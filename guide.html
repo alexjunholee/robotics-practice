@@ -414,9 +414,73 @@ mark.search-highlight {
   #main-content { margin-left: 0; }
 }
 
+/* Demo containers */
+.demo-container {
+  margin: 1rem 0;
+  border: 1px solid #2a3a5a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.demo-header {
+  padding: 0.8rem 1rem;
+  background: #16213e;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #6fa8dc;
+  user-select: none;
+  transition: background 0.2s;
+}
+.demo-header:hover {
+  background: #1a2a4e;
+}
+.demo-body {
+  background: #0d1117;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+}
+.demo-body.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+}
+.demo-body.expanded {
+  opacity: 1;
+}
+.demo-body iframe {
+  display: block;
+  width: 100%;
+  height: 600px;
+  border: none;
+}
+.demo-tabs {
+  display: flex;
+  background: #0f1923;
+  border-bottom: 1px solid #2a3a5a;
+}
+.demo-tab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  color: #9a9ab0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.demo-tab:hover {
+  color: #6fa8dc;
+  background: rgba(111, 168, 220, 0.05);
+}
+.demo-tab.active {
+  color: #6fa8dc;
+  border-bottom-color: #6fa8dc;
+  background: rgba(111, 168, 220, 0.1);
+}
+
 /* Print */
 @media print {
-  #progress-bar, #topbar, #sidebar, #sidebar-overlay, #search-box, .menu-toggle { display: none !important; }
+  #progress-bar, #topbar, #sidebar, #sidebar-overlay, #search-box, .menu-toggle, .demo-container { display: none !important; }
 
   #main-content {
     margin: 0 !important;
@@ -447,7 +511,7 @@ mark.search-highlight {
 <div id="topbar">
   <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation">&#9776;</button>
   <span class="title">GUIDE ON BECOMING A ROBOTICIST</span>
-  <a href="index.html" class="back-link">Practice Demos</a>
+  <!-- Practice Demos link removed: demos are now embedded inline -->
 </div>
 
 <div id="sidebar-overlay" id="sidebar-overlay"></div>
@@ -7872,6 +7936,8 @@ sudo apt-get install libeigen3-dev
     contentEl.style.display = 'block';
     loadingEl.style.display = 'none';
 
+    // Embed interactive demos inline
+    embedDemos();
     // Add IDs to headings and build TOC
     buildTOC();
     // Setup scroll tracking
@@ -8095,6 +8161,237 @@ sudo apt-get install libeigen3-dev
         document.getElementById('search-input').focus();
       }
     });
+  }
+
+  // ---- Embed interactive demos inline ----
+  function embedDemos() {
+    // Map of hash keys to demo files and display names
+    var demoMap = {
+      'canny_edge':          { file: 'interactive/canny_edge.html',          name: 'Canny Edge Detection' },
+      'lens_distortion':     { file: 'interactive/lens_distortion.html',     name: 'Lens Distortion' },
+      'feature_matching':    { file: 'interactive/feature_matching.html',    name: 'Feature Matching' },
+      'ransac':              { file: 'interactive/ransac.html',              name: 'RANSAC' },
+      'm_estimator':         { file: 'interactive/m_estimator.html',         name: 'M-Estimator' },
+      'rotation_gimbal':     { file: 'interactive/rotation_gimbal.html',     name: '회전 표현과 Gimbal Lock' },
+      'pose_composition_3d': { file: 'interactive/pose_composition_3d.html', name: 'SE(3) Pose Composition' },
+      'se2_odometry':        { file: 'interactive/se2_odometry.html',        name: 'SE(2) Odometry' },
+      'odom_uncertainty':    { file: 'interactive/odom_uncertainty.html',     name: 'Odometry Uncertainty' },
+      'xyzrpy_6dof':         { file: 'interactive/xyzrpy_6dof.html',        name: '6DoF 포즈 시각화' },
+      'robot_arm_fk':        { file: 'interactive/robot_arm_fk.html',        name: 'Robot Arm FK' },
+      'icp_steps':           { file: 'interactive/icp_steps.html',           name: 'ICP 2D' },
+      'icp_3d':              { file: 'interactive/icp_3d.html',              name: 'ICP 3D' },
+      'pose_graph':          { file: 'interactive/pose_graph.html',          name: 'Pose Graph Optimization' }
+    };
+
+    // Find all blockquotes in the rendered content
+    var blockquotes = contentEl.querySelectorAll('blockquote');
+
+    blockquotes.forEach(function(bq) {
+      var firstP = bq.querySelector('p');
+      if (!firstP) return;
+
+      var firstStrong = firstP.querySelector('strong');
+      if (!firstStrong) return;
+
+      // Check if the bold text starts with "실습"
+      var strongText = firstStrong.textContent.trim();
+      if (strongText.indexOf('실습') !== 0) return;
+
+      // Find all links with app.html# pattern in this blockquote
+      var links = bq.querySelectorAll('a[href*="app.html#"]');
+      if (links.length === 0) return;
+
+      // Extract demo info from links
+      var demos = [];
+      links.forEach(function(link) {
+        var href = link.getAttribute('href');
+        var hashMatch = href.match(/#(\w+)$/);
+        if (hashMatch && demoMap[hashMatch[1]]) {
+          demos.push({
+            key: hashMatch[1],
+            label: link.textContent.trim(),
+            file: demoMap[hashMatch[1]].file
+          });
+        }
+      });
+
+      if (demos.length === 0) return;
+
+      // Extract the description text (second line of blockquote, after the link line)
+      var allPs = bq.querySelectorAll('p');
+      var description = '';
+      // The description might be in the second <p>, or in the same <p> after a <br>
+      // Let's check for text after the links in the last <p>
+      if (allPs.length > 1) {
+        description = allPs[allPs.length - 1].textContent.trim();
+      } else if (allPs.length === 1) {
+        // Description may be part of the same paragraph - look for text content after links
+        // Clone the paragraph and remove the strong and links to get remaining text
+        var clone = firstP.cloneNode(true);
+        var strongClone = clone.querySelector('strong');
+        if (strongClone) strongClone.remove();
+        var linkClones = clone.querySelectorAll('a');
+        linkClones.forEach(function(l) { l.remove(); });
+        description = clone.textContent.replace(/[|:]/g, '').trim();
+      }
+
+      // Build the demo container
+      var container = document.createElement('div');
+      container.className = 'demo-container';
+
+      // Build header text
+      var headerLabel = demos.map(function(d) { return d.label; }).join(' / ');
+      var headerText = '\u25B6 \uC2E4\uC2B5: ' + headerLabel;
+      if (description) {
+        headerText += ' \u2014 ' + description;
+      }
+      headerText += ' (\uD074\uB9AD\uD558\uC5EC \uC5F4\uAE30)';
+
+      var header = document.createElement('div');
+      header.className = 'demo-header';
+      header.textContent = headerText;
+      header.setAttribute('role', 'button');
+      header.setAttribute('tabindex', '0');
+      // Store demo info for toggle
+      header.dataset.demos = JSON.stringify(demos);
+      header.dataset.headerLabel = headerLabel;
+      header.dataset.description = description;
+
+      header.addEventListener('click', function() {
+        toggleDemo(this);
+      });
+      header.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleDemo(this);
+        }
+      });
+
+      container.appendChild(header);
+
+      // Build body
+      var body = document.createElement('div');
+      body.className = 'demo-body collapsed';
+
+      if (demos.length === 1) {
+        // Single demo - simple iframe
+        var iframe = document.createElement('iframe');
+        iframe.setAttribute('data-src', demos[0].file);
+        iframe.setAttribute('width', '100%');
+        iframe.setAttribute('height', '600');
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('loading', 'lazy');
+        iframe.setAttribute('title', demos[0].label);
+        body.appendChild(iframe);
+      } else {
+        // Multiple demos - tabbed interface
+        var tabBar = document.createElement('div');
+        tabBar.className = 'demo-tabs';
+
+        demos.forEach(function(demo, idx) {
+          var tabBtn = document.createElement('button');
+          tabBtn.className = 'demo-tab' + (idx === 0 ? ' active' : '');
+          tabBtn.textContent = demo.label;
+          tabBtn.dataset.demoKey = demo.key;
+          tabBtn.dataset.demoFile = demo.file;
+          tabBtn.addEventListener('click', function() {
+            switchTab(this);
+          });
+          tabBar.appendChild(tabBtn);
+        });
+
+        body.appendChild(tabBar);
+
+        // iframe for the first (active) demo
+        var iframe = document.createElement('iframe');
+        iframe.setAttribute('data-src', demos[0].file);
+        iframe.setAttribute('width', '100%');
+        iframe.setAttribute('height', '600');
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('loading', 'lazy');
+        iframe.setAttribute('title', demos[0].label);
+        iframe.dataset.demoKey = demos[0].key;
+        body.appendChild(iframe);
+      }
+
+      container.appendChild(body);
+
+      // Replace the blockquote with the demo container
+      bq.parentNode.replaceChild(container, bq);
+    });
+  }
+
+  // ---- Toggle demo open/closed ----
+  function toggleDemo(headerEl) {
+    var body = headerEl.nextElementSibling;
+    var demos = JSON.parse(headerEl.dataset.demos);
+    var headerLabel = headerEl.dataset.headerLabel;
+    var description = headerEl.dataset.description;
+    var isOpen = !body.classList.contains('collapsed');
+
+    if (isOpen) {
+      // Close
+      body.style.maxHeight = body.scrollHeight + 'px';
+      // Force reflow
+      body.offsetHeight;
+      body.classList.remove('expanded');
+      body.classList.add('collapsed');
+      var closeText = '\u25B6 \uC2E4\uC2B5: ' + headerLabel;
+      if (description) closeText += ' \u2014 ' + description;
+      closeText += ' (\uD074\uB9AD\uD558\uC5EC \uC5F4\uAE30)';
+      headerEl.textContent = closeText;
+    } else {
+      // Open - lazy load iframe if needed
+      var iframe = body.querySelector('iframe');
+      if (iframe && !iframe.getAttribute('src') && iframe.getAttribute('data-src')) {
+        iframe.setAttribute('src', iframe.getAttribute('data-src'));
+      }
+
+      body.classList.remove('collapsed');
+      body.style.maxHeight = '0px';
+      // Force reflow
+      body.offsetHeight;
+      // Set to actual height for animation
+      var targetHeight = 600 + 10; // iframe height + some padding
+      var tabs = body.querySelector('.demo-tabs');
+      if (tabs) targetHeight += tabs.offsetHeight || 40;
+      body.style.maxHeight = targetHeight + 'px';
+      body.classList.add('expanded');
+
+      // After transition, remove max-height constraint so it can adapt
+      setTimeout(function() {
+        if (!body.classList.contains('collapsed')) {
+          body.style.maxHeight = 'none';
+        }
+      }, 450);
+
+      var openText = '\u25BC \uC2E4\uC2B5: ' + headerLabel;
+      if (description) openText += ' \u2014 ' + description;
+      openText += ' (\uD074\uB9AD\uD558\uC5EC \uB2EB\uAE30)';
+      headerEl.textContent = openText;
+    }
+  }
+
+  // ---- Switch tabs in multi-demo containers ----
+  function switchTab(tabBtn) {
+    var tabBar = tabBtn.parentElement;
+    var body = tabBar.parentElement;
+    var demoFile = tabBtn.dataset.demoFile;
+    var demoKey = tabBtn.dataset.demoKey;
+
+    // Update active tab
+    var allTabs = tabBar.querySelectorAll('.demo-tab');
+    allTabs.forEach(function(t) { t.classList.remove('active'); });
+    tabBtn.classList.add('active');
+
+    // Update iframe
+    var iframe = body.querySelector('iframe');
+    if (iframe) {
+      iframe.dataset.demoKey = demoKey;
+      iframe.setAttribute('data-src', demoFile);
+      iframe.setAttribute('src', demoFile);
+      iframe.setAttribute('title', tabBtn.textContent);
+    }
   }
 
 })();
