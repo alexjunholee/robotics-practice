@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오도메트리 불확실성 전파 — Odometry Uncertainty Propagation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+#sidebar {
+  width: 370px;
+  min-width: 370px;
+  padding: 18px;
+  background: #16213e;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-right: 2px solid #0f3460;
+}
+h1 { font-size: 17px; color: #e94560; }
+h2 { font-size: 13px; color: #0f3460; background: #e94560; padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
+.slider-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.slider-row label { width: 100px; font-size: 12px; }
+.slider-row input[type=range] { flex: 1; accent-color: #e94560; }
+.slider-row .val { width: 42px; text-align: right; font-family: monospace; font-size: 12px; color: #53d8fb; }
+button {
+  padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;
+  font-size: 12px; font-weight: 600; transition: background 0.2s;
+}
+.btn-primary { background: #e94560; color: #fff; }
+.btn-primary:hover { background: #c73e55; }
+.btn-secondary { background: #0f3460; color: #e0e0e0; }
+.btn-secondary:hover { background: #1a4a8a; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.state-box {
+  font-family: monospace; font-size: 12px; background: #0d1b38;
+  padding: 8px; border-radius: 4px; line-height: 1.6;
+}
+.state-box span { color: #53d8fb; }
+.note {
+  font-size: 11px; color: #f0c040; background: rgba(240,192,64,0.1);
+  padding: 8px; border-radius: 4px; border-left: 3px solid #f0c040;
+  line-height: 1.6;
+}
+#canvas-container {
+  flex: 1; display: flex; align-items: center; justify-content: center; position: relative;
+}
+canvas { background: #0d1b38; border-radius: 8px; }
+.legend {
+  position: absolute; bottom: 12px; left: 14px; font-size: 11px; color: #666;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>오도메트리 불확실성 전파</h1>
+  <p style="font-size:11px;color:#888;">Odometry Uncertainty Propagation (EKF-style)</p>
+
+  <h2>바퀴 속도 Wheel Velocities</h2>
+  <div class="slider-row">
+    <label>v<sub>L</sub> (왼쪽)</label>
+    <input type="range" id="vl" min="-5" max="5" step="0.1" value="2">
+    <span class="val" id="vl-val">2.0</span>
+  </div>
+  <div class="slider-row">
+    <label>v<sub>R</sub> (오른쪽)</label>
+    <input type="range" id="vr" min="-5" max="5" step="0.1" value="2">
+    <span class="val" id="vr-val">2.0</span>
+  </div>
+
+  <h2>노이즈 파라미터 Noise</h2>
+  <div class="slider-row">
+    <label>&sigma;<sub>v</sub> (선속도)</label>
+    <input type="range" id="sigma_v" min="0" max="1" step="0.01" value="0.1">
+    <span class="val" id="sigma_v-val">0.10</span>
+  </div>
+  <div class="slider-row">
+    <label>&sigma;<sub>&omega;</sub> (각속도)</label>
+    <input type="range" id="sigma_w" min="0" max="0.5" step="0.005" value="0.05">
+    <span class="val" id="sigma_w-val">0.050</span>
+  </div>
+
+  <h2>시뮬레이션 파라미터</h2>
+  <div class="slider-row">
+    <label>Baseline (L)</label>
+    <input type="range" id="baseline" min="0.3" max="3" step="0.1" value="1.0">
+    <span class="val" id="baseline-val">1.0</span>
+  </div>
+  <div class="slider-row">
+    <label>dt (초)</label>
+    <input type="range" id="dt" min="0.01" max="0.5" step="0.01" value="0.1">
+    <span class="val" id="dt-val">0.10</span>
+  </div>
+
+  <h2>제어 Controls</h2>
+  <div class="btn-row">
+    <button class="btn-primary" id="btn-step">Step</button>
+    <button class="btn-primary" id="btn-play">Play</button>
+    <button class="btn-secondary" id="btn-reset">Reset</button>
+    <button class="btn-secondary" id="btn-drop">Drop Ellipse</button>
+  </div>
+  <div class="btn-row" style="margin-top:4px;">
+    <button class="btn-secondary" onclick="setPreset(2,2)">직진</button>
+    <button class="btn-secondary" onclick="setPreset(1,3)">좌회전</button>
+    <button class="btn-secondary" onclick="setPreset(3,1)">우회전</button>
+    <button class="btn-secondary" onclick="setPreset(-2,2)">제자리 회전</button>
+  </div>
+
+  <h2>현재 상태 및 공분산 Covariance</h2>
+  <div class="state-box" id="state-display"></div>
+
+  <h2>공분산 행렬 &Sigma; (3&times;3)</h2>
+  <div class="state-box" id="cov-display" style="font-size:11px;"></div>
+
+  <div class="note">
+    이것이 IMU drift의 원인이다. 시간이 지날수록 불확실성이 누적된다.<br>
+    직진 시: x 불확실성은 선형 증가, &theta; 불확실성으로 인해 y 불확실성은 이차적으로 증가한다.
+  </div>
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+  <div class="legend">파란 타원: 현재 공분산 | 회색 타원: 드롭된 공분산 스냅샷 | 1 grid = 1 m</div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const c = document.getElementById('canvas-container');
+  const s = Math.min(c.clientWidth - 40, c.clientHeight - 40);
+  canvas.width = s; canvas.height = s;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// State
+let pose = { x: 0, y: 0, theta: 0 };
+// 3x3 covariance [xx, xy, xt; yx, yy, yt; tx, ty, tt] stored as flat array row-major
+let cov = [0,0,0, 0,0,0, 0,0,0];
+let trail = [];
+let droppedEllipses = [];
+let playing = false;
+let animId = null;
+let stepCount = 0;
+
+function ppm() { return canvas.width / 20; }
+function ox() { return canvas.width / 2; }
+function oy() { return canvas.height / 2; }
+function w2c(wx, wy) { return [ox() + wx * ppm(), oy() - wy * ppm()]; }
+
+function gv(id) { return parseFloat(document.getElementById(id).value); }
+
+function setPreset(vl, vr) {
+  document.getElementById('vl').value = vl;
+  document.getElementById('vr').value = vr;
+  updateLabels();
+}
+
+function updateLabels() {
+  ['vl','vr','sigma_v','sigma_w','baseline','dt'].forEach(id => {
+    const v = parseFloat(document.getElementById(id).value);
+    const el = document.getElementById(id + '-val');
+    if (id === 'dt') el.textContent = v.toFixed(2);
+    else if (id === 'sigma_w') el.textContent = v.toFixed(3);
+    else if (id === 'sigma_v') el.textContent = v.toFixed(2);
+    else el.textContent = v.toFixed(1);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(el => el.addEventListener('input', updateLabels));
+
+// Matrix helpers (3x3 row-major)
+function matMul(A, B) {
+  const C = new Array(9).fill(0);
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      for (let k = 0; k < 3; k++)
+        C[i*3+j] += A[i*3+k] * B[k*3+j];
+  return C;
+}
+
+function matTranspose(A) {
+  return [A[0],A[3],A[6], A[1],A[4],A[7], A[2],A[5],A[8]];
+}
+
+function matAdd(A, B) {
+  return A.map((v,i) => v + B[i]);
+}
+
+function step() {
+  const vl = gv('vl'), vr = gv('vr'), L = gv('baseline'), dt = gv('dt');
+  const sv = gv('sigma_v'), sw = gv('sigma_w');
+
+  const v = (vr + vl) / 2;
+  const omega = (vr - vl) / L;
+  const th = pose.theta;
+
+  // Jacobian of motion model w.r.t. state: F = d(g)/d(state)
+  // g: x' = x + v*cos(th)*dt, y' = y + v*sin(th)*dt, th' = th + omega*dt
+  const F = [
+    1, 0, -v * Math.sin(th) * dt,
+    0, 1,  v * Math.cos(th) * dt,
+    0, 0, 1
+  ];
+
+  // Jacobian w.r.t. noise (v, omega): V
+  const V = [
+    Math.cos(th) * dt, 0,
+    Math.sin(th) * dt, 0,
+    0,                 dt
+  ]; // 3x2
+
+  // Process noise in control space
+  const M = [
+    sv * sv, 0,
+    0,       sw * sw
+  ]; // 2x2
+
+  // V * M * V^T (3x3)
+  // Manually compute since V is 3x2, M is 2x2
+  const VMVt = new Array(9).fill(0);
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      let s = 0;
+      for (let k = 0; k < 2; k++) {
+        for (let l = 0; l < 2; l++) {
+          s += V[i*2+k] * M[k*2+l] * V[j*2+l];
+        }
+      }
+      VMVt[i*3+j] = s;
+    }
+  }
+
+  // Propagate: cov' = F * cov * F^T + V * M * V^T
+  const Ft = matTranspose(F);
+  cov = matAdd(matMul(F, matMul(cov, Ft)), VMVt);
+
+  // Update pose
+  pose.x += v * Math.cos(th) * dt;
+  pose.y += v * Math.sin(th) * dt;
+  pose.theta += omega * dt;
+
+  trail.push({ x: pose.x, y: pose.y });
+  stepCount++;
+
+  updateDisplays(v, omega);
+  draw();
+}
+
+function dropEllipse() {
+  droppedEllipses.push({
+    x: pose.x, y: pose.y,
+    cov: [...cov],
+    step: stepCount
+  });
+  draw();
+}
+
+function reset() {
+  pose = { x: 0, y: 0, theta: 0 };
+  cov = [0,0,0, 0,0,0, 0,0,0];
+  trail = [];
+  droppedEllipses = [];
+  stepCount = 0;
+  playing = false;
+  document.getElementById('btn-play').textContent = 'Play';
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  updateDisplays(0, 0);
+  draw();
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('btn-play').textContent = playing ? 'Pause' : 'Play';
+  if (playing) animate();
+  else if (animId) { cancelAnimationFrame(animId); animId = null; }
+}
+
+let lastTime = 0;
+function animate(ts) {
+  if (!playing) return;
+  if (!lastTime) lastTime = ts;
+  if (ts - lastTime >= 50) {
+    step();
+    lastTime = ts;
+  }
+  animId = requestAnimationFrame(animate);
+}
+
+document.getElementById('btn-step').addEventListener('click', step);
+document.getElementById('btn-play').addEventListener('click', togglePlay);
+document.getElementById('btn-reset').addEventListener('click', reset);
+document.getElementById('btn-drop').addEventListener('click', dropEllipse);
+
+function updateDisplays(v, omega) {
+  const deg = (pose.theta * 180 / Math.PI) % 360;
+  document.getElementById('state-display').innerHTML =
+    `Step: <span>${stepCount}</span><br>` +
+    `x = <span>${pose.x.toFixed(3)}</span>  y = <span>${pose.y.toFixed(3)}</span><br>` +
+    `&theta; = <span>${pose.theta.toFixed(3)}</span> rad (<span>${deg.toFixed(1)}</span>&deg;)<br>` +
+    `v = <span>${v.toFixed(3)}</span>  &omega; = <span>${omega.toFixed(3)}</span>`;
+
+  const c = cov;
+  document.getElementById('cov-display').innerHTML =
+    `<span>[${c[0].toFixed(4)}, ${c[1].toFixed(4)}, ${c[2].toFixed(4)}]</span><br>` +
+    `<span>[${c[3].toFixed(4)}, ${c[4].toFixed(4)}, ${c[5].toFixed(4)}]</span><br>` +
+    `<span>[${c[6].toFixed(4)}, ${c[7].toFixed(4)}, ${c[8].toFixed(4)}]</span><br><br>` +
+    `&sigma;<sub>x</sub> = <span>${Math.sqrt(Math.max(0,c[0])).toFixed(4)}</span>  ` +
+    `&sigma;<sub>y</sub> = <span>${Math.sqrt(Math.max(0,c[4])).toFixed(4)}</span>  ` +
+    `&sigma;<sub>&theta;</sub> = <span>${Math.sqrt(Math.max(0,c[8])).toFixed(4)}</span>`;
+}
+
+function drawGrid() {
+  const w = canvas.width, h = canvas.height, p = ppm();
+  ctx.strokeStyle = '#1a2744'; ctx.lineWidth = 1;
+  for (let gx = -10; gx <= 10; gx++) {
+    const cx = ox() + gx * p;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+  }
+  for (let gy = -10; gy <= 10; gy++) {
+    const cy = oy() - gy * p;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+  }
+  ctx.strokeStyle = '#334466'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, oy()); ctx.lineTo(w, oy()); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox(), 0); ctx.lineTo(ox(), h); ctx.stroke();
+}
+
+function drawEllipse(wx, wy, covMat, color, alpha, lineWidth) {
+  // Extract 2x2 xy marginal
+  const a = covMat[0], b = covMat[1], d = covMat[4];
+  // Eigenvalues of 2x2 symmetric [a b; b d]
+  const tr = a + d;
+  const det = a * d - b * b;
+  const disc = Math.max(0, tr * tr / 4 - det);
+  const sqrtDisc = Math.sqrt(disc);
+  const l1 = Math.max(0.0001, tr / 2 + sqrtDisc);
+  const l2 = Math.max(0.0001, tr / 2 - sqrtDisc);
+
+  // Eigenvector angle
+  let angle = 0;
+  if (Math.abs(b) > 1e-10) {
+    angle = Math.atan2(l1 - a, b);
+  } else {
+    angle = a >= d ? 0 : Math.PI / 2;
+  }
+
+  const [cx, cy] = w2c(wx, wy);
+  const p = ppm();
+  // 2-sigma ellipse
+  const sx = 2 * Math.sqrt(l1) * p;
+  const sy = 2 * Math.sqrt(l2) * p;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-angle); // canvas y is flipped
+  ctx.beginPath();
+  ctx.ellipse(0, 0, Math.max(2, sx), Math.max(2, sy), 0, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.globalAlpha = alpha;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = alpha * 0.15;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawTrail() {
+  if (trail.length < 2) return;
+  ctx.beginPath();
+  const [sx, sy] = w2c(trail[0].x, trail[0].y);
+  ctx.moveTo(sx, sy);
+  for (let i = 1; i < trail.length; i++) {
+    const [px, py] = w2c(trail[i].x, trail[i].y);
+    ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = 'rgba(83, 216, 251, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawRobot() {
+  const [cx, cy] = w2c(pose.x, pose.y);
+  const p = ppm();
+  const sz = 0.35 * p;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-pose.theta);
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(sz, 0);
+  ctx.lineTo(-sz * 0.5, -sz * 0.5);
+  ctx.lineTo(-sz * 0.3, 0);
+  ctx.lineTo(-sz * 0.5, sz * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(233, 69, 96, 0.8)';
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 2;
+  ctx.fill(); ctx.stroke();
+
+  // Axes
+  const al = 0.5 * p;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(al, 0);
+  ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -al);
+  ctx.strokeStyle = '#44ff44'; ctx.lineWidth = 2; ctx.stroke();
+
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawTrail();
+
+  // Dropped ellipses
+  droppedEllipses.forEach((e, i) => {
+    drawEllipse(e.x, e.y, e.cov, '#888888', 0.6, 1.5);
+    const [cx, cy] = w2c(e.x, e.y);
+    ctx.fillStyle = '#666';
+    ctx.font = '9px monospace';
+    ctx.fillText(`#${e.step}`, cx + 5, cy - 5);
+  });
+
+  // Current covariance ellipse
+  if (stepCount > 0) {
+    drawEllipse(pose.x, pose.y, cov, '#53d8fb', 0.9, 2);
+  }
+
+  drawRobot();
+
+  // Origin
+  const [ocx, ocy] = w2c(0, 0);
+  ctx.beginPath(); ctx.arc(ocx, ocy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#e94560'; ctx.fill();
+}
+
+updateLabels();
+updateDisplays(0, 0);
+draw();
+</script>
+</body>
+</html>

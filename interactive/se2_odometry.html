@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SE(2) Differential Drive Odometry</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+#sidebar {
+  width: 340px;
+  min-width: 340px;
+  padding: 20px;
+  background: #16213e;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-right: 2px solid #0f3460;
+}
+h1 { font-size: 18px; color: #e94560; margin-bottom: 4px; }
+h2 { font-size: 14px; color: #0f3460; background: #e94560; padding: 4px 8px; border-radius: 4px; margin-top: 6px; }
+.control-group { display: flex; flex-direction: column; gap: 6px; }
+.slider-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.slider-row label { width: 90px; font-size: 13px; }
+.slider-row input[type=range] { flex: 1; accent-color: #e94560; }
+.slider-row .val { width: 40px; text-align: right; font-family: monospace; font-size: 13px; color: #53d8fb; }
+button {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-primary { background: #e94560; color: #fff; }
+.btn-primary:hover { background: #c73e55; }
+.btn-secondary { background: #0f3460; color: #e0e0e0; }
+.btn-secondary:hover { background: #1a4a8a; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.state-display {
+  font-family: monospace;
+  font-size: 13px;
+  background: #0d1b38;
+  padding: 10px;
+  border-radius: 4px;
+  line-height: 1.7;
+}
+.state-display span { color: #53d8fb; }
+.equations {
+  font-family: monospace;
+  font-size: 11px;
+  background: #0d1b38;
+  padding: 10px;
+  border-radius: 4px;
+  line-height: 1.8;
+  color: #a0d0a0;
+  white-space: pre;
+}
+#canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+canvas {
+  background: #0d1b38;
+  border-radius: 8px;
+}
+.grid-label {
+  position: absolute;
+  bottom: 10px;
+  right: 14px;
+  font-size: 11px;
+  color: #555;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>SE(2) 차동 구동 오도메트리</h1>
+  <p style="font-size:12px;color:#888;">Differential Drive Odometry Simulation</p>
+
+  <h2>바퀴 속도 제어</h2>
+  <div class="control-group">
+    <div class="slider-row">
+      <label>왼쪽 바퀴 (v<sub>L</sub>)</label>
+      <input type="range" id="vl" min="-5" max="5" step="0.1" value="0">
+      <span class="val" id="vl-val">0.0</span>
+    </div>
+    <div class="slider-row">
+      <label>오른쪽 바퀴 (v<sub>R</sub>)</label>
+      <input type="range" id="vr" min="-5" max="5" step="0.1" value="0">
+      <span class="val" id="vr-val">0.0</span>
+    </div>
+    <div class="slider-row">
+      <label>Baseline (L)</label>
+      <input type="range" id="baseline" min="0.3" max="3" step="0.1" value="1.0">
+      <span class="val" id="baseline-val">1.0</span>
+    </div>
+    <div class="slider-row">
+      <label>dt (초)</label>
+      <input type="range" id="dt" min="0.01" max="0.5" step="0.01" value="0.1">
+      <span class="val" id="dt-val">0.10</span>
+    </div>
+  </div>
+
+  <h2>제어 버튼</h2>
+  <div class="btn-row">
+    <button class="btn-primary" id="btn-step">Step</button>
+    <button class="btn-primary" id="btn-play">Play</button>
+    <button class="btn-secondary" id="btn-reset">Reset</button>
+  </div>
+
+  <h2>프리셋 Presets</h2>
+  <div class="btn-row">
+    <button class="btn-secondary" onclick="setPreset(2,2)">직진</button>
+    <button class="btn-secondary" onclick="setPreset(1,3)">좌회전</button>
+    <button class="btn-secondary" onclick="setPreset(3,1)">우회전</button>
+    <button class="btn-secondary" onclick="setPreset(-2,2)">제자리 회전</button>
+  </div>
+
+  <h2>현재 상태 Pose</h2>
+  <div class="state-display" id="state-display">
+    x = <span>0.000</span><br>
+    y = <span>0.000</span><br>
+    &theta; = <span>0.000</span> rad (<span>0.0</span>&deg;)<br>
+    v = <span>0.000</span><br>
+    &omega; = <span>0.000</span>
+  </div>
+
+  <h2>운동학 방정식 Kinematics</h2>
+  <div class="equations">v = (v_R + v_L) / 2
+&omega; = (v_R - v_L) / L
+
+x  += v &middot; cos(&theta;) &middot; dt
+y  += v &middot; sin(&theta;) &middot; dt
+&theta; += &omega; &middot; dt</div>
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+  <div class="grid-label">1 grid = 1 m</div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const container = document.getElementById('canvas-container');
+  const s = Math.min(container.clientWidth - 40, container.clientHeight - 40);
+  canvas.width = s;
+  canvas.height = s;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// State
+let x = 0, y = 0, theta = 0;
+let trail = [];
+let playing = false;
+let animId = null;
+
+// Scale: pixels per meter
+function ppm() { return canvas.width / 20; }
+// World origin in canvas pixels (center)
+function ox() { return canvas.width / 2; }
+function oy() { return canvas.height / 2; }
+function w2c(wx, wy) { return [ox() + wx * ppm(), oy() - wy * ppm()]; }
+
+function getVL() { return parseFloat(document.getElementById('vl').value); }
+function getVR() { return parseFloat(document.getElementById('vr').value); }
+function getL()  { return parseFloat(document.getElementById('baseline').value); }
+function getDT() { return parseFloat(document.getElementById('dt').value); }
+
+function setPreset(vl, vr) {
+  document.getElementById('vl').value = vl;
+  document.getElementById('vr').value = vr;
+  updateSliderLabels();
+}
+
+function updateSliderLabels() {
+  document.getElementById('vl-val').textContent = parseFloat(document.getElementById('vl').value).toFixed(1);
+  document.getElementById('vr-val').textContent = parseFloat(document.getElementById('vr').value).toFixed(1);
+  document.getElementById('baseline-val').textContent = parseFloat(document.getElementById('baseline').value).toFixed(1);
+  document.getElementById('dt-val').textContent = parseFloat(document.getElementById('dt').value).toFixed(2);
+}
+
+document.querySelectorAll('input[type=range]').forEach(el => {
+  el.addEventListener('input', updateSliderLabels);
+});
+
+function step() {
+  const vl = getVL(), vr = getVR(), L = getL(), dt = getDT();
+  const v = (vr + vl) / 2;
+  const omega = (vr - vl) / L;
+  x += v * Math.cos(theta) * dt;
+  y += v * Math.sin(theta) * dt;
+  theta += omega * dt;
+  trail.push({ x, y, theta });
+  updateStateDisplay(v, omega);
+  draw();
+}
+
+function updateStateDisplay(v, omega) {
+  const deg = (theta * 180 / Math.PI) % 360;
+  document.getElementById('state-display').innerHTML =
+    `x = <span>${x.toFixed(3)}</span><br>` +
+    `y = <span>${y.toFixed(3)}</span><br>` +
+    `&theta; = <span>${theta.toFixed(3)}</span> rad (<span>${deg.toFixed(1)}</span>&deg;)<br>` +
+    `v = <span>${v.toFixed(3)}</span><br>` +
+    `&omega; = <span>${omega.toFixed(3)}</span>`;
+}
+
+function reset() {
+  x = 0; y = 0; theta = 0;
+  trail = [];
+  playing = false;
+  document.getElementById('btn-play').textContent = 'Play';
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  updateStateDisplay(0, 0);
+  draw();
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('btn-play').textContent = playing ? 'Pause' : 'Play';
+  if (playing) animate();
+  else if (animId) { cancelAnimationFrame(animId); animId = null; }
+}
+
+let lastTime = 0;
+const stepInterval = 50; // ms between steps during play
+function animate(ts) {
+  if (!playing) return;
+  if (!lastTime) lastTime = ts;
+  if (ts - lastTime >= stepInterval) {
+    step();
+    lastTime = ts;
+  }
+  animId = requestAnimationFrame(animate);
+}
+
+document.getElementById('btn-step').addEventListener('click', step);
+document.getElementById('btn-play').addEventListener('click', togglePlay);
+document.getElementById('btn-reset').addEventListener('click', reset);
+
+function drawGrid() {
+  const w = canvas.width, h = canvas.height;
+  const p = ppm();
+  ctx.strokeStyle = '#1a2744';
+  ctx.lineWidth = 1;
+  // Vertical
+  for (let gx = -10; gx <= 10; gx++) {
+    const cx = ox() + gx * p;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+  }
+  // Horizontal
+  for (let gy = -10; gy <= 10; gy++) {
+    const cy = oy() - gy * p;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = '#334466';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, oy()); ctx.lineTo(w, oy()); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox(), 0); ctx.lineTo(ox(), h); ctx.stroke();
+}
+
+function drawTrail() {
+  if (trail.length < 2) return;
+  ctx.beginPath();
+  const [sx, sy] = w2c(trail[0].x, trail[0].y);
+  ctx.moveTo(sx, sy);
+  for (let i = 1; i < trail.length; i++) {
+    const [px, py] = w2c(trail[i].x, trail[i].y);
+    ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = 'rgba(83, 216, 251, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Dots every N steps
+  const dotEvery = Math.max(1, Math.floor(trail.length / 80));
+  for (let i = 0; i < trail.length; i += dotEvery) {
+    const [px, py] = w2c(trail[i].x, trail[i].y);
+    ctx.beginPath();
+    ctx.arc(px, py, 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(83, 216, 251, 0.4)';
+    ctx.fill();
+  }
+}
+
+function drawRobot(rx, ry, rtheta) {
+  const [cx, cy] = w2c(rx, ry);
+  const p = ppm();
+  const bodyLen = 0.5 * p;
+  const bodyW = 0.35 * p;
+  const L = getL();
+  const halfW = (L / 2) * p;
+  const wheelLen = 0.22 * p;
+  const wheelW = 0.07 * p;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-rtheta);
+
+  // Body (triangle/arrow)
+  ctx.beginPath();
+  ctx.moveTo(bodyLen * 0.6, 0);
+  ctx.lineTo(-bodyLen * 0.4, -bodyW * 0.5);
+  ctx.lineTo(-bodyLen * 0.3, 0);
+  ctx.lineTo(-bodyLen * 0.4, bodyW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(233, 69, 96, 0.7)';
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 2;
+  ctx.fill();
+  ctx.stroke();
+
+  // Left wheel (top in screen = positive y in world, but canvas y is flipped so it's negative cy)
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(-wheelLen / 2, -halfW - wheelW, wheelLen, wheelW);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-wheelLen / 2, -halfW - wheelW, wheelLen, wheelW);
+
+  // Right wheel
+  ctx.fillStyle = '#fb923c';
+  ctx.fillRect(-wheelLen / 2, halfW, wheelLen, wheelW);
+  ctx.strokeStyle = '#f97316';
+  ctx.strokeRect(-wheelLen / 2, halfW, wheelLen, wheelW);
+
+  // Wheel labels
+  ctx.fillStyle = '#4ade80';
+  ctx.font = '10px monospace';
+  ctx.fillText('L', -wheelLen / 2 - 12, -halfW - wheelW / 2 + 3);
+  ctx.fillStyle = '#fb923c';
+  ctx.fillText('R', -wheelLen / 2 - 12, halfW + wheelW / 2 + 3);
+
+  // Coordinate frame
+  const axisLen = 0.6 * p;
+  // x-axis (forward) - red
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(axisLen, 0);
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  // Arrow head
+  ctx.beginPath();
+  ctx.moveTo(axisLen, 0);
+  ctx.lineTo(axisLen - 6, -4);
+  ctx.lineTo(axisLen - 6, 4);
+  ctx.closePath();
+  ctx.fillStyle = '#ff4444';
+  ctx.fill();
+
+  // y-axis (left) - green (in canvas: negative y direction)
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, -axisLen);
+  ctx.strokeStyle = '#44ff44';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -axisLen);
+  ctx.lineTo(-4, -axisLen + 6);
+  ctx.lineTo(4, -axisLen + 6);
+  ctx.closePath();
+  ctx.fillStyle = '#44ff44';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+
+  // World frame labels
+  ctx.fillStyle = '#ff4444';
+  ctx.font = '12px monospace';
+  ctx.fillText('X', canvas.width - 20, oy() - 5);
+  ctx.fillStyle = '#44ff44';
+  ctx.fillText('Y', ox() + 5, 15);
+
+  drawTrail();
+  drawRobot(x, y, theta);
+
+  // Origin marker
+  const [ocx, ocy] = w2c(0, 0);
+  ctx.beginPath();
+  ctx.arc(ocx, ocy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#e94560';
+  ctx.fill();
+}
+
+updateSliderLabels();
+draw();
+</script>
+</body>
+</html>

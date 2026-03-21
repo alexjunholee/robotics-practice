@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로봇 팔 Forward Kinematics (3-DOF)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;overflow:hidden}
+#container{display:flex;height:100vh;width:100vw}
+#sidebar{width:370px;min-width:370px;background:#16213e;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;border-right:1px solid #0f3460}
+h1{font-size:18px;color:#e94560;text-align:center;border-bottom:1px solid #0f3460;padding-bottom:8px}
+h2{font-size:13px;color:#0f3460;background:#e94560;padding:3px 8px;border-radius:4px;margin-top:2px}
+.section{border:1px solid #0f3460;border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:4px}
+.slider-group{display:flex;flex-direction:column;gap:1px}
+.slider-group label{font-size:12px;color:#a0a0c0;display:flex;justify-content:space-between}
+.slider-group input[type=range]{width:100%;accent-color:#e94560}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap}
+button{background:#0f3460;color:#e0e0e0;border:1px solid #e94560;padding:7px 12px;border-radius:4px;cursor:pointer;font-size:12px;transition:background .2s}
+button:hover{background:#e94560;color:#fff}
+button.active{background:#e94560;color:#fff}
+.info-box{background:#0d1b3e;border:1px solid #0f3460;border-radius:4px;padding:8px;font-family:'Courier New',monospace;font-size:10.5px;line-height:1.5;white-space:pre;overflow-x:auto}
+#canvas3d{flex:1;display:block}
+.j1{color:#ff5555}.j2{color:#55ff55}.j3{color:#5599ff}
+.legend{display:flex;gap:10px;font-size:11px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:3px}
+.ldot{width:10px;height:10px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="sidebar">
+<h1>로봇 팔 Forward Kinematics</h1>
+<h2>3-DOF Planar Robot Arm</h2>
+
+<div class="legend">
+<span><span class="ldot" style="background:#ff4444"></span>Link 1</span>
+<span><span class="ldot" style="background:#44ff44"></span>Link 2</span>
+<span><span class="ldot" style="background:#4488ff"></span>Link 3</span>
+<span><span class="ldot" style="background:#ffff44"></span>End-Effector</span>
+</div>
+
+<div class="section">
+<span style="font-weight:bold;font-size:12px">관절 각도 (Joint Angles)</span>
+<div class="slider-group">
+<label><span class="j1">&theta;1</span><span id="t1Val">0.0&deg;</span></label>
+<input type="range" id="sliderT1" min="-180" max="180" step="0.5" value="0">
+</div>
+<div class="slider-group">
+<label><span class="j2">&theta;2</span><span id="t2Val">0.0&deg;</span></label>
+<input type="range" id="sliderT2" min="-180" max="180" step="0.5" value="0">
+</div>
+<div class="slider-group">
+<label><span class="j3">&theta;3</span><span id="t3Val">0.0&deg;</span></label>
+<input type="range" id="sliderT3" min="-180" max="180" step="0.5" value="0">
+</div>
+</div>
+
+<div class="section">
+<span style="font-weight:bold;font-size:12px">링크 길이 (Link Lengths)</span>
+<div class="slider-group">
+<label><span class="j1">L1</span><span id="l1Val">3.0</span></label>
+<input type="range" id="sliderL1" min="0.5" max="5" step="0.1" value="3">
+</div>
+<div class="slider-group">
+<label><span class="j2">L2</span><span id="l2Val">2.0</span></label>
+<input type="range" id="sliderL2" min="0.5" max="5" step="0.1" value="2">
+</div>
+<div class="slider-group">
+<label><span class="j3">L3</span><span id="l3Val">1.0</span></label>
+<input type="range" id="sliderL3" min="0.5" max="5" step="0.1" value="1">
+</div>
+</div>
+
+<div class="btn-row">
+<button id="btnHome">Home (원점)</button>
+<button id="btnRandom">Random (무작위)</button>
+<button id="btnWorkspace">Workspace (작업공간)</button>
+<button id="btnClearTrail">Clear Trail</button>
+</div>
+
+<h2>End-Effector 위치</h2>
+<div class="info-box" id="infoEE">x = 6.000
+y = 0.000
+절대 거리 = 6.000</div>
+
+<h2>변환 행렬 (Transformation Matrices)</h2>
+<div class="info-box" id="infoT01" style="font-size:10px">T01 (Base → Joint 1):
+[ cos&theta;1  -sin&theta;1  L1*cos&theta;1 ]
+[ sin&theta;1   cos&theta;1  L1*sin&theta;1 ]
+[   0        0        1      ]</div>
+<div class="info-box" id="infoT12" style="font-size:10px">T12 (Joint 1 → Joint 2):
+...</div>
+<div class="info-box" id="infoT23" style="font-size:10px">T23 (Joint 2 → End-Effector):
+...</div>
+
+<div style="font-size:10px;color:#555;text-align:center;margin-top:auto">
+마우스: 회전 | 스크롤: 줌 | 우클릭: 이동<br>
+FK: x = &Sigma;Li*cos(&Sigma;&theta;i), y = &Sigma;Li*sin(&Sigma;&theta;i)
+</div>
+</div>
+<canvas id="canvas3d"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Minimal OrbitControls
+!function(){
+const EPS=1e-6,ST={NONE:-1,ROT:0,PAN:2};
+class OrbitControls{
+constructor(cam,el){
+this.camera=cam;this.domElement=el;this.target=new THREE.Vector3();
+this.rotateSpeed=1;this.zoomSpeed=1;
+let state=ST.NONE,sph=new THREE.Spherical(),sphD=new THREE.Spherical();
+let panOff=new THREE.Vector3(),scale=1;
+let rS=new THREE.Vector2(),rE=new THREE.Vector2(),rD=new THREE.Vector2();
+let pS=new THREE.Vector2(),pE=new THREE.Vector2(),pD=new THREE.Vector2();
+const zs=()=>Math.pow(0.95,this.zoomSpeed);
+const pl=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,0);v.multiplyScalar(-d);panOff.add(v)};
+const pu=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,1);v.multiplyScalar(d);panOff.add(v)};
+const pan=(dx,dy)=>{let p=cam.position.clone().sub(this.target);let d=p.length()*Math.tan(cam.fov/2*Math.PI/180);pl(2*dx*d/el.clientHeight,cam.matrix);pu(2*dy*d/el.clientHeight,cam.matrix)};
+const md=e=>{e.preventDefault();if(e.button===0){state=ST.ROT;rS.set(e.clientX,e.clientY)}else if(e.button===2){state=ST.PAN;pS.set(e.clientX,e.clientY)}if(state!==ST.NONE){document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu)}};
+const mm=e=>{e.preventDefault();if(state===ST.ROT){rE.set(e.clientX,e.clientY);rD.subVectors(rE,rS);sphD.theta-=2*Math.PI*rD.x/el.clientHeight*this.rotateSpeed;sphD.phi-=2*Math.PI*rD.y/el.clientHeight*this.rotateSpeed;rS.copy(rE)}else if(state===ST.PAN){pE.set(e.clientX,e.clientY);pD.subVectors(pE,pS);pan(pD.x,pD.y);pS.copy(pE)}};
+const mu=()=>{state=ST.NONE;document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu)};
+const wh=e=>{e.preventDefault();if(e.deltaY<0)scale/=zs();else scale*=zs()};
+el.addEventListener('mousedown',md);el.addEventListener('wheel',wh,{passive:false});el.addEventListener('contextmenu',e=>e.preventDefault());
+this.update=function(){let off=new THREE.Vector3();let q=new THREE.Quaternion().setFromUnitVectors(cam.up,new THREE.Vector3(0,1,0));let qi=q.clone().invert();off.copy(cam.position).sub(this.target);off.applyQuaternion(q);sph.setFromVector3(off);sph.theta+=sphD.theta;sph.phi+=sphD.phi;sph.phi=Math.max(EPS,Math.min(Math.PI-EPS,sph.phi));sph.radius*=scale;sph.radius=Math.max(0.5,Math.min(100,sph.radius));this.target.add(panOff);off.setFromSpherical(sph);off.applyQuaternion(qi);cam.position.copy(this.target).add(off);cam.lookAt(this.target);sphD.set(0,0,0);panOff.set(0,0,0);scale=1};
+}
+}
+THREE.OrbitControls=OrbitControls;
+}();
+
+let scene,camera,renderer,controls;
+let armGroup;
+let trailPoints=[],trailLine;
+let workspacePoints=null;
+let jointMeshes=[],linkMeshes=[],eeMesh;
+
+function init(){
+const canvas=document.getElementById('canvas3d');
+renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x1a1a2e);
+
+scene=new THREE.Scene();
+camera=new THREE.PerspectiveCamera(50,1,0.1,200);
+camera.position.set(0,12,10);
+controls=new THREE.OrbitControls(camera,canvas);
+controls.target.set(3,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+let dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(5,10,8);scene.add(dl);
+let dl2=new THREE.DirectionalLight(0xffffff,0.3);dl2.position.set(-5,8,-3);scene.add(dl2);
+
+// Grid (XY plane at z=0, viewed from above-ish)
+// We'll work in XY plane for FK, Three.js XZ for floor
+// Actually let's use Three.js XY plane directly for the arm, with Z=up for camera view
+let gridSize=16,gridDiv=16;
+let gVerts=[];
+for(let i=-gridSize/2;i<=gridSize/2;i+=gridSize/gridDiv){
+gVerts.push(i,0,-gridSize/2, i,0,gridSize/2);
+gVerts.push(-gridSize/2,0,i, gridSize/2,0,i);
+}
+let gridGeo=new THREE.BufferGeometry();
+gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(gVerts,3));
+scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0x0a1838})));
+
+// World axes
+let axH=new THREE.AxesHelper(2);
+scene.add(axH);
+
+// Arm (build in XZ plane so it's visible from default cam, Y=up=0)
+armGroup=new THREE.Group();
+scene.add(armGroup);
+
+// Trail
+let tlGeo=new THREE.BufferGeometry();
+tlGeo.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(90000),3));
+trailLine=new THREE.Line(tlGeo,new THREE.LineBasicMaterial({color:0xffaa00,transparent:true,opacity:0.6}));
+trailLine.geometry.setDrawRange(0,0);
+scene.add(trailLine);
+
+buildArm();
+resize();
+window.addEventListener('resize',resize);
+animate();
+updateArm();
+}
+
+function buildArm(){
+// Clear old
+while(armGroup.children.length)armGroup.remove(armGroup.children[0]);
+jointMeshes=[];linkMeshes=[];
+
+let jointGeo=new THREE.SphereGeometry(0.18,16,16);
+let linkColors=[0xff4444,0x44ff44,0x4488ff];
+let jointColor=0xcccccc;
+
+// Base joint
+let j0=new THREE.Mesh(jointGeo,new THREE.MeshLambertMaterial({color:0xff8800}));
+j0.position.set(0,0.1,0);
+armGroup.add(j0);
+jointMeshes.push(j0);
+
+// We'll create links and joints that get repositioned in updateArm
+for(let i=0;i<3;i++){
+// Link cylinder (will be repositioned)
+let linkGeo=new THREE.CylinderGeometry(0.08,0.08,1,12);
+let link=new THREE.Mesh(linkGeo,new THREE.MeshLambertMaterial({color:linkColors[i]}));
+link.position.set(0,0.1,0);
+armGroup.add(link);
+linkMeshes.push(link);
+
+// Joint sphere
+let j=new THREE.Mesh(jointGeo,new THREE.MeshLambertMaterial({color:jointColor}));
+j.position.set(0,0.1,0);
+armGroup.add(j);
+jointMeshes.push(j);
+}
+
+// End-effector
+let eeGeo=new THREE.SphereGeometry(0.22,16,16);
+eeMesh=new THREE.Mesh(eeGeo,new THREE.MeshLambertMaterial({color:0xffff00,emissive:0x444400}));
+eeMesh.position.set(0,0.1,0);
+armGroup.add(eeMesh);
+}
+
+function deg2rad(d){return d*Math.PI/180}
+
+function updateArm(){
+let t1=deg2rad(parseFloat(document.getElementById('sliderT1').value));
+let t2=deg2rad(parseFloat(document.getElementById('sliderT2').value));
+let t3=deg2rad(parseFloat(document.getElementById('sliderT3').value));
+let L1=parseFloat(document.getElementById('sliderL1').value);
+let L2=parseFloat(document.getElementById('sliderL2').value);
+let L3=parseFloat(document.getElementById('sliderL3').value);
+
+document.getElementById('t1Val').textContent=(t1*180/Math.PI).toFixed(1)+'\u00b0';
+document.getElementById('t2Val').textContent=(t2*180/Math.PI).toFixed(1)+'\u00b0';
+document.getElementById('t3Val').textContent=(t3*180/Math.PI).toFixed(1)+'\u00b0';
+document.getElementById('l1Val').textContent=L1.toFixed(1);
+document.getElementById('l2Val').textContent=L2.toFixed(1);
+document.getElementById('l3Val').textContent=L3.toFixed(1);
+
+// Forward kinematics in XZ plane (Y=0.1 for visibility above grid)
+// Joint 0 at origin
+let j0x=0,j0z=0;
+// Joint 1
+let j1x=L1*Math.cos(t1);
+let j1z=L1*Math.sin(t1);
+// Joint 2
+let j2x=j1x+L2*Math.cos(t1+t2);
+let j2z=j1z+L2*Math.sin(t1+t2);
+// End-effector
+let eex=j2x+L3*Math.cos(t1+t2+t3);
+let eez=j2z+L3*Math.sin(t1+t2+t3);
+
+let yOff=0.1;
+
+// Position joints (in Three.js: x=x, y=up, z=z)
+jointMeshes[0].position.set(j0x,yOff,j0z);
+jointMeshes[1].position.set(j1x,yOff,j1z);
+jointMeshes[2].position.set(j2x,yOff,j2z);
+jointMeshes[3].position.set(eex,yOff,eez);
+
+// Position links (cylinders between joints)
+positionLink(linkMeshes[0],j0x,j0z,j1x,j1z,L1,yOff);
+positionLink(linkMeshes[1],j1x,j1z,j2x,j2z,L2,yOff);
+positionLink(linkMeshes[2],j2x,j2z,eex,eez,L3,yOff);
+
+// End-effector
+eeMesh.position.set(eex,yOff,eez);
+
+// Trail
+trailPoints.push(new THREE.Vector3(eex,yOff,eez));
+if(trailPoints.length>10000)trailPoints.shift();
+let posArr=trailLine.geometry.attributes.position.array;
+for(let i=0;i<trailPoints.length;i++){
+posArr[i*3]=trailPoints[i].x;posArr[i*3+1]=trailPoints[i].y;posArr[i*3+2]=trailPoints[i].z;
+}
+trailLine.geometry.attributes.position.needsUpdate=true;
+trailLine.geometry.setDrawRange(0,trailPoints.length);
+
+// Info
+let dist=Math.sqrt(eex*eex+eez*eez);
+document.getElementById('infoEE').textContent=
+`x = ${eex.toFixed(3)}\ny = ${eez.toFixed(3)}\n절대 거리 = ${dist.toFixed(3)}`;
+
+// Transformation matrices
+let c1=Math.cos(t1),s1=Math.sin(t1);
+let c12=Math.cos(t1+t2),s12=Math.sin(t1+t2);
+let c123=Math.cos(t1+t2+t3),s123=Math.sin(t1+t2+t3);
+
+document.getElementById('infoT01').textContent=
+`T01 (Base → Joint 1):\n`+
+`[ ${f(c1)}  ${f(-s1)}  ${f(L1*c1)} ]\n`+
+`[ ${f(s1)}   ${f(c1)}  ${f(L1*s1)} ]\n`+
+`[  0.000   0.000   1.000 ]`;
+
+document.getElementById('infoT12').textContent=
+`T12 (Joint 1 → Joint 2):\n`+
+`[ ${f(Math.cos(t2))}  ${f(-Math.sin(t2))}  ${f(L2*Math.cos(t2))} ]\n`+
+`[ ${f(Math.sin(t2))}   ${f(Math.cos(t2))}  ${f(L2*Math.sin(t2))} ]\n`+
+`[  0.000   0.000   1.000 ]`;
+
+document.getElementById('infoT23').textContent=
+`T23 (Joint 2 → EE):\n`+
+`[ ${f(Math.cos(t3))}  ${f(-Math.sin(t3))}  ${f(L3*Math.cos(t3))} ]\n`+
+`[ ${f(Math.sin(t3))}   ${f(Math.cos(t3))}  ${f(L3*Math.sin(t3))} ]\n`+
+`[  0.000   0.000   1.000 ]`;
+}
+
+function f(v){return (v>=0?' ':'')+v.toFixed(3)}
+
+function positionLink(mesh,x1,z1,x2,z2,len,y){
+let mx=(x1+x2)/2,mz=(z1+z2)/2;
+mesh.position.set(mx,y,mz);
+// scale
+mesh.scale.y=len;
+// rotate to align
+let angle=Math.atan2(z2-z1,x2-x1);
+mesh.rotation.set(0,0,0);
+mesh.rotation.x=-Math.PI/2; // default cylinder is along Y
+mesh.rotation.order='ZXY';
+// We need to orient the cylinder from (x1,z1) to (x2,z2) in XZ plane
+// Cylinder default: along Y-axis. We need it along angle direction in XZ plane
+mesh.rotation.set(0,0,0);
+let dir=new THREE.Vector3(x2-x1,0,z2-z1).normalize();
+let up=new THREE.Vector3(0,1,0);
+let quat=new THREE.Quaternion();
+quat.setFromUnitVectors(up,dir);
+mesh.setRotationFromQuaternion(quat);
+}
+
+// Sliders
+['sliderT1','sliderT2','sliderT3','sliderL1','sliderL2','sliderL3'].forEach(id=>{
+document.getElementById(id).addEventListener('input',updateArm);
+});
+
+// Home
+document.getElementById('btnHome').addEventListener('click',()=>{
+document.getElementById('sliderT1').value=0;
+document.getElementById('sliderT2').value=0;
+document.getElementById('sliderT3').value=0;
+updateArm();
+});
+
+// Random
+document.getElementById('btnRandom').addEventListener('click',()=>{
+document.getElementById('sliderT1').value=Math.round((Math.random()*360-180)*2)/2;
+document.getElementById('sliderT2').value=Math.round((Math.random()*360-180)*2)/2;
+document.getElementById('sliderT3').value=Math.round((Math.random()*360-180)*2)/2;
+updateArm();
+});
+
+// Clear trail
+document.getElementById('btnClearTrail').addEventListener('click',()=>{
+trailPoints=[];
+trailLine.geometry.setDrawRange(0,0);
+});
+
+// Workspace
+document.getElementById('btnWorkspace').addEventListener('click',function(){
+if(workspacePoints){
+scene.remove(workspacePoints);
+workspacePoints=null;
+this.classList.remove('active');
+return;
+}
+this.classList.add('active');
+let L1=parseFloat(document.getElementById('sliderL1').value);
+let L2=parseFloat(document.getElementById('sliderL2').value);
+let L3=parseFloat(document.getElementById('sliderL3').value);
+let N=2000;
+let positions=new Float32Array(N*3);
+let colors=new Float32Array(N*3);
+for(let i=0;i<N;i++){
+let a1=(Math.random()*360-180)*Math.PI/180;
+let a2=(Math.random()*360-180)*Math.PI/180;
+let a3=(Math.random()*360-180)*Math.PI/180;
+let ex=L1*Math.cos(a1)+L2*Math.cos(a1+a2)+L3*Math.cos(a1+a2+a3);
+let ey=L1*Math.sin(a1)+L2*Math.sin(a1+a2)+L3*Math.sin(a1+a2+a3);
+positions[i*3]=ex;
+positions[i*3+1]=0.05;
+positions[i*3+2]=ey;
+// color by distance from origin
+let d=Math.sqrt(ex*ex+ey*ey)/(L1+L2+L3);
+colors[i*3]=d;colors[i*3+1]=0.3;colors[i*3+2]=1-d;
+}
+let geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+workspacePoints=new THREE.Points(geo,new THREE.PointsMaterial({size:0.06,vertexColors:true,transparent:true,opacity:0.5}));
+scene.add(workspacePoints);
+});
+
+function resize(){
+let canvas=document.getElementById('canvas3d');
+let w=window.innerWidth-370,h=window.innerHeight;
+renderer.setSize(w,h);
+camera.aspect=w/h;
+camera.updateProjectionMatrix();
+}
+
+function animate(){
+requestAnimationFrame(animate);
+controls.update();
+renderer.render(scene,camera);
+}
+
+init();
+</script>
+</body>
+</html>

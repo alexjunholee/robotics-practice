@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SE(3) 포즈 합성 시각화 — Pose Composition</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+#sidebar {
+  width: 400px;
+  min-width: 400px;
+  padding: 16px;
+  background: #16213e;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-right: 2px solid #0f3460;
+}
+h1 { font-size: 17px; color: #e94560; }
+h2 { font-size: 12px; color: #0f3460; background: #e94560; padding: 3px 8px; border-radius: 4px; margin-top: 2px; }
+.slider-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.slider-row label { width: 50px; font-size: 11px; font-family: monospace; }
+.slider-row input[type=range] { flex: 1; accent-color: #e94560; }
+.slider-row .val { width: 50px; text-align: right; font-family: monospace; font-size: 11px; color: #53d8fb; }
+.transform-group {
+  background: #0d1b38; padding: 8px; border-radius: 4px;
+  border-left: 3px solid;
+}
+.t1-group { border-left-color: #ff6666; }
+.t2-group { border-left-color: #6666ff; }
+button {
+  padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;
+  font-size: 11px; font-weight: 600;
+}
+.btn-primary { background: #e94560; color: #fff; }
+.btn-secondary { background: #0f3460; color: #e0e0e0; }
+.btn-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.toggle-row { display: flex; gap: 8px; font-size: 11px; align-items: center; }
+.toggle-row label { display: flex; align-items: center; gap: 3px; cursor: pointer; }
+.toggle-row input { accent-color: #e94560; }
+.matrix-box {
+  font-family: monospace; font-size: 10px; background: #0d1b38;
+  padding: 6px; border-radius: 4px; line-height: 1.5; white-space: pre;
+  border-left: 3px solid;
+}
+.note {
+  font-size: 11px; color: #f0c040; background: rgba(240,192,64,0.1);
+  padding: 8px; border-radius: 4px; border-left: 3px solid #f0c040;
+  line-height: 1.5;
+}
+.noncommute-label {
+  font-size: 13px; color: #ff6060; font-weight: bold;
+  text-align: center; padding: 4px;
+  background: rgba(255,96,96,0.1); border-radius: 4px;
+}
+#three-container { flex: 1; position: relative; }
+#three-container canvas { display: block; }
+.legend-3d {
+  position: absolute; bottom: 10px; left: 14px; font-size: 11px; line-height: 1.6;
+}
+.legend-3d .lw { color: #aaa; } .legend-3d .lr { color: #ff6666; }
+.legend-3d .lb { color: #6688ff; } .legend-3d .lg { color: #66ff66; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>SE(3) 포즈 합성 시각화</h1>
+  <p style="font-size:11px;color:#888;">3D Pose Composition &mdash; Non-commutativity of SE(3)</p>
+
+  <h2>T1 변환 (빨간 프레임)</h2>
+  <div class="transform-group t1-group" id="t1-controls"></div>
+
+  <h2>T2 변환 (파란 프레임 via T1&middot;T2)</h2>
+  <div class="transform-group t2-group" id="t2-controls"></div>
+
+  <h2>프레임 표시 Visibility</h2>
+  <div class="toggle-row">
+    <label><input type="checkbox" id="show-world" checked> World (흰색)</label>
+    <label><input type="checkbox" id="show-t1" checked> T1 (빨강)</label>
+    <label><input type="checkbox" id="show-t1t2" checked> T1&middot;T2 (파랑)</label>
+    <label><input type="checkbox" id="show-t2t1" checked> T2&middot;T1 (초록)</label>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="btn-reset">Reset</button>
+    <button class="btn-secondary" onclick="setExample1()">예시1: 회전+이동</button>
+    <button class="btn-secondary" onclick="setExample2()">예시2: 큰 차이</button>
+  </div>
+
+  <div id="noncommute-label" class="noncommute-label" style="display:none;"></div>
+
+  <h2>행렬 Matrices (4&times;4)</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+    <div>
+      <div style="font-size:10px;color:#ff6666;margin-bottom:2px;">T1</div>
+      <div class="matrix-box" id="mat-t1" style="border-left-color:#ff6666;"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#6688ff;margin-bottom:2px;">T2</div>
+      <div class="matrix-box" id="mat-t2" style="border-left-color:#6688ff;"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#9999ff;margin-bottom:2px;">T1&middot;T2</div>
+      <div class="matrix-box" id="mat-t1t2" style="border-left-color:#9999ff;"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#66ff66;margin-bottom:2px;">T2&middot;T1</div>
+      <div class="matrix-box" id="mat-t2t1" style="border-left-color:#66ff66;"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    SE(3)에서 변환의 순서가 결과를 바꾼다.<br>
+    이것이 Lie group의 비가환성이다.<br>
+    T1&middot;T2 &ne; T2&middot;T1 (일반적으로)
+  </div>
+</div>
+
+<div id="three-container">
+  <div class="legend-3d">
+    <span class="lw">&#9608; World (origin)</span><br>
+    <span class="lr">&#9608; T1 frame</span><br>
+    <span class="lb">&#9608; T1&middot;T2 frame</span><br>
+    <span class="lg">&#9608; T2&middot;T1 frame</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ---- Slider generation ----
+function createSliders(containerId, prefix) {
+  const container = document.getElementById(containerId);
+  const params = [
+    { name: 'x', min: -5, max: 5, step: 0.1, val: 0 },
+    { name: 'y', min: -5, max: 5, step: 0.1, val: 0 },
+    { name: 'z', min: -5, max: 5, step: 0.1, val: 0 },
+    { name: 'roll', min: -180, max: 180, step: 1, val: 0 },
+    { name: 'pitch', min: -180, max: 180, step: 1, val: 0 },
+    { name: 'yaw', min: -180, max: 180, step: 1, val: 0 },
+  ];
+  params.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+    const isAngle = ['roll','pitch','yaw'].includes(p.name);
+    row.innerHTML = `
+      <label>${p.name}${isAngle ? ' (&deg;)' : ' (m)'}</label>
+      <input type="range" id="${prefix}_${p.name}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.val}">
+      <span class="val" id="${prefix}_${p.name}_val">${isAngle ? p.val.toFixed(0) : p.val.toFixed(1)}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+createSliders('t1-controls', 't1');
+createSliders('t2-controls', 't2');
+
+document.querySelectorAll('input[type=range]').forEach(el => {
+  el.addEventListener('input', () => {
+    const valEl = document.getElementById(el.id + '_val');
+    const v = parseFloat(el.value);
+    if (el.id.includes('roll') || el.id.includes('pitch') || el.id.includes('yaw'))
+      valEl.textContent = v.toFixed(0);
+    else
+      valEl.textContent = v.toFixed(1);
+    updateScene();
+  });
+});
+
+document.querySelectorAll('input[type=checkbox]').forEach(el => {
+  el.addEventListener('change', updateScene);
+});
+
+function gv(id) { return parseFloat(document.getElementById(id).value); }
+
+function setExample1() {
+  document.getElementById('t1_x').value = 2;
+  document.getElementById('t1_y').value = 0;
+  document.getElementById('t1_z').value = 0;
+  document.getElementById('t1_roll').value = 0;
+  document.getElementById('t1_pitch').value = 0;
+  document.getElementById('t1_yaw').value = 45;
+  document.getElementById('t2_x').value = 1;
+  document.getElementById('t2_y').value = 1;
+  document.getElementById('t2_z').value = 0;
+  document.getElementById('t2_roll').value = 0;
+  document.getElementById('t2_pitch').value = 0;
+  document.getElementById('t2_yaw').value = 30;
+  document.querySelectorAll('input[type=range]').forEach(el => el.dispatchEvent(new Event('input')));
+}
+
+function setExample2() {
+  document.getElementById('t1_x').value = 1;
+  document.getElementById('t1_y').value = 0;
+  document.getElementById('t1_z').value = 2;
+  document.getElementById('t1_roll').value = 90;
+  document.getElementById('t1_pitch').value = 0;
+  document.getElementById('t1_yaw').value = 0;
+  document.getElementById('t2_x').value = 0;
+  document.getElementById('t2_y').value = 2;
+  document.getElementById('t2_z').value = 0;
+  document.getElementById('t2_roll').value = 0;
+  document.getElementById('t2_pitch').value = 45;
+  document.getElementById('t2_yaw').value = 90;
+  document.querySelectorAll('input[type=range]').forEach(el => el.dispatchEvent(new Event('input')));
+}
+
+function resetAll() {
+  document.querySelectorAll('#t1-controls input, #t2-controls input').forEach(el => {
+    el.value = 0;
+    el.dispatchEvent(new Event('input'));
+  });
+}
+document.getElementById('btn-reset').addEventListener('click', resetAll);
+
+// ---- Three.js ----
+const container = document.getElementById('three-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1b38);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+camera.position.set(6, 5, 8);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+container.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+function resizeRenderer() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resizeRenderer);
+resizeRenderer();
+
+// Grid
+const gridHelper = new THREE.GridHelper(10, 10, 0x334466, 0x1a2744);
+scene.add(gridHelper);
+
+// Ambient + directional light
+scene.add(new THREE.AmbientLight(0x404060, 1));
+const dlight = new THREE.DirectionalLight(0xffffff, 0.6);
+dlight.position.set(5, 10, 5);
+scene.add(dlight);
+
+// Create coordinate frame axes (using lines for crispness)
+function createFrame(length, lineWidth, opacity) {
+  const group = new THREE.Group();
+  const dirs = [
+    { dir: new THREE.Vector3(1,0,0), color: 0xff0000 },
+    { dir: new THREE.Vector3(0,1,0), color: 0x00ff00 },
+    { dir: new THREE.Vector3(0,0,1), color: 0x0000ff },
+  ];
+  dirs.forEach(d => {
+    // Shaft
+    const geom = new THREE.CylinderGeometry(0.03 * lineWidth, 0.03 * lineWidth, length, 8);
+    geom.translate(0, length / 2, 0);
+    geom.rotateZ(-Math.PI / 2);
+    // Align cylinder (which points Y) to the desired direction
+    const q = new THREE.Quaternion();
+    q.setFromUnitVectors(new THREE.Vector3(1, 0, 0), d.dir);
+    geom.applyQuaternion(q);
+    const mat = new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity });
+    group.add(new THREE.Mesh(geom, mat));
+
+    // Cone tip
+    const coneGeom = new THREE.ConeGeometry(0.07 * lineWidth, 0.2 * lineWidth, 8);
+    coneGeom.translate(0, 0.1 * lineWidth, 0);
+    coneGeom.rotateZ(-Math.PI / 2);
+    coneGeom.applyQuaternion(q);
+    coneGeom.translate(d.dir.x * length, d.dir.y * length, d.dir.z * length);
+    group.add(new THREE.Mesh(coneGeom, mat));
+  });
+
+  // Small sphere at origin
+  const sph = new THREE.Mesh(
+    new THREE.SphereGeometry(0.06 * lineWidth, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity })
+  );
+  group.add(sph);
+  return group;
+}
+
+// World frame (thick, white-ish)
+const worldFrame = createFrame(2.0, 2.0, 0.6);
+scene.add(worldFrame);
+
+// Labeled axis letters for world
+function makeLabel(text, pos, color) {
+  const canvas2 = document.createElement('canvas');
+  canvas2.width = 64; canvas2.height = 64;
+  const c = canvas2.getContext('2d');
+  c.fillStyle = color;
+  c.font = 'bold 48px monospace';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(text, 32, 32);
+  const tex = new THREE.CanvasTexture(canvas2);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  sprite.position.copy(pos);
+  sprite.scale.set(0.4, 0.4, 0.4);
+  return sprite;
+}
+scene.add(makeLabel('X', new THREE.Vector3(2.4, 0, 0), '#ff4444'));
+scene.add(makeLabel('Y', new THREE.Vector3(0, 2.4, 0), '#44ff44'));
+scene.add(makeLabel('Z', new THREE.Vector3(0, 0, 2.4), '#4444ff'));
+
+// T1 frame
+const t1Frame = createFrame(1.2, 1.5, 0.9);
+scene.add(t1Frame);
+// Tinted glow sphere for T1
+const t1Marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.12, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.7 })
+);
+t1Frame.add(t1Marker);
+
+// T1*T2 frame
+const t1t2Frame = createFrame(1.2, 1.5, 0.9);
+scene.add(t1t2Frame);
+const t1t2Marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.12, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.7 })
+);
+t1t2Frame.add(t1t2Marker);
+
+// T2*T1 frame
+const t2t1Frame = createFrame(1.2, 1.5, 0.9);
+scene.add(t2t1Frame);
+const t2t1Marker = new THREE.Mesh(
+  new THREE.SphereGeometry(0.12, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.7 })
+);
+t2t1Frame.add(t2t1Marker);
+
+// Connection lines
+const lineMat12 = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.3 });
+const lineGeom12 = new THREE.BufferGeometry();
+lineGeom12.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 0,0,0, 0,0,0], 3));
+const line12 = new THREE.Line(lineGeom12, lineMat12);
+scene.add(line12);
+
+const lineMat21 = new THREE.LineBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.3 });
+const lineGeom21 = new THREE.BufferGeometry();
+lineGeom21.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 0,0,0, 0,0,0], 3));
+const line21 = new THREE.Line(lineGeom21, lineMat21);
+scene.add(line21);
+
+// ---- Math utilities ----
+function deg2rad(d) { return d * Math.PI / 180; }
+
+function makeMatrix(x, y, z, roll, pitch, yaw) {
+  const m = new THREE.Matrix4();
+  const euler = new THREE.Euler(deg2rad(roll), deg2rad(yaw), deg2rad(pitch), 'YZX');
+  // Three.js Euler: we use intrinsic ZYX = extrinsic XYZ
+  // For robotics convention: Rz(yaw) * Ry(pitch) * Rx(roll)
+  const e = new THREE.Euler(deg2rad(roll), deg2rad(pitch), deg2rad(yaw), 'ZYX');
+  const q = new THREE.Quaternion().setFromEuler(e);
+  m.makeRotationFromQuaternion(q);
+  m.setPosition(x, y, z);
+  return m;
+}
+
+function mat4ToArray(m) {
+  // Three.js stores column-major; return row-major 4x4
+  const e = m.elements;
+  return [
+    [e[0], e[4], e[8],  e[12]],
+    [e[1], e[5], e[9],  e[13]],
+    [e[2], e[6], e[10], e[14]],
+    [e[3], e[7], e[11], e[15]],
+  ];
+}
+
+function formatMat(m) {
+  const a = mat4ToArray(m);
+  return a.map(row => row.map(v => {
+    const s = v.toFixed(3);
+    return s.length < 7 ? s.padStart(7) : s;
+  }).join(' ')).join('\n');
+}
+
+function matricesEqual(m1, m2, tol) {
+  const a1 = m1.elements, a2 = m2.elements;
+  for (let i = 0; i < 16; i++) {
+    if (Math.abs(a1[i] - a2[i]) > tol) return false;
+  }
+  return true;
+}
+
+function updateScene() {
+  const T1 = makeMatrix(gv('t1_x'), gv('t1_y'), gv('t1_z'), gv('t1_roll'), gv('t1_pitch'), gv('t1_yaw'));
+  const T2 = makeMatrix(gv('t2_x'), gv('t2_y'), gv('t2_z'), gv('t2_roll'), gv('t2_pitch'), gv('t2_yaw'));
+
+  const T1T2 = new THREE.Matrix4().copy(T1).multiply(T2);
+  const T2T1 = new THREE.Matrix4().copy(T2).multiply(T1);
+
+  // Apply to frames
+  t1Frame.matrix.copy(T1);
+  t1Frame.matrixAutoUpdate = false;
+
+  t1t2Frame.matrix.copy(T1T2);
+  t1t2Frame.matrixAutoUpdate = false;
+
+  t2t1Frame.matrix.copy(T2T1);
+  t2t1Frame.matrixAutoUpdate = false;
+
+  // Visibility
+  worldFrame.visible = document.getElementById('show-world').checked;
+  t1Frame.visible = document.getElementById('show-t1').checked;
+  t1t2Frame.visible = document.getElementById('show-t1t2').checked;
+  t2t1Frame.visible = document.getElementById('show-t2t1').checked;
+
+  // Connection lines: origin -> T1 -> T1T2, origin -> T2T1
+  const p1 = new THREE.Vector3().setFromMatrixPosition(T1);
+  const p12 = new THREE.Vector3().setFromMatrixPosition(T1T2);
+  const p21 = new THREE.Vector3().setFromMatrixPosition(T2T1);
+
+  const pos12 = line12.geometry.attributes.position;
+  pos12.setXYZ(0, 0, 0, 0);
+  pos12.setXYZ(1, p1.x, p1.y, p1.z);
+  pos12.setXYZ(2, p12.x, p12.y, p12.z);
+  pos12.needsUpdate = true;
+
+  const pos21 = line21.geometry.attributes.position;
+  pos21.setXYZ(0, 0, 0, 0);
+  pos21.setXYZ(1, p21.x, p21.y, p21.z);
+  pos21.needsUpdate = true;
+
+  // Matrices display
+  document.getElementById('mat-t1').textContent = formatMat(T1);
+  document.getElementById('mat-t2').textContent = formatMat(T2);
+  document.getElementById('mat-t1t2').textContent = formatMat(T1T2);
+  document.getElementById('mat-t2t1').textContent = formatMat(T2T1);
+
+  // Non-commutativity check
+  const label = document.getElementById('noncommute-label');
+  if (matricesEqual(T1T2, T2T1, 0.001)) {
+    label.style.display = 'none';
+  } else {
+    label.style.display = 'block';
+    // Compute positional difference
+    const posDiff = p12.distanceTo(p21);
+    label.innerHTML = `비가환: T1&middot;T2 &ne; T2&middot;T1 &nbsp; (위치 차이: ${posDiff.toFixed(3)} m)`;
+  }
+}
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// Initial
+updateScene();
+</script>
+</body>
+</html>

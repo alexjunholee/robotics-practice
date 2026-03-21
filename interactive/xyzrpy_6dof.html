@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6DoF 포즈 시각화 (XYZ + RPY)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;overflow:hidden}
+#container{display:flex;height:100vh;width:100vw}
+#sidebar{width:360px;min-width:360px;background:#16213e;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;border-right:1px solid #0f3460}
+h1{font-size:18px;color:#e94560;text-align:center;border-bottom:1px solid #0f3460;padding-bottom:8px}
+h2{font-size:13px;color:#0f3460;background:#e94560;padding:3px 8px;border-radius:4px;margin-top:2px}
+.slider-group{display:flex;flex-direction:column;gap:1px}
+.slider-group label{font-size:12px;color:#a0a0c0;display:flex;justify-content:space-between}
+.slider-group input[type=range]{width:100%;accent-color:#e94560}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap}
+button{background:#0f3460;color:#e0e0e0;border:1px solid #e94560;padding:7px 12px;border-radius:4px;cursor:pointer;font-size:12px;transition:background .2s}
+button:hover{background:#e94560;color:#fff}
+button.active{background:#e94560;color:#fff}
+.info-box{background:#0d1b3e;border:1px solid #0f3460;border-radius:4px;padding:8px;font-family:'Courier New',monospace;font-size:10.5px;line-height:1.5;white-space:pre;overflow-x:auto}
+#canvas3d{flex:1;display:block}
+.section{border:1px solid #0f3460;border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:4px}
+.axis-label{font-weight:bold;font-size:12px}
+.x-col{color:#ff4444}.y-col{color:#44ff44}.z-col{color:#4488ff}
+.r-col{color:#ff8844}.p-col{color:#88ff44}.w-col{color:#44ffff}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="sidebar">
+<h1>6DoF 포즈 시각화</h1>
+<h2>XYZ + Roll-Pitch-Yaw</h2>
+
+<div class="section">
+<span class="axis-label">위치 (Position)</span>
+<div class="slider-group">
+<label><span class="x-col">X</span><span id="xVal">0.00</span></label>
+<input type="range" id="sliderX" min="-5" max="5" step="0.05" value="0">
+</div>
+<div class="slider-group">
+<label><span class="y-col">Y</span><span id="yVal">0.00</span></label>
+<input type="range" id="sliderY" min="-5" max="5" step="0.05" value="0">
+</div>
+<div class="slider-group">
+<label><span class="z-col">Z</span><span id="zVal">0.00</span></label>
+<input type="range" id="sliderZ" min="0" max="10" step="0.05" value="0">
+</div>
+</div>
+
+<div class="section">
+<span class="axis-label">자세 (Orientation - RPY in degrees)</span>
+<div class="slider-group">
+<label><span class="r-col">Roll (X축)</span><span id="rollVal">0.0</span></label>
+<input type="range" id="sliderRoll" min="-180" max="180" step="0.5" value="0">
+</div>
+<div class="slider-group">
+<label><span class="p-col">Pitch (Y축)</span><span id="pitchVal">0.0</span></label>
+<input type="range" id="sliderPitch" min="-180" max="180" step="0.5" value="0">
+</div>
+<div class="slider-group">
+<label><span class="w-col">Yaw (Z축)</span><span id="yawVal">0.0</span></label>
+<input type="range" id="sliderYaw" min="-180" max="180" step="0.5" value="0">
+</div>
+</div>
+
+<div class="btn-row">
+<button id="btnHover">호버링</button>
+<button id="btnForward">전진 비행</button>
+<button id="btnBank">뱅킹 턴</button>
+</div>
+<div class="btn-row">
+<button id="btnRecord">Record (궤적 기록)</button>
+<button id="btnPlay">Play (재생)</button>
+<button id="btnClearTrail">Clear Trail</button>
+</div>
+
+<h2>변환 행렬 (4x4 Transformation Matrix)</h2>
+<div class="info-box" id="infoT">T =
+[ 1.000  0.000  0.000  0.000 ]
+[ 0.000  1.000  0.000  0.000 ]
+[ 0.000  0.000  1.000  0.000 ]
+[ 0.000  0.000  0.000  1.000 ]</div>
+
+<h2>쿼터니언 (Quaternion)</h2>
+<div class="info-box" id="infoQ">[w, x, y, z] = [1.000, 0.000, 0.000, 0.000]</div>
+
+<div style="font-size:10px;color:#555;text-align:center;margin-top:auto">
+Z-up 좌표계 (ROS 표준) | 마우스: 회전/줌/이동
+</div>
+</div>
+<canvas id="canvas3d"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Minimal OrbitControls
+!function(){
+const EPS=1e-6,STATE={NONE:-1,ROTATE:0,DOLLY:1,PAN:2};
+class OrbitControls{
+constructor(cam,el){
+this.camera=cam;this.domElement=el;this.target=new THREE.Vector3();
+this.rotateSpeed=1;this.zoomSpeed=1;this.panSpeed=1;
+this.minDistance=1;this.maxDistance=100;
+let state=STATE.NONE,sph=new THREE.Spherical(),sphD=new THREE.Spherical();
+let panOff=new THREE.Vector3(),scale=1;
+let rStart=new THREE.Vector2(),rEnd=new THREE.Vector2(),rDelta=new THREE.Vector2();
+let pStart=new THREE.Vector2(),pEnd=new THREE.Vector2(),pDelta=new THREE.Vector2();
+const zs=()=>Math.pow(0.95,this.zoomSpeed);
+const rl=a=>{sphD.theta-=a};const ru=a=>{sphD.phi-=a};
+const pl=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,0);v.multiplyScalar(-d);panOff.add(v)};
+const pu=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,1);v.multiplyScalar(d);panOff.add(v)};
+const pan=(dx,dy)=>{if(cam.isPerspectiveCamera){let p=cam.position.clone().sub(this.target);let d=p.length()*Math.tan(cam.fov/2*Math.PI/180);pl(2*dx*d/el.clientHeight,cam.matrix);pu(2*dy*d/el.clientHeight,cam.matrix)}};
+const md=e=>{e.preventDefault();if(e.button===0){state=STATE.ROTATE;rStart.set(e.clientX,e.clientY)}else if(e.button===2){state=STATE.PAN;pStart.set(e.clientX,e.clientY)}if(state!==STATE.NONE){document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu)}};
+const mm=e=>{e.preventDefault();if(state===STATE.ROTATE){rEnd.set(e.clientX,e.clientY);rDelta.subVectors(rEnd,rStart);rl(2*Math.PI*rDelta.x/el.clientHeight*this.rotateSpeed);ru(2*Math.PI*rDelta.y/el.clientHeight*this.rotateSpeed);rStart.copy(rEnd)}else if(state===STATE.PAN){pEnd.set(e.clientX,e.clientY);pDelta.subVectors(pEnd,pStart);pan(pDelta.x,pDelta.y);pStart.copy(pEnd)}};
+const mu=()=>{state=STATE.NONE;document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu)};
+const wh=e=>{e.preventDefault();if(e.deltaY<0)scale/=zs();else scale*=zs()};
+el.addEventListener('mousedown',md);el.addEventListener('wheel',wh,{passive:false});el.addEventListener('contextmenu',e=>e.preventDefault());
+this.update=function(){let off=new THREE.Vector3();let q=new THREE.Quaternion().setFromUnitVectors(cam.up,new THREE.Vector3(0,1,0));let qi=q.clone().invert();off.copy(cam.position).sub(this.target);off.applyQuaternion(q);sph.setFromVector3(off);sph.theta+=sphD.theta;sph.phi+=sphD.phi;sph.phi=Math.max(EPS,Math.min(Math.PI-EPS,sph.phi));sph.radius*=scale;sph.radius=Math.max(this.minDistance,Math.min(this.maxDistance,sph.radius));this.target.add(panOff);off.setFromSpherical(sph);off.applyQuaternion(qi);cam.position.copy(this.target).add(off);cam.lookAt(this.target);sphD.set(0,0,0);panOff.set(0,0,0);scale=1};
+}
+}
+THREE.OrbitControls=OrbitControls;
+}();
+
+let scene,camera,renderer,controls;
+let drone,bodyFrame;
+let trailLine,trailPoints=[];
+let recording=false,trajectory=[],animating=false,animId=null;
+
+function init(){
+const canvas=document.getElementById('canvas3d');
+renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x1a1a2e);
+
+scene=new THREE.Scene();
+// Z-up: we set camera.up to Z, and use Three.js Y-up internally
+// We'll swap: Three.js Y = our Z, Three.js Z = our -Y (or we just re-map)
+// Simpler: just set up=Z in camera and work in standard coords
+camera=new THREE.PerspectiveCamera(50,1,0.1,200);
+camera.up.set(0,0,1); // Z-up
+camera.position.set(10,10,8);
+controls=new THREE.OrbitControls(camera,canvas);
+controls.target.set(0,0,2);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+let dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(8,8,12);scene.add(dl);
+let dl2=new THREE.DirectionalLight(0xffffff,0.3);dl2.position.set(-5,-5,8);scene.add(dl2);
+
+// Grid on XY plane (z=0)
+let gridSize=20,gridDiv=20;
+let gridGeo=new THREE.BufferGeometry();
+let gVerts=[];
+for(let i=-gridSize/2;i<=gridSize/2;i+=gridSize/gridDiv){
+gVerts.push(i,-gridSize/2,0,i,gridSize/2,0);
+gVerts.push(-gridSize/2,i,0,gridSize/2,i,0);
+}
+gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(gVerts,3));
+scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0x0a1838})));
+
+// World axes (thick)
+createAxis(scene,[0,0,0],5,true);
+
+// Drone
+drone=new THREE.Group();
+buildDrone();
+scene.add(drone);
+
+// Trail
+let tlGeo=new THREE.BufferGeometry();
+tlGeo.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(30000),3));
+trailLine=new THREE.Line(tlGeo,new THREE.LineBasicMaterial({color:0xffaa00,transparent:true,opacity:0.7}));
+trailLine.geometry.setDrawRange(0,0);
+scene.add(trailLine);
+
+resize();
+window.addEventListener('resize',resize);
+animate();
+updatePose();
+}
+
+function createAxis(parent,origin,len,thick){
+let r=thick?0.04:0.025;
+let colors=[0xff3333,0x33ff33,0x3388ff];
+let dirs=[[1,0,0],[0,1,0],[0,0,1]];
+let labels=['X','Y','Z'];
+for(let i=0;i<3;i++){
+let geo=new THREE.CylinderGeometry(r,r,len,8);
+let mat=new THREE.MeshLambertMaterial({color:colors[i]});
+let mesh=new THREE.Mesh(geo,mat);
+// orient cylinder along axis
+if(i===0){mesh.rotation.z=-Math.PI/2;mesh.position.set(len/2,0,0);}
+else if(i===1){mesh.position.set(0,len/2,0);}
+else{mesh.rotation.x=Math.PI/2;mesh.position.set(0,0,len/2);}
+parent.add(mesh);
+// cone tip
+let cGeo=new THREE.ConeGeometry(r*3,0.3,8);
+let cone=new THREE.Mesh(cGeo,mat);
+if(i===0){cone.rotation.z=-Math.PI/2;cone.position.set(len,0,0);}
+else if(i===1){cone.position.set(0,len,0);}
+else{cone.rotation.x=Math.PI/2;cone.position.set(0,0,len);}
+parent.add(cone);
+// label
+let canvas2=document.createElement('canvas');canvas2.width=64;canvas2.height=64;
+let ctx2=canvas2.getContext('2d');
+ctx2.fillStyle='#'+colors[i].toString(16).padStart(6,'0');
+ctx2.font='bold 48px Arial';ctx2.textAlign='center';ctx2.textBaseline='middle';
+ctx2.fillText(labels[i],32,32);
+let tex=new THREE.CanvasTexture(canvas2);
+let spMat=new THREE.SpriteMaterial({map:tex,transparent:true});
+let sp=new THREE.Sprite(spMat);
+sp.scale.set(0.5,0.5,1);
+if(i===0)sp.position.set(len+0.5,0,0);
+else if(i===1)sp.position.set(0,len+0.5,0);
+else sp.position.set(0,0,len+0.5);
+parent.add(sp);
+}
+}
+
+function buildDrone(){
+// body - flat box
+let bodyGeo=new THREE.BoxGeometry(0.6,0.6,0.15);
+let bodyMat=new THREE.MeshLambertMaterial({color:0x333355});
+let body=new THREE.Mesh(bodyGeo,bodyMat);
+drone.add(body);
+
+// 4 arms
+let armLen=0.8;
+let armGeo=new THREE.CylinderGeometry(0.03,0.03,armLen,8);
+let armMat=new THREE.MeshLambertMaterial({color:0x555577});
+let angles=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
+let rotorColors=[0xff4444,0xff4444,0x4444ff,0x4444ff];
+for(let i=0;i<4;i++){
+let arm=new THREE.Mesh(armGeo,armMat);
+let a=angles[i];
+arm.rotation.z=a;
+arm.position.set(Math.cos(a)*armLen/2,Math.sin(a)*armLen/2,0);
+drone.add(arm);
+// rotor disc
+let rotorGeo=new THREE.RingGeometry(0.15,0.25,16);
+let rotorMat=new THREE.MeshLambertMaterial({color:rotorColors[i],side:THREE.DoubleSide,transparent:true,opacity:0.6});
+let rotor=new THREE.Mesh(rotorGeo,rotorMat);
+rotor.position.set(Math.cos(a)*armLen,Math.sin(a)*armLen,0.08);
+drone.add(rotor);
+}
+
+// direction indicator (front arrow)
+let arrowGeo=new THREE.ConeGeometry(0.08,0.3,6);
+let arrowMat=new THREE.MeshLambertMaterial({color:0xff8800});
+let arrow=new THREE.Mesh(arrowGeo,arrowMat);
+arrow.rotation.z=-Math.PI/2;
+arrow.position.set(0.45,0,0);
+drone.add(arrow);
+
+// body frame axes
+bodyFrame=new THREE.Group();
+createAxis(bodyFrame,[0,0,0],1.2,false);
+drone.add(bodyFrame);
+}
+
+function deg2rad(d){return d*Math.PI/180}
+
+function updatePose(){
+let x=parseFloat(document.getElementById('sliderX').value);
+let y=parseFloat(document.getElementById('sliderY').value);
+let z=parseFloat(document.getElementById('sliderZ').value);
+let roll=deg2rad(parseFloat(document.getElementById('sliderRoll').value));
+let pitch=deg2rad(parseFloat(document.getElementById('sliderPitch').value));
+let yaw=deg2rad(parseFloat(document.getElementById('sliderYaw').value));
+
+document.getElementById('xVal').textContent=x.toFixed(2);
+document.getElementById('yVal').textContent=y.toFixed(2);
+document.getElementById('zVal').textContent=z.toFixed(2);
+document.getElementById('rollVal').textContent=(roll*180/Math.PI).toFixed(1)+'\u00b0';
+document.getElementById('pitchVal').textContent=(pitch*180/Math.PI).toFixed(1)+'\u00b0';
+document.getElementById('yawVal').textContent=(yaw*180/Math.PI).toFixed(1)+'\u00b0';
+
+// ZYX Euler: R = Rz(yaw) * Ry(pitch) * Rx(roll)
+let cr=Math.cos(roll),sr=Math.sin(roll);
+let cp=Math.cos(pitch),sp=Math.sin(pitch);
+let cy=Math.cos(yaw),sy=Math.sin(yaw);
+
+let R=[
+[cy*cp, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+[sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+[-sp,   cp*sr,          cp*cr          ]
+];
+
+// Set drone transform
+drone.position.set(x,y,z);
+// Apply rotation via matrix
+let m=new THREE.Matrix4();
+m.set(
+R[0][0],R[0][1],R[0][2],0,
+R[1][0],R[1][1],R[1][2],0,
+R[2][0],R[2][1],R[2][2],0,
+0,0,0,1
+);
+drone.rotation.setFromRotationMatrix(m);
+
+// 4x4 transform
+let T=`T = \n[ ${R[0][0].toFixed(3)}  ${R[0][1].toFixed(3)}  ${R[0][2].toFixed(3)}  ${x.toFixed(3)} ]\n[ ${R[1][0].toFixed(3)}  ${R[1][1].toFixed(3)}  ${R[1][2].toFixed(3)}  ${y.toFixed(3)} ]\n[ ${R[2][0].toFixed(3)}  ${R[2][1].toFixed(3)}  ${R[2][2].toFixed(3)}  ${z.toFixed(3)} ]\n[ 0.000  0.000  0.000  1.000 ]`;
+document.getElementById('infoT').textContent=T;
+
+// Quaternion from rotation matrix
+let tr=R[0][0]+R[1][1]+R[2][2];
+let qw,qx,qy,qz;
+if(tr>0){let s=Math.sqrt(tr+1)*2;qw=0.25*s;qx=(R[2][1]-R[1][2])/s;qy=(R[0][2]-R[2][0])/s;qz=(R[1][0]-R[0][1])/s;}
+else if(R[0][0]>R[1][1]&&R[0][0]>R[2][2]){let s=Math.sqrt(1+R[0][0]-R[1][1]-R[2][2])*2;qw=(R[2][1]-R[1][2])/s;qx=0.25*s;qy=(R[0][1]+R[1][0])/s;qz=(R[0][2]+R[2][0])/s;}
+else if(R[1][1]>R[2][2]){let s=Math.sqrt(1+R[1][1]-R[0][0]-R[2][2])*2;qw=(R[0][2]-R[2][0])/s;qx=(R[0][1]+R[1][0])/s;qy=0.25*s;qz=(R[1][2]+R[2][1])/s;}
+else{let s=Math.sqrt(1+R[2][2]-R[0][0]-R[1][1])*2;qw=(R[1][0]-R[0][1])/s;qx=(R[0][2]+R[2][0])/s;qy=(R[1][2]+R[2][1])/s;qz=0.25*s;}
+document.getElementById('infoQ').textContent=`[w, x, y, z] = [${qw.toFixed(3)}, ${qx.toFixed(3)}, ${qy.toFixed(3)}, ${qz.toFixed(3)}]`;
+
+// Trail
+trailPoints.push(new THREE.Vector3(x,y,z));
+if(trailPoints.length>10000)trailPoints.shift();
+let posArr=trailLine.geometry.attributes.position.array;
+for(let i=0;i<trailPoints.length;i++){
+posArr[i*3]=trailPoints[i].x;posArr[i*3+1]=trailPoints[i].y;posArr[i*3+2]=trailPoints[i].z;
+}
+trailLine.geometry.attributes.position.needsUpdate=true;
+trailLine.geometry.setDrawRange(0,trailPoints.length);
+
+// Record
+if(recording){
+trajectory.push({
+x:parseFloat(document.getElementById('sliderX').value),
+y:parseFloat(document.getElementById('sliderY').value),
+z:parseFloat(document.getElementById('sliderZ').value),
+roll:parseFloat(document.getElementById('sliderRoll').value),
+pitch:parseFloat(document.getElementById('sliderPitch').value),
+yaw:parseFloat(document.getElementById('sliderYaw').value)
+});
+}
+}
+
+function setSliders(x,y,z,roll,pitch,yaw){
+document.getElementById('sliderX').value=x;
+document.getElementById('sliderY').value=y;
+document.getElementById('sliderZ').value=z;
+document.getElementById('sliderRoll').value=roll;
+document.getElementById('sliderPitch').value=pitch;
+document.getElementById('sliderYaw').value=yaw;
+updatePose();
+}
+
+// Slider events
+['sliderX','sliderY','sliderZ','sliderRoll','sliderPitch','sliderYaw'].forEach(id=>{
+document.getElementById(id).addEventListener('input',()=>{if(!animating)updatePose();});
+});
+
+// Preset: Hovering
+document.getElementById('btnHover').addEventListener('click',()=>{
+stopAnim();setSliders(0,0,3,0,0,0);
+});
+
+// Preset: Forward flight
+document.getElementById('btnForward').addEventListener('click',()=>{
+stopAnim();
+animating=true;
+let t=0;
+function step(){
+if(!animating)return;
+t+=0.03;
+let x=-5+t*2;
+if(x>5){animating=false;return;}
+setSliders(x.toFixed(2),0,3,0,-5,0);
+animId=requestAnimationFrame(step);
+}
+step();
+});
+
+// Preset: Banking turn
+document.getElementById('btnBank').addEventListener('click',()=>{
+stopAnim();
+animating=true;
+let t=0;
+function step(){
+if(!animating)return;
+t+=0.02;
+if(t>2*Math.PI){animating=false;return;}
+let radius=3;
+let x=radius*Math.cos(t);
+let y=radius*Math.sin(t);
+let yaw=(t*180/Math.PI+90);
+if(yaw>180)yaw-=360;
+let roll=Math.sin(t)*30;
+setSliders(x.toFixed(2),y.toFixed(2),3,roll.toFixed(1),0,yaw.toFixed(1));
+animId=requestAnimationFrame(step);
+}
+step();
+});
+
+function stopAnim(){
+animating=false;
+if(animId)cancelAnimationFrame(animId);
+}
+
+// Record
+document.getElementById('btnRecord').addEventListener('click',function(){
+recording=!recording;
+if(recording){trajectory=[];this.classList.add('active');this.textContent='Recording... (중지)';}
+else{this.classList.remove('active');this.textContent='Record (궤적 기록)';}
+});
+
+// Play
+document.getElementById('btnPlay').addEventListener('click',()=>{
+if(trajectory.length<2)return;
+stopAnim();
+animating=true;
+let i=0;
+function step(){
+if(!animating||i>=trajectory.length){animating=false;return;}
+let f=trajectory[i];
+setSliders(f.x,f.y,f.z,f.roll,f.pitch,f.yaw);
+i++;
+animId=requestAnimationFrame(step);
+}
+step();
+});
+
+// Clear trail
+document.getElementById('btnClearTrail').addEventListener('click',()=>{
+trailPoints=[];
+trailLine.geometry.setDrawRange(0,0);
+});
+
+function resize(){
+let canvas=document.getElementById('canvas3d');
+let w=window.innerWidth-360,h=window.innerHeight;
+renderer.setSize(w,h);
+camera.aspect=w/h;
+camera.updateProjectionMatrix();
+}
+
+function animate(){
+requestAnimationFrame(animate);
+controls.update();
+renderer.render(scene,camera);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D ICP (Iterative Closest Point) - Point Cloud Registration</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;overflow:hidden}
+#container{display:flex;height:100vh;width:100vw}
+#sidebar{width:340px;min-width:340px;background:#16213e;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;border-right:1px solid #0f3460}
+h1{font-size:18px;color:#e94560;text-align:center;border-bottom:1px solid #0f3460;padding-bottom:10px}
+h2{font-size:14px;color:#0f3460;background:#e94560;padding:4px 8px;border-radius:4px;margin-top:4px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+button{background:#0f3460;color:#e0e0e0;border:1px solid #e94560;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:13px;transition:background .2s}
+button:hover{background:#e94560;color:#fff}
+button.active{background:#e94560;color:#fff}
+.slider-group{display:flex;flex-direction:column;gap:2px}
+.slider-group label{font-size:12px;color:#a0a0c0}
+.slider-group input[type=range]{width:100%;accent-color:#e94560}
+.info-box{background:#0d1b3e;border:1px solid #0f3460;border-radius:4px;padding:10px;font-family:'Courier New',monospace;font-size:11px;line-height:1.5;white-space:pre;overflow-x:auto}
+.legend{display:flex;gap:12px;font-size:12px;align-items:center;flex-wrap:wrap}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
+#canvas3d{flex:1;display:block}
+#convergence-canvas{position:absolute;bottom:10px;right:10px;background:rgba(22,33,62,0.92);border:1px solid #0f3460;border-radius:6px}
+#convergence-label{position:absolute;bottom:175px;right:10px;font-size:11px;color:#a0a0c0;background:rgba(22,33,62,0.85);padding:2px 8px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="sidebar">
+<h1>3D ICP 정합</h1>
+<h2>Iterative Closest Point</h2>
+<div class="legend">
+<span><span class="legend-dot" style="background:#4488ff"></span>Source (소스)</span>
+<span><span class="legend-dot" style="background:#44ff88"></span>Target (타겟)</span>
+<span><span class="legend-dot" style="background:#888"></span>대응선</span>
+</div>
+<div class="btn-row">
+<button id="btnStep">Step (1회 반복)</button>
+<button id="btnRunAll">Run All (수렴까지)</button>
+<button id="btnReset">Reset (초기화)</button>
+</div>
+<div class="slider-group">
+<label>최대 대응 거리 (Max Correspondence Dist): <span id="maxDistVal">5.0</span></label>
+<input type="range" id="maxDistSlider" min="0.5" max="10" step="0.1" value="5.0">
+</div>
+<div class="info-box" id="infoIter">반복(Iteration): 0</div>
+<div class="info-box" id="infoRMSE">RMSE: -</div>
+<div class="info-box" id="infoR">회전 행렬 R:
+[ 1.000  0.000  0.000 ]
+[ 0.000  1.000  0.000 ]
+[ 0.000  0.000  1.000 ]</div>
+<div class="info-box" id="infoT">평행 이동 t:
+[ 0.000, 0.000, 0.000 ]</div>
+<div style="font-size:11px;color:#666;text-align:center;margin-top:auto">
+마우스: 회전 | 스크롤: 줌 | 우클릭: 이동<br>
+SVD 기반 Rigid Alignment
+</div>
+</div>
+<canvas id="canvas3d"></canvas>
+</div>
+<div id="convergence-label">수렴 그래프 (RMSE vs Iteration)</div>
+<canvas id="convergence-canvas" width="260" height="160"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// OrbitControls inline (minimal)
+!function(){
+const EPS=0.000001,STATE={NONE:-1,ROTATE:0,DOLLY:1,PAN:2};
+class OrbitControls{
+constructor(camera,domElement){
+this.camera=camera;this.domElement=domElement;this.target=new THREE.Vector3();
+this.enableDamping=false;this.dampingFactor=0.05;
+this.rotateSpeed=1;this.zoomSpeed=1;this.panSpeed=1;
+this.minDistance=0;this.maxDistance=Infinity;
+let state=STATE.NONE,spherical=new THREE.Spherical(),sphericalDelta=new THREE.Spherical();
+let panOffset=new THREE.Vector3(),scale=1;
+let rotateStart=new THREE.Vector2(),rotateEnd=new THREE.Vector2(),rotateDelta=new THREE.Vector2();
+let panStart=new THREE.Vector2(),panEnd=new THREE.Vector2(),panDelta=new THREE.Vector2();
+const getZoomScale=()=>Math.pow(0.95,this.zoomSpeed);
+const rotateLeft=a=>{sphericalDelta.theta-=a};
+const rotateUp=a=>{sphericalDelta.phi-=a};
+const panLeft=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,0);v.multiplyScalar(-d);panOffset.add(v)};
+const panUp=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,1);v.multiplyScalar(d);panOffset.add(v)};
+const pan=(dx,dy)=>{let el=this.domElement;if(this.camera.isPerspectiveCamera){let pos=this.camera.position;let tOff=pos.clone().sub(this.target);let tDist=tOff.length();tDist*=Math.tan(this.camera.fov/2*Math.PI/180);panLeft(2*dx*tDist/el.clientHeight,this.camera.matrix);panUp(2*dy*tDist/el.clientHeight,this.camera.matrix)}};
+const onMouseDown=e=>{e.preventDefault();if(e.button===0)state=STATE.ROTATE,rotateStart.set(e.clientX,e.clientY);else if(e.button===1)state=STATE.DOLLY;else if(e.button===2)state=STATE.PAN,panStart.set(e.clientX,e.clientY);if(state!==STATE.NONE){document.addEventListener('mousemove',onMouseMove);document.addEventListener('mouseup',onMouseUp)}};
+const onMouseMove=e=>{e.preventDefault();if(state===STATE.ROTATE){rotateEnd.set(e.clientX,e.clientY);rotateDelta.subVectors(rotateEnd,rotateStart);rotateLeft(2*Math.PI*rotateDelta.x/domElement.clientHeight*this.rotateSpeed);rotateUp(2*Math.PI*rotateDelta.y/domElement.clientHeight*this.rotateSpeed);rotateStart.copy(rotateEnd)}else if(state===STATE.PAN){panEnd.set(e.clientX,e.clientY);panDelta.subVectors(panEnd,panStart);pan(panDelta.x,panDelta.y);panStart.copy(panEnd)}};
+const onMouseUp=()=>{state=STATE.NONE;document.removeEventListener('mousemove',onMouseMove);document.removeEventListener('mouseup',onMouseUp)};
+const onWheel=e=>{e.preventDefault();if(e.deltaY<0)scale/=getZoomScale();else scale*=getZoomScale()};
+const onContextMenu=e=>e.preventDefault();
+domElement.addEventListener('mousedown',onMouseDown);domElement.addEventListener('wheel',onWheel,{passive:false});domElement.addEventListener('contextmenu',onContextMenu);
+this.update=function(){let offset=new THREE.Vector3();let quat=new THREE.Quaternion().setFromUnitVectors(camera.up,new THREE.Vector3(0,1,0));let quatI=quat.clone().invert();offset.copy(camera.position).sub(this.target);offset.applyQuaternion(quat);spherical.setFromVector3(offset);spherical.theta+=sphericalDelta.theta;spherical.phi+=sphericalDelta.phi;spherical.phi=Math.max(EPS,Math.min(Math.PI-EPS,spherical.phi));spherical.radius*=scale;spherical.radius=Math.max(this.minDistance,Math.min(this.maxDistance,spherical.radius));this.target.add(panOffset);offset.setFromSpherical(spherical);offset.applyQuaternion(quatI);camera.position.copy(this.target).add(offset);camera.lookAt(this.target);sphericalDelta.set(0,0,0);panOffset.set(0,0,0);scale=1};
+}
+}
+THREE.OrbitControls=OrbitControls;
+}();
+
+// ---- SVD 3x3 via Jacobi ----
+function svd3x3(H){
+// H is [row][col], returns {U, S, V} as 3x3 arrays
+// Power iteration / Jacobi approach for 3x3
+const mat3=()=>[[0,0,0],[0,0,0],[0,0,0]];
+const eye3=()=>[[1,0,0],[0,1,0],[0,0,1]];
+const mul=(A,B)=>{let C=mat3();for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)C[i][j]+=A[i][k]*B[k][j];return C};
+const trans=(A)=>{let T=mat3();for(let i=0;i<3;i++)for(let j=0;j<3;j++)T[i][j]=A[j][i];return T};
+
+// compute H^T H
+let HtH=mul(trans(H),H);
+// Jacobi eigenvalue for symmetric 3x3
+let V=eye3();
+for(let iter=0;iter<50;iter++){
+for(let p=0;p<3;p++)for(let q=p+1;q<3;q++){
+if(Math.abs(HtH[p][q])<1e-12)continue;
+let tau=(HtH[q][q]-HtH[p][p])/(2*HtH[p][q]);
+let t;
+if(Math.abs(tau)>1e15)t=1/(2*tau);
+else t=Math.sign(tau)/(Math.abs(tau)+Math.sqrt(1+tau*tau));
+let c=1/Math.sqrt(1+t*t),s=t*c;
+let G=eye3();G[p][p]=c;G[q][q]=c;G[p][q]=s;G[q][p]=-s;
+HtH=mul(mul(trans(G),HtH),G);
+V=mul(V,G);
+}}
+// singular values
+let S=[Math.sqrt(Math.max(0,HtH[0][0])),Math.sqrt(Math.max(0,HtH[1][1])),Math.sqrt(Math.max(0,HtH[2][2]))];
+// sort descending
+let idx=[0,1,2];idx.sort((a,b)=>S[b]-S[a]);
+let Vs=mat3(),Ss=[S[idx[0]],S[idx[1]],S[idx[2]]];
+for(let i=0;i<3;i++)for(let j=0;j<3;j++)Vs[i][j]=V[i][idx[j]];
+// U = H V S^-1
+let U=mat3();
+let HV=mul(H,Vs);
+for(let j=0;j<3;j++){
+if(Ss[j]>1e-10){for(let i=0;i<3;i++)U[i][j]=HV[i][j]/Ss[j];}
+else{
+// find orthogonal column
+if(j===0){U[0][0]=1;U[1][0]=0;U[2][0]=0;}
+else if(j===1){
+let u0=[U[0][0],U[1][0],U[2][0]];
+let c=[1,0,0];if(Math.abs(u0[0])>0.9)c=[0,1,0];
+// cross
+U[0][1]=u0[1]*c[2]-u0[2]*c[1];
+U[1][1]=u0[2]*c[0]-u0[0]*c[2];
+U[2][1]=u0[0]*c[1]-u0[1]*c[0];
+let n=Math.sqrt(U[0][1]**2+U[1][1]**2+U[2][1]**2);
+if(n>1e-10){U[0][1]/=n;U[1][1]/=n;U[2][1]/=n;}
+}else{
+U[0][2]=U[1][0]*U[2][1]-U[2][0]*U[1][1];
+U[1][2]=U[2][0]*U[0][1]-U[0][0]*U[2][1];
+U[2][2]=U[0][0]*U[1][1]-U[1][0]*U[0][1];
+}
+}
+}
+return{U,S:Ss,V:Vs};
+}
+
+// ---- Application ----
+let scene,camera,renderer,controls;
+let sourcePoints=[],targetPoints=[],originalSource=[];
+let correspondenceLines=null;
+let sourceCloud=null,targetCloud=null;
+let iteration=0,rmseHistory=[];
+let cumulativeR=[[1,0,0],[0,1,0],[0,0,1]],cumulativeT=[0,0,0];
+let running=false;
+
+function init(){
+const canvas=document.getElementById('canvas3d');
+renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x1a1a2e);
+
+scene=new THREE.Scene();
+camera=new THREE.PerspectiveCamera(50,1,0.1,200);
+camera.position.set(12,10,12);
+controls=new THREE.OrbitControls(camera,canvas);
+controls.target.set(0,2,0);
+
+// lights
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+let dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(10,20,10);scene.add(dl);
+
+// grid
+let grid=new THREE.GridHelper(20,20,0x0f3460,0x0a1030);
+scene.add(grid);
+
+// axes
+let axH=new THREE.AxesHelper(4);scene.add(axH);
+
+generatePointClouds();
+buildVisuals();
+resize();
+window.addEventListener('resize',resize);
+animate();
+}
+
+function generatePointClouds(){
+targetPoints=[];
+// L-shape + stairs in 3D
+// base of L
+for(let i=0;i<60;i++){
+let x=Math.random()*4;let y=Math.random()*0.5;let z=Math.random()*1;
+targetPoints.push([x,y,z]);
+}
+// vertical of L
+for(let i=0;i<60;i++){
+let x=Math.random()*1;let y=Math.random()*4;let z=Math.random()*1;
+targetPoints.push([x,y,z]);
+}
+// stairs
+for(let s=0;s<3;s++){
+for(let i=0;i<27;i++){
+let x=2+s*1.2+Math.random()*1;
+let y=1+s*1.2+Math.random()*0.3;
+let z=1+Math.random()*1.5;
+targetPoints.push([x,y,z]);
+}
+}
+
+// center target around centroid
+let cx=0,cy=0,cz=0;
+for(let p of targetPoints){cx+=p[0];cy+=p[1];cz+=p[2];}
+cx/=targetPoints.length;cy/=targetPoints.length;cz/=targetPoints.length;
+for(let p of targetPoints){p[0]-=cx;p[1]-=cy;p[2]-=cz;}
+
+// create source by applying known transform to target
+let angle1=0.4,angle2=0.3,angle3=-0.2;
+let Rx=[[1,0,0],[0,Math.cos(angle1),-Math.sin(angle1)],[0,Math.sin(angle1),Math.cos(angle1)]];
+let Ry=[[Math.cos(angle2),0,Math.sin(angle2)],[0,1,0],[-Math.sin(angle2),0,Math.cos(angle2)]];
+let Rz=[[Math.cos(angle3),-Math.sin(angle3),0],[Math.sin(angle3),Math.cos(angle3),0],[0,0,1]];
+let R=mulMat(mulMat(Rz,Ry),Rx);
+let t=[2.5,-1.5,1.0];
+
+sourcePoints=[];
+for(let p of targetPoints){
+let rp=[
+R[0][0]*p[0]+R[0][1]*p[1]+R[0][2]*p[2]+t[0],
+R[1][0]*p[0]+R[1][1]*p[1]+R[1][2]*p[2]+t[1],
+R[2][0]*p[0]+R[2][1]*p[1]+R[2][2]*p[2]+t[2]
+];
+// add small noise
+rp[0]+=0.05*(Math.random()-0.5);
+rp[1]+=0.05*(Math.random()-0.5);
+rp[2]+=0.05*(Math.random()-0.5);
+sourcePoints.push(rp);
+}
+originalSource=sourcePoints.map(p=>[...p]);
+iteration=0;
+rmseHistory=[];
+cumulativeR=[[1,0,0],[0,1,0],[0,0,1]];
+cumulativeT=[0,0,0];
+}
+
+function mulMat(A,B){
+let C=[[0,0,0],[0,0,0],[0,0,0]];
+for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)C[i][j]+=A[i][k]*B[k][j];
+return C;
+}
+
+function buildVisuals(){
+// remove old
+if(sourceCloud)scene.remove(sourceCloud);
+if(targetCloud)scene.remove(targetCloud);
+if(correspondenceLines)scene.remove(correspondenceLines);
+
+// target points (green)
+let tGeo=new THREE.BufferGeometry();
+let tPos=new Float32Array(targetPoints.length*3);
+let tCol=new Float32Array(targetPoints.length*3);
+for(let i=0;i<targetPoints.length;i++){
+tPos[i*3]=targetPoints[i][0];tPos[i*3+1]=targetPoints[i][1];tPos[i*3+2]=targetPoints[i][2];
+tCol[i*3]=0.27;tCol[i*3+1]=1;tCol[i*3+2]=0.53;
+}
+tGeo.setAttribute('position',new THREE.BufferAttribute(tPos,3));
+tGeo.setAttribute('color',new THREE.BufferAttribute(tCol,3));
+targetCloud=new THREE.Points(tGeo,new THREE.PointsMaterial({size:0.15,vertexColors:true}));
+scene.add(targetCloud);
+
+updateSourceVisual();
+}
+
+function updateSourceVisual(){
+if(sourceCloud)scene.remove(sourceCloud);
+if(correspondenceLines)scene.remove(correspondenceLines);
+
+let maxDist=parseFloat(document.getElementById('maxDistSlider').value);
+let {pairs,rmse}=findCorrespondences(maxDist);
+
+// source points colored by error
+let sGeo=new THREE.BufferGeometry();
+let sPos=new Float32Array(sourcePoints.length*3);
+let sCol=new Float32Array(sourcePoints.length*3);
+// find max error for color mapping
+let maxErr=0;
+let errMap=new Map();
+for(let pr of pairs){
+let d=pr.dist;if(d>maxErr)maxErr=d;
+errMap.set(pr.si,d);
+}
+if(maxErr<0.001)maxErr=1;
+
+for(let i=0;i<sourcePoints.length;i++){
+sPos[i*3]=sourcePoints[i][0];sPos[i*3+1]=sourcePoints[i][1];sPos[i*3+2]=sourcePoints[i][2];
+let err=errMap.has(i)?errMap.get(i):maxErr;
+let t=Math.min(1,err/maxErr);
+// blue(good) to red(far)
+sCol[i*3]=t;sCol[i*3+1]=0.1;sCol[i*3+2]=1-t;
+}
+sGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));
+sGeo.setAttribute('color',new THREE.BufferAttribute(sCol,3));
+sourceCloud=new THREE.Points(sGeo,new THREE.PointsMaterial({size:0.15,vertexColors:true}));
+scene.add(sourceCloud);
+
+// correspondence lines
+let lineGeo=new THREE.BufferGeometry();
+let lPos=new Float32Array(pairs.length*6);
+for(let i=0;i<pairs.length;i++){
+let s=sourcePoints[pairs[i].si],t2=targetPoints[pairs[i].ti];
+lPos[i*6]=s[0];lPos[i*6+1]=s[1];lPos[i*6+2]=s[2];
+lPos[i*6+3]=t2[0];lPos[i*6+4]=t2[1];lPos[i*6+5]=t2[2];
+}
+lineGeo.setAttribute('position',new THREE.BufferAttribute(lPos,3));
+correspondenceLines=new THREE.LineSegments(lineGeo,new THREE.LineBasicMaterial({color:0x555566,transparent:true,opacity:0.3}));
+scene.add(correspondenceLines);
+}
+
+function findCorrespondences(maxDist){
+let pairs=[];
+let totalErr=0;
+for(let i=0;i<sourcePoints.length;i++){
+let s=sourcePoints[i];
+let bestD=Infinity,bestJ=-1;
+for(let j=0;j<targetPoints.length;j++){
+let dx=s[0]-targetPoints[j][0],dy=s[1]-targetPoints[j][1],dz=s[2]-targetPoints[j][2];
+let d=dx*dx+dy*dy+dz*dz;
+if(d<bestD){bestD=d;bestJ=j;}
+}
+bestD=Math.sqrt(bestD);
+if(bestD<=maxDist){
+pairs.push({si:i,ti:bestJ,dist:bestD});
+totalErr+=bestD*bestD;
+}
+}
+let rmse=pairs.length>0?Math.sqrt(totalErr/pairs.length):0;
+return{pairs,rmse};
+}
+
+function icpStep(){
+let maxDist=parseFloat(document.getElementById('maxDistSlider').value);
+let {pairs,rmse:rmse0}=findCorrespondences(maxDist);
+if(pairs.length<4){return{converged:true,rmse:rmse0};}
+
+// centroids
+let sp=[0,0,0],tp=[0,0,0];
+for(let pr of pairs){
+let s=sourcePoints[pr.si],t=targetPoints[pr.ti];
+sp[0]+=s[0];sp[1]+=s[1];sp[2]+=s[2];
+tp[0]+=t[0];tp[1]+=t[1];tp[2]+=t[2];
+}
+let n=pairs.length;
+sp[0]/=n;sp[1]/=n;sp[2]/=n;
+tp[0]/=n;tp[1]/=n;tp[2]/=n;
+
+// H = sum (source_i - sp)(target_i - tp)^T
+let H=[[0,0,0],[0,0,0],[0,0,0]];
+for(let pr of pairs){
+let s=sourcePoints[pr.si],t=targetPoints[pr.ti];
+let ds=[s[0]-sp[0],s[1]-sp[1],s[2]-sp[2]];
+let dt=[t[0]-tp[0],t[1]-tp[1],t[2]-tp[2]];
+for(let i=0;i<3;i++)for(let j=0;j<3;j++)H[i][j]+=ds[i]*dt[j];
+}
+
+// SVD
+let {U,S,V}=svd3x3(H);
+
+// R = V * U^T
+let Ut=[[U[0][0],U[1][0],U[2][0]],[U[0][1],U[1][1],U[2][1]],[U[0][2],U[1][2],U[2][2]]];
+let R=mulMat(V,Ut);
+
+// ensure proper rotation (det > 0)
+let det=R[0][0]*(R[1][1]*R[2][2]-R[1][2]*R[2][1])
+       -R[0][1]*(R[1][0]*R[2][2]-R[1][2]*R[2][0])
+       +R[0][2]*(R[1][0]*R[2][1]-R[1][1]*R[2][0]);
+if(det<0){
+// flip sign of last column of V
+for(let i=0;i<3;i++)V[i][2]*=-1;
+R=mulMat(V,Ut);
+}
+
+// t = target_centroid - R * source_centroid
+let Rsp=[0,0,0];
+for(let i=0;i<3;i++)for(let j=0;j<3;j++)Rsp[i]+=R[i][j]*sp[j];
+let t=[tp[0]-Rsp[0],tp[1]-Rsp[1],tp[2]-Rsp[2]];
+
+// apply transform
+for(let i=0;i<sourcePoints.length;i++){
+let p=sourcePoints[i];
+let np=[0,0,0];
+for(let r=0;r<3;r++)for(let c=0;c<3;c++)np[r]+=R[r][c]*p[c];
+np[0]+=t[0];np[1]+=t[1];np[2]+=t[2];
+sourcePoints[i]=np;
+}
+
+// update cumulative transform: new = R*old, t_new = R*t_old + t
+let newR=mulMat(R,cumulativeR);
+let newT=[0,0,0];
+for(let i=0;i<3;i++){
+for(let j=0;j<3;j++)newT[i]+=R[i][j]*cumulativeT[j];
+newT[i]+=t[i];
+}
+cumulativeR=newR;cumulativeT=newT;
+
+iteration++;
+let {rmse}=findCorrespondences(maxDist);
+rmseHistory.push(rmse);
+
+updateSourceVisual();
+updateInfo(rmse);
+drawConvergence();
+
+let converged=rmseHistory.length>=2&&Math.abs(rmseHistory[rmseHistory.length-1]-rmseHistory[rmseHistory.length-2])<1e-5;
+return{converged,rmse};
+}
+
+function updateInfo(rmse){
+document.getElementById('infoIter').textContent='반복(Iteration): '+iteration;
+document.getElementById('infoRMSE').textContent='RMSE: '+(rmse!==undefined?rmse.toFixed(6):'-');
+let R=cumulativeR;
+document.getElementById('infoR').textContent=
+'회전 행렬 R:\n'+
+'[ '+R[0][0].toFixed(3)+'  '+R[0][1].toFixed(3)+'  '+R[0][2].toFixed(3)+' ]\n'+
+'[ '+R[1][0].toFixed(3)+'  '+R[1][1].toFixed(3)+'  '+R[1][2].toFixed(3)+' ]\n'+
+'[ '+R[2][0].toFixed(3)+'  '+R[2][1].toFixed(3)+'  '+R[2][2].toFixed(3)+' ]';
+let t=cumulativeT;
+document.getElementById('infoT').textContent='평행 이동 t:\n[ '+t[0].toFixed(3)+', '+t[1].toFixed(3)+', '+t[2].toFixed(3)+' ]';
+}
+
+function drawConvergence(){
+let c=document.getElementById('convergence-canvas');
+let ctx=c.getContext('2d');
+let w=c.width,h=c.height;
+ctx.clearRect(0,0,w,h);
+ctx.fillStyle='rgba(22,33,62,0.9)';
+ctx.fillRect(0,0,w,h);
+
+if(rmseHistory.length<1)return;
+let maxR=Math.max(...rmseHistory)*1.1;
+if(maxR<0.001)maxR=1;
+let pad=35;
+let pw=w-pad-10,ph=h-pad-15;
+
+// axes
+ctx.strokeStyle='#0f3460';ctx.lineWidth=1;
+ctx.beginPath();ctx.moveTo(pad,5);ctx.lineTo(pad,h-pad);ctx.lineTo(w-5,h-pad);ctx.stroke();
+ctx.fillStyle='#a0a0c0';ctx.font='9px monospace';
+ctx.fillText('RMSE',2,12);
+ctx.fillText('Iter',w-28,h-2);
+ctx.fillText('0',pad-10,h-pad+10);
+ctx.fillText(maxR.toFixed(2),0,14);
+ctx.fillText(rmseHistory.length.toString(),pad+pw-5,h-pad+10);
+
+// plot
+ctx.strokeStyle='#e94560';ctx.lineWidth=2;
+ctx.beginPath();
+for(let i=0;i<rmseHistory.length;i++){
+let x=pad+(i/(Math.max(1,rmseHistory.length-1)))*pw;
+let y=(h-pad)-((rmseHistory[i]/maxR)*ph);
+if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+}
+ctx.stroke();
+
+// dots
+ctx.fillStyle='#e94560';
+for(let i=0;i<rmseHistory.length;i++){
+let x=pad+(i/(Math.max(1,rmseHistory.length-1)))*pw;
+let y=(h-pad)-((rmseHistory[i]/maxR)*ph);
+ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();
+}
+}
+
+function resize(){
+let canvas=document.getElementById('canvas3d');
+let rect=canvas.parentElement.getBoundingClientRect();
+let w=window.innerWidth-340,h=window.innerHeight;
+renderer.setSize(w,h);
+camera.aspect=w/h;
+camera.updateProjectionMatrix();
+}
+
+function animate(){
+requestAnimationFrame(animate);
+controls.update();
+renderer.render(scene,camera);
+}
+
+// events
+document.getElementById('maxDistSlider').addEventListener('input',function(){
+document.getElementById('maxDistVal').textContent=this.value;
+updateSourceVisual();
+});
+
+document.getElementById('btnStep').addEventListener('click',function(){
+if(!running)icpStep();
+});
+
+document.getElementById('btnRunAll').addEventListener('click',async function(){
+if(running)return;
+running=true;
+this.classList.add('active');
+let maxIter=200;
+for(let i=0;i<maxIter;i++){
+let {converged}=icpStep();
+if(converged)break;
+await new Promise(r=>setTimeout(r,60));
+}
+running=false;
+this.classList.remove('active');
+});
+
+document.getElementById('btnReset').addEventListener('click',function(){
+running=false;
+generatePointClouds();
+buildVisuals();
+updateInfo(undefined);
+drawConvergence();
+});
+
+init();
+updateInfo(undefined);
+drawConvergence();
+</script>
+</body>
+</html>

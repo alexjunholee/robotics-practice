@@ -151,43 +151,67 @@
         <div class="name">Feature Matching과 Ratio Test</div>
         <div class="desc">Lowe's ratio test로 good match를 필터링하는 과정</div>
       </a>
+      <a class="card" href="interactive/se2_odometry.html">
+        <div class="name">SE(2) 차동 구동 오도메트리</div>
+        <div class="desc">좌/우 바퀴 속도로 로봇 이동 궤적 시뮬레이션</div>
+      </a>
+      <a class="card" href="interactive/odom_uncertainty.html">
+        <div class="name">오도메트리 불확실성 전파</div>
+        <div class="desc">이동에 따라 커지는 공분산 타원 시각화</div>
+      </a>
+      <a class="card" href="interactive/pose_composition_3d.html">
+        <div class="name">SE(3) 포즈 합성</div>
+        <div class="desc">T1*T2 vs T2*T1 — 변환의 비가환성 체험</div>
+      </a>
+      <a class="card" href="interactive/icp_3d.html">
+        <div class="name">3D ICP 포인트 클라우드 정합</div>
+        <div class="desc">SVD 기반 3D ICP를 step-by-step으로 시각화</div>
+      </a>
+      <a class="card" href="interactive/xyzrpy_6dof.html">
+        <div class="name">6DoF 포즈 시각화 (XYZ + RPY)</div>
+        <div class="desc">드론 모델로 6자유도 포즈와 변환 행렬 확인</div>
+      </a>
+      <a class="card" href="interactive/robot_arm_fk.html">
+        <div class="name">로봇 팔 Forward Kinematics</div>
+        <div class="desc">3-DOF 로봇 팔의 순방향 기구학과 작업 공간</div>
+      </a>
     </div>
   </section>
 
   <section>
     <h2>Python Scripts</h2>
     <div class="grid">
-      <a class="card" href="scripts/so3_exp_log.py">
+      <a class="card" href="scripts/01_lie_group.py">
         <div class="name">SO(3) Exp/Log Map</div>
-        <div class="desc">Lie group 기초 — 회전 행렬과 so(3) 사이의 변환</div>
+        <div class="desc">Lie group 기초 — Rodrigues formula로 회전 행렬과 so(3) 변환</div>
       </a>
-      <a class="card" href="scripts/factor_graph_slam.py">
+      <a class="card" href="scripts/02_factor_graph_slam.py">
         <div class="name">Factor Graph SLAM</div>
-        <div class="desc">GTSAM을 이용한 2D pose graph SLAM 예제</div>
+        <div class="desc">GTSAM (또는 scipy fallback)으로 2D pose graph SLAM</div>
       </a>
-      <a class="card" href="scripts/orb_feature_matching.py">
+      <a class="card" href="scripts/03_feature_matching.py">
         <div class="name">ORB Feature Matching</div>
-        <div class="desc">ORB 특징점 검출 및 브루트포스 매칭</div>
+        <div class="desc">ORB 특징점 검출 + BFMatcher + Lowe's ratio test</div>
       </a>
-      <a class="card" href="scripts/pnp_pose_estimation.py">
+      <a class="card" href="scripts/04_pnp_demo.py">
         <div class="name">PnP Pose Estimation</div>
         <div class="desc">3D-2D 대응점으로부터 카메라 포즈 추정</div>
       </a>
-      <a class="card" href="scripts/depth_anything_v2.py">
+      <a class="card" href="scripts/05_depth_estimation.py">
         <div class="name">Depth Anything V2</div>
-        <div class="desc">단안 깊이 추정 모델 추론 스크립트</div>
+        <div class="desc">단안 깊이 추정 모델 추론</div>
       </a>
-      <a class="card" href="scripts/yolov8_inference.py">
+      <a class="card" href="scripts/06_yolo_inference.py">
         <div class="name">YOLOv8 Inference</div>
-        <div class="desc">YOLOv8 객체 탐지 추론 및 결과 시각화</div>
+        <div class="desc">YOLOv8n 객체 탐지 추론 및 시각화</div>
       </a>
-      <a class="card" href="scripts/point_cloud_icp.py">
+      <a class="card" href="scripts/07_pointcloud_icp.py">
         <div class="name">Point Cloud ICP</div>
-        <div class="desc">Open3D 기반 포인트 클라우드 정합 예제</div>
+        <div class="desc">Open3D 포인트 클라우드 정합</div>
       </a>
-      <a class="card" href="scripts/ekf_slam_2d.py">
+      <a class="card" href="scripts/08_ekf_slam.py">
         <div class="name">EKF SLAM 2D</div>
-        <div class="desc">확장 칼만 필터 기반 2D SLAM 시뮬레이션</div>
+        <div class="desc">확장 칼만 필터 기반 2D SLAM (from scratch)</div>
       </a>
     </div>
   </section>
