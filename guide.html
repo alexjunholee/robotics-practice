@@ -414,12 +414,22 @@ mark.search-highlight {
   #main-content { margin-left: 0; }
 }
 
-/* Demo containers */
+/* Demo containers — break out of 800px content width */
 .demo-container {
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   border: 1px solid #2a3a5a;
   border-radius: 8px;
   overflow: hidden;
+  width: calc(100vw - var(--sidebar-width) - 80px);
+  max-width: 1400px;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+@media (max-width: 768px) {
+  .demo-container {
+    width: calc(100vw - 40px);
+  }
 }
 .demo-header {
   padding: 0.8rem 1rem;
@@ -430,9 +440,28 @@ mark.search-highlight {
   color: #6fa8dc;
   user-select: none;
   transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .demo-header:hover {
   background: #1a2a4e;
+}
+.demo-header .demo-title { flex: 1; }
+.demo-fullscreen-btn {
+  background: none;
+  border: 1px solid #3a4a6a;
+  color: #9a9ab0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: all 0.2s;
+}
+.demo-fullscreen-btn:hover {
+  color: #6fa8dc;
+  border-color: #6fa8dc;
 }
 .demo-body {
   background: #0d1117;
@@ -449,8 +478,26 @@ mark.search-highlight {
 .demo-body iframe {
   display: block;
   width: 100%;
-  height: 600px;
+  height: 700px;
   border: none;
+}
+/* Fullscreen mode */
+.demo-container.fullscreen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh;
+  transform: none;
+  border-radius: 0;
+  z-index: 10000;
+  margin: 0;
+}
+.demo-container.fullscreen .demo-body iframe {
+  height: calc(100vh - 45px);
+}
+.demo-container.fullscreen .demo-body.expanded {
+  max-height: none !important;
 }
 .demo-tabs {
   display: flex;
@@ -8321,15 +8368,36 @@ sudo apt-get install libeigen3-dev
 
       var header = document.createElement('div');
       header.className = 'demo-header';
-      header.textContent = headerText;
       header.setAttribute('role', 'button');
       header.setAttribute('tabindex', '0');
-      // Store demo info for toggle
       header.dataset.demos = JSON.stringify(demos);
       header.dataset.headerLabel = headerLabel;
       header.dataset.description = description;
 
-      header.addEventListener('click', function() {
+      var titleSpan = document.createElement('span');
+      titleSpan.className = 'demo-title';
+      titleSpan.textContent = headerText;
+      header.appendChild(titleSpan);
+
+      var fsBtn = document.createElement('button');
+      fsBtn.className = 'demo-fullscreen-btn';
+      fsBtn.textContent = '\u2922 전체 화면';
+      fsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var cont = this.closest('.demo-container');
+        cont.classList.toggle('fullscreen');
+        if (cont.classList.contains('fullscreen')) {
+          this.textContent = '\u2716 닫기';
+          document.body.style.overflow = 'hidden';
+        } else {
+          this.textContent = '\u2922 전체 화면';
+          document.body.style.overflow = '';
+        }
+      });
+      header.appendChild(fsBtn);
+
+      header.addEventListener('click', function(e) {
+        if (e.target.classList.contains('demo-fullscreen-btn')) return;
         toggleDemo(this);
       });
       header.addEventListener('keydown', function(e) {
@@ -8350,7 +8418,7 @@ sudo apt-get install libeigen3-dev
         var iframe = document.createElement('iframe');
         iframe.setAttribute('data-src', demos[0].file);
         iframe.setAttribute('width', '100%');
-        iframe.setAttribute('height', '600');
+        iframe.setAttribute('height', '700');
         iframe.setAttribute('frameborder', '0');
         iframe.setAttribute('loading', 'lazy');
         iframe.setAttribute('title', demos[0].label);
@@ -8378,7 +8446,7 @@ sudo apt-get install libeigen3-dev
         var iframe = document.createElement('iframe');
         iframe.setAttribute('data-src', demos[0].file);
         iframe.setAttribute('width', '100%');
-        iframe.setAttribute('height', '600');
+        iframe.setAttribute('height', '700');
         iframe.setAttribute('frameborder', '0');
         iframe.setAttribute('loading', 'lazy');
         iframe.setAttribute('title', demos[0].label);
@@ -8411,7 +8479,9 @@ sudo apt-get install libeigen3-dev
       var closeText = '\u25B6 \uC2E4\uC2B5: ' + headerLabel;
       if (description) closeText += ' \u2014 ' + description;
       closeText += ' (\uD074\uB9AD\uD558\uC5EC \uC5F4\uAE30)';
-      headerEl.textContent = closeText;
+      var titleEl = headerEl.querySelector('.demo-title');
+      if (titleEl) titleEl.textContent = closeText;
+      else headerEl.textContent = closeText;
     } else {
       // Open - lazy load iframe if needed
       var iframe = body.querySelector('iframe');
@@ -8424,7 +8494,7 @@ sudo apt-get install libeigen3-dev
       // Force reflow
       body.offsetHeight;
       // Set to actual height for animation
-      var targetHeight = 600 + 10; // iframe height + some padding
+      var targetHeight = 700 + 10; // iframe height + some padding
       var tabs = body.querySelector('.demo-tabs');
       if (tabs) targetHeight += tabs.offsetHeight || 40;
       body.style.maxHeight = targetHeight + 'px';
@@ -8440,7 +8510,9 @@ sudo apt-get install libeigen3-dev
       var openText = '\u25BC \uC2E4\uC2B5: ' + headerLabel;
       if (description) openText += ' \u2014 ' + description;
       openText += ' (\uD074\uB9AD\uD558\uC5EC \uB2EB\uAE30)';
-      headerEl.textContent = openText;
+      var titleEl2 = headerEl.querySelector('.demo-title');
+      if (titleEl2) titleEl2.textContent = openText;
+      else headerEl.textContent = openText;
     }
   }
 
