@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Bundle Adjustment 수렴 시각화</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; }
+h1 { text-align: center; color: #00d4ff; font-size: 1.5em; margin-bottom: 3px; }
+.subtitle { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 12px; }
+.layout { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.main-view { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.main-view canvas { border: 1px solid #333; border-radius: 5px; }
+.side-panel { display: flex; flex-direction: column; gap: 10px; width: 320px; }
+.panel { background: #16213e; padding: 12px; border-radius: 10px; }
+.panel h3 { color: #00d4ff; font-size: 0.92em; margin-bottom: 8px; }
+.ctrl { margin-bottom: 8px; }
+.ctrl label { font-size: 0.8em; color: #aaa; display: flex; justify-content: space-between; }
+.ctrl label span { color: #00d4ff; font-weight: bold; }
+input[type="range"] { width: 100%; accent-color: #00d4ff; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button { background: #00d4ff; color: #1a1a2e; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.82em; }
+button:hover { background: #00b8d9; }
+button:disabled { background: #555; color: #999; cursor: not-allowed; }
+button.secondary { background: #2a2a4e; color: #e0e0e0; border: 1px solid #444; }
+button.secondary:hover { background: #3a3a5e; }
+.stats { font-size: 0.82em; }
+.stats .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.stats .row span:last-child { color: #00d4ff; font-weight: bold; }
+.legend { display: flex; gap: 12px; font-size: 0.75em; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-color { width: 12px; height: 12px; border-radius: 2px; }
+canvas#plotCanvas { background: #0f0f23; }
+canvas#sceneCanvas { background: #0f0f23; }
+</style>
+</head>
+<body>
+<h1>Bundle Adjustment 수렴 시각화</h1>
+<p class="subtitle">2D Simplified Bundle Adjustment - Gauss-Newton Optimization</p>
+
+<div class="layout">
+  <div class="main-view">
+    <canvas id="sceneCanvas" width="550" height="450"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#888;border:1px dashed #aaa"></div> Ground Truth (정답)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div> 노이즈 (Noisy)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#44ff44"></div> 최적화 (Optimized)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,0,0.3)"></div> 투영선 (Projection)</div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="panel">
+      <h3>설정 (Settings)</h3>
+      <div class="ctrl">
+        <label>노이즈 레벨 (Noise Level): <span id="vNoise">15</span></label>
+        <input type="range" id="noiseLevel" min="2" max="40" step="1" value="15">
+      </div>
+      <div class="ctrl">
+        <label>Step Size (스텝 크기): <span id="vStep">0.01</span></label>
+        <input type="range" id="stepSize" min="0.001" max="0.05" step="0.001" value="0.01">
+      </div>
+      <div class="btn-row">
+        <button id="resetBtn">초기화 (Reset)</button>
+        <button id="stepBtn">1 Step 실행</button>
+        <button id="runBtn">자동 실행 (Animate)</button>
+        <button id="stopBtn" class="secondary" disabled>정지 (Stop)</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>수렴 그래프 (Convergence Plot)</h3>
+      <canvas id="plotCanvas" width="296" height="160"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>통계 (Statistics)</h3>
+      <div class="stats">
+        <div class="row"><span>반복 횟수 (Iteration):</span><span id="iterCount">0</span></div>
+        <div class="row"><span>초기 오차 (Initial Error):</span><span id="initError">-</span></div>
+        <div class="row"><span>현재 오차 (Current Error):</span><span id="curError">-</span></div>
+        <div class="row"><span>오차 감소율 (Reduction):</span><span id="reduction">-</span></div>
+        <div class="row"><span>카메라 수 (Cameras):</span><span>5</span></div>
+        <div class="row"><span>포인트 수 (Points):</span><span>20</span></div>
+        <div class="row"><span>관측 수 (Observations):</span><span id="obsCount">-</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const sceneCanvas = document.getElementById('sceneCanvas');
+const sCtx = sceneCanvas.getContext('2d');
+const plotCanvas = document.getElementById('plotCanvas');
+const pCtx = plotCanvas.getContext('2d');
+const SW = 550, SH = 450, PW = 296, PH = 160;
+
+const NUM_CAMS = 5;
+const NUM_PTS = 20;
+const FOCAL = 200;
+
+let gtCams = [], gtPts = [];
+let noisyCams = [], noisyPts = [];
+let optCams = [], optPts = [];
+let observations = [];
+let errorHistory = [];
+let iteration = 0;
+let animating = false;
+let animId = null;
+let initialError = 0;
+
+function randRange(a, b) { return a + Math.random() * (b - a); }
+
+function generateScene() {
+  const noise = parseFloat(document.getElementById('noiseLevel').value);
+  gtCams = [];
+  gtPts = [];
+
+  // Cameras arranged in a rough arc
+  for (let i = 0; i < NUM_CAMS; i++) {
+    const angle = -Math.PI / 3 + (i / (NUM_CAMS - 1)) * (2 * Math.PI / 3);
+    const r = 180;
+    gtCams.push({
+      x: SW / 2 + r * Math.cos(angle),
+      y: SH - 60 + r * Math.sin(angle) * 0.3 - 80,
+      angle: angle + Math.PI / 2 + (Math.random() - 0.5) * 0.3
+    });
+  }
+
+  // Points scattered in the scene
+  for (let i = 0; i < NUM_PTS; i++) {
+    gtPts.push({
+      x: 80 + Math.random() * (SW - 160),
+      y: 50 + Math.random() * (SH - 200)
+    });
+  }
+
+  // Generate observations: each camera sees points in front of it
+  observations = [];
+  for (let ci = 0; ci < NUM_CAMS; ci++) {
+    for (let pi = 0; pi < NUM_PTS; pi++) {
+      const dx = gtPts[pi].x - gtCams[ci].x;
+      const dy = gtPts[pi].y - gtCams[ci].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Camera sees point if within some range and roughly in front
+      if (dist < 350 && dist > 20) {
+        // Project: simplified 2D projection (bearing angle)
+        const bearing = Math.atan2(dy, dx) - gtCams[ci].angle;
+        const projected = FOCAL * Math.tan(bearing);
+        if (Math.abs(projected) < FOCAL * 2) {
+          observations.push({ cam: ci, pt: pi, measured: projected + (Math.random() - 0.5) * 0.5 });
+        }
+      }
+    }
+  }
+
+  // Add noise
+  noisyCams = gtCams.map(c => ({
+    x: c.x + (Math.random() - 0.5) * noise * 2,
+    y: c.y + (Math.random() - 0.5) * noise * 2,
+    angle: c.angle + (Math.random() - 0.5) * noise * 0.01
+  }));
+  noisyPts = gtPts.map(p => ({
+    x: p.x + (Math.random() - 0.5) * noise * 2,
+    y: p.y + (Math.random() - 0.5) * noise * 2
+  }));
+
+  optCams = noisyCams.map(c => ({ ...c }));
+  optPts = noisyPts.map(p => ({ ...p }));
+
+  errorHistory = [];
+  iteration = 0;
+  initialError = computeTotalError(optCams, optPts);
+  errorHistory.push(initialError);
+
+  document.getElementById('obsCount').textContent = observations.length;
+  document.getElementById('initError').textContent = initialError.toFixed(2);
+  updateStats();
+  render();
+}
+
+function project(cam, pt) {
+  const dx = pt.x - cam.x;
+  const dy = pt.y - cam.y;
+  const bearing = Math.atan2(dy, dx) - cam.angle;
+  return FOCAL * Math.tan(bearing);
+}
+
+function computeTotalError(cams, pts) {
+  let total = 0;
+  for (const obs of observations) {
+    const pred = project(cams[obs.cam], pts[obs.pt]);
+    const err = pred - obs.measured;
+    total += err * err;
+  }
+  return total;
+}
+
+function optimizeStep() {
+  const stepSize = parseFloat(document.getElementById('stepSize').value);
+  const eps = 0.1;
+
+  // Gradient descent on camera poses and point positions
+  // Compute numerical gradients
+  for (let ci = 0; ci < NUM_CAMS; ci++) {
+    const relObs = observations.filter(o => o.cam === ci);
+    if (relObs.length === 0) continue;
+
+    // Gradient for x
+    let gx = 0, gy = 0, ga = 0;
+    for (const obs of relObs) {
+      const pred = project(optCams[ci], optPts[obs.pt]);
+      const err = pred - obs.measured;
+
+      optCams[ci].x += eps;
+      const px = project(optCams[ci], optPts[obs.pt]);
+      optCams[ci].x -= eps;
+
+      optCams[ci].y += eps;
+      const py = project(optCams[ci], optPts[obs.pt]);
+      optCams[ci].y -= eps;
+
+      optCams[ci].angle += eps;
+      const pa = project(optCams[ci], optPts[obs.pt]);
+      optCams[ci].angle -= eps;
+
+      gx += 2 * err * (px - pred) / eps;
+      gy += 2 * err * (py - pred) / eps;
+      ga += 2 * err * (pa - pred) / eps;
+    }
+
+    optCams[ci].x -= stepSize * gx;
+    optCams[ci].y -= stepSize * gy;
+    optCams[ci].angle -= stepSize * ga * 0.1;
+  }
+
+  for (let pi = 0; pi < NUM_PTS; pi++) {
+    const relObs = observations.filter(o => o.pt === pi);
+    if (relObs.length === 0) continue;
+
+    let gx = 0, gy = 0;
+    for (const obs of relObs) {
+      const pred = project(optCams[obs.cam], optPts[pi]);
+      const err = pred - obs.measured;
+
+      optPts[pi].x += eps;
+      const px = project(optCams[obs.cam], optPts[pi]);
+      optPts[pi].x -= eps;
+
+      optPts[pi].y += eps;
+      const py = project(optCams[obs.cam], optPts[pi]);
+      optPts[pi].y -= eps;
+
+      gx += 2 * err * (px - pred) / eps;
+      gy += 2 * err * (py - pred) / eps;
+    }
+
+    optPts[pi].x -= stepSize * gx;
+    optPts[pi].y -= stepSize * gy;
+  }
+
+  iteration++;
+  const err = computeTotalError(optCams, optPts);
+  errorHistory.push(err);
+  updateStats();
+  render();
+}
+
+function updateStats() {
+  const curErr = errorHistory[errorHistory.length - 1] || 0;
+  document.getElementById('iterCount').textContent = iteration;
+  document.getElementById('curError').textContent = curErr.toFixed(2);
+  const red = initialError > 0 ? ((1 - curErr / initialError) * 100).toFixed(1) : '0';
+  document.getElementById('reduction').textContent = red + '%';
+}
+
+function drawCamera(ctx, cam, color, dashed) {
+  ctx.save();
+  ctx.translate(cam.x, cam.y);
+  ctx.rotate(cam.angle);
+  const sz = 12;
+  ctx.beginPath();
+  ctx.moveTo(sz, 0);
+  ctx.lineTo(-sz * 0.7, -sz * 0.6);
+  ctx.lineTo(-sz * 0.7, sz * 0.6);
+  ctx.closePath();
+  if (dashed) {
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawPoint(ctx, pt, color, radius, dashed) {
+  ctx.beginPath();
+  ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+  if (dashed) {
+    ctx.setLineDash([2, 2]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+}
+
+function render() {
+  sCtx.fillStyle = '#0f0f23';
+  sCtx.fillRect(0, 0, SW, SH);
+
+  // Draw projection lines (optimized -> points)
+  sCtx.strokeStyle = 'rgba(255, 255, 0, 0.08)';
+  sCtx.lineWidth = 0.5;
+  for (const obs of observations) {
+    sCtx.beginPath();
+    sCtx.moveTo(optCams[obs.cam].x, optCams[obs.cam].y);
+    sCtx.lineTo(optPts[obs.pt].x, optPts[obs.pt].y);
+    sCtx.stroke();
+  }
+
+  // Ground truth (dashed gray)
+  for (const cam of gtCams) drawCamera(sCtx, cam, '#aaa', true);
+  for (const pt of gtPts) drawPoint(sCtx, pt, '#aaa', 4, true);
+
+  // Noisy (red, small)
+  for (const cam of noisyCams) drawCamera(sCtx, cam, 'rgba(255,68,68,0.5)', false);
+  for (const pt of noisyPts) drawPoint(sCtx, pt, 'rgba(255,68,68,0.5)', 3, false);
+
+  // Optimized (green)
+  for (const cam of optCams) drawCamera(sCtx, cam, '#44ff44', false);
+  for (const pt of optPts) drawPoint(sCtx, pt, '#44ff44', 4, false);
+
+  // Draw convergence plot
+  pCtx.fillStyle = '#0f0f23';
+  pCtx.fillRect(0, 0, PW, PH);
+
+  if (errorHistory.length > 1) {
+    const maxE = Math.max(...errorHistory) * 1.1;
+    const minE = Math.min(...errorHistory) * 0.9;
+    const range = maxE - minE || 1;
+
+    // Axes
+    pCtx.strokeStyle = '#444';
+    pCtx.lineWidth = 1;
+    pCtx.beginPath();
+    pCtx.moveTo(35, 5); pCtx.lineTo(35, PH - 20); pCtx.lineTo(PW - 5, PH - 20);
+    pCtx.stroke();
+
+    // Labels
+    pCtx.fillStyle = '#888';
+    pCtx.font = '9px sans-serif';
+    pCtx.fillText('Error', 2, 12);
+    pCtx.fillText('Iteration', PW - 50, PH - 5);
+    pCtx.fillText(maxE.toFixed(0), 2, 18);
+    pCtx.fillText(minE.toFixed(0), 2, PH - 22);
+
+    // Plot line
+    pCtx.strokeStyle = '#00d4ff';
+    pCtx.lineWidth = 2;
+    pCtx.beginPath();
+    const plotW = PW - 45;
+    const plotH = PH - 30;
+    for (let i = 0; i < errorHistory.length; i++) {
+      const x = 36 + (i / Math.max(1, errorHistory.length - 1)) * plotW;
+      const y = 8 + (1 - (errorHistory[i] - minE) / range) * plotH;
+      if (i === 0) pCtx.moveTo(x, y);
+      else pCtx.lineTo(x, y);
+    }
+    pCtx.stroke();
+
+    // Dots
+    pCtx.fillStyle = '#00d4ff';
+    for (let i = 0; i < errorHistory.length; i++) {
+      const x = 36 + (i / Math.max(1, errorHistory.length - 1)) * plotW;
+      const y = 8 + (1 - (errorHistory[i] - minE) / range) * plotH;
+      pCtx.beginPath();
+      pCtx.arc(x, y, 2, 0, Math.PI * 2);
+      pCtx.fill();
+    }
+  } else {
+    pCtx.fillStyle = '#555';
+    pCtx.font = '12px sans-serif';
+    pCtx.fillText('최적화를 시작하세요', PW / 2 - 60, PH / 2);
+  }
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  stopAnimation();
+  generateScene();
+});
+
+document.getElementById('stepBtn').addEventListener('click', () => {
+  optimizeStep();
+});
+
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (animating) return;
+  animating = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  function step() {
+    if (!animating) return;
+    optimizeStep();
+    if (iteration < 200) {
+      animId = requestAnimationFrame(step);
+    } else {
+      stopAnimation();
+    }
+  }
+  step();
+});
+
+function stopAnimation() {
+  animating = false;
+  if (animId) cancelAnimationFrame(animId);
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+}
+
+document.getElementById('stopBtn').addEventListener('click', stopAnimation);
+
+document.getElementById('noiseLevel').addEventListener('input', () => {
+  document.getElementById('vNoise').textContent = document.getElementById('noiseLevel').value;
+});
+
+document.getElementById('stepSize').addEventListener('input', () => {
+  document.getElementById('vStep').textContent = parseFloat(document.getElementById('stepSize').value).toFixed(3);
+});
+
+generateScene();
+</script>
+</body>
+</html>

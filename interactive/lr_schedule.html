@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Rate Schedule 비교</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#e94560;margin-bottom:8px;font-size:1.6em}
+.annotation{text-align:center;color:#aaa;font-size:0.85em;margin-bottom:16px;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.5}
+.container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.chart-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333;flex:1;min-width:500px;max-width:850px}
+.panel{background:#0f0f23;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px;max-height:90vh;overflow-y:auto}
+.panel h3{color:#e94560;margin-bottom:10px;font-size:0.95em}
+.toggle-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:0.82em;cursor:pointer;padding:4px 8px;border-radius:6px;transition:0.2s}
+.toggle-row:hover{background:rgba(255,255,255,0.05)}
+.toggle-row input{accent-color:#e94560}
+.toggle-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.section{margin-top:16px;padding-top:12px;border-top:1px solid #333}
+.section h4{color:#aaa;font-size:0.82em;margin-bottom:8px}
+.slider-group{margin:6px 0}
+.slider-group label{display:flex;justify-content:space-between;font-size:0.78em;color:#888;margin-bottom:1px}
+.slider-group input[type=range]{width:100%;accent-color:#e94560}
+</style>
+</head>
+<body>
+<h1>Learning Rate Schedule 비교</h1>
+<p class="annotation">학습률 스케줄은 학습 안정성과 최종 성능에 큰 영향을 준다. Cosine Annealing이 최근 가장 많이 쓰인다.</p>
+<div class="container">
+  <div class="chart-wrap">
+    <div id="chart" style="width:100%;height:520px"></div>
+  </div>
+  <div class="panel">
+    <h3>스케줄 토글</h3>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_step"><span class="toggle-dot" style="background:#e94560"></span>Step Decay</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_exp"><span class="toggle-dot" style="background:#4a9eff"></span>Exponential Decay</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_cosine"><span class="toggle-dot" style="background:#50c878"></span>Cosine Annealing</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_restart"><span class="toggle-dot" style="background:#ffcc00"></span>Cosine Warm Restarts</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_onecycle"><span class="toggle-dot" style="background:#a855f7"></span>OneCycleLR</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_warmcos"><span class="toggle-dot" style="background:#ff8c42"></span>Linear Warmup + Cosine</label>
+
+    <div class="section">
+      <h4>공통 파라미터</h4>
+      <div class="slider-group">
+        <label><span>Initial LR</span><span id="v_lr">0.01</span></label>
+        <input type="range" id="s_lr" min="-4" max="-1" step="0.05" value="-2" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>Total Epochs</span><span id="v_epochs">100</span></label>
+        <input type="range" id="s_epochs" min="20" max="300" step="5" value="100" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Step Decay</h4>
+      <div class="slider-group">
+        <label><span>Step Size</span><span id="v_stepsize">30</span></label>
+        <input type="range" id="s_stepsize" min="5" max="80" step="1" value="30" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>Gamma (γ)</span><span id="v_gamma">0.1</span></label>
+        <input type="range" id="s_gamma" min="0.05" max="0.95" step="0.05" value="0.1" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Exponential Decay</h4>
+      <div class="slider-group">
+        <label><span>Gamma (γ)</span><span id="v_expgamma">0.95</span></label>
+        <input type="range" id="s_expgamma" min="0.8" max="0.999" step="0.001" value="0.95" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Cosine Annealing</h4>
+      <div class="slider-group">
+        <label><span>T_max</span><span id="v_tmax">100</span></label>
+        <input type="range" id="s_tmax" min="10" max="300" step="5" value="100" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>eta_min</span><span id="v_etamin">0.0001</span></label>
+        <input type="range" id="s_etamin" min="-6" max="-2" step="0.1" value="-4" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Cosine Warm Restarts</h4>
+      <div class="slider-group">
+        <label><span>T_0</span><span id="v_t0">10</span></label>
+        <input type="range" id="s_t0" min="5" max="50" step="1" value="10" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>T_mult</span><span id="v_tmult">2</span></label>
+        <input type="range" id="s_tmult" min="1" max="4" step="1" value="2" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>OneCycleLR</h4>
+      <div class="slider-group">
+        <label><span>max_lr</span><span id="v_maxlr">0.05</span></label>
+        <input type="range" id="s_maxlr" min="-3" max="-0.5" step="0.05" value="-1.3" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>pct_start</span><span id="v_pctstart">0.3</span></label>
+        <input type="range" id="s_pctstart" min="0.05" max="0.6" step="0.01" value="0.3" oninput="update()">
+      </div>
+      <div class="slider-group">
+        <label><span>div_factor</span><span id="v_divfactor">25</span></label>
+        <input type="range" id="s_divfactor" min="2" max="100" step="1" value="25" oninput="update()">
+      </div>
+    </div>
+
+    <div class="section">
+      <h4>Linear Warmup + Cosine</h4>
+      <div class="slider-group">
+        <label><span>Warmup Epochs</span><span id="v_warmup">10</span></label>
+        <input type="range" id="s_warmup" min="1" max="50" step="1" value="10" oninput="update()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function val(id){return parseFloat(document.getElementById(id).value)}
+function checked(id){return document.getElementById(id).checked}
+
+function update(){
+  const lrLog = val('s_lr');
+  const lr0 = Math.pow(10, lrLog);
+  const epochs = val('s_epochs');
+  const stepSize = val('s_stepsize');
+  const gamma = val('s_gamma');
+  const expGamma = val('s_expgamma');
+  const tmax = val('s_tmax');
+  const etaminLog = val('s_etamin');
+  const etaMin = Math.pow(10, etaminLog);
+  const t0 = val('s_t0');
+  const tmult = val('s_tmult');
+  const maxlrLog = val('s_maxlr');
+  const maxLR = Math.pow(10, maxlrLog);
+  const pctStart = val('s_pctstart');
+  const divFactor = val('s_divfactor');
+  const warmupEpochs = val('s_warmup');
+
+  // Update displays
+  document.getElementById('v_lr').textContent = lr0.toExponential(2);
+  document.getElementById('v_epochs').textContent = epochs;
+  document.getElementById('v_stepsize').textContent = stepSize;
+  document.getElementById('v_gamma').textContent = gamma;
+  document.getElementById('v_expgamma').textContent = expGamma;
+  document.getElementById('v_tmax').textContent = tmax;
+  document.getElementById('v_etamin').textContent = etaMin.toExponential(1);
+  document.getElementById('v_t0').textContent = t0;
+  document.getElementById('v_tmult').textContent = tmult;
+  document.getElementById('v_maxlr').textContent = maxLR.toExponential(2);
+  document.getElementById('v_pctstart').textContent = pctStart;
+  document.getElementById('v_divfactor').textContent = divFactor;
+  document.getElementById('v_warmup').textContent = warmupEpochs;
+
+  const x = [];
+  for(let i=0;i<=epochs;i++) x.push(i);
+
+  const traces = [];
+
+  // Step Decay
+  if(checked('t_step')){
+    const y = x.map(e => lr0 * Math.pow(gamma, Math.floor(e/stepSize)));
+    traces.push({x,y,name:'Step Decay',line:{color:'#e94560',width:2.5}});
+  }
+
+  // Exponential Decay
+  if(checked('t_exp')){
+    const y = x.map(e => lr0 * Math.pow(expGamma, e));
+    traces.push({x,y,name:'Exponential Decay',line:{color:'#4a9eff',width:2.5}});
+  }
+
+  // Cosine Annealing
+  if(checked('t_cosine')){
+    const y = x.map(e => etaMin + (lr0-etaMin)*0.5*(1+Math.cos(Math.PI*e/tmax)));
+    traces.push({x,y,name:'Cosine Annealing',line:{color:'#50c878',width:2.5}});
+  }
+
+  // Cosine with Warm Restarts
+  if(checked('t_restart')){
+    const y = x.map(e => {
+      let ti = t0, tCur = e, cycleStart = 0;
+      while(tCur >= ti){
+        tCur -= ti;
+        cycleStart += ti;
+        ti *= tmult;
+      }
+      return etaMin + (lr0-etaMin)*0.5*(1+Math.cos(Math.PI*tCur/ti));
+    });
+    traces.push({x,y,name:'Cosine Warm Restarts',line:{color:'#ffcc00',width:2.5}});
+  }
+
+  // OneCycleLR
+  if(checked('t_onecycle')){
+    const initLR = maxLR / divFactor;
+    const finalLR = initLR / 1000;
+    const upEnd = Math.floor(epochs * pctStart);
+    const y = x.map(e => {
+      if(e <= upEnd){
+        // linear warmup to max_lr
+        const pct = e / upEnd;
+        return initLR + (maxLR - initLR) * pct;
+      } else {
+        // cosine anneal down
+        const pct = (e - upEnd) / (epochs - upEnd);
+        return finalLR + (maxLR - finalLR) * 0.5 * (1 + Math.cos(Math.PI * pct));
+      }
+    });
+    traces.push({x,y,name:'OneCycleLR',line:{color:'#a855f7',width:2.5}});
+  }
+
+  // Linear Warmup + Cosine
+  if(checked('t_warmcos')){
+    const y = x.map(e => {
+      if(e < warmupEpochs){
+        return lr0 * (e / warmupEpochs);
+      } else {
+        const remaining = epochs - warmupEpochs;
+        const t = e - warmupEpochs;
+        return etaMin + (lr0-etaMin)*0.5*(1+Math.cos(Math.PI*t/remaining));
+      }
+    });
+    traces.push({x,y,name:'Linear Warmup + Cosine',line:{color:'#ff8c42',width:2.5}});
+  }
+
+  const layout = {
+    paper_bgcolor:'#0f0f23',
+    plot_bgcolor:'#0a0a1a',
+    font:{color:'#e0e0e0',family:'Segoe UI'},
+    title:{text:'Learning Rate Schedules',font:{color:'#e94560',size:16}},
+    xaxis:{
+      title:'Epoch',
+      color:'#888',
+      gridcolor:'rgba(255,255,255,0.08)',
+      zerolinecolor:'rgba(255,255,255,0.1)',
+      range:[0,epochs]
+    },
+    yaxis:{
+      title:'Learning Rate',
+      color:'#888',
+      gridcolor:'rgba(255,255,255,0.08)',
+      zerolinecolor:'rgba(255,255,255,0.1)',
+      type:'log',
+      exponentformat:'e'
+    },
+    legend:{
+      bgcolor:'rgba(15,15,35,0.8)',
+      bordercolor:'#333',
+      borderwidth:1,
+      font:{size:11}
+    },
+    margin:{l:70,r:30,t:50,b:50},
+    hovermode:'x unified'
+  };
+
+  Plotly.react('chart', traces, layout, {responsive:true, displayModeBar:false});
+}
+
+update();
+</script>
+</body>
+</html>

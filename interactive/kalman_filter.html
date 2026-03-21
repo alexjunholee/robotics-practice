@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalman Filter Predict/Update</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+  h1 { color: #00d4ff; margin-bottom: 5px; font-size: 1.6em; }
+  .subtitle { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+  .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  canvas { background: #0f0f23; border: 1px solid #333; border-radius: 8px; }
+  .panel { background: #16213e; border-radius: 8px; padding: 15px; min-width: 280px; }
+  .panel h3 { color: #00d4ff; margin-bottom: 10px; font-size: 1em; }
+  .slider-group { margin-bottom: 12px; }
+  .slider-group label { display: block; font-size: 0.85em; margin-bottom: 4px; color: #aaa; }
+  .slider-group input[type=range] { width: 100%; accent-color: #00d4ff; }
+  .slider-val { float: right; color: #00d4ff; font-weight: bold; }
+  .buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #00d4ff44; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: background 0.2s; }
+  button:hover { background: #1a5276; }
+  button.active { background: #00d4ff33; border-color: #00d4ff; }
+  .stats { font-size: 0.82em; line-height: 1.7; }
+  .stats span { color: #00d4ff; }
+  .legend { display: flex; gap: 15px; margin: 10px 0; font-size: 0.8em; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+  .explanation { background: #0f0f23; padding: 10px; border-radius: 6px; font-size: 0.8em; color: #888; margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>Kalman Filter Predict/Update</h1>
+<p class="subtitle">1D Kalman Filter - 이동 목표 추적 시뮬레이션</p>
+<div class="container">
+  <div>
+    <canvas id="canvas" width="800" height="450"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#888"></div>실제 위치 (True Position)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div>측정값 (Measurement)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#4488ff"></div>KF 추정값 (Estimate)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(68,136,255,0.2)"></div>불확실성 대역 (&plusmn;2&sigma;)</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>제어 파라미터</h3>
+    <div class="slider-group">
+      <label>Process Noise Q <span class="slider-val" id="qVal">1.00</span></label>
+      <input type="range" id="qSlider" min="0.01" max="10" step="0.01" value="1.0">
+    </div>
+    <div class="slider-group">
+      <label>Measurement Noise R <span class="slider-val" id="rVal">2.00</span></label>
+      <input type="range" id="rSlider" min="0.01" max="10" step="0.01" value="2.0">
+    </div>
+    <div class="buttons">
+      <button id="playBtn" class="active">재생 (Play)</button>
+      <button id="pauseBtn">일시정지 (Pause)</button>
+      <button id="stepBtn">한 단계 (Step)</button>
+      <button id="resetBtn">초기화 (Reset)</button>
+    </div>
+    <h3>상태 정보</h3>
+    <div class="stats">
+      <div>상태 추정값 (State x&#770;): <span id="stateEst">0.00</span></div>
+      <div>분산 (Variance P): <span id="variance">0.00</span></div>
+      <div>Kalman Gain K: <span id="kalmanGain">0.00</span></div>
+      <div>실제 위치 (True Pos): <span id="truePos">0.00</span></div>
+      <div>단계 (Step): <span id="stepCount">0</span></div>
+      <div>현재 단계: <span id="phase">-</span></div>
+    </div>
+    <div class="explanation">
+      <strong>원리:</strong> Predict 단계에서 불확실성(P)이 Q만큼 증가하고,
+      Update 단계에서 측정을 반영하여 P가 감소합니다.<br><br>
+      <strong>R이 크면</strong> → 측정을 덜 신뢰 → 예측을 더 따름<br>
+      <strong>Q가 크면</strong> → 모델을 덜 신뢰 → 측정을 더 따름
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let Q = 1.0, R = 2.0;
+let playing = true;
+let step = 0;
+
+const maxPoints = 300;
+let truePositions = [];
+let measurements = [];
+let estimates = [];
+let variances = [];
+let kalmanGains = [];
+
+// True state
+let trueX = H / 2;
+let trueV = 0;
+
+// KF state
+let x_hat = H / 2;
+let P = 10;
+let K = 0;
+let currentPhase = 'Predict';
+
+function reset() {
+  trueX = H / 2;
+  trueV = 0;
+  x_hat = H / 2;
+  P = 10;
+  K = 0;
+  step = 0;
+  truePositions = [];
+  measurements = [];
+  estimates = [];
+  variances = [];
+  kalmanGains = [];
+  currentPhase = 'Predict';
+}
+
+function gaussRand() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function doStep() {
+  // True dynamics: random acceleration
+  let acc = gaussRand() * 1.5;
+  trueV += acc * 0.1;
+  trueV *= 0.98; // damping
+  trueX += trueV;
+  // Bounds
+  if (trueX < 50) { trueX = 50; trueV = Math.abs(trueV); }
+  if (trueX > H - 50) { trueX = H - 50; trueV = -Math.abs(trueV); }
+
+  // Predict
+  currentPhase = 'Predict';
+  // x_hat stays (F=1, no control input for simplicity in 1D position-only model)
+  P = P + Q;
+
+  // Measurement
+  let z = trueX + gaussRand() * Math.sqrt(R) * 15;
+
+  // Update
+  currentPhase = 'Update';
+  K = P / (P + R * 15 * 15);
+  x_hat = x_hat + K * (z - x_hat);
+  P = (1 - K) * P;
+
+  truePositions.push(trueX);
+  measurements.push(z);
+  estimates.push(x_hat);
+  variances.push(P);
+  kalmanGains.push(K);
+
+  if (truePositions.length > maxPoints) {
+    truePositions.shift();
+    measurements.shift();
+    estimates.shift();
+    variances.shift();
+    kalmanGains.shift();
+  }
+
+  step++;
+}
+
+function draw() {
+  ctx.fillStyle = '#0f0f23';
+  ctx.fillRect(0, 0, W, H);
+
+  const n = estimates.length;
+  if (n < 2) return;
+
+  const dx = W / maxPoints;
+
+  // Uncertainty band
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    let x = i * dx;
+    let sigma2 = Math.sqrt(variances[i]) * 2;
+    if (i === 0) ctx.moveTo(x, estimates[i] - sigma2);
+    else ctx.lineTo(x, estimates[i] - sigma2);
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    let x = i * dx;
+    let sigma2 = Math.sqrt(variances[i]) * 2;
+    ctx.lineTo(x, estimates[i] + sigma2);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(68, 136, 255, 0.15)';
+  ctx.fill();
+
+  // True position line
+  ctx.beginPath();
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < n; i++) {
+    let x = i * dx;
+    if (i === 0) ctx.moveTo(x, truePositions[i]);
+    else ctx.lineTo(x, truePositions[i]);
+  }
+  ctx.stroke();
+
+  // Measurements as red dots
+  for (let i = 0; i < n; i++) {
+    let x = i * dx;
+    let y = measurements[i];
+    if (y > 0 && y < H) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff4444';
+      ctx.fill();
+    }
+  }
+
+  // KF estimate line
+  ctx.beginPath();
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 2.5;
+  for (let i = 0; i < n; i++) {
+    let x = i * dx;
+    if (i === 0) ctx.moveTo(x, estimates[i]);
+    else ctx.lineTo(x, estimates[i]);
+  }
+  ctx.stroke();
+
+  // Current position indicators
+  if (n > 0) {
+    let cx = (n - 1) * dx;
+    // True
+    ctx.beginPath();
+    ctx.arc(cx, truePositions[n - 1], 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#888';
+    ctx.fill();
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Estimate
+    ctx.beginPath();
+    ctx.arc(cx, estimates[n - 1], 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#4488ff';
+    ctx.fill();
+    ctx.strokeStyle = '#6699ff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#555';
+  ctx.font = '11px monospace';
+  ctx.fillText('위치 (Position)', 10, 15);
+  ctx.fillText('시간 (Time) →', W - 100, H - 10);
+
+  // Update stats
+  if (n > 0) {
+    document.getElementById('stateEst').textContent = estimates[n - 1].toFixed(2);
+    document.getElementById('variance').textContent = variances[n - 1].toFixed(4);
+    document.getElementById('kalmanGain').textContent = kalmanGains[n - 1].toFixed(4);
+    document.getElementById('truePos').textContent = truePositions[n - 1].toFixed(2);
+    document.getElementById('stepCount').textContent = step;
+    document.getElementById('phase').textContent = currentPhase;
+  }
+}
+
+function loop() {
+  if (playing) {
+    doStep();
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Sliders
+document.getElementById('qSlider').addEventListener('input', e => {
+  Q = parseFloat(e.target.value);
+  document.getElementById('qVal').textContent = Q.toFixed(2);
+});
+document.getElementById('rSlider').addEventListener('input', e => {
+  R = parseFloat(e.target.value);
+  document.getElementById('rVal').textContent = R.toFixed(2);
+});
+
+// Buttons
+document.getElementById('playBtn').addEventListener('click', () => {
+  playing = true;
+  document.getElementById('playBtn').classList.add('active');
+  document.getElementById('pauseBtn').classList.remove('active');
+});
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  playing = false;
+  document.getElementById('pauseBtn').classList.add('active');
+  document.getElementById('playBtn').classList.remove('active');
+});
+document.getElementById('stepBtn').addEventListener('click', () => {
+  playing = false;
+  document.getElementById('pauseBtn').classList.add('active');
+  document.getElementById('playBtn').classList.remove('active');
+  doStep();
+  draw();
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  reset();
+  draw();
+});
+
+reset();
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Augmentation 갤러리</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#e94560;margin-bottom:16px;font-size:1.6em}
+.container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.views{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.canvas-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333}
+.canvas-wrap h3{color:#e94560;margin-bottom:8px;font-size:0.95em}
+canvas{display:block;border-radius:8px}
+.panel{background:#0f0f23;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px}
+.panel h3{color:#e94560;margin-bottom:12px;font-size:0.95em}
+.aug-btn{display:inline-block;background:#16213e;color:#e0e0e0;border:1px solid #333;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.78em;margin:3px;transition:0.2s}
+.aug-btn:hover{border-color:#e94560;color:#e94560}
+.aug-btn.active{border-color:#e94560;background:#2a1a30;color:#e94560}
+.slider-group{margin:8px 0}
+.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:#aaa;margin-bottom:2px}
+.slider-group input[type=range]{width:100%;accent-color:#e94560}
+.btn-action{background:#e94560;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.85em;width:100%;margin-top:10px}
+.btn-action:hover{background:#c73650}
+.info-box{background:#16213e;border-radius:8px;padding:10px;margin-top:10px;font-size:0.78em;color:#7fdbca;font-family:'Courier New',monospace;line-height:1.5}
+#paramPanel{margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Data Augmentation 갤러리</h1>
+<div class="container">
+  <div>
+    <div class="views">
+      <div class="canvas-wrap">
+        <h3>원본 이미지</h3>
+        <canvas id="origCvs" width="300" height="300"></canvas>
+      </div>
+      <div class="canvas-wrap">
+        <h3>Augmented 이미지</h3>
+        <canvas id="augCvs" width="300" height="300"></canvas>
+      </div>
+    </div>
+    <div class="info-box" id="transformInfo" style="max-width:632px;margin-top:12px">
+      Augmentation을 선택하세요.
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Augmentation 선택</h3>
+    <div id="augBtns">
+      <span class="aug-btn active" onclick="selectAug('crop')">Random Crop</span>
+      <span class="aug-btn" onclick="selectAug('flip')">Horizontal Flip</span>
+      <span class="aug-btn" onclick="selectAug('jitter')">Color Jitter</span>
+      <span class="aug-btn" onclick="selectAug('noise')">Gaussian Noise</span>
+      <span class="aug-btn" onclick="selectAug('cutmix')">CutMix</span>
+      <span class="aug-btn" onclick="selectAug('mixup')">MixUp</span>
+      <span class="aug-btn" onclick="selectAug('mosaic')">Mosaic</span>
+      <span class="aug-btn" onclick="selectAug('rotate')">Random Rotation</span>
+      <span class="aug-btn" onclick="selectAug('erase')">Random Erasing</span>
+    </div>
+    <div id="paramPanel"></div>
+    <button class="btn-action" onclick="randomAll()">Random All (무작위 조합)</button>
+  </div>
+</div>
+
+<script>
+const origCvs = document.getElementById('origCvs');
+const augCvs = document.getElementById('augCvs');
+const origCtx = origCvs.getContext('2d');
+const augCtx = augCvs.getContext('2d');
+const S = 300;
+
+let currentAug = 'crop';
+let origImageData = null;
+let secondImageData = null;
+
+// Draw a colorful scene
+function drawScene(ctx, variant=0){
+  // sky
+  const sky = ctx.createLinearGradient(0,0,0,S*0.5);
+  sky.addColorStop(0, variant?'#2d1b69':'#1a2980');
+  sky.addColorStop(1, variant?'#44318d':'#26d0ce');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,S,S*0.5);
+
+  // sun/moon
+  ctx.beginPath();
+  ctx.arc(variant?220:80, 60, 30, 0, Math.PI*2);
+  ctx.fillStyle = variant?'#c0c0e0':'#ffdd57';
+  ctx.fill();
+
+  // mountains
+  ctx.fillStyle = variant?'#2d3561':'#3d5a80';
+  ctx.beginPath();ctx.moveTo(0,S*0.5);ctx.lineTo(60,S*0.25);ctx.lineTo(140,S*0.45);ctx.lineTo(200,S*0.2);ctx.lineTo(280,S*0.4);ctx.lineTo(S,S*0.3);ctx.lineTo(S,S*0.5);ctx.closePath();ctx.fill();
+
+  // ground
+  ctx.fillStyle = variant?'#1a472a':'#2d6a4f';
+  ctx.fillRect(0,S*0.5,S,S*0.5);
+
+  // road
+  ctx.fillStyle='#333';
+  ctx.beginPath();ctx.moveTo(100,S);ctx.lineTo(200,S);ctx.lineTo(170,S*0.5);ctx.lineTo(130,S*0.5);ctx.closePath();ctx.fill();
+
+  // trees
+  const treeColors = variant?['#0b6623','#228b22']:['#1b4332','#40916c'];
+  for(const [tx,ty] of [[40,S*0.5],[260,S*0.55],[220,S*0.48],[50,S*0.6]]){
+    ctx.fillStyle='#5c4033';ctx.fillRect(tx-4,ty,8,25);
+    ctx.beginPath();ctx.moveTo(tx,ty-30);ctx.lineTo(tx-20,ty+5);ctx.lineTo(tx+20,ty+5);ctx.closePath();
+    ctx.fillStyle=treeColors[0];ctx.fill();
+    ctx.beginPath();ctx.moveTo(tx,ty-45);ctx.lineTo(tx-15,ty-10);ctx.lineTo(tx+15,ty-10);ctx.closePath();
+    ctx.fillStyle=treeColors[1];ctx.fill();
+  }
+
+  // house
+  ctx.fillStyle = variant?'#8b4513':'#b8860b';
+  ctx.fillRect(S*0.55, S*0.38, 50, 35);
+  ctx.fillStyle = variant?'#654321':'#8b6914';
+  ctx.beginPath();ctx.moveTo(S*0.55-5,S*0.38);ctx.lineTo(S*0.55+25,S*0.28);ctx.lineTo(S*0.55+55,S*0.38);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#ffdd57';ctx.fillRect(S*0.55+18,S*0.42,14,12);
+
+  // car
+  ctx.fillStyle = variant?'#e94560':'#4a9eff';
+  ctx.fillRect(130, S*0.75, 40, 18);
+  ctx.fillStyle = variant?'#c73650':'#3570c7';
+  ctx.fillRect(138, S*0.75-10, 24, 12);
+
+  // clouds
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  for(const [cx,cy] of [[120+variant*60,40],[250-variant*80,55]]){
+    ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.arc(cx+15,cy-5,12,0,Math.PI*2);ctx.arc(cx+25,cy,10,0,Math.PI*2);ctx.fill();
+  }
+
+  // flowers
+  const flowerColors = ['#e94560','#ffdd57','#a855f7','#50c878'];
+  for(let i=0;i<8;i++){
+    const fx = 20+i*38+variant*10, fy = S*0.85+Math.sin(i)*10;
+    ctx.fillStyle=flowerColors[i%4];
+    ctx.beginPath();ctx.arc(fx,fy,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#2d6a4f';ctx.fillRect(fx-1,fy,2,10);
+  }
+}
+
+function initImages(){
+  drawScene(origCtx, 0);
+  origImageData = origCtx.getImageData(0,0,S,S);
+
+  const tmpCvs = document.createElement('canvas');
+  tmpCvs.width=S;tmpCvs.height=S;
+  const tmpCtx=tmpCvs.getContext('2d');
+  drawScene(tmpCtx, 1);
+  secondImageData = tmpCtx.getImageData(0,0,S,S);
+}
+
+function getOrigData(){ return new ImageData(new Uint8ClampedArray(origImageData.data), S, S); }
+function getSecondData(){ return new ImageData(new Uint8ClampedArray(secondImageData.data), S, S); }
+
+const augParams = {
+  crop: {ratio: 0.75},
+  flip: {on: true},
+  jitter: {brightness: 1.0, contrast: 1.0, saturation: 1.0},
+  noise: {sigma: 20},
+  cutmix: {lambda: 0.5},
+  mixup: {alpha: 0.5},
+  mosaic: {},
+  rotate: {angle: 15},
+  erase: {ratio: 0.2}
+};
+
+function selectAug(name){
+  currentAug = name;
+  document.querySelectorAll('.aug-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.aug-btn').forEach(b=>{if(b.textContent.toLowerCase().includes(name)||
+    (name==='crop'&&b.textContent.includes('Crop'))||
+    (name==='flip'&&b.textContent.includes('Flip'))||
+    (name==='jitter'&&b.textContent.includes('Jitter'))||
+    (name==='noise'&&b.textContent.includes('Noise'))||
+    (name==='cutmix'&&b.textContent.includes('CutMix'))||
+    (name==='mixup'&&b.textContent.includes('MixUp'))||
+    (name==='mosaic'&&b.textContent.includes('Mosaic'))||
+    (name==='rotate'&&b.textContent.includes('Rotation'))||
+    (name==='erase'&&b.textContent.includes('Erasing'))
+  ) b.classList.add('active');});
+  buildParams();
+  applyAug();
+}
+
+function buildParams(){
+  const panel = document.getElementById('paramPanel');
+  let html = '';
+  const sl = (id, label, min, max, step, val) =>
+    `<div class="slider-group"><label><span>${label}</span><span id="v_${id}">${val}</span></label>
+     <input type="range" id="s_${id}" min="${min}" max="${max}" step="${step}" value="${val}" oninput="paramChange('${id}',this.value)"></div>`;
+
+  switch(currentAug){
+    case 'crop': html = sl('crop_ratio','Crop 비율',0.5,1.0,0.01,augParams.crop.ratio); break;
+    case 'flip': html = `<div style="margin:10px 0"><label style="font-size:0.85em;color:#aaa;cursor:pointer"><input type="checkbox" id="cb_flip" ${augParams.flip.on?'checked':''} onchange="augParams.flip.on=this.checked;applyAug()"> Horizontal Flip 적용</label></div>`; break;
+    case 'jitter':
+      html = sl('brightness','Brightness',0,2.0,0.05,augParams.jitter.brightness);
+      html += sl('contrast','Contrast',0,2.0,0.05,augParams.jitter.contrast);
+      html += sl('saturation','Saturation',0,2.0,0.05,augParams.jitter.saturation);
+      break;
+    case 'noise': html = sl('sigma','Noise Sigma (σ)',0,50,1,augParams.noise.sigma); break;
+    case 'cutmix': html = sl('cutmix_lambda','Lambda (λ)',0,1,0.01,augParams.cutmix.lambda); break;
+    case 'mixup': html = sl('mixup_alpha','Alpha (α)',0,1,0.01,augParams.mixup.alpha); break;
+    case 'mosaic': html = '<p style="font-size:0.8em;color:#888;margin:8px 0">4개 이미지를 모자이크로 결합합니다.</p>'; break;
+    case 'rotate': html = sl('rot_angle','회전 각도 (도)',-45,45,1,augParams.rotate.angle); break;
+    case 'erase': html = sl('erase_ratio','Erasing 비율',0,0.5,0.01,augParams.erase.ratio); break;
+  }
+  panel.innerHTML = html;
+}
+
+function paramChange(id, val){
+  const v = parseFloat(val);
+  document.getElementById('v_'+id).textContent = v;
+  switch(id){
+    case 'crop_ratio': augParams.crop.ratio=v; break;
+    case 'brightness': augParams.jitter.brightness=v; break;
+    case 'contrast': augParams.jitter.contrast=v; break;
+    case 'saturation': augParams.jitter.saturation=v; break;
+    case 'sigma': augParams.noise.sigma=v; break;
+    case 'cutmix_lambda': augParams.cutmix.lambda=v; break;
+    case 'mixup_alpha': augParams.mixup.alpha=v; break;
+    case 'rot_angle': augParams.rotate.angle=v; break;
+    case 'erase_ratio': augParams.erase.ratio=v; break;
+  }
+  applyAug();
+}
+
+function applyAug(transforms=null){
+  augCtx.clearRect(0,0,S,S);
+  const applied = [];
+
+  if(transforms){
+    // apply multiple
+    augCtx.putImageData(getOrigData(),0,0);
+    for(const t of transforms){
+      applyOne(t.name, t.params);
+      applied.push(t.desc);
+    }
+  } else {
+    augCtx.putImageData(getOrigData(),0,0);
+    applyOne(currentAug);
+    applied.push(getDesc(currentAug));
+  }
+
+  document.getElementById('transformInfo').innerHTML =
+    `<b>적용된 변환:</b> ${applied.join(' | ')}`;
+}
+
+function getDesc(name){
+  switch(name){
+    case 'crop': return `Random Crop (ratio=${augParams.crop.ratio})`;
+    case 'flip': return `H-Flip (${augParams.flip.on?'ON':'OFF'})`;
+    case 'jitter': return `Brightness=${augParams.jitter.brightness}, Contrast=${augParams.jitter.contrast}, Saturation=${augParams.jitter.saturation}`;
+    case 'noise': return `Gaussian Noise σ=${augParams.noise.sigma}`;
+    case 'cutmix': return `CutMix λ=${augParams.cutmix.lambda}`;
+    case 'mixup': return `MixUp α=${augParams.mixup.alpha}`;
+    case 'mosaic': return `Mosaic (4-tile)`;
+    case 'rotate': return `Rotation=${augParams.rotate.angle}°`;
+    case 'erase': return `Random Erasing (ratio=${augParams.erase.ratio})`;
+  }
+  return name;
+}
+
+function applyOne(name, params){
+  const p = params || augParams[name];
+  switch(name){
+    case 'crop': {
+      const r = p.ratio || augParams.crop.ratio;
+      const cw = Math.floor(S*r), ch = Math.floor(S*r);
+      const cx = Math.floor(Math.random()*(S-cw)), cy = Math.floor(Math.random()*(S-ch));
+      const imgData = augCtx.getImageData(cx,cy,cw,ch);
+      augCtx.clearRect(0,0,S,S);
+      const tmp = document.createElement('canvas');tmp.width=cw;tmp.height=ch;
+      tmp.getContext('2d').putImageData(imgData,0,0);
+      augCtx.drawImage(tmp,0,0,S,S);
+      break;
+    }
+    case 'flip': {
+      if(p.on !== false){
+        const imgData = augCtx.getImageData(0,0,S,S);
+        augCtx.save();augCtx.translate(S,0);augCtx.scale(-1,1);
+        augCtx.putImageData(imgData,0,0);
+        // manual pixel flip
+        const d = imgData.data;
+        const flipped = new Uint8ClampedArray(d.length);
+        for(let y=0;y<S;y++){
+          for(let x=0;x<S;x++){
+            const si = (y*S+x)*4;
+            const di = (y*S+(S-1-x))*4;
+            flipped[di]=d[si];flipped[di+1]=d[si+1];flipped[di+2]=d[si+2];flipped[di+3]=d[si+3];
+          }
+        }
+        augCtx.putImageData(new ImageData(flipped,S,S),0,0);
+        augCtx.restore();
+      }
+      break;
+    }
+    case 'jitter': {
+      const br = p.brightness!=null?p.brightness:augParams.jitter.brightness;
+      const co = p.contrast!=null?p.contrast:augParams.jitter.contrast;
+      const sa = p.saturation!=null?p.saturation:augParams.jitter.saturation;
+      const imgData = augCtx.getImageData(0,0,S,S);
+      const d = imgData.data;
+      for(let i=0;i<d.length;i+=4){
+        let r=d[i],g=d[i+1],b=d[i+2];
+        // brightness
+        r*=br;g*=br;b*=br;
+        // contrast
+        r=(r-128)*co+128;g=(g-128)*co+128;b=(b-128)*co+128;
+        // saturation
+        const gray=0.299*r+0.587*g+0.114*b;
+        r=gray+(r-gray)*sa;g=gray+(g-gray)*sa;b=gray+(b-gray)*sa;
+        d[i]=Math.max(0,Math.min(255,r));d[i+1]=Math.max(0,Math.min(255,g));d[i+2]=Math.max(0,Math.min(255,b));
+      }
+      augCtx.putImageData(imgData,0,0);
+      break;
+    }
+    case 'noise': {
+      const sigma = p.sigma!=null?p.sigma:augParams.noise.sigma;
+      const imgData = augCtx.getImageData(0,0,S,S);
+      const d = imgData.data;
+      for(let i=0;i<d.length;i+=4){
+        for(let c=0;c<3;c++){
+          const noise = sigma * (Math.random()+Math.random()+Math.random()+Math.random()+Math.random()+Math.random()-3)/1.5;
+          d[i+c] = Math.max(0,Math.min(255, d[i+c]+noise));
+        }
+      }
+      augCtx.putImageData(imgData,0,0);
+      break;
+    }
+    case 'cutmix': {
+      const lam = p.lambda!=null?p.lambda:augParams.cutmix.lambda;
+      const cutW = Math.floor(S*Math.sqrt(1-lam));
+      const cutH = Math.floor(S*Math.sqrt(1-lam));
+      const cx = Math.floor(Math.random()*(S-cutW));
+      const cy = Math.floor(Math.random()*(S-cutH));
+      const second = getSecondData();
+      const orig = augCtx.getImageData(0,0,S,S);
+      const d = orig.data, s = second.data;
+      for(let y=cy;y<cy+cutH&&y<S;y++){
+        for(let x=cx;x<cx+cutW&&x<S;x++){
+          const i=(y*S+x)*4;
+          d[i]=s[i];d[i+1]=s[i+1];d[i+2]=s[i+2];
+        }
+      }
+      augCtx.putImageData(orig,0,0);
+      // draw cut boundary
+      augCtx.strokeStyle='rgba(233,69,96,0.8)';augCtx.lineWidth=2;augCtx.setLineDash([4,4]);
+      augCtx.strokeRect(cx,cy,cutW,cutH);augCtx.setLineDash([]);
+      break;
+    }
+    case 'mixup': {
+      const alpha = p.alpha!=null?p.alpha:augParams.mixup.alpha;
+      const orig = augCtx.getImageData(0,0,S,S);
+      const second = getSecondData();
+      const d = orig.data, s = second.data;
+      for(let i=0;i<d.length;i+=4){
+        d[i]=d[i]*alpha+s[i]*(1-alpha);
+        d[i+1]=d[i+1]*alpha+s[i+1]*(1-alpha);
+        d[i+2]=d[i+2]*alpha+s[i+2]*(1-alpha);
+      }
+      augCtx.putImageData(orig,0,0);
+      break;
+    }
+    case 'mosaic': {
+      const half = S/2;
+      // draw 4 variants
+      const tmp = document.createElement('canvas');tmp.width=S;tmp.height=S;
+      const tc = tmp.getContext('2d');
+      // tile 0: original
+      augCtx.putImageData(getOrigData(),0,0);
+      const t0 = augCtx.getImageData(0,0,S,S);
+      // tile 1: second image
+      const t1 = getSecondData();
+      // tile 2: flipped original
+      const t2data = new Uint8ClampedArray(origImageData.data);
+      for(let y=0;y<S;y++)for(let x=0;x<S/2;x++){
+        const a=(y*S+x)*4,b=(y*S+S-1-x)*4;
+        [t2data[a],t2data[b]]=[t2data[b],t2data[a]];
+        [t2data[a+1],t2data[b+1]]=[t2data[b+1],t2data[a+1]];
+        [t2data[a+2],t2data[b+2]]=[t2data[b+2],t2data[a+2]];
+      }
+      // tile 3: jittered second
+      const t3data = new Uint8ClampedArray(secondImageData.data);
+      for(let i=0;i<t3data.length;i+=4){t3data[i]=Math.min(255,t3data[i]*1.3);t3data[i+2]=Math.min(255,t3data[i+2]*0.7);}
+
+      // compose mosaic
+      augCtx.clearRect(0,0,S,S);
+      const tiles = [origImageData.data, secondImageData.data, t2data, t3data];
+      const out = augCtx.createImageData(S,S);
+      const od = out.data;
+      for(let y=0;y<S;y++){
+        for(let x=0;x<S;x++){
+          const ti = (y<half?0:2) + (x<half?0:1);
+          const sx = x<half? x*2 : (x-half)*2;
+          const sy = y<half? y*2 : (y-half)*2;
+          const clampX = Math.min(sx, S-1), clampY = Math.min(sy, S-1);
+          const si = (clampY*S+clampX)*4;
+          const di = (y*S+x)*4;
+          od[di]=tiles[ti][si];od[di+1]=tiles[ti][si+1];od[di+2]=tiles[ti][si+2];od[di+3]=255;
+        }
+      }
+      augCtx.putImageData(out,0,0);
+      // grid lines
+      augCtx.strokeStyle='rgba(233,69,96,0.6)';augCtx.lineWidth=2;
+      augCtx.beginPath();augCtx.moveTo(half,0);augCtx.lineTo(half,S);augCtx.stroke();
+      augCtx.beginPath();augCtx.moveTo(0,half);augCtx.lineTo(S,half);augCtx.stroke();
+      break;
+    }
+    case 'rotate': {
+      const angle = (p.angle!=null?p.angle:augParams.rotate.angle) * Math.PI/180;
+      const imgData = augCtx.getImageData(0,0,S,S);
+      augCtx.clearRect(0,0,S,S);
+      augCtx.fillStyle='#0a0a1a';augCtx.fillRect(0,0,S,S);
+      const tmp = document.createElement('canvas');tmp.width=S;tmp.height=S;
+      tmp.getContext('2d').putImageData(imgData,0,0);
+      augCtx.save();
+      augCtx.translate(S/2,S/2);
+      augCtx.rotate(angle);
+      augCtx.drawImage(tmp,-S/2,-S/2);
+      augCtx.restore();
+      break;
+    }
+    case 'erase': {
+      const ratio = p.ratio!=null?p.ratio:augParams.erase.ratio;
+      const ew = Math.floor(S*Math.sqrt(ratio)*0.8);
+      const eh = Math.floor(S*Math.sqrt(ratio)*1.2);
+      const ex = Math.floor(Math.random()*(S-ew));
+      const ey = Math.floor(Math.random()*(S-eh));
+      // fill with random noise
+      const imgData = augCtx.getImageData(0,0,S,S);
+      const d = imgData.data;
+      for(let y=ey;y<ey+eh&&y<S;y++){
+        for(let x=ex;x<ex+ew&&x<S;x++){
+          const i=(y*S+x)*4;
+          d[i]=Math.random()*128;d[i+1]=Math.random()*128;d[i+2]=Math.random()*128;
+        }
+      }
+      augCtx.putImageData(imgData,0,0);
+      augCtx.strokeStyle='rgba(233,69,96,0.5)';augCtx.lineWidth=1;augCtx.setLineDash([3,3]);
+      augCtx.strokeRect(ex,ey,ew,eh);augCtx.setLineDash([]);
+      break;
+    }
+  }
+}
+
+function randomAll(){
+  const possible = ['crop','flip','jitter','noise','rotate','erase'];
+  const chosen = possible.filter(()=>Math.random()>0.5);
+  if(chosen.length===0) chosen.push('jitter');
+
+  const transforms = chosen.map(name=>{
+    const rp = {};
+    switch(name){
+      case 'crop': rp.ratio=0.6+Math.random()*0.35; return {name,params:rp,desc:`Crop=${rp.ratio.toFixed(2)}`};
+      case 'flip': rp.on=Math.random()>0.5; return {name,params:rp,desc:`Flip=${rp.on?'ON':'OFF'}`};
+      case 'jitter': rp.brightness=0.7+Math.random()*0.8;rp.contrast=0.7+Math.random()*0.8;rp.saturation=0.5+Math.random(); return {name,params:rp,desc:`Bright=${rp.brightness.toFixed(2)}`};
+      case 'noise': rp.sigma=Math.floor(Math.random()*30); return {name,params:rp,desc:`Noise σ=${rp.sigma}`};
+      case 'rotate': rp.angle=Math.floor(-30+Math.random()*60); return {name,params:rp,desc:`Rot=${rp.angle}°`};
+      case 'erase': rp.ratio=Math.random()*0.3; return {name,params:rp,desc:`Erase=${rp.ratio.toFixed(2)}`};
+    }
+  });
+
+  applyAug(transforms);
+}
+
+initImages();
+buildParams();
+applyAug();
+</script>
+</body>
+</html>

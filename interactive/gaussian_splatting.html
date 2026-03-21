@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Gaussian Splatting 파라미터</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#e94560;margin-bottom:8px;font-size:1.6em}
+.annotation{text-align:center;color:#aaa;font-size:0.85em;margin-bottom:16px;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.5}
+.container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.canvas-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333}
+.canvas-wrap h3{color:#e94560;margin-bottom:8px;font-size:0.95em}
+canvas{display:block;border-radius:8px;cursor:crosshair}
+.panel{background:#0f0f23;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px}
+.panel h3{color:#e94560;margin-bottom:12px;font-size:0.95em}
+.btn{background:#e94560;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.85em;margin:4px}
+.btn:hover{background:#c73650}
+.btn.secondary{background:#16213e;border:1px solid #e94560;color:#e94560}
+.btn.secondary:hover{background:#1a2744}
+.slider-group{margin:8px 0}
+.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:#aaa;margin-bottom:2px}
+.slider-group input[type=range]{width:100%;accent-color:#e94560;background:transparent}
+.info-box{background:#16213e;border-radius:8px;padding:10px;margin-top:10px;font-size:0.8em;font-family:'Courier New',monospace;color:#7fdbca;line-height:1.6}
+.color-row{display:flex;gap:8px;align-items:center;margin:6px 0}
+.color-row label{font-size:0.8em;color:#aaa;width:20px}
+.color-row input[type=range]{flex:1;accent-color:#e94560}
+.color-row span{font-size:0.75em;color:#888;width:30px;text-align:right}
+.no-sel{color:#666;font-style:italic;font-size:0.85em;margin-top:20px}
+.buttons-row{margin-bottom:12px;display:flex;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<h1>3D Gaussian Splatting 파라미터</h1>
+<p class="annotation">3DGS에서 각 Gaussian은 position, covariance, color, opacity를 가진다. 수백만 개의 Gaussian으로 장면을 표현한다.</p>
+<div class="container">
+  <div class="canvas-wrap">
+    <h3>렌더링 결과 (2D Slice)</h3>
+    <canvas id="cvs" width="520" height="420"></canvas>
+  </div>
+  <div class="panel">
+    <h3>컨트롤 패널</h3>
+    <div class="buttons-row">
+      <button class="btn" onclick="addGaussian()">+ Gaussian 추가</button>
+      <button class="btn secondary" onclick="removeGaussian()">- 선택 삭제</button>
+    </div>
+    <div id="controls">
+      <p class="no-sel">Gaussian을 클릭하여 선택하세요</p>
+    </div>
+    <div id="covDisplay" class="info-box" style="display:none">
+      <div id="covText"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let gaussians = [];
+let selectedIdx = -1;
+
+function randRange(a,b){return a+Math.random()*(b-a)}
+function initGaussians(){
+  const colors = [[230,69,96],[80,200,255],[120,255,120],[255,200,80],[200,120,255],[80,255,200],[255,150,100]];
+  for(let i=0;i<7;i++){
+    const c = colors[i % colors.length];
+    gaussians.push({
+      x: randRange(80, cvs.width-80),
+      y: randRange(80, cvs.height-80),
+      sx: randRange(25,60),
+      sy: randRange(25,60),
+      rot: randRange(-Math.PI/4, Math.PI/4),
+      opacity: randRange(0.3,0.8),
+      r: c[0], g: c[1], b: c[2],
+      depth: randRange(0,1)
+    });
+  }
+}
+
+function renderGaussians(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0,0,cvs.width,cvs.height);
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<cvs.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cvs.height);ctx.stroke();}
+  for(let y=0;y<cvs.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cvs.width,y);ctx.stroke();}
+
+  // sort back-to-front by depth
+  const sorted = gaussians.map((g,i)=>({...g,idx:i})).sort((a,b)=>b.depth-a.depth);
+
+  for(const g of sorted){
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.rot);
+    ctx.globalAlpha = g.opacity;
+
+    // draw filled ellipse with radial gradient
+    const maxR = Math.max(g.sx, g.sy)*2.5;
+    const grad = ctx.createRadialGradient(0,0,0, 0,0,maxR);
+    grad.addColorStop(0, `rgba(${g.r},${g.g},${g.b},1)`);
+    grad.addColorStop(0.3, `rgba(${g.r},${g.g},${g.b},0.6)`);
+    grad.addColorStop(0.7, `rgba(${g.r},${g.g},${g.b},0.15)`);
+    grad.addColorStop(1, `rgba(${g.r},${g.g},${g.b},0)`);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(0,0, g.sx*2.5, g.sy*2.5, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // selection highlight
+    if(g.idx === selectedIdx){
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5,5]);
+      ctx.beginPath();
+      ctx.ellipse(0,0, g.sx*1.5, g.sy*1.5, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  // gaussian count
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '12px monospace';
+  ctx.fillText(`Gaussians: ${gaussians.length}`, 10, cvs.height - 10);
+}
+
+function buildControls(){
+  const panel = document.getElementById('controls');
+  const covBox = document.getElementById('covDisplay');
+  if(selectedIdx < 0 || selectedIdx >= gaussians.length){
+    panel.innerHTML = '<p class="no-sel">Gaussian을 클릭하여 선택하세요</p>';
+    covBox.style.display = 'none';
+    return;
+  }
+  const g = gaussians[selectedIdx];
+  covBox.style.display = 'block';
+
+  const sliders = [
+    {id:'x', label:'X 위치', min:0, max:cvs.width, step:1, val:g.x},
+    {id:'y', label:'Y 위치', min:0, max:cvs.height, step:1, val:g.y},
+    {id:'sx', label:'Sigma X (σx)', min:5, max:120, step:1, val:g.sx},
+    {id:'sy', label:'Sigma Y (σy)', min:5, max:120, step:1, val:g.sy},
+    {id:'rot', label:'Rotation (rad)', min:-3.14, max:3.14, step:0.01, val:g.rot},
+    {id:'opacity', label:'Opacity (α)', min:0, max:1, step:0.01, val:g.opacity},
+    {id:'depth', label:'Depth (정렬)', min:0, max:1, step:0.01, val:g.depth},
+  ];
+
+  let html = `<p style="font-size:0.85em;color:#e94560;margin-bottom:8px">선택된 Gaussian #${selectedIdx}</p>`;
+  for(const s of sliders){
+    html += `<div class="slider-group">
+      <label><span>${s.label}</span><span id="v_${s.id}">${Number(s.val).toFixed(s.step<1?2:0)}</span></label>
+      <input type="range" id="s_${s.id}" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.val}"
+        oninput="updateParam('${s.id}',this.value)">
+    </div>`;
+  }
+  html += `<div style="margin-top:8px">
+    <div class="color-row"><label>R</label><input type="range" min="0" max="255" step="1" value="${g.r}" oninput="updateParam('r',this.value)"><span id="v_r">${g.r}</span></div>
+    <div class="color-row"><label>G</label><input type="range" min="0" max="255" step="1" value="${g.g}" oninput="updateParam('g',this.value)"><span id="v_g">${g.g}</span></div>
+    <div class="color-row"><label>B</label><input type="range" min="0" max="255" step="1" value="${g.b}" oninput="updateParam('b',this.value)"><span id="v_b">${g.b}</span></div>
+  </div>`;
+  panel.innerHTML = html;
+  updateCov();
+}
+
+function updateParam(key, val){
+  if(selectedIdx < 0) return;
+  const v = parseFloat(val);
+  gaussians[selectedIdx][key] = v;
+  const el = document.getElementById('v_'+key);
+  if(el) el.textContent = (key==='rot'||key==='opacity'||key==='depth') ? v.toFixed(2) : Math.round(v);
+  updateCov();
+  renderGaussians();
+}
+
+function updateCov(){
+  if(selectedIdx < 0) return;
+  const g = gaussians[selectedIdx];
+  const c = Math.cos(g.rot), s = Math.sin(g.rot);
+  const sx2 = g.sx*g.sx, sy2 = g.sy*g.sy;
+  const cov00 = c*c*sx2 + s*s*sy2;
+  const cov01 = c*s*(sx2-sy2);
+  const cov11 = s*s*sx2 + c*c*sy2;
+  document.getElementById('covText').innerHTML =
+    `Covariance Matrix Σ:<br>` +
+    `┌ ${cov00.toFixed(1).padStart(8)} ${cov01.toFixed(1).padStart(8)} ┐<br>` +
+    `└ ${cov01.toFixed(1).padStart(8)} ${cov11.toFixed(1).padStart(8)} ┘<br><br>` +
+    `Position: (${g.x.toFixed(0)}, ${g.y.toFixed(0)})<br>` +
+    `Opacity: ${g.opacity.toFixed(2)}<br>` +
+    `Color: rgb(${g.r}, ${g.g}, ${g.b})`;
+}
+
+cvs.addEventListener('click', function(e){
+  const rect = cvs.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (cvs.width / rect.width);
+  const my = (e.clientY - rect.top) * (cvs.height / rect.height);
+
+  let closest = -1, closestDist = Infinity;
+  for(let i=0;i<gaussians.length;i++){
+    const g = gaussians[i];
+    // transform mouse to gaussian local coords
+    const dx = mx - g.x, dy = my - g.y;
+    const c = Math.cos(-g.rot), s = Math.sin(-g.rot);
+    const lx = c*dx - s*dy, ly = s*dx + c*dy;
+    const d = (lx*lx)/(g.sx*g.sx*4) + (ly*ly)/(g.sy*g.sy*4);
+    if(d < 1 && d < closestDist){
+      closestDist = d;
+      closest = i;
+    }
+  }
+  selectedIdx = closest;
+  buildControls();
+  renderGaussians();
+});
+
+function addGaussian(){
+  gaussians.push({
+    x: randRange(60,cvs.width-60), y: randRange(60,cvs.height-60),
+    sx: randRange(20,50), sy: randRange(20,50),
+    rot: 0, opacity: 0.6,
+    r: Math.floor(randRange(80,255)), g: Math.floor(randRange(80,255)), b: Math.floor(randRange(80,255)),
+    depth: randRange(0,1)
+  });
+  selectedIdx = gaussians.length - 1;
+  buildControls();
+  renderGaussians();
+}
+
+function removeGaussian(){
+  if(selectedIdx < 0 || selectedIdx >= gaussians.length) return;
+  gaussians.splice(selectedIdx, 1);
+  selectedIdx = -1;
+  buildControls();
+  renderGaussians();
+}
+
+initGaussians();
+renderGaussians();
+</script>
+</body>
+</html>

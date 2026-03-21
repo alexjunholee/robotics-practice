@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homography 변환</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+  h1 { color: #00d4ff; margin-bottom: 5px; font-size: 1.5em; }
+  .subtitle { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+  .main { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .canvases { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+  .canvas-wrap { text-align: center; }
+  .canvas-wrap h3 { color: #aaa; font-size: 0.85em; margin-bottom: 5px; }
+  canvas { background: #0f0f23; border: 1px solid #333; border-radius: 8px; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  .panel { background: #16213e; border-radius: 8px; padding: 15px; min-width: 280px; max-width: 320px; }
+  .panel h3 { color: #00d4ff; margin-bottom: 10px; font-size: 1em; }
+  .buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #00d4ff44; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: background 0.2s; }
+  button:hover { background: #1a5276; }
+  .matrix-display { background: #0f0f23; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.78em; margin-bottom: 10px; line-height: 1.6; }
+  .matrix-display .val { color: #00d4ff; }
+  .explanation { background: #0f0f23; padding: 10px; border-radius: 6px; font-size: 0.78em; color: #888; margin-top: 10px; line-height: 1.5; }
+  .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<h1>Homography 변환</h1>
+<p class="subtitle">4점 대응을 이용한 평면 사영 변환 (Planar Projective Transformation)</p>
+<div class="main">
+  <div>
+    <div class="canvases">
+      <div class="canvas-wrap">
+        <h3>원본 (Source) / 변환 결과 (Warped)</h3>
+        <canvas id="canvas" width="600" height="500"></canvas>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div>소스 꼭짓점 (Source Corners)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#44ff44"></div>목표 꼭짓점 (Dest Corners)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#4488ff"></div>원본 영역</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff8844"></div>변환된 영역</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>프리셋 (Presets)</h3>
+    <div class="buttons">
+      <button id="perspBtn">원근 변환 (Perspective)</button>
+      <button id="affineBtn">아핀 변환 (Affine)</button>
+      <button id="resetBtn">초기화 (Reset)</button>
+    </div>
+    <h3>Homography 행렬 H (3x3)</h3>
+    <div class="matrix-display" id="matrixDisp">
+      <div>[<span class="val">1.000</span>, <span class="val">0.000</span>, <span class="val">0.000</span>]</div>
+      <div>[<span class="val">0.000</span>, <span class="val">1.000</span>, <span class="val">0.000</span>]</div>
+      <div>[<span class="val">0.000</span>, <span class="val">0.000</span>, <span class="val">1.000</span>]</div>
+    </div>
+    <h3>꼭짓점 좌표</h3>
+    <div class="matrix-display" id="coordDisp" style="font-size: 0.72em; line-height: 1.5;">
+    </div>
+    <div class="explanation">
+      <strong>원리:</strong> 4점 대응으로부터 평면 간의 변환을 구한다.
+      DLT (Direct Linear Transform) 알고리즘으로 8개의 대응 방정식에서
+      3x3 Homography 행렬 H를 계산한다.<br><br>
+      <strong>응용:</strong> SLAM에서 평면 감지, AR에서 마커 추적,
+      이미지 모자이킹, 문서 스캔 보정에 쓰인다.<br><br>
+      <strong>조작:</strong> 빨간점(소스)과 초록점(목표)을 드래그하세요.
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// Source quad (red)
+let src = [
+  { x: 150, y: 100 },
+  { x: 400, y: 100 },
+  { x: 400, y: 350 },
+  { x: 150, y: 350 }
+];
+
+// Destination quad (green)
+let dst = [
+  { x: 150, y: 100 },
+  { x: 400, y: 100 },
+  { x: 400, y: 350 },
+  { x: 150, y: 350 }
+];
+
+let dragging = null; // { type: 'src'|'dst', idx: number }
+const DRAG_RADIUS = 12;
+
+// DLT algorithm: compute homography from 4 point correspondences
+function computeHomography(s, d) {
+  // Build 8x9 matrix A
+  const A = [];
+  for (let i = 0; i < 4; i++) {
+    const sx = s[i].x, sy = s[i].y;
+    const dx = d[i].x, dy = d[i].y;
+    A.push([-sx, -sy, -1, 0, 0, 0, dx * sx, dx * sy, dx]);
+    A.push([0, 0, 0, -sx, -sy, -1, dy * sx, dy * sy, dy]);
+  }
+
+  // SVD via AᵀA eigenvalue decomposition (simplified for 9x9)
+  // We solve Ah = 0, h is the null space of A
+  // Use AᵀA and find smallest eigenvalue eigenvector
+  const ATA = Array(9).fill(null).map(() => Array(9).fill(0));
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 9; j++) {
+      for (let k = 0; k < 9; k++) {
+        ATA[j][k] += A[i][j] * A[i][k];
+      }
+    }
+  }
+
+  // Power iteration to find smallest eigenvector of ATA
+  // Actually, let's use inverse power iteration
+  // Simpler approach: solve using the last row constraint h33=1
+  // Set h[8]=1 and solve 8x8 system
+
+  const A8 = [];
+  const b8 = [];
+  for (let i = 0; i < 8; i++) {
+    A8.push(A[i].slice(0, 8));
+    b8.push(-A[i][8]);
+  }
+
+  // Solve 8x8 linear system using Gaussian elimination
+  const h = solveLinear(A8, b8);
+  if (!h) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  h.push(1);
+
+  return h;
+}
+
+function solveLinear(A, b) {
+  const n = A.length;
+  // Augmented matrix
+  const M = A.map((row, i) => [...row, b[i]]);
+
+  for (let col = 0; col < n; col++) {
+    // Partial pivoting
+    let maxRow = col;
+    let maxVal = Math.abs(M[col][col]);
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(M[row][col]) > maxVal) {
+        maxVal = Math.abs(M[row][col]);
+        maxRow = row;
+      }
+    }
+    [M[col], M[maxRow]] = [M[maxRow], M[col]];
+
+    if (Math.abs(M[col][col]) < 1e-12) return null;
+
+    for (let row = col + 1; row < n; row++) {
+      const factor = M[row][col] / M[col][col];
+      for (let j = col; j <= n; j++) {
+        M[row][j] -= factor * M[col][j];
+      }
+    }
+  }
+
+  // Back substitution
+  const x = new Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = M[i][n];
+    for (let j = i + 1; j < n; j++) {
+      x[i] -= M[i][j] * x[j];
+    }
+    x[i] /= M[i][i];
+  }
+  return x;
+}
+
+function applyHomography(H, px, py) {
+  const w = H[6] * px + H[7] * py + H[8];
+  if (Math.abs(w) < 1e-12) return { x: px, y: py };
+  const x = (H[0] * px + H[1] * py + H[2]) / w;
+  const y = (H[3] * px + H[4] * py + H[5]) / w;
+  return { x, y };
+}
+
+function drawSourcePattern() {
+  // Draw a recognizable pattern inside the source quad
+  // We'll draw a grid + text on a virtual rectangle then warp it
+  const sMinX = Math.min(src[0].x, src[3].x);
+  const sMaxX = Math.max(src[1].x, src[2].x);
+  const sMinY = Math.min(src[0].y, src[1].y);
+  const sMaxY = Math.max(src[2].y, src[3].y);
+
+  // Draw source quad outline
+  ctx.beginPath();
+  ctx.moveTo(src[0].x, src[0].y);
+  for (let i = 1; i < 4; i++) ctx.lineTo(src[i].x, src[i].y);
+  ctx.closePath();
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(68, 136, 255, 0.08)';
+  ctx.fill();
+
+  // Draw grid inside source quad
+  const gridN = 5;
+  ctx.strokeStyle = 'rgba(68, 136, 255, 0.3)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= gridN; i++) {
+    let t = i / gridN;
+    // Horizontal lines
+    let p0x = src[0].x + t * (src[3].x - src[0].x);
+    let p0y = src[0].y + t * (src[3].y - src[0].y);
+    let p1x = src[1].x + t * (src[2].x - src[1].x);
+    let p1y = src[1].y + t * (src[2].y - src[1].y);
+    ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
+    // Vertical lines
+    p0x = src[0].x + t * (src[1].x - src[0].x);
+    p0y = src[0].y + t * (src[1].y - src[0].y);
+    p1x = src[3].x + t * (src[2].x - src[3].x);
+    p1y = src[3].y + t * (src[2].y - src[3].y);
+    ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
+  }
+
+  // Draw a colored pattern (small rectangles at grid intersections)
+  const colors = ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff', '#44ffff'];
+  let ci = 0;
+  for (let r = 0; r < gridN; r++) {
+    for (let c = 0; c < gridN; c++) {
+      if ((r + c) % 3 === 0) {
+        let t0r = r / gridN, t1r = (r + 1) / gridN;
+        let t0c = c / gridN, t1c = (c + 1) / gridN;
+        // Bilinear interpolation of quad corners
+        let corners = [];
+        for (let [tr, tc] of [[t0r, t0c], [t0r, t1c], [t1r, t1c], [t1r, t0c]]) {
+          let top = { x: src[0].x + tc * (src[1].x - src[0].x), y: src[0].y + tc * (src[1].y - src[0].y) };
+          let bot = { x: src[3].x + tc * (src[2].x - src[3].x), y: src[3].y + tc * (src[2].y - src[3].y) };
+          corners.push({ x: top.x + tr * (bot.x - top.x), y: top.y + tr * (bot.y - top.y) });
+        }
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (let k = 1; k < 4; k++) ctx.lineTo(corners[k].x, corners[k].y);
+        ctx.closePath();
+        ctx.fillStyle = colors[ci % colors.length] + '55';
+        ctx.fill();
+        ci++;
+      }
+    }
+  }
+
+  // Label
+  let cx = (src[0].x + src[1].x + src[2].x + src[3].x) / 4;
+  let cy = (src[0].y + src[1].y + src[2].y + src[3].y) / 4;
+  ctx.fillStyle = 'rgba(68, 136, 255, 0.5)';
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SOURCE', cx, cy);
+}
+
+function drawWarpedPattern(Hmat) {
+  // Warp the grid from source to destination using H
+  const gridN = 5;
+
+  // Draw warped quad outline
+  ctx.beginPath();
+  ctx.moveTo(dst[0].x, dst[0].y);
+  for (let i = 1; i < 4; i++) ctx.lineTo(dst[i].x, dst[i].y);
+  ctx.closePath();
+  ctx.strokeStyle = '#ff8844';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 136, 68, 0.08)';
+  ctx.fill();
+
+  // Draw warped grid lines
+  ctx.strokeStyle = 'rgba(255, 136, 68, 0.4)';
+  ctx.lineWidth = 1;
+  const steps = 20;
+  for (let i = 0; i <= gridN; i++) {
+    let t = i / gridN;
+    // Horizontal lines (warp each point)
+    ctx.beginPath();
+    for (let s = 0; s <= steps; s++) {
+      let u = s / steps;
+      // Point on source grid
+      let topX = src[0].x + u * (src[1].x - src[0].x);
+      let topY = src[0].y + u * (src[1].y - src[0].y);
+      let botX = src[3].x + u * (src[2].x - src[3].x);
+      let botY = src[3].y + u * (src[2].y - src[3].y);
+      let px = topX + t * (botX - topX);
+      let py = topY + t * (botY - topY);
+      let wp = applyHomography(Hmat, px, py);
+      if (s === 0) ctx.moveTo(wp.x, wp.y);
+      else ctx.lineTo(wp.x, wp.y);
+    }
+    ctx.stroke();
+    // Vertical lines
+    ctx.beginPath();
+    for (let s = 0; s <= steps; s++) {
+      let v = s / steps;
+      let leftX = src[0].x + v * (src[3].x - src[0].x);
+      let leftY = src[0].y + v * (src[3].y - src[0].y);
+      let rightX = src[1].x + v * (src[2].x - src[1].x);
+      let rightY = src[1].y + v * (src[2].y - src[1].y);
+      let px = leftX + t * (rightX - leftX);
+      let py = leftY + t * (rightY - leftY);
+      let wp = applyHomography(Hmat, px, py);
+      if (s === 0) ctx.moveTo(wp.x, wp.y);
+      else ctx.lineTo(wp.x, wp.y);
+    }
+    ctx.stroke();
+  }
+
+  // Draw warped colored tiles
+  const colors = ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff', '#44ffff'];
+  let ci = 0;
+  for (let r = 0; r < gridN; r++) {
+    for (let c = 0; c < gridN; c++) {
+      if ((r + c) % 3 === 0) {
+        let t0r = r / gridN, t1r = (r + 1) / gridN;
+        let t0c = c / gridN, t1c = (c + 1) / gridN;
+        let corners = [];
+        for (let [tr, tc] of [[t0r, t0c], [t0r, t1c], [t1r, t1c], [t1r, t0c]]) {
+          let top = { x: src[0].x + tc * (src[1].x - src[0].x), y: src[0].y + tc * (src[1].y - src[0].y) };
+          let bot = { x: src[3].x + tc * (src[2].x - src[3].x), y: src[3].y + tc * (src[2].y - src[3].y) };
+          let sp = { x: top.x + tr * (bot.x - top.x), y: top.y + tr * (bot.y - top.y) };
+          corners.push(applyHomography(Hmat, sp.x, sp.y));
+        }
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (let k = 1; k < 4; k++) ctx.lineTo(corners[k].x, corners[k].y);
+        ctx.closePath();
+        ctx.fillStyle = colors[ci % colors.length] + '55';
+        ctx.fill();
+        ci++;
+      }
+    }
+  }
+
+  // Warped label
+  let cx = (src[0].x + src[1].x + src[2].x + src[3].x) / 4;
+  let cy = (src[0].y + src[1].y + src[2].y + src[3].y) / 4;
+  let wc = applyHomography(Hmat, cx, cy);
+  ctx.fillStyle = 'rgba(255, 136, 68, 0.6)';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('WARPED', wc.x, wc.y);
+}
+
+function drawCornerPoint(p, color, label) {
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, DRAG_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = color + '44';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, p.x, p.y - 16);
+}
+
+function updateDisplay(Hmat) {
+  const md = document.getElementById('matrixDisp');
+  md.innerHTML = '';
+  for (let r = 0; r < 3; r++) {
+    let row = '[';
+    for (let c = 0; c < 3; c++) {
+      let v = Hmat[r * 3 + c];
+      row += `<span class="val">${v >= 0 ? ' ' : ''}${v.toFixed(4)}</span>`;
+      if (c < 2) row += ', ';
+    }
+    row += ']';
+    md.innerHTML += `<div>${row}</div>`;
+  }
+
+  const cd = document.getElementById('coordDisp');
+  let html = '<div style="color:#ff4444">소스(S): ';
+  for (let i = 0; i < 4; i++) html += `(${src[i].x.toFixed(0)},${src[i].y.toFixed(0)}) `;
+  html += '</div><div style="color:#44ff44">목표(D): ';
+  for (let i = 0; i < 4; i++) html += `(${dst[i].x.toFixed(0)},${dst[i].y.toFixed(0)}) `;
+  html += '</div>';
+  cd.innerHTML = html;
+}
+
+function draw() {
+  ctx.fillStyle = '#0f0f23';
+  ctx.fillRect(0, 0, W, H);
+
+  const Hmat = computeHomography(src, dst);
+
+  drawSourcePattern();
+  drawWarpedPattern(Hmat);
+
+  // Draw corner handles
+  for (let i = 0; i < 4; i++) {
+    drawCornerPoint(src[i], '#ff4444', `S${i + 1}`);
+    drawCornerPoint(dst[i], '#44ff44', `D${i + 1}`);
+  }
+
+  // Connection lines src -> dst
+  ctx.setLineDash([3, 5]);
+  ctx.strokeStyle = '#ffffff22';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(src[i].x, src[i].y);
+    ctx.lineTo(dst[i].x, dst[i].y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  updateDisplay(Hmat);
+}
+
+// Mouse interaction
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => {
+  const p = getMousePos(e);
+  // Check dst points first (they're on top)
+  for (let i = 0; i < 4; i++) {
+    if (Math.hypot(p.x - dst[i].x, p.y - dst[i].y) < DRAG_RADIUS) {
+      dragging = { type: 'dst', idx: i };
+      return;
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    if (Math.hypot(p.x - src[i].x, p.y - src[i].y) < DRAG_RADIUS) {
+      dragging = { type: 'src', idx: i };
+      return;
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const p = getMousePos(e);
+  const arr = dragging.type === 'src' ? src : dst;
+  arr[dragging.idx].x = Math.max(10, Math.min(W - 10, p.x));
+  arr[dragging.idx].y = Math.max(10, Math.min(H - 10, p.y));
+  draw();
+});
+
+canvas.addEventListener('mouseup', () => { dragging = null; });
+canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const p = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  for (let i = 0; i < 4; i++) {
+    if (Math.hypot(p.x - dst[i].x, p.y - dst[i].y) < DRAG_RADIUS * 1.5) {
+      dragging = { type: 'dst', idx: i }; return;
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    if (Math.hypot(p.x - src[i].x, p.y - src[i].y) < DRAG_RADIUS * 1.5) {
+      dragging = { type: 'src', idx: i }; return;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!dragging) return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const p = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  const arr = dragging.type === 'src' ? src : dst;
+  arr[dragging.idx].x = Math.max(10, Math.min(W - 10, p.x));
+  arr[dragging.idx].y = Math.max(10, Math.min(H - 10, p.y));
+  draw();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { dragging = null; });
+
+// Presets
+document.getElementById('perspBtn').addEventListener('click', () => {
+  src = [{ x: 150, y: 100 }, { x: 400, y: 100 }, { x: 400, y: 350 }, { x: 150, y: 350 }];
+  dst = [{ x: 200, y: 120 }, { x: 430, y: 80 }, { x: 480, y: 400 }, { x: 130, y: 370 }];
+  draw();
+});
+
+document.getElementById('affineBtn').addEventListener('click', () => {
+  src = [{ x: 150, y: 100 }, { x: 400, y: 100 }, { x: 400, y: 350 }, { x: 150, y: 350 }];
+  // Affine: shear + scale
+  dst = [{ x: 200, y: 80 }, { x: 480, y: 130 }, { x: 430, y: 380 }, { x: 150, y: 330 }];
+  draw();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  src = [{ x: 150, y: 100 }, { x: 400, y: 100 }, { x: 400, y: 350 }, { x: 150, y: 350 }];
+  dst = [{ x: 150, y: 100 }, { x: 400, y: 100 }, { x: 400, y: 350 }, { x: 150, y: 350 }];
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>

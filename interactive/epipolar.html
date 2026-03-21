@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epipolar Geometry 시각화</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 15px; }
+  h1 { color: #00d4ff; margin-bottom: 5px; font-size: 1.5em; }
+  .subtitle { color: #888; font-size: 0.85em; margin-bottom: 12px; }
+  .view-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
+  .view-col { text-align: center; }
+  .view-col h3 { color: #aaa; font-size: 0.85em; margin-bottom: 4px; }
+  canvas { background: #0f0f23; border: 1px solid #333; border-radius: 8px; cursor: crosshair; }
+  .bottom-row { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 960px; }
+  .panel { background: #16213e; border-radius: 8px; padding: 12px; flex: 1; min-width: 250px; }
+  .panel h3 { color: #00d4ff; margin-bottom: 8px; font-size: 0.95em; }
+  .slider-group { margin-bottom: 10px; }
+  .slider-group label { display: block; font-size: 0.82em; margin-bottom: 3px; color: #aaa; }
+  .slider-group input[type=range] { width: 100%; accent-color: #00d4ff; }
+  .slider-val { float: right; color: #00d4ff; font-weight: bold; }
+  .matrix-display { background: #0f0f23; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 0.7em; margin-bottom: 8px; line-height: 1.5; }
+  .matrix-display .val { color: #00d4ff; }
+  .stats { font-size: 0.78em; line-height: 1.6; }
+  .stats span { color: #00d4ff; }
+  .explanation { background: #0f0f23; padding: 8px; border-radius: 6px; font-size: 0.75em; color: #888; margin-top: 8px; line-height: 1.4; }
+  .legend { display: flex; gap: 10px; margin: 6px 0; font-size: 0.75em; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-color { width: 10px; height: 10px; border-radius: 50%; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #00d4ff44; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em; margin: 4px; transition: background 0.2s; }
+  button:hover { background: #1a5276; }
+</style>
+</head>
+<body>
+<h1>Epipolar Geometry 시각화</h1>
+<p class="subtitle">두 카메라 뷰 사이의 에피폴라 기하학 (Fundamental Matrix F)</p>
+
+<div class="view-row">
+  <div class="view-col">
+    <h3>왼쪽 카메라 (Left Camera)</h3>
+    <canvas id="leftCanvas" width="460" height="360"></canvas>
+  </div>
+  <div class="view-col">
+    <h3>오른쪽 카메라 (Right Camera)</h3>
+    <canvas id="rightCanvas" width="460" height="360"></canvas>
+  </div>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-color" style="background:#ffff44"></div>클릭 점 (Clicked Point)</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ff4488"></div>에피폴라 선 (Epipolar Line)</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ff8800"></div>에피폴 (Epipole)</div>
+  <div class="legend-item"><div class="legend-color" style="background:varied"></div>대응점 (Correspondences)</div>
+</div>
+
+<div class="bottom-row">
+  <div class="panel">
+    <h3>파라미터</h3>
+    <div class="slider-group">
+      <label>기선 거리 (Baseline) <span class="slider-val" id="baseVal">3.0</span></label>
+      <input type="range" id="baseSlider" min="0.5" max="8" step="0.1" value="3.0">
+    </div>
+    <div class="slider-group">
+      <label>카메라 수렴각 (Convergence) <span class="slider-val" id="convVal">5</span>&deg;</label>
+      <input type="range" id="convSlider" min="0" max="30" step="1" value="5">
+    </div>
+    <button id="resetBtn">초기화 (Reset)</button>
+    <button id="clearBtn">선 지우기 (Clear Lines)</button>
+  </div>
+  <div class="panel">
+    <h3>Fundamental Matrix F (3x3)</h3>
+    <div class="matrix-display" id="fMatrix"></div>
+    <h3>에피폴 좌표 (Epipole)</h3>
+    <div class="stats">
+      <div>왼쪽 에피폴 e: (<span id="eL_x">-</span>, <span id="eL_y">-</span>)</div>
+      <div>오른쪽 에피폴 e': (<span id="eR_x">-</span>, <span id="eR_y">-</span>)</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="explanation">
+      <strong>원리:</strong> 기본 행렬 F는 두 뷰 사이의 에피폴라 제약을 인코딩한다.
+      왼쪽 이미지의 점 p에 대해, 오른쪽의 에피폴라 선은 l' = F*p 이다.
+      대응점 p'는 반드시 이 선 위에 있다.<br><br>
+      <strong>에피폴:</strong> 한 카메라의 중심이 다른 카메라 이미지에 투영된 점.
+      모든 에피폴라 선이 에피폴에서 만난다.<br><br>
+      <strong>조작:</strong> 왼쪽/오른쪽 캔버스를 클릭하면 반대쪽에 에피폴라 선이 그려진다.
+      기선 거리를 변경하면 F 행렬이 업데이트된다.
+    </div>
+  </div>
+</div>
+
+<script>
+const leftCanvas = document.getElementById('leftCanvas');
+const rightCanvas = document.getElementById('rightCanvas');
+const ctxL = leftCanvas.getContext('2d');
+const ctxR = rightCanvas.getContext('2d');
+const CW = 460, CH = 360;
+
+// Camera parameters
+let baseline = 3.0;
+let convergence = 5; // degrees
+const focalLength = 400;
+const cx = CW / 2, cy = CH / 2;
+
+// 3D scene points (x, y, z in world coordinates)
+const scenePoints = [
+  { x: 0, y: 0, z: 8, color: '#ff4444', size: 20, shape: 'rect' },
+  { x: -2, y: -1, z: 6, color: '#44ff44', size: 15, shape: 'circle' },
+  { x: 1.5, y: 1, z: 10, color: '#4488ff', size: 22, shape: 'rect' },
+  { x: -1, y: 1.5, z: 7, color: '#ff8844', size: 12, shape: 'circle' },
+  { x: 2, y: -1.5, z: 9, color: '#ff44ff', size: 18, shape: 'rect' },
+  { x: 0.5, y: -0.5, z: 5, color: '#44ffff', size: 14, shape: 'circle' },
+  { x: -2.5, y: 0.5, z: 11, color: '#ffff44', size: 16, shape: 'rect' },
+];
+
+// Clicked points and epipolar lines
+let leftClicks = [];
+let rightClicks = [];
+let epipolarLinesRight = []; // lines on right canvas from left clicks
+let epipolarLinesLeft = []; // lines on left canvas from right clicks
+
+function deg2rad(d) { return d * Math.PI / 180; }
+
+// Intrinsic matrix K
+function getK() {
+  return [
+    [focalLength, 0, cx],
+    [0, focalLength, cy],
+    [0, 0, 1]
+  ];
+}
+
+// Rotation matrix around Y axis
+function rotY(angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [
+    [c, 0, s],
+    [0, 1, 0],
+    [-s, 0, c]
+  ];
+}
+
+// Camera extrinsics
+function getCameraMatrices() {
+  const b = baseline;
+  const ang = deg2rad(convergence);
+
+  // Left camera: position (-b/2, 0, 0), rotated slightly right
+  const R_L = rotY(ang);
+  const t_L = [-b / 2, 0, 0];
+
+  // Right camera: position (b/2, 0, 0), rotated slightly left
+  const R_R = rotY(-ang);
+  const t_R = [b / 2, 0, 0];
+
+  return { R_L, t_L, R_R, t_R };
+}
+
+function matMul3(A, B) {
+  const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      for (let k = 0; k < 3; k++)
+        C[i][j] += A[i][k] * B[k][j];
+  return C;
+}
+
+function matVec3(M, v) {
+  return [
+    M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2],
+    M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2],
+    M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]
+  ];
+}
+
+function transpose3(M) {
+  return [
+    [M[0][0], M[1][0], M[2][0]],
+    [M[0][1], M[1][1], M[2][1]],
+    [M[0][2], M[1][2], M[2][2]]
+  ];
+}
+
+function inverse3(M) {
+  const det = M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
+    - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
+    + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+  if (Math.abs(det) < 1e-15) return null;
+  const inv = [
+    [(M[1][1] * M[2][2] - M[1][2] * M[2][1]) / det, (M[0][2] * M[2][1] - M[0][1] * M[2][2]) / det, (M[0][1] * M[1][2] - M[0][2] * M[1][1]) / det],
+    [(M[1][2] * M[2][0] - M[1][0] * M[2][2]) / det, (M[0][0] * M[2][2] - M[0][2] * M[2][0]) / det, (M[0][2] * M[1][0] - M[0][0] * M[1][2]) / det],
+    [(M[1][0] * M[2][1] - M[1][1] * M[2][0]) / det, (M[0][1] * M[2][0] - M[0][0] * M[2][1]) / det, (M[0][0] * M[1][1] - M[0][1] * M[1][0]) / det]
+  ];
+  return inv;
+}
+
+// Skew-symmetric matrix from vector
+function skew(v) {
+  return [
+    [0, -v[2], v[1]],
+    [v[2], 0, -v[0]],
+    [-v[1], v[0], 0]
+  ];
+}
+
+// Project 3D point to camera image
+function projectPoint(pt, R, t, K) {
+  // Camera coordinates: R * (pt - t)  (where t is camera position)
+  const diff = [pt.x - t[0], pt.y - t[1], pt.z - t[2]];
+  const cam = matVec3(R, diff);
+  if (cam[2] <= 0.1) return null;
+  const proj = matVec3(K, cam);
+  return { x: proj[0] / proj[2], y: proj[1] / proj[2], z: cam[2] };
+}
+
+// Compute fundamental matrix F
+// F = K_R^{-T} * [t]_x * R * K_L^{-1}
+// Where R, t are relative pose from left to right camera
+function computeF() {
+  const { R_L, t_L, R_R, t_R } = getCameraMatrices();
+  const K = getK();
+  const K_inv = inverse3(K);
+  const K_invT = transpose3(K_inv);
+
+  // Relative rotation: R = R_R * R_L^T
+  const R_LT = transpose3(R_L);
+  const R_rel = matMul3(R_R, R_LT);
+
+  // Relative translation: t = R_R * (t_L - t_R)
+  const dt = [t_L[0] - t_R[0], t_L[1] - t_R[1], t_L[2] - t_R[2]];
+  const t_rel = matVec3(R_R, dt);
+
+  // E = [t]_x * R_rel
+  const tx = skew(t_rel);
+  const E = matMul3(tx, R_rel);
+
+  // F = K^{-T} * E * K^{-1}
+  const temp = matMul3(K_invT, E);
+  const F = matMul3(temp, K_inv);
+
+  // Normalize F so that ||F|| = 1
+  let norm = 0;
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      norm += F[i][j] * F[i][j];
+  norm = Math.sqrt(norm);
+  if (norm > 0) {
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++)
+        F[i][j] /= norm;
+  }
+
+  return F;
+}
+
+// Compute epipolar line: l = F * p (or l = F^T * p for reverse)
+function epipolarLine(F, px, py, transpose) {
+  const p = [px, py, 1];
+  let l;
+  if (transpose) {
+    const FT = transpose3(F);
+    l = matVec3(FT, p);
+  } else {
+    l = matVec3(F, p);
+  }
+  return l; // [a, b, c] where ax + by + c = 0
+}
+
+// Compute epipole: null space of F (right null space for e, left for e')
+function computeEpipoles(F) {
+  // Right epipole: F * e = 0 => smallest singular value vector
+  // Approximate by solving F * [x, y, 1]^T = 0 using 2x2 subsystem
+  // e_R is right null space of F
+  // e_L is left null space of F (right null space of F^T)
+  const eR = nullSpace3(F);
+  const FT = transpose3(F);
+  const eL = nullSpace3(FT);
+  return { eL, eR };
+}
+
+function nullSpace3(M) {
+  // Find null space of 3x3 matrix using cross product of two rows
+  // or solve Mx = 0
+  // Use the cross product of first two rows as an approximation
+  const r0 = M[0], r1 = M[1], r2 = M[2];
+  let v = [
+    r0[1] * r1[2] - r0[2] * r1[1],
+    r0[2] * r1[0] - r0[0] * r1[2],
+    r0[0] * r1[1] - r0[1] * r1[0]
+  ];
+  let norm = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  if (norm < 1e-12) {
+    // Try other pair
+    v = [
+      r0[1] * r2[2] - r0[2] * r2[1],
+      r0[2] * r2[0] - r0[0] * r2[2],
+      r0[0] * r2[1] - r0[1] * r2[0]
+    ];
+    norm = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  }
+  if (norm > 1e-12) {
+    if (Math.abs(v[2]) > 1e-12) {
+      return { x: v[0] / v[2], y: v[1] / v[2] };
+    }
+  }
+  return { x: NaN, y: NaN };
+}
+
+// Draw line ax + by + c = 0 on canvas
+function drawLine(ctxTarget, a, b, c, color, lineWidth) {
+  // Find two intersection points with canvas edges
+  const pts = [];
+  // Left edge x=0: by + c = 0 => y = -c/b
+  if (Math.abs(b) > 1e-12) {
+    const y = -c / b;
+    if (y >= -50 && y <= CH + 50) pts.push({ x: 0, y });
+  }
+  // Right edge x=CW
+  if (Math.abs(b) > 1e-12) {
+    const y = -(a * CW + c) / b;
+    if (y >= -50 && y <= CH + 50) pts.push({ x: CW, y });
+  }
+  // Top edge y=0: ax + c = 0 => x = -c/a
+  if (Math.abs(a) > 1e-12) {
+    const x = -c / a;
+    if (x >= -50 && x <= CW + 50) pts.push({ x, y: 0 });
+  }
+  // Bottom edge y=CH
+  if (Math.abs(a) > 1e-12) {
+    const x = -(b * CH + c) / a;
+    if (x >= -50 && x <= CW + 50) pts.push({ x, y: CH });
+  }
+
+  if (pts.length >= 2) {
+    ctxTarget.beginPath();
+    ctxTarget.moveTo(pts[0].x, pts[0].y);
+    ctxTarget.lineTo(pts[1].x, pts[1].y);
+    ctxTarget.strokeStyle = color;
+    ctxTarget.lineWidth = lineWidth || 1.5;
+    ctxTarget.stroke();
+  }
+}
+
+function drawScene(ctxTarget, R, t, K, projPoints, isLeft) {
+  ctxTarget.fillStyle = '#0f0f23';
+  ctxTarget.fillRect(0, 0, CW, CH);
+
+  // Draw grid
+  ctxTarget.strokeStyle = '#1a1a3e';
+  ctxTarget.lineWidth = 0.5;
+  for (let x = 0; x <= CW; x += 40) {
+    ctxTarget.beginPath(); ctxTarget.moveTo(x, 0); ctxTarget.lineTo(x, CH); ctxTarget.stroke();
+  }
+  for (let y = 0; y <= CH; y += 40) {
+    ctxTarget.beginPath(); ctxTarget.moveTo(0, y); ctxTarget.lineTo(CW, y); ctxTarget.stroke();
+  }
+
+  // Draw projected scene points
+  for (let i = 0; i < scenePoints.length; i++) {
+    const pt = scenePoints[i];
+    const proj = projectPoint(pt, R, t, K);
+    if (!proj) continue;
+    projPoints.push({ x: proj.x, y: proj.y, color: pt.color, idx: i });
+
+    const sz = pt.size * (5 / proj.z);
+    if (pt.shape === 'rect') {
+      ctxTarget.fillStyle = pt.color + 'aa';
+      ctxTarget.fillRect(proj.x - sz / 2, proj.y - sz / 2, sz, sz);
+      ctxTarget.strokeStyle = pt.color;
+      ctxTarget.lineWidth = 1.5;
+      ctxTarget.strokeRect(proj.x - sz / 2, proj.y - sz / 2, sz, sz);
+    } else {
+      ctxTarget.beginPath();
+      ctxTarget.arc(proj.x, proj.y, sz / 2, 0, Math.PI * 2);
+      ctxTarget.fillStyle = pt.color + 'aa';
+      ctxTarget.fill();
+      ctxTarget.strokeStyle = pt.color;
+      ctxTarget.lineWidth = 1.5;
+      ctxTarget.stroke();
+    }
+
+    // Label
+    ctxTarget.fillStyle = pt.color;
+    ctxTarget.font = 'bold 10px monospace';
+    ctxTarget.textAlign = 'center';
+    ctxTarget.fillText(`P${i + 1}`, proj.x, proj.y - sz / 2 - 5);
+  }
+
+  // Camera label
+  ctxTarget.fillStyle = '#555';
+  ctxTarget.font = '11px monospace';
+  ctxTarget.textAlign = 'left';
+  ctxTarget.fillText(isLeft ? '좌측 뷰 (Left View)' : '우측 뷰 (Right View)', 10, CH - 10);
+}
+
+function draw() {
+  const { R_L, t_L, R_R, t_R } = getCameraMatrices();
+  const K = getK();
+  const F = computeF();
+  const { eL, eR } = computeEpipoles(F);
+
+  let leftProjPoints = [];
+  let rightProjPoints = [];
+
+  drawScene(ctxL, R_L, t_L, K, leftProjPoints, true);
+  drawScene(ctxR, R_R, t_R, K, rightProjPoints, false);
+
+  // Draw corresponding point connections (lines between same-indexed projected points)
+  // Just mark them with matching colors
+
+  // Draw epipolar lines from left clicks on right canvas
+  for (let cl of leftClicks) {
+    // Draw clicked point on left
+    ctxL.beginPath();
+    ctxL.arc(cl.x, cl.y, 6, 0, Math.PI * 2);
+    ctxL.fillStyle = '#ffff4488';
+    ctxL.fill();
+    ctxL.strokeStyle = '#ffff44';
+    ctxL.lineWidth = 2;
+    ctxL.stroke();
+
+    // Compute epipolar line on right
+    const l = epipolarLine(F, cl.x, cl.y, false);
+    drawLine(ctxR, l[0], l[1], l[2], '#ff4488', 2);
+  }
+
+  // Draw epipolar lines from right clicks on left canvas
+  for (let cl of rightClicks) {
+    // Draw clicked point on right
+    ctxR.beginPath();
+    ctxR.arc(cl.x, cl.y, 6, 0, Math.PI * 2);
+    ctxR.fillStyle = '#ffff4488';
+    ctxR.fill();
+    ctxR.strokeStyle = '#ffff44';
+    ctxR.lineWidth = 2;
+    ctxR.stroke();
+
+    // Compute epipolar line on left: l = F^T * p'
+    const l = epipolarLine(F, cl.x, cl.y, true);
+    drawLine(ctxL, l[0], l[1], l[2], '#ff4488', 2);
+  }
+
+  // Draw epipoles
+  if (!isNaN(eL.x) && !isNaN(eL.y)) {
+    ctxL.beginPath();
+    ctxL.arc(eL.x, eL.y, 8, 0, Math.PI * 2);
+    ctxL.fillStyle = '#ff880066';
+    ctxL.fill();
+    ctxL.strokeStyle = '#ff8800';
+    ctxL.lineWidth = 2;
+    ctxL.stroke();
+    ctxL.fillStyle = '#ff8800';
+    ctxL.font = 'bold 11px monospace';
+    ctxL.textAlign = 'center';
+    ctxL.fillText('e', eL.x, eL.y - 12);
+  }
+  if (!isNaN(eR.x) && !isNaN(eR.y)) {
+    ctxR.beginPath();
+    ctxR.arc(eR.x, eR.y, 8, 0, Math.PI * 2);
+    ctxR.fillStyle = '#ff880066';
+    ctxR.fill();
+    ctxR.strokeStyle = '#ff8800';
+    ctxR.lineWidth = 2;
+    ctxR.stroke();
+    ctxR.fillStyle = '#ff8800';
+    ctxR.font = 'bold 11px monospace';
+    ctxR.textAlign = 'center';
+    ctxR.fillText("e'", eR.x, eR.y - 12);
+  }
+
+  // Update F matrix display
+  const md = document.getElementById('fMatrix');
+  md.innerHTML = '';
+  for (let r = 0; r < 3; r++) {
+    let row = '[';
+    for (let c = 0; c < 3; c++) {
+      let v = F[r][c];
+      let vs = v.toExponential(3);
+      row += `<span class="val">${vs}</span>`;
+      if (c < 2) row += ', ';
+    }
+    row += ']';
+    md.innerHTML += `<div>${row}</div>`;
+  }
+
+  // Update epipole display
+  document.getElementById('eL_x').textContent = isNaN(eL.x) ? 'Inf' : eL.x.toFixed(1);
+  document.getElementById('eL_y').textContent = isNaN(eL.y) ? 'Inf' : eL.y.toFixed(1);
+  document.getElementById('eR_x').textContent = isNaN(eR.x) ? 'Inf' : eR.x.toFixed(1);
+  document.getElementById('eR_y').textContent = isNaN(eR.y) ? 'Inf' : eR.y.toFixed(1);
+}
+
+// Mouse handlers
+function getMousePos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+leftCanvas.addEventListener('click', e => {
+  const p = getMousePos(leftCanvas, e);
+  leftClicks.push(p);
+  draw();
+});
+
+rightCanvas.addEventListener('click', e => {
+  const p = getMousePos(rightCanvas, e);
+  rightClicks.push(p);
+  draw();
+});
+
+// Sliders
+document.getElementById('baseSlider').addEventListener('input', e => {
+  baseline = parseFloat(e.target.value);
+  document.getElementById('baseVal').textContent = baseline.toFixed(1);
+  draw();
+});
+
+document.getElementById('convSlider').addEventListener('input', e => {
+  convergence = parseFloat(e.target.value);
+  document.getElementById('convVal').textContent = convergence;
+  draw();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  baseline = 3.0;
+  convergence = 5;
+  document.getElementById('baseSlider').value = 3.0;
+  document.getElementById('baseVal').textContent = '3.0';
+  document.getElementById('convSlider').value = 5;
+  document.getElementById('convVal').textContent = '5';
+  leftClicks = [];
+  rightClicks = [];
+  draw();
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  leftClicks = [];
+  rightClicks = [];
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>

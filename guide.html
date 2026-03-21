@@ -828,6 +828,9 @@ Depth (Z) = (focal_length × baseline) / disparity
 > - [Cyrill Stachniss — Stereo Vision](https://www.youtube.com/watch?v=SyB7Wg1e62A) — 스테레오 비전의 수학적 원리를 명확하게 설명
 > - [Stanford CS231A — Epipolar Geometry and Stereo](https://web.stanford.edu/class/cs231a/) — Stanford의 Computer Vision 강의. 에피폴라 기하학을 잘 다룬다.
 
+> **실습**: [Stereo Disparity 시각화](https://alexjunholee.github.io/robotics-practice/app.html#stereo_disparity)
+> 스테레오 이미지 쌍에서 disparity를 계산하고, baseline과 focal length가 깊이 추정에 미치는 영향을 확인할 수 있다.
+
 ### 2.1.3 RGB-D Camera (깊이 카메라)
 
 RGB 이미지와 Depth 이미지를 직접 제공하는 센서이다.
@@ -1277,6 +1280,9 @@ p(x) = N(μ, Σ)
 > **추천 자료**
 > - [3Blue1Brown — But what is the Central Limit Theorem?](https://www.youtube.com/watch?v=zeJD6dqJ5lo) — 중심극한정리를 시각적으로 설명. 왜 정규분포가 어디에나 나타나는지 직관적으로 이해할 수 있다.
 
+> **실습**: [Kalman Filter](https://alexjunholee.github.io/robotics-practice/app.html#kalman_filter)
+> 칼만 필터의 predict-update 사이클을 인터랙티브하게 조작하며, 정규분포 기반 상태 추정 과정을 확인할 수 있다.
+
 ### 3.3.2 베이즈 정리 (Bayes' Rule)
 
 ```
@@ -1701,6 +1707,9 @@ Factor graph를 최적화하려면 정규 방정식 `H d = -b`를 풀어야 한�
 > - [Factor Graphs for Robot Perception (Dellaert & Kaess, 2017)](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) -- 100페이지 분량의 종합 레퍼런스
 > - [CMU 16-833 Lecture Notes](https://www.cs.cmu.edu/~kaess/teaching/16833/) -- Michael Kaess 교수의 SLAM 강의. Factor graph와 iSAM2를 깊이 다룬다
 
+> **실습**: [Factor Graph 시각화](https://alexjunholee.github.io/robotics-practice/app.html#factor_graph_viz)
+> Factor graph의 변수 노드와 팩터 노드를 직접 구성하고, 그래프 구조가 최적화에 미치는 영향을 확인할 수 있다.
+
 ### 3.8 심화: Robust Estimation
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
@@ -1897,6 +1906,9 @@ sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 > **실습**: [Canny Edge Detection](https://alexjunholee.github.io/robotics-practice/app.html#canny_edge)
 > Canny 에지 검출기의 threshold 파라미터를 실시간으로 조절하며 결과 변화를 확인할 수 있다.
 
+> **실습**: [Convolution 시각화](https://alexjunholee.github.io/robotics-practice/app.html#convolution)
+> 다양한 커널을 이미지에 적용하며 convolution 연산이 어떻게 필터링을 수행하는지 직관적으로 이해할 수 있다.
+
 ### 4.1.3 Morphology (형태학적 연산)
 
 이진 이미지(binary image)를 다룰 때 필수적인 도구이다. 예를 들어, segmentation 결과에서 작은 노이즈 점들을 제거하거나, 끊어진 영역을 이어 붙이거나 할 때 morphology를 쓴다. 이걸 모르면 이진화 결과를 후처리할 때 막막하다.
@@ -1959,6 +1971,9 @@ Opening과 Closing의 순서를 헷갈리는 사람이 많은데 — Opening은 
 > - [Stanford CS231A — Camera Models](https://web.stanford.edu/class/cs231a/) — 기하 기반 CV의 핵심 강의
 > - [First Principles of CV — Camera and Imaging](https://www.youtube.com/playlist?list=PL2zRqk16wsdoYzrWStQ2SQHXXS2K6ofd4) — Pinhole부터 실제 렌즈까지 차근차근 설명
 > - [Szeliski Ch.2 — Image Formation](https://szeliski.org/Book/) — 카메라 모델의 수학적 기초
+
+> **실습**: [Camera Projection](https://alexjunholee.github.io/robotics-practice/app.html#camera_projection)
+> 3D 공간의 점이 카메라 내부/외부 파라미터에 의해 2D 이미지로 투영되는 과정을 인터랙티브하게 확인할 수 있다.
 
 ### 4.2.2 Distortion Models
 
@@ -2148,6 +2163,9 @@ x2^T E x1 = 0
 
 Essential Matrix에서 R과 t를 분해(decompose)하면 두 카메라 간의 상대 회전과 이동을 알 수 있다. 이것이 Visual Odometry의 핵심 원리이다.
 
+> **실습**: [Epipolar Geometry 시각화](https://alexjunholee.github.io/robotics-practice/app.html#epipolar)
+> 두 카메라 시점 간의 에피폴라 선과 에피폴을 인터랙티브하게 확인하며, Essential/Fundamental Matrix의 기하학적 의미를 이해할 수 있다.
+
 ### 4.4.2 Fundamental Matrix (F)
 
 **정의**: 캘리브레이션되지 않은 카메라 쌍의 관계
@@ -2181,6 +2199,9 @@ points_3d = points_4d[:3] / points_4d[3]  # Homogeneous → Cartesian
 > - [Stanford CS231A — Epipolar Geometry](https://web.stanford.edu/class/cs231a/) — 수학적 유도가 잘 정리된 강의 자료
 > - [Hartley & Zisserman, "Multiple View Geometry in Computer Vision"](https://www.robots.ox.ac.uk/~vgg/hzbook/) — 다중 시점 기하학의 바이블. 깊이 들어가려면 필독
 > - [First Principles of CV — Stereo Vision](https://www.youtube.com/playlist?list=PL2zRqk16wsdoYzrWStQ2SQHXXS2K6ofd4) — Epipolar geometry를 직관적으로 설명
+
+> **실습**: [Homography 시각화](https://alexjunholee.github.io/robotics-practice/app.html#homography)
+> 평면 간 호모그래피 변환을 인터랙티브하게 조작하며, 4개의 대응점으로 투영 변환이 어떻게 결정되는지 확인할 수 있다.
 
 ---
 
@@ -2221,6 +2242,9 @@ flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — 광류의 수학적 원리
 > - [Teed & Deng, "RAFT: Recurrent All-Pairs Field Transforms for Optical Flow" (2020)](https://arxiv.org/abs/2003.12039) — 딥러닝 기반 optical flow의 대표작
 > - [OpenCV Optical Flow 튜토리얼](https://docs.opencv.org/4.x/d4/dee/tutorial_optical_flow.html) — Lucas-Kanade, Farneback 코드 예제
+
+> **실습**: [Optical Flow 시각화](https://alexjunholee.github.io/robotics-practice/app.html#optical_flow)
+> Lucas-Kanade와 Dense Optical Flow 알고리즘의 동작을 인터랙티브하게 비교하며 픽셀 이동 추정 과정을 확인할 수 있다.
 
 ---
 
@@ -2834,6 +2858,12 @@ model = DDP(model, device_ids=[local_rank])
 > - [PyTorch DDP 튜토리얼](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html) -- 분산 학습 공식 가이드
 > - [Wightman et al., "ResNet strikes back" (2021)](https://arxiv.org/abs/2110.00476) -- 학습 레시피의 중요성을 보여주는 논문. 같은 ResNet으로 학습 기법만 바꿔 정확도를 크게 향상
 
+> **실습**: [Data Augmentation 시각화](https://alexjunholee.github.io/robotics-practice/app.html#data_augmentation)
+> RandAugment, CutMix, MixUp 등 다양한 augmentation 기법이 이미지를 어떻게 변형하는지 인터랙티브하게 확인할 수 있다.
+
+> **실습**: [Learning Rate Schedule 시각화](https://alexjunholee.github.io/robotics-practice/app.html#lr_schedule)
+> Cosine Annealing, OneCycleLR 등 다양한 learning rate schedule의 곡선을 비교하며 하이퍼파라미터의 영향을 확인할 수 있다.
+
 ---
 
 ### 5.9 심화: 자기지도 학습과 대조 학습
@@ -3171,6 +3201,9 @@ masks, scores, logits = predictor.predict(
 > - [Two Minute Papers — Segment Anything](https://www.youtube.com/watch?v=sEkgJMj5DjM) — SAM의 임팩트를 빠르게 이해
 > - [HuggingFace — SAM](https://huggingface.co/docs/transformers/model_doc/sam) — HuggingFace에서 바로 사용
 
+> **실습**: [SAM2 Interactive Segmentation](https://alexjunholee.github.io/robotics-practice/app.html#hf_sam)
+> SAM2 모델을 직접 사용하여 이미지에서 프롬프트 기반 세그멘테이션을 체험할 수 있다 (HuggingFace Space).
+
 ### 6.2.3 CLIP
 
 **Vision-Language Model**: 이미지와 텍스트를 공유 임베딩 공간에 매핑한다.
@@ -3228,6 +3261,9 @@ Depth Anything V2는 V1에서 한 걸음 더 나아가, metric depth (절대 깊
 > - [Depth Anything GitHub](https://github.com/LiheYoung/Depth-Anything) — 공식 코드
 > - [HuggingFace — Depth Anything](https://huggingface.co/docs/transformers/model_doc/depth_anything) — HuggingFace에서 바로 사용
 
+> **실습**: [Depth Anything V2](https://alexjunholee.github.io/robotics-practice/app.html#hf_depth)
+> Depth Anything V2 모델로 이미지에서 깊이를 추정하는 과정을 직접 체험할 수 있다 (HuggingFace Space).
+
 ### 6.2.5 GroundingDINO
 
 **Open-Vocabulary Object Detection**: 텍스트 프롬프트로 임의의 객체를 탐지한다.
@@ -3248,6 +3284,9 @@ Grounded-SAM은 로보틱스에서 매우 강력한 조합이다. "red cup"이�
 > - [Liu et al., "Grounding DINO: Marrying DINO with Grounded Pre-Training for Open-Set Object Detection" (2023)](https://arxiv.org/abs/2303.05499) — GroundingDINO 원논문
 > - [Grounded-SAM GitHub](https://github.com/IDEA-Research/Grounded-Segment-Anything) — 텍스트 기반 탐지+분할 파이프라인
 > - [HuggingFace — Grounding DINO](https://huggingface.co/docs/transformers/model_doc/grounding-dino) — HuggingFace에서 사용
+
+> **실습**: [Grounding DINO Demo](https://alexjunholee.github.io/robotics-practice/app.html#hf_grounding_dino)
+> 텍스트 프롬프트로 이미지에서 임의의 객체를 탐지하는 Open-Vocabulary Detection을 직접 체험할 수 있다 (HuggingFace Space).
 
 ---
 
@@ -4057,6 +4096,9 @@ PointPillars의 아이디어가 영리한 이유: 3D 공간을 수직 기둥(pil
 > - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — 멀티모달 융합의 대표작
 > - [MMDetection3D GitHub](https://github.com/open-mmlab/mmdetection3d) — 3D Object Detection 통합 프레임워크
 
+> **실습**: [BEV Projection 시각화](https://alexjunholee.github.io/robotics-practice/app.html#bev_projection)
+> 카메라 이미지를 Bird's Eye View로 변환하는 과정을 인터랙티브하게 확인하며, BEV 기반 3D 감지의 원리를 이해할 수 있다.
+
 ### 8.4 3D Reconstruction
 
 여러 뷰 또는 깊이 정보로부터 3D 모델을 생성한다. 로봇이 환경을 3D로 "기억"하려면 이 기술이 필요하다.
@@ -4212,6 +4254,9 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF/3DGS 실험 통합 프레임워크
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — 공식 코드
+
+> **실습**: [3D Gaussian Splatting 시각화](https://alexjunholee.github.io/robotics-practice/app.html#gaussian_splatting)
+> 3D Gaussian의 위치, 공분산, 색상을 조작하며 splatting 렌더링 과정을 인터랙티브하게 이해할 수 있다.
 
 ### 8.6 심화: Neural Implicit Representations
 
@@ -4795,6 +4840,12 @@ MCL의 직관: 수천 개의 "가상 로봇(파티클)"을 지도 위에 뿌린�
 > - [Cyrill Stachniss — Monte Carlo Localization](https://www.youtube.com/watch?v=MsYlueVDLI0) — MCL/파티클 필터의 직관적 설명
 > - [ROS Navigation Stack — AMCL](http://wiki.ros.org/amcl) — ROS에서 MCL 사용하기
 
+> **실습**: [Particle Filter](https://alexjunholee.github.io/robotics-practice/app.html#particle_filter)
+> 파티클 필터 기반 로봇 위치 추정 과정을 시각화하며, 파티클의 수렴 과정을 인터랙티브하게 확인할 수 있다.
+
+> **실습**: [Occupancy Grid](https://alexjunholee.github.io/robotics-practice/app.html#occupancy_grid)
+> 2D 점유 격자 지도를 구축하는 과정을 시각화하며, 센서 측정이 어떻게 확률적 지도로 변환되는지 확인할 수 있다.
+
 ### 9.8 Learning-based & Neural SLAM (최신 트렌드)
 
 전통적인 SLAM은 수작업으로 설계된 특징점, 매칭 알고리즘, 최적화 파이프라인에 의존한다. 최근에는 이 과정의 일부 또는 전체를 딥러닝으로 대체하려는 시도가 활발하다.
@@ -4913,6 +4964,9 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 > - Barfoot, "State Estimation for Robotics" Ch.4 (Nonlinear Estimation) — Manifold 위의 최적화를 체계적으로 설명
 > - [CMU 16-833 Robot Localization and Mapping Lecture Notes](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — Factor graph와 SLAM 백엔드 이론
 > - [g2o Tutorial](https://github.com/RainerKuemmerle/g2o) / [GTSAM Tutorial](https://gtsam.org/tutorials/intro.html) — 라이브러리별 실습
+
+> **실습**: [Bundle Adjustment 시각화](https://alexjunholee.github.io/robotics-practice/app.html#bundle_adjustment)
+> 카메라 포즈와 3D 포인트를 동시에 최적화하는 Bundle Adjustment 과정을 인터랙티브하게 확인할 수 있다.
 
 ### 9.10 심화: IMU Preintegration
 
@@ -8180,7 +8234,25 @@ sudo apt-get install libeigen3-dev
       'robot_arm_fk':        { file: 'interactive/robot_arm_fk.html',        name: 'Robot Arm FK' },
       'icp_steps':           { file: 'interactive/icp_steps.html',           name: 'ICP 2D' },
       'icp_3d':              { file: 'interactive/icp_3d.html',              name: 'ICP 3D' },
-      'pose_graph':          { file: 'interactive/pose_graph.html',          name: 'Pose Graph Optimization' }
+      'pose_graph':          { file: 'interactive/pose_graph.html',          name: 'Pose Graph Optimization' },
+      'kalman_filter':       { file: 'interactive/kalman_filter.html',       name: 'Kalman Filter' },
+      'particle_filter':     { file: 'interactive/particle_filter.html',     name: 'Particle Filter' },
+      'homography':          { file: 'interactive/homography.html',          name: 'Homography' },
+      'epipolar':            { file: 'interactive/epipolar.html',            name: 'Epipolar Geometry' },
+      'optical_flow':        { file: 'interactive/optical_flow.html',        name: 'Optical Flow' },
+      'stereo_disparity':    { file: 'interactive/stereo_disparity.html',    name: 'Stereo Disparity' },
+      'occupancy_grid':      { file: 'interactive/occupancy_grid.html',      name: 'Occupancy Grid' },
+      'camera_projection':   { file: 'interactive/camera_projection.html',   name: 'Camera Projection' },
+      'convolution':         { file: 'interactive/convolution.html',         name: 'Convolution' },
+      'bundle_adjustment':   { file: 'interactive/bundle_adjustment.html',   name: 'Bundle Adjustment' },
+      'gaussian_splatting':  { file: 'interactive/gaussian_splatting.html',  name: '3D Gaussian Splatting' },
+      'factor_graph_viz':    { file: 'interactive/factor_graph_viz.html',    name: 'Factor Graph' },
+      'bev_projection':      { file: 'interactive/bev_projection.html',      name: 'BEV Projection' },
+      'data_augmentation':   { file: 'interactive/data_augmentation.html',   name: 'Data Augmentation' },
+      'lr_schedule':         { file: 'interactive/lr_schedule.html',         name: 'LR Schedule' },
+      'hf_sam':              { file: 'interactive/hf_sam.html',              name: 'SAM2 Interactive Segmentation' },
+      'hf_depth':            { file: 'interactive/hf_depth.html',            name: 'Depth Anything V2' },
+      'hf_grounding_dino':   { file: 'interactive/hf_grounding_dino.html',   name: 'Grounding DINO' }
     };
 
     // Find all blockquotes in the rendered content

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Occupancy Grid Mapping - 점유 격자 지도</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; }
+h1 { text-align: center; color: #00d4ff; margin-bottom: 3px; font-size: 1.5em; }
+.subtitle { text-align: center; color: #888; margin-bottom: 10px; font-size: 0.85em; }
+.main { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.left-panel { display: flex; flex-direction: column; align-items: center; }
+canvas { border: 1px solid #333; border-radius: 5px; background: #0f0f23; }
+.right-panel { display: flex; flex-direction: column; gap: 10px; max-width: 280px; }
+.panel-section { background: #16213e; padding: 12px; border-radius: 8px; }
+.panel-section h3 { color: #00d4ff; font-size: 0.95em; margin-bottom: 8px; }
+.control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.control-row label { font-size: 0.8em; color: #aaa; }
+.control-row .val { color: #00d4ff; font-weight: bold; font-size: 0.85em; min-width: 30px; text-align: right; }
+input[type="range"] { width: 110px; accent-color: #00d4ff; }
+button { background: #00d4ff; color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
+button:hover { background: #00b8d9; }
+.stats { font-size: 0.85em; }
+.stats .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.stats .row span:last-child { color: #00d4ff; font-weight: bold; }
+.legend { display: flex; gap: 10px; font-size: 0.75em; margin-top: 8px; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-color { width: 14px; height: 14px; border: 1px solid #555; border-radius: 2px; }
+.keys-hint { font-size: 0.75em; color: #888; text-align: center; margin-top: 5px; }
+.formula { font-family: 'Courier New', monospace; font-size: 0.8em; color: #aaa; margin-top: 5px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<h1>Occupancy Grid Mapping</h1>
+<p class="subtitle">점유 격자 지도 - Log-Odds 업데이트</p>
+
+<div class="main">
+  <div class="left-panel">
+    <canvas id="gridCanvas" width="500" height="500"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#111"></div> 점유 (Occupied)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ddd"></div> 자유 (Free)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#808080"></div> 미지 (Unknown)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#00d4ff"></div> 로봇 (Robot)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,0,0.3)"></div> 센서 (Sensor)</div>
+    </div>
+    <div class="keys-hint">방향키로 이동 / Arrow Keys to move</div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-section">
+      <h3>센서 설정 (Sensor Settings)</h3>
+      <div class="control-row">
+        <label>센서 범위 (Range)</label>
+        <span class="val" id="valRange">100</span>
+        <input type="range" id="sensorRange" min="50" max="200" step="5" value="100">
+      </div>
+      <div class="control-row">
+        <label>센서 노이즈 (Noise)</label>
+        <span class="val" id="valNoise">5</span>
+        <input type="range" id="sensorNoise" min="0" max="20" step="1" value="5">
+      </div>
+      <div class="control-row">
+        <label>레이 수 (Rays)</label>
+        <span class="val" id="valRays">30</span>
+        <input type="range" id="numRays" min="10" max="90" step="5" value="30">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>통계 (Statistics)</h3>
+      <div class="stats">
+        <div class="row"><span>매핑된 셀 (Mapped Cells):</span><span id="mappedCells">0</span></div>
+        <div class="row"><span>점유 셀 (Occupied):</span><span id="occCells">0</span></div>
+        <div class="row"><span>자유 셀 (Free):</span><span id="freeCells">0</span></div>
+        <div class="row"><span>탐사율 (Coverage):</span><span id="coverage">0%</span></div>
+        <div class="row"><span>로봇 위치 (Position):</span><span id="robotPos">-</span></div>
+        <div class="row"><span>로봇 방향 (Heading):</span><span id="robotHead">-</span></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Log-Odds 업데이트 공식</h3>
+      <div class="formula">
+        l(m|z) = l(m) + log(p/(1-p))<br>
+        p_occ = 0.7, p_free = 0.3<br>
+        l_occ = +0.85, l_free = -0.85<br>
+        Clamp: [-5, 5]
+      </div>
+    </div>
+
+    <button id="clearBtn" style="width:100%">지도 초기화 (Clear Map)</button>
+  </div>
+</div>
+
+<script>
+const GRID = 200;
+const CELL = 500 / GRID;
+const canvas = document.getElementById('gridCanvas');
+const ctx = canvas.getContext('2d');
+
+let logOdds = new Float32Array(GRID * GRID);
+const L_OCC = 0.847;
+const L_FREE = -0.847;
+const L_MIN = -5, L_MAX = 5;
+
+const walls = [];
+function addWallRect(x1, y1, x2, y2) {
+  for (let x = x1; x <= x2; x++) { walls.push({x, y: y1}); walls.push({x, y: y2}); }
+  for (let y = y1; y <= y2; y++) { walls.push({x: x1, y}); walls.push({x: x2, y}); }
+}
+
+const wallSet = new Set();
+function addWall(x, y) { if (x >= 0 && x < GRID && y >= 0 && y < GRID) wallSet.add(y * GRID + x); }
+function isWall(x, y) { return x < 0 || x >= GRID || y < 0 || y >= GRID || wallSet.has(y * GRID + x); }
+
+// Outer boundary
+for (let i = 0; i < GRID; i++) { addWall(i, 0); addWall(i, GRID-1); addWall(0, i); addWall(GRID-1, i); }
+// Room 1
+for (let i = 20; i <= 80; i++) { addWall(i, 20); addWall(i, 80); }
+for (let i = 20; i <= 80; i++) { addWall(20, i); addWall(80, i); }
+// Door in room 1
+for (let i = 45; i <= 55; i++) { wallSet.delete(80 * GRID + i); }
+// Room 2
+for (let i = 100; i <= 170; i++) { addWall(i, 30); addWall(i, 90); }
+for (let i = 30; i <= 90; i++) { addWall(100, i); addWall(170, i); }
+for (let i = 55; i <= 65; i++) { wallSet.delete(i * GRID + 100); }
+// Room 3
+for (let i = 30; i <= 100; i++) { addWall(i, 120); addWall(i, 180); }
+for (let i = 120; i <= 180; i++) { addWall(30, i); addWall(100, i); }
+for (let i = 60; i <= 70; i++) { wallSet.delete(120 * GRID + i); }
+// Room 4
+for (let i = 120; i <= 185; i++) { addWall(i, 110); addWall(i, 175); }
+for (let i = 110; i <= 175; i++) { addWall(120, i); addWall(185, i); }
+for (let i = 135; i <= 150; i++) { wallSet.delete(i * GRID + 120); }
+// Corridor obstacle
+for (let i = 85; i <= 115; i++) { addWall(i, 97); addWall(i, 103); }
+for (let i = 97; i <= 103; i++) { addWall(85, i); addWall(115, i); }
+
+let robot = { x: GRID / 2, y: GRID / 2, angle: 0 };
+
+function castRay(ox, oy, angle, maxRange) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  for (let t = 1; t < maxRange; t++) {
+    const gx = Math.floor(ox + dx * t);
+    const gy = Math.floor(oy + dy * t);
+    if (isWall(gx, gy)) return { hit: true, dist: t, gx, gy };
+  }
+  return { hit: false, dist: maxRange };
+}
+
+function updateGrid() {
+  const range = parseInt(document.getElementById('sensorRange').value) * (GRID / 500);
+  const noise = parseInt(document.getElementById('sensorNoise').value);
+  const nRays = parseInt(document.getElementById('numRays').value);
+
+  const startAngle = robot.angle - Math.PI / 2;
+  const endAngle = robot.angle + Math.PI / 2;
+  const step = (endAngle - startAngle) / (nRays - 1);
+
+  for (let i = 0; i < nRays; i++) {
+    const a = startAngle + i * step;
+    const noiseOffset = (Math.random() - 0.5) * noise * 0.5 * (GRID / 500);
+    const result = castRay(robot.x, robot.y, a, range);
+    const effectiveDist = result.hit ? Math.max(1, result.dist + noiseOffset) : range;
+
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    for (let t = 1; t < effectiveDist - 1; t++) {
+      const gx = Math.floor(robot.x + dx * t);
+      const gy = Math.floor(robot.y + dy * t);
+      if (gx >= 0 && gx < GRID && gy >= 0 && gy < GRID) {
+        const idx = gy * GRID + gx;
+        logOdds[idx] = Math.max(L_MIN, Math.min(L_MAX, logOdds[idx] + L_FREE));
+      }
+    }
+    if (result.hit) {
+      const gx = Math.floor(robot.x + dx * effectiveDist);
+      const gy = Math.floor(robot.y + dy * effectiveDist);
+      if (gx >= 0 && gx < GRID && gy >= 0 && gy < GRID) {
+        const idx = gy * GRID + gx;
+        logOdds[idx] = Math.max(L_MIN, Math.min(L_MAX, logOdds[idx] + L_OCC));
+      }
+    }
+  }
+}
+
+function render() {
+  const range = parseInt(document.getElementById('sensorRange').value) * (GRID / 500);
+  const nRays = parseInt(document.getElementById('numRays').value);
+  const imgData = ctx.createImageData(500, 500);
+
+  let mapped = 0, occ = 0, free = 0;
+
+  for (let gy = 0; gy < GRID; gy++) {
+    for (let gx = 0; gx < GRID; gx++) {
+      const idx = gy * GRID + gx;
+      const l = logOdds[idx];
+      const p = 1 / (1 + Math.exp(-l));
+      let r, g, b;
+      if (Math.abs(l) < 0.01) {
+        r = g = b = 80;
+      } else {
+        mapped++;
+        if (p > 0.5) { occ++; const v = Math.round((1 - p) * 200); r = v; g = v; b = v; }
+        else { free++; const v = Math.round((1 - p) * 255); r = v; g = v; b = v; }
+      }
+      const px0 = Math.floor(gx * CELL);
+      const py0 = Math.floor(gy * CELL);
+      const px1 = Math.floor((gx + 1) * CELL);
+      const py1 = Math.floor((gy + 1) * CELL);
+      for (let py = py0; py < py1 && py < 500; py++) {
+        for (let px = px0; px < px1 && px < 500; px++) {
+          const pi = (py * 500 + px) * 4;
+          imgData.data[pi] = r; imgData.data[pi+1] = g; imgData.data[pi+2] = b; imgData.data[pi+3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw walls faintly for reference
+  ctx.fillStyle = 'rgba(255, 100, 100, 0.15)';
+  wallSet.forEach(idx => {
+    const gx = idx % GRID, gy = Math.floor(idx / GRID);
+    ctx.fillRect(gx * CELL, gy * CELL, CELL, CELL);
+  });
+
+  // Draw sensor rays
+  const startAngle = robot.angle - Math.PI / 2;
+  const endAngle = robot.angle + Math.PI / 2;
+  const step = (endAngle - startAngle) / (nRays - 1);
+  ctx.strokeStyle = 'rgba(255, 255, 0, 0.15)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < nRays; i++) {
+    const a = startAngle + i * step;
+    const result = castRay(robot.x, robot.y, a, range);
+    ctx.beginPath();
+    ctx.moveTo(robot.x * CELL, robot.y * CELL);
+    const ex = robot.x + Math.cos(a) * result.dist;
+    const ey = robot.y + Math.sin(a) * result.dist;
+    ctx.lineTo(ex * CELL, ey * CELL);
+    ctx.stroke();
+  }
+
+  // Draw robot
+  const rx = robot.x * CELL, ry = robot.y * CELL;
+  const sz = 6;
+  ctx.save();
+  ctx.translate(rx, ry);
+  ctx.rotate(robot.angle);
+  ctx.fillStyle = '#00d4ff';
+  ctx.beginPath();
+  ctx.moveTo(sz, 0);
+  ctx.lineTo(-sz, -sz * 0.7);
+  ctx.lineTo(-sz, sz * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  document.getElementById('mappedCells').textContent = mapped;
+  document.getElementById('occCells').textContent = occ;
+  document.getElementById('freeCells').textContent = free;
+  document.getElementById('coverage').textContent = (mapped / (GRID * GRID) * 100).toFixed(1) + '%';
+  document.getElementById('robotPos').textContent = `(${robot.x.toFixed(0)}, ${robot.y.toFixed(0)})`;
+  document.getElementById('robotHead').textContent = (robot.angle * 180 / Math.PI).toFixed(0) + '\u00B0';
+}
+
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key] = true; e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function gameLoop() {
+  const speed = 1.2;
+  const turnSpeed = 0.06;
+  let moved = false;
+  if (keys['ArrowUp'] || keys['w']) {
+    const nx = robot.x + Math.cos(robot.angle) * speed;
+    const ny = robot.y + Math.sin(robot.angle) * speed;
+    if (!isWall(Math.floor(nx), Math.floor(ny))) { robot.x = nx; robot.y = ny; moved = true; }
+  }
+  if (keys['ArrowDown'] || keys['s']) {
+    const nx = robot.x - Math.cos(robot.angle) * speed;
+    const ny = robot.y - Math.sin(robot.angle) * speed;
+    if (!isWall(Math.floor(nx), Math.floor(ny))) { robot.x = nx; robot.y = ny; moved = true; }
+  }
+  if (keys['ArrowLeft'] || keys['a']) { robot.angle -= turnSpeed; moved = true; }
+  if (keys['ArrowRight'] || keys['d']) { robot.angle += turnSpeed; moved = true; }
+
+  if (moved) updateGrid();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  logOdds = new Float32Array(GRID * GRID);
+});
+
+['sensorRange', 'sensorNoise', 'numRays'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById('valRange').textContent = document.getElementById('sensorRange').value;
+    document.getElementById('valNoise').textContent = document.getElementById('sensorNoise').value;
+    document.getElementById('valRays').textContent = document.getElementById('numRays').value;
+  });
+});
+
+canvas.setAttribute('tabindex', '0');
+canvas.focus();
+updateGrid();
+gameLoop();
+</script>
+</body>
+</html>

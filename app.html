@@ -198,31 +198,52 @@ body {
 <div id="layout">
   <!-- Sidebar -->
   <nav id="sidebar" class="collapsed">
-    <!-- Computer Vision -->
+    <!-- Computer Vision (9) -->
     <div class="cat-label">Computer Vision</div>
     <a class="nav-item" data-id="canny_edge" data-tip="Gaussian Blur, Gradient, NMS, Hysteresis 파라미터 실험">Canny Edge Detection</a>
+    <a class="nav-item" data-id="convolution" data-tip="다양한 커널을 적용하는 Convolution 필터링 시각화">Convolution 필터링</a>
     <a class="nav-item" data-id="lens_distortion" data-tip="방사/접선 왜곡 계수를 조절하며 렌즈 왜곡 관찰">Lens Distortion</a>
+    <a class="nav-item" data-id="camera_projection" data-tip="핀홀 카메라 모델의 3D→2D 투영 시각화">Camera Pinhole Projection</a>
     <a class="nav-item" data-id="feature_matching" data-tip="ORB 특징점 매칭과 Lowe's Ratio Test 시뮬레이션">Feature Matching</a>
-    <a class="nav-item" data-id="ransac" data-tip="Outlier 속에서 최적 모델을 찾는 RANSAC 시각화">RANSAC</a>
+    <a class="nav-item" data-id="homography" data-tip="4점 대응으로 Homography 행렬 변환 시각화">Homography 변환</a>
+    <a class="nav-item" data-id="epipolar" data-tip="에피폴라 기하학과 Fundamental Matrix 시각화">Epipolar Geometry</a>
+    <a class="nav-item" data-id="optical_flow" data-tip="Lucas-Kanade / Horn-Schunck Optical Flow 시각화">Optical Flow</a>
+    <a class="nav-item" data-id="stereo_disparity" data-tip="스테레오 영상 시차 맵과 깊이 추정 시각화">Stereo Disparity</a>
 
-    <!-- 수학/최적화 -->
+    <!-- 수학/최적화 (6) -->
     <div class="cat-label">수학 / 최적화</div>
     <a class="nav-item" data-id="m_estimator" data-tip="Huber, Cauchy 등 다양한 Robust 비용 함수 비교">M-Estimator</a>
+    <a class="nav-item" data-id="ransac" data-tip="Outlier 속에서 최적 모델을 찾는 RANSAC 시각화">RANSAC</a>
     <a class="nav-item" data-id="rotation_gimbal" data-tip="오일러 각, 쿼터니언 회전과 Gimbal Lock 체험">Rotation &amp; Gimbal Lock</a>
-    <a class="nav-item" data-id="pose_composition_3d" data-tip="SE(3) 포즈 합성 T_A * T_B 3D 시각화">Pose Composition</a>
+    <a class="nav-item" data-id="xyzrpy_6dof" data-tip="X, Y, Z, Roll, Pitch, Yaw 6자유도 포즈 조작">6DoF Pose (XYZ+RPY)</a>
+    <a class="nav-item" data-id="pose_composition_3d" data-tip="SE(3) 포즈 합성 T_A * T_B 3D 시각화">SE(3) Pose Composition</a>
+    <a class="nav-item" data-id="lr_schedule" data-tip="StepLR, CosineAnnealing 등 LR 스케줄러 비교">LR Schedule 비교</a>
 
-    <!-- 로보틱스 -->
+    <!-- 딥러닝/VFM (5) -->
+    <div class="cat-label">딥러닝 / VFM</div>
+    <a class="nav-item" data-id="data_augmentation" data-tip="Flip, Crop, Color Jitter 등 데이터 증강 기법 체험">Data Augmentation</a>
+    <a class="nav-item" data-id="gaussian_splatting" data-tip="3D Gaussian Splatting 렌더링 파라미터 시각화">Gaussian Splatting</a>
+    <a class="nav-item" data-id="hf_sam" data-tip="Segment Anything Model 2 (HuggingFace) 데모">SAM2 (HuggingFace)</a>
+    <a class="nav-item" data-id="hf_depth" data-tip="Depth Anything V2 (HuggingFace) 단안 깊이 추정">Depth Anything V2 (HF)</a>
+    <a class="nav-item" data-id="hf_grounding_dino" data-tip="GroundingDINO 텍스트 기반 객체 검출 (HuggingFace)">GroundingDINO (HF)</a>
+
+    <!-- 로보틱스 (5) -->
     <div class="cat-label">로보틱스</div>
     <a class="nav-item" data-id="se2_odometry" data-tip="차동 구동 로봇의 SE(2) 오도메트리 시뮬레이션">SE(2) Odometry</a>
     <a class="nav-item" data-id="odom_uncertainty" data-tip="오도메트리 공분산 전파와 불확실성 타원 시각화">Odometry Uncertainty</a>
-    <a class="nav-item" data-id="xyzrpy_6dof" data-tip="X, Y, Z, Roll, Pitch, Yaw 6자유도 포즈 조작">6DoF Pose (XYZ+RPY)</a>
     <a class="nav-item" data-id="robot_arm_fk" data-tip="3-DOF 로봇 팔 순기구학 관절 각도 시뮬레이션">Robot Arm FK</a>
+    <a class="nav-item" data-id="kalman_filter" data-tip="칼만 필터 예측-업데이트 사이클 시각화">Kalman Filter</a>
+    <a class="nav-item" data-id="particle_filter" data-tip="파티클 필터 기반 Monte Carlo Localization 시각화">Particle Filter / MCL</a>
 
-    <!-- 3D / SLAM -->
+    <!-- 3D / SLAM (7) -->
     <div class="cat-label">3D / SLAM</div>
     <a class="nav-item" data-id="icp_steps" data-tip="2D 점군 정합 ICP 알고리즘 단계별 시각화">ICP 2D</a>
     <a class="nav-item" data-id="icp_3d" data-tip="3D 포인트 클라우드 ICP 정합 시각화">ICP 3D</a>
     <a class="nav-item" data-id="pose_graph" data-tip="포즈 그래프 최적화 (루프 클로저) 시각화">Pose Graph Optimization</a>
+    <a class="nav-item" data-id="bundle_adjustment" data-tip="카메라 포즈 + 3D 점 동시 최적화 번들 조정 시각화">Bundle Adjustment</a>
+    <a class="nav-item" data-id="occupancy_grid" data-tip="LiDAR 스캔 기반 점유 격자 지도 생성 시각화">Occupancy Grid Mapping</a>
+    <a class="nav-item" data-id="factor_graph_viz" data-tip="팩터 그래프 변수/팩터 연결 구조 시각화">Factor Graph 구성</a>
+    <a class="nav-item" data-id="bev_projection" data-tip="카메라 이미지에서 Bird's Eye View 투영 변환">BEV Projection</a>
   </nav>
 
   <!-- Content -->
@@ -243,22 +264,45 @@ body {
   const welcome = document.getElementById('welcome');
   const items   = document.querySelectorAll('.nav-item');
 
-  // Map data-id to file names
+  // Map data-id to file names (32 demos)
   const fileMap = {
+    // Computer Vision (9)
     canny_edge:          'canny_edge.html',
+    convolution:         'convolution.html',
     lens_distortion:     'lens_distortion.html',
+    camera_projection:   'camera_projection.html',
     feature_matching:    'feature_matching.html',
-    ransac:              'ransac.html',
+    homography:          'homography.html',
+    epipolar:            'epipolar.html',
+    optical_flow:        'optical_flow.html',
+    stereo_disparity:    'stereo_disparity.html',
+    // 수학/최적화 (6)
     m_estimator:         'm_estimator.html',
+    ransac:              'ransac.html',
     rotation_gimbal:     'rotation_gimbal.html',
+    xyzrpy_6dof:        'xyzrpy_6dof.html',
     pose_composition_3d: 'pose_composition_3d.html',
+    lr_schedule:         'lr_schedule.html',
+    // 딥러닝/VFM (5)
+    data_augmentation:   'data_augmentation.html',
+    gaussian_splatting:  'gaussian_splatting.html',
+    hf_sam:              'hf_sam.html',
+    hf_depth:            'hf_depth.html',
+    hf_grounding_dino:   'hf_grounding_dino.html',
+    // 로보틱스 (5)
     se2_odometry:        'se2_odometry.html',
     odom_uncertainty:    'odom_uncertainty.html',
-    xyzrpy_6dof:        'xyzrpy_6dof.html',
     robot_arm_fk:        'robot_arm_fk.html',
+    kalman_filter:       'kalman_filter.html',
+    particle_filter:     'particle_filter.html',
+    // 3D / SLAM (7)
     icp_steps:           'icp_steps.html',
     icp_3d:              'icp_3d.html',
-    pose_graph:          'pose_graph.html'
+    pose_graph:          'pose_graph.html',
+    bundle_adjustment:   'bundle_adjustment.html',
+    occupancy_grid:      'occupancy_grid.html',
+    factor_graph_viz:    'factor_graph_viz.html',
+    bev_projection:      'bev_projection.html'
   };
 
   function isMobile() {

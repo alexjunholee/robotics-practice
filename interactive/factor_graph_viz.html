@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factor Graph 구성 시각화</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#e94560;margin-bottom:16px;font-size:1.6em}
+.layout{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.canvas-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333}
+canvas{display:block;border-radius:8px;cursor:default}
+.side{display:flex;flex-direction:column;gap:12px;min-width:280px;max-width:320px}
+.panel{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333}
+.panel h3{color:#e94560;margin-bottom:10px;font-size:0.95em}
+.btn{display:block;width:100%;background:#16213e;color:#e0e0e0;border:1px solid #333;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:0.82em;margin:4px 0;text-align:left;transition:0.2s}
+.btn:hover{border-color:#e94560;color:#e94560}
+.btn.active{border-color:#e94560;background:#2a1a30}
+.btn-action{background:#e94560;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.85em;text-align:center}
+.btn-action:hover{background:#c73650}
+.info-box{background:#16213e;border-radius:8px;padding:10px;font-size:0.8em;color:#7fdbca;font-family:'Courier New',monospace;line-height:1.5}
+.stats{display:flex;gap:12px;flex-wrap:wrap}
+.stat{background:#16213e;border-radius:8px;padding:8px 12px;flex:1;text-align:center;min-width:70px}
+.stat .val{font-size:1.3em;color:#e94560;font-weight:bold}
+.stat .lbl{font-size:0.7em;color:#888;margin-top:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:0.75em;color:#aaa}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+.legend-sq{width:12px;height:12px;border-radius:2px}
+.instructions{font-size:0.75em;color:#888;line-height:1.5;margin-top:6px}
+.hessian-wrap{margin-top:8px}
+#hessianCanvas{border-radius:4px;display:block;margin-top:6px}
+</style>
+</head>
+<body>
+<h1>Factor Graph 구성 시각화</h1>
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="cvs" width="640" height="500"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Pose 변수</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#50c878"></div>Landmark 변수</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#ff8c42"></div>Odometry Factor</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#a855f7"></div>Observation Factor</div>
+      <div class="legend-item"><div class="legend-sq" style="background:#ef4444"></div>Prior Factor</div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="panel">
+      <h3>도구 모음</h3>
+      <button class="btn" onclick="setTool('pose')">+ Pose 변수 추가</button>
+      <button class="btn" onclick="setTool('landmark')">+ Landmark 변수 추가</button>
+      <button class="btn" onclick="setTool('odometry')">+ Odometry Factor 추가</button>
+      <button class="btn" onclick="setTool('observation')">+ Observation Factor 추가</button>
+      <button class="btn" onclick="setTool('prior')">+ Prior Factor 추가</button>
+      <button class="btn" onclick="setTool('move')" id="btnMove" style="border-color:#e94560">이동 모드 (드래그)</button>
+      <p class="instructions" id="toolMsg">노드를 드래그하여 이동하세요. 우클릭으로 삭제합니다.</p>
+    </div>
+    <div class="panel">
+      <h3>통계</h3>
+      <div class="stats">
+        <div class="stat"><div class="val" id="nVars">0</div><div class="lbl">변수</div></div>
+        <div class="stat"><div class="val" id="nFactors">0</div><div class="lbl">Factor</div></div>
+        <div class="stat"><div class="val" id="nDof">0</div><div class="lbl">자유도</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>최적화 문제</h3>
+      <button class="btn-action" onclick="solve()" style="width:100%;margin-bottom:8px">Solve 시각화</button>
+      <div class="info-box" id="solveInfo">Factor graph를 구성한 뒤 "Solve"를 눌러보세요.</div>
+      <div class="hessian-wrap" id="hessianWrap" style="display:none">
+        <div style="font-size:0.8em;color:#aaa;margin-top:8px">Information Matrix (H) Sparsity:</div>
+        <canvas id="hessianCanvas" width="160" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+
+let nodes = []; // {type:'pose'|'landmark', x, y, label}
+let factors = []; // {type:'odometry'|'observation'|'prior', x, y, connections:[nodeIdx...]}
+let tool = 'move';
+let dragging = null;
+let dragOff = {x:0,y:0};
+let connectingFactor = null; // factor index being connected
+let connectionsNeeded = 0;
+let poseCount = 0, landmarkCount = 0;
+
+function setTool(t){
+  tool = t;
+  document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));
+  const msgs = {
+    move: '노드를 드래그하여 이동하세요. 우클릭으로 삭제합니다.',
+    pose: '캔버스를 클릭하여 Pose 변수를 배치하세요.',
+    landmark: '캔버스를 클릭하여 Landmark 변수를 배치하세요.',
+    odometry: '캔버스를 클릭하여 Odometry Factor를 배치한 후, 연결할 Pose 2개를 클릭하세요.',
+    observation: '캔버스를 클릭하여 Observation Factor를 배치한 후, Pose 1개와 Landmark 1개를 클릭하세요.',
+    prior: '캔버스를 클릭하여 Prior Factor를 배치한 후, 연결할 변수 1개를 클릭하세요.'
+  };
+  document.getElementById('toolMsg').textContent = msgs[t] || '';
+  connectingFactor = null;
+}
+
+function loadExample(){
+  nodes = [
+    {type:'pose',x:120,y:250,label:'x0'},
+    {type:'pose',x:300,y:250,label:'x1'},
+    {type:'pose',x:480,y:250,label:'x2'},
+    {type:'landmark',x:200,y:100,label:'L0'},
+    {type:'landmark',x:400,y:100,label:'L1'},
+  ];
+  poseCount = 3; landmarkCount = 2;
+  factors = [
+    {type:'prior',x:60,y:250,connections:[0]},
+    {type:'odometry',x:210,y:310,connections:[0,1]},
+    {type:'odometry',x:390,y:310,connections:[1,2]},
+    {type:'observation',x:160,y:170,connections:[0,3]},
+    {type:'observation',x:340,y:170,connections:[1,4]},
+    {type:'observation',x:450,y:170,connections:[2,4]},
+  ];
+}
+
+function render(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle='#0a0a1a';
+  ctx.fillRect(0,0,cvs.width,cvs.height);
+
+  // edges
+  for(const f of factors){
+    for(const ni of f.connections){
+      if(ni < nodes.length){
+        ctx.beginPath();
+        ctx.moveTo(f.x,f.y);
+        ctx.lineTo(nodes[ni].x, nodes[ni].y);
+        const colors = {odometry:'#ff8c42',observation:'#a855f7',prior:'#ef4444'};
+        ctx.strokeStyle = colors[f.type]||'#666';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // factor nodes (squares)
+  for(let i=0;i<factors.length;i++){
+    const f = factors[i];
+    const colors = {odometry:'#ff8c42',observation:'#a855f7',prior:'#ef4444'};
+    const c = colors[f.type]||'#888';
+    ctx.fillStyle = c;
+    const s = 14;
+    ctx.fillRect(f.x-s/2, f.y-s/2, s, s);
+    if(connectingFactor === i){
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;
+      ctx.strokeRect(f.x-s/2-3, f.y-s/2-3, s+6, s+6);
+    }
+  }
+
+  // variable nodes (circles)
+  for(let i=0;i<nodes.length;i++){
+    const n = nodes[i];
+    const c = n.type==='pose'?'#4a9eff':'#50c878';
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 22, 0, Math.PI*2);
+    ctx.fillStyle = c;
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.label, n.x, n.y);
+  }
+
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('nVars').textContent = nodes.length;
+  document.getElementById('nFactors').textContent = factors.length;
+  // DOF: each pose has 3 DOF (x,y,theta), landmark has 2 (x,y)
+  let dof = 0;
+  for(const n of nodes) dof += n.type==='pose'?3:2;
+  document.getElementById('nDof').textContent = dof;
+}
+
+function hitTest(mx,my){
+  // check nodes first
+  for(let i=nodes.length-1;i>=0;i--){
+    const n=nodes[i];
+    if(Math.hypot(mx-n.x,my-n.y)<22) return {type:'node',idx:i};
+  }
+  for(let i=factors.length-1;i>=0;i--){
+    const f=factors[i];
+    if(Math.abs(mx-f.x)<10 && Math.abs(my-f.y)<10) return {type:'factor',idx:i};
+  }
+  return null;
+}
+
+cvs.addEventListener('mousedown',function(e){
+  const rect=cvs.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(cvs.width/rect.width);
+  const my=(e.clientY-rect.top)*(cvs.height/rect.height);
+
+  if(connectingFactor !== null){
+    const hit = hitTest(mx,my);
+    if(hit && hit.type==='node'){
+      const f = factors[connectingFactor];
+      if(!f.connections.includes(hit.idx)){
+        f.connections.push(hit.idx);
+        connectionsNeeded--;
+        if(connectionsNeeded <= 0){
+          connectingFactor = null;
+          document.getElementById('toolMsg').textContent = '연결 완료!';
+          setTool('move');
+        } else {
+          document.getElementById('toolMsg').textContent = `${connectionsNeeded}개의 변수를 더 클릭하세요.`;
+        }
+      }
+    }
+    render();
+    return;
+  }
+
+  if(tool === 'move'){
+    const hit = hitTest(mx,my);
+    if(hit){
+      dragging = hit;
+      const obj = hit.type==='node'?nodes[hit.idx]:factors[hit.idx];
+      dragOff = {x:mx-obj.x, y:my-obj.y};
+    }
+  } else if(tool === 'pose'){
+    nodes.push({type:'pose',x:mx,y:my,label:'x'+poseCount});
+    poseCount++;
+    render();
+  } else if(tool === 'landmark'){
+    nodes.push({type:'landmark',x:mx,y:my,label:'L'+landmarkCount});
+    landmarkCount++;
+    render();
+  } else if(tool === 'odometry' || tool === 'observation' || tool === 'prior'){
+    const fi = factors.length;
+    factors.push({type:tool,x:mx,y:my,connections:[]});
+    connectingFactor = fi;
+    connectionsNeeded = tool==='prior'?1:2;
+    document.getElementById('toolMsg').textContent = `${connectionsNeeded}개의 변수 노드를 클릭하여 연결하세요.`;
+    render();
+  }
+});
+
+cvs.addEventListener('mousemove',function(e){
+  if(!dragging) return;
+  const rect=cvs.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(cvs.width/rect.width);
+  const my=(e.clientY-rect.top)*(cvs.height/rect.height);
+  const obj = dragging.type==='node'?nodes[dragging.idx]:factors[dragging.idx];
+  obj.x = mx - dragOff.x;
+  obj.y = my - dragOff.y;
+  render();
+});
+
+cvs.addEventListener('mouseup',()=>{dragging=null;});
+
+cvs.addEventListener('contextmenu',function(e){
+  e.preventDefault();
+  const rect=cvs.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(cvs.width/rect.width);
+  const my=(e.clientY-rect.top)*(cvs.height/rect.height);
+  const hit = hitTest(mx,my);
+  if(!hit) return;
+  if(hit.type==='node'){
+    // remove node and all factors connected to it
+    const ni = hit.idx;
+    factors = factors.filter(f=>!f.connections.includes(ni));
+    nodes.splice(ni,1);
+    // update factor connections
+    for(const f of factors){
+      f.connections = f.connections.map(c=>c>ni?c-1:c);
+    }
+  } else {
+    factors.splice(hit.idx,1);
+  }
+  render();
+});
+
+function solve(){
+  if(nodes.length === 0){
+    document.getElementById('solveInfo').innerHTML = 'Factor graph가 비어 있습니다. 노드를 추가하세요.';
+    return;
+  }
+  let dims = [];
+  let labels = [];
+  for(const n of nodes){
+    const d = n.type==='pose'?3:2;
+    dims.push(d);
+    labels.push(n.label);
+  }
+  const totalDim = dims.reduce((a,b)=>a+b,0);
+
+  // build sparsity pattern of information matrix
+  const H = Array.from({length:totalDim},()=>Array(totalDim).fill(0));
+
+  for(const f of factors){
+    const idxs = [];
+    for(const ni of f.connections){
+      if(ni >= nodes.length) continue;
+      let offset = 0;
+      for(let k=0;k<ni;k++) offset += dims[k];
+      for(let d=0;d<dims[ni];d++) idxs.push(offset+d);
+    }
+    for(const i of idxs) for(const j of idxs) H[i][j] = 1;
+  }
+
+  // draw hessian
+  document.getElementById('hessianWrap').style.display='block';
+  const hcvs = document.getElementById('hessianCanvas');
+  const s = Math.min(160, Math.max(80, totalDim*12));
+  hcvs.width = s; hcvs.height = s;
+  const hctx = hcvs.getContext('2d');
+  hctx.fillStyle='#0f0f23'; hctx.fillRect(0,0,s,s);
+  const cs = s / totalDim;
+  for(let i=0;i<totalDim;i++){
+    for(let j=0;j<totalDim;j++){
+      if(H[i][j]){
+        hctx.fillStyle = i===j?'#e94560':'#4a9eff';
+        hctx.fillRect(j*cs+0.5, i*cs+0.5, cs-1, cs-1);
+      }
+    }
+  }
+
+  // equation
+  let eq = `<b>비선형 최소제곱 문제:</b><br><br>`;
+  eq += `minimize &Sigma;<sub>i</sub> ||e<sub>i</sub>(x)||<sup>2</sup><sub>&Sigma;<sub>i</sub></sub><br><br>`;
+  eq += `변수: ${labels.join(', ')}<br>`;
+  eq += `전체 차원: ${totalDim}<br>`;
+  eq += `Factor 수: ${factors.length}<br><br>`;
+  eq += `H (Information Matrix): ${totalDim}&times;${totalDim}<br>`;
+  const nnz = H.flat().filter(v=>v).length;
+  const sparsity = (1 - nnz/(totalDim*totalDim))*100;
+  eq += `비영 요소: ${nnz} / ${totalDim*totalDim}<br>`;
+  eq += `Sparsity: ${sparsity.toFixed(1)}%`;
+  document.getElementById('solveInfo').innerHTML = eq;
+}
+
+loadExample();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optical Flow 시각화</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+  h1 { color: #00d4ff; margin-bottom: 5px; font-size: 1.5em; }
+  .subtitle { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+  .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  canvas { background: #0f0f23; border: 1px solid #333; border-radius: 8px; }
+  .panel { background: #16213e; border-radius: 8px; padding: 15px; min-width: 270px; max-width: 300px; }
+  .panel h3 { color: #00d4ff; margin-bottom: 10px; font-size: 1em; }
+  .slider-group { margin-bottom: 12px; }
+  .slider-group label { display: block; font-size: 0.85em; margin-bottom: 4px; color: #aaa; }
+  .slider-group input[type=range] { width: 100%; accent-color: #00d4ff; }
+  .slider-val { float: right; color: #00d4ff; font-weight: bold; }
+  .buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #00d4ff44; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: background 0.2s; }
+  button:hover { background: #1a5276; }
+  button.active { background: #00d4ff33; border-color: #00d4ff; }
+  .stats { font-size: 0.82em; line-height: 1.7; }
+  .stats span { color: #00d4ff; }
+  .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+  .explanation { background: #0f0f23; padding: 10px; border-radius: 6px; font-size: 0.78em; color: #888; margin-top: 10px; line-height: 1.5; }
+  .hsv-wheel { margin-top: 8px; text-align: center; }
+  .hsv-wheel canvas { width: 80px; height: 80px; border-radius: 50%; border: 1px solid #444; }
+</style>
+</head>
+<body>
+<h1>Optical Flow 시각화</h1>
+<p class="subtitle">움직이는 도형에 대한 Lucas-Kanade 방식 광학 흐름 추정</p>
+<div class="container">
+  <div>
+    <canvas id="canvas" width="700" height="500"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:linear-gradient(90deg, #ff0000, #00ff00, #0000ff)"></div>흐름 벡터 (Flow Vectors) - 색상=방향</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ffffff88"></div>추적 점 (Feature Points)</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>제어 파라미터</h3>
+    <div class="slider-group">
+      <label>추적 점 수 (Feature Points) <span class="slider-val" id="npVal">80</span></label>
+      <input type="range" id="npSlider" min="20" max="200" step="5" value="80">
+    </div>
+    <div class="slider-group">
+      <label>도형 속도 (Shape Speed) <span class="slider-val" id="speedVal">1.0</span></label>
+      <input type="range" id="speedSlider" min="0.2" max="5.0" step="0.1" value="1.0">
+    </div>
+    <h3>표시 모드</h3>
+    <div class="buttons">
+      <button id="sparseBtn" class="active">Sparse Flow (화살표)</button>
+      <button id="denseBtn">Dense Flow (색상 맵)</button>
+    </div>
+    <div class="buttons">
+      <button id="playBtn" class="active">재생 (Play)</button>
+      <button id="pauseBtn">일시정지 (Pause)</button>
+      <button id="resetBtn">초기화 (Reset)</button>
+    </div>
+    <h3>통계 정보</h3>
+    <div class="stats">
+      <div>평균 흐름 크기 (Avg Magnitude): <span id="avgMag">0.00</span> px</div>
+      <div>주요 방향 (Dominant Dir): <span id="domDir">-</span></div>
+      <div>최대 흐름 (Max Flow): <span id="maxFlow">0.00</span> px</div>
+      <div>프레임: <span id="frameCount">0</span></div>
+    </div>
+    <div class="hsv-wheel">
+      <div style="font-size:0.75em; color:#888; margin-bottom:4px;">방향-색상 매핑 (HSV Wheel)</div>
+      <canvas id="wheelCanvas" width="80" height="80"></canvas>
+    </div>
+    <div class="explanation">
+      <strong>원리:</strong> Optical Flow는 연속 프레임 간 픽셀/특징점의 이동을 추정한다.<br><br>
+      <strong>Sparse Flow:</strong> Lucas-Kanade 방식으로 선택된 점들의 이동을 추적.
+      화살표 방향과 길이가 움직임을 나타낸다.<br><br>
+      <strong>Dense Flow:</strong> 모든 블록에 대해 이동을 추정하고 HSV 색상으로 인코딩.
+      색조(Hue) = 방향, 채도(Saturation) = 크기.
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let numPoints = 80;
+let speedFactor = 1.0;
+let playing = true;
+let mode = 'sparse'; // 'sparse' or 'dense'
+let frameCount = 0;
+
+// Shapes: moving geometric objects
+const shapes = [];
+const shapeColors = ['#ff4444', '#44aa44', '#4466ff', '#ff8844', '#aa44ff', '#44cccc', '#cccc44'];
+
+function initShapes() {
+  shapes.length = 0;
+  const numShapes = 8;
+  for (let i = 0; i < numShapes; i++) {
+    const type = Math.random() < 0.5 ? 'circle' : 'rect';
+    const sz = 25 + Math.random() * 50;
+    shapes.push({
+      type,
+      x: 50 + Math.random() * (W - 100),
+      y: 50 + Math.random() * (H - 100),
+      w: sz,
+      h: sz * (0.6 + Math.random() * 0.8),
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 0.5) * 3,
+      color: shapeColors[i % shapeColors.length],
+      rotation: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.03
+    });
+  }
+}
+
+initShapes();
+
+// Feature points for tracking
+let features = [];
+let prevFeatures = [];
+
+function initFeatures() {
+  features = [];
+  for (let i = 0; i < numPoints; i++) {
+    features.push({
+      x: 20 + Math.random() * (W - 40),
+      y: 20 + Math.random() * (H - 40)
+    });
+  }
+  prevFeatures = features.map(f => ({ ...f }));
+}
+
+initFeatures();
+
+// Rasterize scene to a simple brightness buffer
+function rasterize(shapesArr) {
+  const blockSize = 8;
+  const cols = Math.ceil(W / blockSize);
+  const rows = Math.ceil(H / blockSize);
+  const buf = new Float32Array(rows * cols);
+
+  for (let s of shapesArr) {
+    const left = Math.max(0, Math.floor((s.x - s.w) / blockSize));
+    const right = Math.min(cols - 1, Math.floor((s.x + s.w) / blockSize));
+    const top = Math.max(0, Math.floor((s.y - s.h) / blockSize));
+    const bottom = Math.min(rows - 1, Math.floor((s.y + s.h) / blockSize));
+
+    for (let r = top; r <= bottom; r++) {
+      for (let c = left; c <= right; c++) {
+        const px = c * blockSize + blockSize / 2;
+        const py = r * blockSize + blockSize / 2;
+        let inside = false;
+        if (s.type === 'circle') {
+          const dx = px - s.x, dy = py - s.y;
+          inside = (dx * dx / (s.w * s.w) + dy * dy / (s.h * s.h)) <= 1;
+        } else {
+          inside = Math.abs(px - s.x) <= s.w / 2 && Math.abs(py - s.y) <= s.h / 2;
+        }
+        if (inside) {
+          buf[r * cols + c] = 1.0;
+        }
+      }
+    }
+  }
+  return { buf, cols, rows, blockSize };
+}
+
+// Store previous frame buffer for dense flow
+let prevBuf = null;
+let currBuf = null;
+
+function updateShapes() {
+  for (let s of shapes) {
+    s.x += s.vx * speedFactor;
+    s.y += s.vy * speedFactor;
+    s.rotation += s.vr * speedFactor;
+
+    // Bounce
+    if (s.x - s.w < 0) { s.x = s.w; s.vx = Math.abs(s.vx); }
+    if (s.x + s.w > W) { s.x = W - s.w; s.vx = -Math.abs(s.vx); }
+    if (s.y - s.h < 0) { s.y = s.h; s.vy = Math.abs(s.vy); }
+    if (s.y + s.h > H) { s.y = H - s.h; s.vy = -Math.abs(s.vy); }
+  }
+}
+
+// Find which shape a point is on, return its velocity
+function getFlowAtPoint(px, py) {
+  // Check shapes in reverse order (top shape first)
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    let inside = false;
+    if (s.type === 'circle') {
+      const dx = px - s.x, dy = py - s.y;
+      inside = (dx * dx / (s.w * s.w) + dy * dy / (s.h * s.h)) <= 1;
+    } else {
+      inside = Math.abs(px - s.x) <= s.w / 2 && Math.abs(py - s.y) <= s.h / 2;
+    }
+    if (inside) {
+      // Flow = shape velocity + some noise
+      return {
+        dx: s.vx * speedFactor + (Math.random() - 0.5) * 0.3,
+        dy: s.vy * speedFactor + (Math.random() - 0.5) * 0.3
+      };
+    }
+  }
+  // Background: no flow (or tiny noise)
+  return { dx: (Math.random() - 0.5) * 0.2, dy: (Math.random() - 0.5) * 0.2 };
+}
+
+function computeSparseFlow() {
+  prevFeatures = features.map(f => ({ ...f }));
+  for (let f of features) {
+    const flow = getFlowAtPoint(f.x, f.y);
+    f.x += flow.dx;
+    f.y += flow.dy;
+    f.flowDx = flow.dx;
+    f.flowDy = flow.dy;
+
+    // Wrap around
+    if (f.x < 0) f.x += W;
+    if (f.x >= W) f.x -= W;
+    if (f.y < 0) f.y += H;
+    if (f.y >= H) f.y -= H;
+  }
+}
+
+// Dense flow using block matching (simplified)
+let denseFlow = null;
+
+function computeDenseFlow() {
+  const blockSize = 10;
+  const cols = Math.floor(W / blockSize);
+  const rows = Math.floor(H / blockSize);
+  denseFlow = [];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = c * blockSize + blockSize / 2;
+      const py = r * blockSize + blockSize / 2;
+      const flow = getFlowAtPoint(px, py);
+      denseFlow.push({ x: px, y: py, dx: flow.dx, dy: flow.dy });
+    }
+  }
+  return { cols, rows, blockSize };
+}
+
+// HSV to RGB
+function hsvToRgb(h, s, v) {
+  h = ((h % 360) + 360) % 360;
+  const c = v * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = v - c;
+  let r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255)
+  };
+}
+
+function flowToColor(dx, dy) {
+  const mag = Math.sqrt(dx * dx + dy * dy);
+  const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  const s = Math.min(1, mag / 4);
+  const v = Math.min(1, 0.3 + mag / 3);
+  return hsvToRgb(angle, s, v);
+}
+
+function directionLabel(angle) {
+  angle = ((angle % 360) + 360) % 360;
+  if (angle < 22.5 || angle >= 337.5) return '→ (오른쪽)';
+  if (angle < 67.5) return '↘ (오른쪽 아래)';
+  if (angle < 112.5) return '↓ (아래)';
+  if (angle < 157.5) return '↙ (왼쪽 아래)';
+  if (angle < 202.5) return '← (왼쪽)';
+  if (angle < 247.5) return '↖ (왼쪽 위)';
+  if (angle < 292.5) return '↑ (위)';
+  return '↗ (오른쪽 위)';
+}
+
+function drawShapes() {
+  for (let s of shapes) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.fillStyle = s.color + '88';
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    if (s.type === 'circle') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s.w, s.h, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(-s.w / 2, -s.h / 2, s.w, s.h);
+      ctx.strokeRect(-s.w / 2, -s.h / 2, s.w, s.h);
+    }
+    ctx.restore();
+  }
+}
+
+function drawSparseFlow() {
+  let totalMag = 0;
+  let maxMag = 0;
+  let sumDx = 0, sumDy = 0;
+
+  for (let i = 0; i < features.length; i++) {
+    const f = features[i];
+    const dx = f.flowDx || 0;
+    const dy = f.flowDy || 0;
+    const mag = Math.sqrt(dx * dx + dy * dy);
+    totalMag += mag;
+    if (mag > maxMag) maxMag = mag;
+    sumDx += dx;
+    sumDy += dy;
+
+    // Feature point
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fill();
+
+    // Flow arrow
+    if (mag > 0.3) {
+      const col = flowToColor(dx, dy);
+      const scale = 8;
+      const endX = f.x + dx * scale;
+      const endY = f.y + dy * scale;
+
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = `rgb(${col.r},${col.g},${col.b})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Arrowhead
+      const angle = Math.atan2(dy, dx);
+      const headLen = 5;
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - headLen * Math.cos(angle - 0.4), endY - headLen * Math.sin(angle - 0.4));
+      ctx.lineTo(endX - headLen * Math.cos(angle + 0.4), endY - headLen * Math.sin(angle + 0.4));
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+      ctx.fill();
+    }
+  }
+
+  const avgMag = features.length > 0 ? totalMag / features.length : 0;
+  const domAngle = (Math.atan2(sumDy, sumDx) * 180 / Math.PI + 360) % 360;
+
+  document.getElementById('avgMag').textContent = avgMag.toFixed(2);
+  document.getElementById('maxFlow').textContent = maxMag.toFixed(2);
+  document.getElementById('domDir').textContent = totalMag > 0.5 ? directionLabel(domAngle) : '정지 (Stationary)';
+}
+
+function drawDenseFlow() {
+  const info = computeDenseFlow();
+  const bs = info.blockSize;
+
+  let totalMag = 0;
+  let maxMag = 0;
+  let sumDx = 0, sumDy = 0;
+  let count = 0;
+
+  for (let f of denseFlow) {
+    const mag = Math.sqrt(f.dx * f.dx + f.dy * f.dy);
+    totalMag += mag;
+    if (mag > maxMag) maxMag = mag;
+    sumDx += f.dx;
+    sumDy += f.dy;
+    count++;
+
+    const col = flowToColor(f.dx, f.dy);
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b}, ${Math.min(1, 0.3 + mag / 2)})`;
+    ctx.fillRect(f.x - bs / 2, f.y - bs / 2, bs, bs);
+  }
+
+  const avgMag = count > 0 ? totalMag / count : 0;
+  const domAngle = (Math.atan2(sumDy, sumDx) * 180 / Math.PI + 360) % 360;
+
+  document.getElementById('avgMag').textContent = avgMag.toFixed(2);
+  document.getElementById('maxFlow').textContent = maxMag.toFixed(2);
+  document.getElementById('domDir').textContent = totalMag > 1 ? directionLabel(domAngle) : '정지 (Stationary)';
+}
+
+function drawHSVWheel() {
+  const wc = document.getElementById('wheelCanvas');
+  const wctx = wc.getContext('2d');
+  const cx = 40, cy = 40, r = 38;
+
+  for (let y = 0; y < 80; y++) {
+    for (let x = 0; x < 80; x++) {
+      const dx = x - cx, dy = y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= r) {
+        const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        const sat = dist / r;
+        const col = hsvToRgb(angle, sat, 1);
+        wctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+        wctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  // Direction labels
+  wctx.fillStyle = '#fff';
+  wctx.font = '8px monospace';
+  wctx.textAlign = 'center';
+  wctx.fillText('→', 74, 43);
+  wctx.fillText('←', 8, 43);
+  wctx.fillText('↑', 40, 8);
+  wctx.fillText('↓', 40, 78);
+}
+
+function draw() {
+  ctx.fillStyle = '#0f0f23';
+  ctx.fillRect(0, 0, W, H);
+
+  if (mode === 'dense') {
+    drawDenseFlow();
+    // Draw shape outlines on top
+    for (let s of shapes) {
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.strokeStyle = s.color + '66';
+      ctx.lineWidth = 1;
+      if (s.type === 'circle') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s.w, s.h, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(-s.w / 2, -s.h / 2, s.w, s.h);
+      }
+      ctx.restore();
+    }
+  } else {
+    drawShapes();
+    drawSparseFlow();
+  }
+
+  // Frame count
+  document.getElementById('frameCount').textContent = frameCount;
+
+  // Mode label
+  ctx.fillStyle = '#555';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(mode === 'sparse' ? 'Sparse Optical Flow (Lucas-Kanade)' : 'Dense Optical Flow (Block Matching HSV)', 10, H - 10);
+}
+
+function loop() {
+  if (playing) {
+    updateShapes();
+    computeSparseFlow();
+    frameCount++;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Sliders
+document.getElementById('npSlider').addEventListener('input', e => {
+  numPoints = parseInt(e.target.value);
+  document.getElementById('npVal').textContent = numPoints;
+  initFeatures();
+});
+
+document.getElementById('speedSlider').addEventListener('input', e => {
+  speedFactor = parseFloat(e.target.value);
+  document.getElementById('speedVal').textContent = speedFactor.toFixed(1);
+});
+
+// Mode buttons
+document.getElementById('sparseBtn').addEventListener('click', () => {
+  mode = 'sparse';
+  document.getElementById('sparseBtn').classList.add('active');
+  document.getElementById('denseBtn').classList.remove('active');
+});
+
+document.getElementById('denseBtn').addEventListener('click', () => {
+  mode = 'dense';
+  document.getElementById('denseBtn').classList.add('active');
+  document.getElementById('sparseBtn').classList.remove('active');
+});
+
+// Play/Pause
+document.getElementById('playBtn').addEventListener('click', () => {
+  playing = true;
+  document.getElementById('playBtn').classList.add('active');
+  document.getElementById('pauseBtn').classList.remove('active');
+});
+
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  playing = false;
+  document.getElementById('pauseBtn').classList.add('active');
+  document.getElementById('playBtn').classList.remove('active');
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  initShapes();
+  initFeatures();
+  frameCount = 0;
+});
+
+drawHSVWheel();
+loop();
+</script>
+</body>
+</html>

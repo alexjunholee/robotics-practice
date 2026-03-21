@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Stereo Disparity Map - 스테레오 시차 맵</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; }
+h1 { text-align: center; color: #00d4ff; margin-bottom: 5px; font-size: 1.6em; }
+.subtitle { text-align: center; color: #888; margin-bottom: 15px; font-size: 0.9em; }
+.controls { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 15px; background: #16213e; padding: 15px; border-radius: 10px; }
+.control-group { display: flex; flex-direction: column; align-items: center; min-width: 150px; }
+.control-group label { font-size: 0.85em; color: #aaa; margin-bottom: 4px; }
+.control-group .value { color: #00d4ff; font-weight: bold; font-size: 0.95em; margin-bottom: 2px; }
+input[type="range"] { width: 140px; accent-color: #00d4ff; }
+.canvas-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+.canvas-box { text-align: center; }
+.canvas-box canvas { border: 1px solid #333; border-radius: 5px; }
+.canvas-box .label { font-size: 0.8em; color: #aaa; margin-top: 4px; }
+.formula { text-align: center; background: #16213e; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-family: 'Courier New', monospace; color: #00d4ff; font-size: 1.1em; }
+.info-row { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.info-box { background: #16213e; padding: 8px 15px; border-radius: 8px; font-size: 0.85em; }
+.info-box span { color: #00d4ff; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Stereo Disparity Map</h1>
+<p class="subtitle">스테레오 시차 맵 - Block Matching 알고리즘</p>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Block Size (블록 크기)</label>
+    <div class="value" id="valBlock">5</div>
+    <input type="range" id="blockSize" min="3" max="21" step="2" value="5">
+  </div>
+  <div class="control-group">
+    <label>Search Range (탐색 범위)</label>
+    <div class="value" id="valSearch">32</div>
+    <input type="range" id="searchRange" min="16" max="128" step="4" value="32">
+  </div>
+  <div class="control-group">
+    <label>Min Disparity (최소 시차)</label>
+    <div class="value" id="valMinDisp">0</div>
+    <input type="range" id="minDisparity" min="0" max="32" step="1" value="0">
+  </div>
+  <div class="control-group">
+    <label>Baseline B (기선 거리, cm)</label>
+    <div class="value" id="valBaseline">10</div>
+    <input type="range" id="baseline" min="1" max="50" step="1" value="10">
+  </div>
+  <div class="control-group">
+    <label>Focal Length f (초점 거리, px)</label>
+    <div class="value" id="valFocal">500</div>
+    <input type="range" id="focal" min="100" max="2000" step="50" value="500">
+  </div>
+</div>
+
+<div class="formula">깊이 공식: Z = f &times; B / d &nbsp;&nbsp;|&nbsp;&nbsp; f = <span id="fVal">500</span>px, B = <span id="bVal">10</span>cm</div>
+
+<div class="canvas-row">
+  <div class="canvas-box">
+    <canvas id="leftCanvas" width="240" height="200"></canvas>
+    <div class="label">왼쪽 이미지 (Left Image)</div>
+  </div>
+  <div class="canvas-box">
+    <canvas id="rightCanvas" width="240" height="200"></canvas>
+    <div class="label">오른쪽 이미지 (Right Image)</div>
+  </div>
+  <div class="canvas-box">
+    <canvas id="disparityCanvas" width="240" height="200"></canvas>
+    <div class="label">시차 맵 (Disparity Map)</div>
+  </div>
+</div>
+
+<div class="info-row">
+  <div class="info-box">최대 시차: <span id="maxDisp">-</span> px</div>
+  <div class="info-box">최소 깊이: <span id="minDepth">-</span> cm</div>
+  <div class="info-box">최대 깊이: <span id="maxDepth">-</span> cm</div>
+  <div class="info-box">처리 시간: <span id="procTime">-</span> ms</div>
+</div>
+
+<script>
+const W = 240, H = 200;
+const leftC = document.getElementById('leftCanvas');
+const rightC = document.getElementById('rightCanvas');
+const dispC = document.getElementById('disparityCanvas');
+const ctxL = leftC.getContext('2d');
+const ctxR = rightC.getContext('2d');
+const ctxD = dispC.getContext('2d');
+
+const rects = [
+  { x: 30, y: 30, w: 60, h: 50, depth: 3, color: [180, 60, 60] },
+  { x: 120, y: 50, w: 50, h: 70, depth: 8, color: [60, 180, 60] },
+  { x: 60, y: 110, w: 80, h: 40, depth: 15, color: [60, 60, 180] },
+  { x: 160, y: 20, w: 40, h: 40, depth: 5, color: [180, 180, 60] },
+  { x: 10, y: 130, w: 70, h: 50, depth: 20, color: [180, 60, 180] },
+  { x: 140, y: 130, w: 60, h: 50, depth: 10, color: [60, 180, 180] },
+  { x: 90, y: 10, w: 30, h: 30, depth: 2, color: [200, 120, 60] },
+];
+
+function generateImage(ctx, shift) {
+  const img = ctx.createImageData(W, H);
+  for (let i = 0; i < img.data.length; i += 4) {
+    img.data[i] = 40; img.data[i+1] = 40; img.data[i+2] = 60; img.data[i+3] = 255;
+  }
+  const sorted = [...rects].sort((a, b) => b.depth - a.depth);
+  for (const r of sorted) {
+    const dx = Math.round(shift / r.depth);
+    for (let y = r.y; y < r.y + r.h && y < H; y++) {
+      for (let x = r.x - dx; x < r.x + r.w - dx && x < W; x++) {
+        if (x < 0) continue;
+        const idx = (y * W + x) * 4;
+        const noise = (Math.random() - 0.5) * 20;
+        img.data[idx] = Math.max(0, Math.min(255, r.color[0] + noise));
+        img.data[idx+1] = Math.max(0, Math.min(255, r.color[1] + noise));
+        img.data[idx+2] = Math.max(0, Math.min(255, r.color[2] + noise));
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return img;
+}
+
+function toGray(imgData) {
+  const g = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    g[i] = imgData.data[i*4] * 0.299 + imgData.data[i*4+1] * 0.587 + imgData.data[i*4+2] * 0.114;
+  }
+  return g;
+}
+
+function jetColormap(v) {
+  v = Math.max(0, Math.min(1, v));
+  let r, g, b;
+  if (v < 0.25) { r = 0; g = 4 * v; b = 1; }
+  else if (v < 0.5) { r = 0; g = 1; b = 1 - 4 * (v - 0.25); }
+  else if (v < 0.75) { r = 4 * (v - 0.5); g = 1; b = 0; }
+  else { r = 1; g = 1 - 4 * (v - 0.75); b = 0; }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function computeDisparity(grayL, grayR, blockSz, searchR, minDisp) {
+  const half = Math.floor(blockSz / 2);
+  const disp = new Float32Array(W * H);
+  for (let y = half; y < H - half; y++) {
+    for (let x = half + searchR; x < W - half; x++) {
+      let bestD = 0, bestSAD = Infinity;
+      for (let d = minDisp; d < searchR; d++) {
+        let sad = 0;
+        for (let by = -half; by <= half; by++) {
+          for (let bx = -half; bx <= half; bx++) {
+            const li = (y + by) * W + (x + bx);
+            const ri = (y + by) * W + (x + bx - d);
+            if (ri >= 0 && ri < W * H) {
+              sad += Math.abs(grayL[li] - grayR[ri]);
+            }
+          }
+        }
+        if (sad < bestSAD) { bestSAD = sad; bestD = d; }
+      }
+      disp[y * W + x] = bestD;
+    }
+  }
+  return disp;
+}
+
+function update() {
+  const blockSz = parseInt(document.getElementById('blockSize').value);
+  const searchR = parseInt(document.getElementById('searchRange').value);
+  const minDisp = parseInt(document.getElementById('minDisparity').value);
+  const B = parseFloat(document.getElementById('baseline').value);
+  const f = parseFloat(document.getElementById('focal').value);
+
+  document.getElementById('valBlock').textContent = blockSz;
+  document.getElementById('valSearch').textContent = searchR;
+  document.getElementById('valMinDisp').textContent = minDisp;
+  document.getElementById('valBaseline').textContent = B;
+  document.getElementById('valFocal').textContent = f;
+  document.getElementById('fVal').textContent = f;
+  document.getElementById('bVal').textContent = B;
+
+  const imgL = generateImage(ctxL, 0);
+  const imgR = generateImage(ctxR, 30);
+  const grayL = toGray(imgL);
+  const grayR = toGray(imgR);
+
+  const t0 = performance.now();
+  const disp = computeDisparity(grayL, grayR, blockSz, searchR, minDisp);
+  const t1 = performance.now();
+
+  let maxD = 0, minD = Infinity;
+  for (let i = 0; i < disp.length; i++) {
+    if (disp[i] > maxD) maxD = disp[i];
+    if (disp[i] > 0 && disp[i] < minD) minD = disp[i];
+  }
+  if (minD === Infinity) minD = 1;
+
+  const dispImg = ctxD.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const v = maxD > 0 ? disp[i] / maxD : 0;
+    const [r, g, b] = jetColormap(v);
+    dispImg.data[i*4] = r;
+    dispImg.data[i*4+1] = g;
+    dispImg.data[i*4+2] = b;
+    dispImg.data[i*4+3] = 255;
+  }
+  ctxD.putImageData(dispImg, 0, 0);
+
+  const depthMin = maxD > 0 ? (f * B / maxD).toFixed(1) : '-';
+  const depthMax = minD > 0 ? (f * B / minD).toFixed(1) : '-';
+
+  document.getElementById('maxDisp').textContent = maxD;
+  document.getElementById('minDepth').textContent = depthMin;
+  document.getElementById('maxDepth').textContent = depthMax;
+  document.getElementById('procTime').textContent = (t1 - t0).toFixed(1);
+}
+
+document.querySelectorAll('input[type="range"]').forEach(el => {
+  el.addEventListener('input', update);
+});
+
+update();
+</script>
+</body>
+</html>

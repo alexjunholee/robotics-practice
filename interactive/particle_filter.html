@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Filter / Monte Carlo Localization</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+  h1 { color: #00d4ff; margin-bottom: 5px; font-size: 1.5em; }
+  .subtitle { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+  .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  canvas { background: #0f0f23; border: 1px solid #333; border-radius: 8px; cursor: crosshair; }
+  .panel { background: #16213e; border-radius: 8px; padding: 15px; min-width: 280px; max-width: 300px; }
+  .panel h3 { color: #00d4ff; margin-bottom: 10px; font-size: 1em; }
+  .slider-group { margin-bottom: 12px; }
+  .slider-group label { display: block; font-size: 0.85em; margin-bottom: 4px; color: #aaa; }
+  .slider-group input[type=range] { width: 100%; accent-color: #00d4ff; }
+  .slider-val { float: right; color: #00d4ff; font-weight: bold; }
+  .buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #00d4ff44; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: background 0.2s; }
+  button:hover { background: #1a5276; }
+  button.danger { border-color: #ff444444; }
+  button.danger:hover { background: #5a2020; }
+  .stats { font-size: 0.82em; line-height: 1.7; }
+  .stats span { color: #00d4ff; }
+  .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+  .keys { background: #0f0f23; padding: 10px; border-radius: 6px; font-size: 0.8em; color: #888; margin-top: 10px; line-height: 1.5; }
+  .explanation { background: #0f0f23; padding: 10px; border-radius: 6px; font-size: 0.78em; color: #888; margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>Particle Filter / Monte Carlo Localization</h1>
+<p class="subtitle">파티클 필터 기반 로봇 위치 추정 시뮬레이션</p>
+<div class="container">
+  <div>
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#00ff88"></div>로봇 (Robot)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff8844"></div>파티클 (Particles)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ff44ff"></div>추정 위치 (Estimate)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#444"></div>벽 (Walls)</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>제어 파라미터</h3>
+    <div class="slider-group">
+      <label>파티클 수 (Particles N) <span class="slider-val" id="nVal">500</span></label>
+      <input type="range" id="nSlider" min="50" max="2000" step="10" value="500">
+    </div>
+    <div class="slider-group">
+      <label>측정 노이즈 (Measurement Noise) <span class="slider-val" id="mnVal">20</span></label>
+      <input type="range" id="mnSlider" min="5" max="80" step="1" value="20">
+    </div>
+    <div class="slider-group">
+      <label>모션 노이즈 (Motion Noise) <span class="slider-val" id="moVal">5</span></label>
+      <input type="range" id="moSlider" min="1" max="30" step="1" value="5">
+    </div>
+    <div class="buttons">
+      <button id="kidnapBtn" class="danger">납치 (Kidnap)</button>
+      <button id="resetBtn">초기화 (Reset)</button>
+    </div>
+    <h3>상태 정보</h3>
+    <div class="stats">
+      <div>로봇 위치: (<span id="robotX">0</span>, <span id="robotY">0</span>)</div>
+      <div>추정 위치: (<span id="estX">0</span>, <span id="estY">0</span>)</div>
+      <div>추정 오차: <span id="error">0</span> px</div>
+      <div>유효 파티클 수: <span id="neff">0</span></div>
+      <div>단계: <span id="stepCount">0</span></div>
+    </div>
+    <div class="keys">
+      <strong>조작법:</strong><br>
+      방향키 / WASD: 로봇 이동<br>
+      납치 버튼: 랜덤 위치로 순간이동
+    </div>
+    <div class="explanation">
+      <strong>원리:</strong> Predict → 파티클 이동 (노이즈 포함),
+      Update → 측정 기반 가중치 계산,
+      Resample → 높은 가중치 파티클 복제.<br>
+      파티클 구름이 로봇 위치로 수렴하는 과정을 관찰하세요.
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = 600, H = 600;
+const CELL = 30;
+const COLS = W / CELL;
+const ROWS = H / CELL;
+
+// Map: 1 = wall, 0 = free
+const map = [];
+for (let r = 0; r < ROWS; r++) {
+  map[r] = [];
+  for (let c = 0; c < COLS; c++) {
+    // Border walls
+    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
+      map[r][c] = 1;
+    } else {
+      map[r][c] = 0;
+    }
+  }
+}
+
+// Interior walls - rooms
+function setWall(r, c) { if (r >= 0 && r < ROWS && c >= 0 && c < COLS) map[r][c] = 1; }
+
+// Vertical wall with door
+for (let r = 0; r < 12; r++) { if (r !== 5 && r !== 6) setWall(r, 10); }
+// Horizontal wall with door
+for (let c = 0; c < 10; c++) { if (c !== 4 && c !== 5) setWall(8, c); }
+// Another vertical wall
+for (let r = 8; r < ROWS; r++) { if (r !== 13 && r !== 14) setWall(r, 10); }
+// Horizontal wall right side
+for (let c = 10; c < COLS; c++) { if (c !== 14 && c !== 15) setWall(12, c); }
+// Small room
+for (let r = 0; r < 6; r++) { if (r !== 3) setWall(r, 15); }
+
+function isWall(x, y) {
+  const c = Math.floor(x / CELL);
+  const r = Math.floor(y / CELL);
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+  return map[r][c] === 1;
+}
+
+function isFreePos(x, y) {
+  return !isWall(x, y);
+}
+
+// Range sensor: distance to nearest wall in a direction
+function raycast(x, y, dx, dy) {
+  let dist = 0;
+  let cx = x, cy = y;
+  const step = 3;
+  while (dist < 400) {
+    cx += dx * step;
+    cy += dy * step;
+    dist += step;
+    if (isWall(cx, cy)) return dist;
+  }
+  return 400;
+}
+
+function getMeasurements(x, y) {
+  return [
+    raycast(x, y, 0, -1), // up
+    raycast(x, y, 1, 0),  // right
+    raycast(x, y, 0, 1),  // down
+    raycast(x, y, -1, 0)  // left
+  ];
+}
+
+// Robot
+let robot = { x: 150, y: 150 };
+// Place robot in free space
+function placeRobotRandom() {
+  let attempts = 0;
+  do {
+    robot.x = Math.random() * (W - 60) + 30;
+    robot.y = Math.random() * (H - 60) + 30;
+    attempts++;
+  } while (isWall(robot.x, robot.y) && attempts < 1000);
+}
+placeRobotRandom();
+
+let numParticles = 500;
+let measurementNoise = 20;
+let motionNoise = 5;
+let stepCount = 0;
+
+// Particles
+let particles = [];
+
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < numParticles; i++) {
+    let px, py;
+    let attempts = 0;
+    do {
+      px = Math.random() * (W - 60) + 30;
+      py = Math.random() * (H - 60) + 30;
+      attempts++;
+    } while (isWall(px, py) && attempts < 200);
+    particles.push({ x: px, y: py, w: 1 / numParticles });
+  }
+}
+
+initParticles();
+
+function gaussRand() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// Movement
+let keysDown = {};
+window.addEventListener('keydown', e => { keysDown[e.key.toLowerCase()] = true; e.preventDefault(); });
+window.addEventListener('keyup', e => { keysDown[e.key.toLowerCase()] = false; });
+
+let moveDir = { dx: 0, dy: 0 };
+const SPEED = 3;
+
+function updateRobot() {
+  let dx = 0, dy = 0;
+  if (keysDown['w'] || keysDown['arrowup']) dy = -SPEED;
+  if (keysDown['s'] || keysDown['arrowdown']) dy = SPEED;
+  if (keysDown['a'] || keysDown['arrowleft']) dx = -SPEED;
+  if (keysDown['d'] || keysDown['arrowright']) dx = SPEED;
+
+  if (dx === 0 && dy === 0) { moveDir = { dx: 0, dy: 0 }; return false; }
+
+  let nx = robot.x + dx;
+  let ny = robot.y + dy;
+  if (isFreePos(nx, ny)) {
+    robot.x = nx;
+    robot.y = ny;
+    moveDir = { dx, dy };
+    return true;
+  }
+  moveDir = { dx: 0, dy: 0 };
+  return false;
+}
+
+function predict(dx, dy) {
+  for (let p of particles) {
+    p.x += dx + gaussRand() * motionNoise;
+    p.y += dy + gaussRand() * motionNoise;
+    // Clamp
+    p.x = Math.max(CELL, Math.min(W - CELL, p.x));
+    p.y = Math.max(CELL, Math.min(H - CELL, p.y));
+  }
+}
+
+function gaussProb(x, sigma) {
+  return Math.exp(-0.5 * (x * x) / (sigma * sigma));
+}
+
+function update() {
+  const robotMeas = getMeasurements(robot.x, robot.y);
+  let totalW = 0;
+  for (let p of particles) {
+    const pMeas = getMeasurements(p.x, p.y);
+    let w = 1;
+    for (let d = 0; d < 4; d++) {
+      w *= gaussProb(pMeas[d] - robotMeas[d], measurementNoise);
+    }
+    // If particle is in a wall, give it zero weight
+    if (isWall(p.x, p.y)) w = 1e-300;
+    p.w = w;
+    totalW += w;
+  }
+  if (totalW > 0) {
+    for (let p of particles) p.w /= totalW;
+  } else {
+    for (let p of particles) p.w = 1 / particles.length;
+  }
+}
+
+function resample() {
+  const N = particles.length;
+  let newParticles = [];
+  // Low-variance resampling
+  let r = Math.random() / N;
+  let c = particles[0].w;
+  let i = 0;
+  for (let j = 0; j < N; j++) {
+    let U = r + j / N;
+    while (U > c && i < N - 1) {
+      i++;
+      c += particles[i].w;
+    }
+    newParticles.push({ x: particles[i].x, y: particles[i].y, w: 1 / N });
+  }
+  particles = newParticles;
+}
+
+function getEstimate() {
+  let ex = 0, ey = 0;
+  for (let p of particles) {
+    ex += p.x * p.w;
+    ey += p.y * p.w;
+  }
+  return { x: ex, y: ey };
+}
+
+function getNeff() {
+  let sum = 0;
+  for (let p of particles) sum += p.w * p.w;
+  return sum > 0 ? 1 / sum : 0;
+}
+
+function drawMap() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (map[r][c] === 1) {
+        ctx.fillStyle = '#333355';
+        ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        ctx.strokeStyle = '#444477';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+      }
+    }
+  }
+  // Grid lines (faint)
+  ctx.strokeStyle = '#1a1a3e';
+  ctx.lineWidth = 0.3;
+  for (let r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke();
+  }
+  for (let c = 0; c <= COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, H); ctx.stroke();
+  }
+}
+
+function drawParticles() {
+  // Find max weight for sizing
+  let maxW = 0;
+  for (let p of particles) { if (p.w > maxW) maxW = p.w; }
+  if (maxW === 0) maxW = 1;
+
+  for (let p of particles) {
+    let sz = 1.5 + (p.w / maxW) * 4;
+    let alpha = 0.3 + (p.w / maxW) * 0.7;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 136, 68, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+function drawRobot() {
+  ctx.save();
+  ctx.translate(robot.x, robot.y);
+  // Draw direction based on last movement
+  let angle = Math.atan2(moveDir.dy || 0, moveDir.dx || 1);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(12, 0);
+  ctx.lineTo(-8, -7);
+  ctx.lineTo(-8, 7);
+  ctx.closePath();
+  ctx.fillStyle = '#00ff88';
+  ctx.fill();
+  ctx.strokeStyle = '#00cc66';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawEstimate(est) {
+  ctx.beginPath();
+  ctx.arc(est.x, est.y, 8, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ff44ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(est.x, est.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff44ff';
+  ctx.fill();
+}
+
+function draw() {
+  ctx.fillStyle = '#0f0f23';
+  ctx.fillRect(0, 0, W, H);
+  drawMap();
+  drawParticles();
+  drawRobot();
+  let est = getEstimate();
+  drawEstimate(est);
+
+  // Range sensor visualization (faint lines from robot)
+  const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  const meas = getMeasurements(robot.x, robot.y);
+  ctx.setLineDash([4, 4]);
+  for (let d = 0; d < 4; d++) {
+    ctx.beginPath();
+    ctx.moveTo(robot.x, robot.y);
+    ctx.lineTo(robot.x + dirs[d][0] * meas[d], robot.y + dirs[d][1] * meas[d]);
+    ctx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Stats
+  let err = Math.sqrt((est.x - robot.x) ** 2 + (est.y - robot.y) ** 2);
+  document.getElementById('robotX').textContent = robot.x.toFixed(0);
+  document.getElementById('robotY').textContent = robot.y.toFixed(0);
+  document.getElementById('estX').textContent = est.x.toFixed(0);
+  document.getElementById('estY').textContent = est.y.toFixed(0);
+  document.getElementById('error').textContent = err.toFixed(1);
+  document.getElementById('neff').textContent = getNeff().toFixed(0);
+  document.getElementById('stepCount').textContent = stepCount;
+}
+
+function loop() {
+  let moved = updateRobot();
+  if (moved) {
+    predict(moveDir.dx, moveDir.dy);
+    update();
+    // Resample if Neff is low
+    if (getNeff() < particles.length / 2) {
+      resample();
+    }
+    stepCount++;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Sliders
+document.getElementById('nSlider').addEventListener('input', e => {
+  numParticles = parseInt(e.target.value);
+  document.getElementById('nVal').textContent = numParticles;
+  initParticles();
+  // Run update immediately so particles are weighted
+  update();
+});
+document.getElementById('mnSlider').addEventListener('input', e => {
+  measurementNoise = parseFloat(e.target.value);
+  document.getElementById('mnVal').textContent = measurementNoise;
+});
+document.getElementById('moSlider').addEventListener('input', e => {
+  motionNoise = parseFloat(e.target.value);
+  document.getElementById('moVal').textContent = motionNoise;
+});
+
+// Buttons
+document.getElementById('kidnapBtn').addEventListener('click', () => {
+  placeRobotRandom();
+  stepCount++;
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  placeRobotRandom();
+  initParticles();
+  stepCount = 0;
+});
+
+// Ensure canvas can receive focus for keyboard events
+canvas.setAttribute('tabindex', '0');
+canvas.focus();
+
+loop();
+</script>
+</body>
+</html>

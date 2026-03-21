@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Camera Pinhole Projection - 카메라 핀홀 투영</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
+h1 { text-align: center; color: #00d4ff; padding-top: 10px; font-size: 1.4em; }
+.subtitle { text-align: center; color: #888; font-size: 0.8em; margin-bottom: 5px; }
+#container { position: relative; width: 100vw; height: calc(100vh - 60px); }
+#threeCanvas { width: 100%; height: 100%; display: block; }
+#imageInset { position: absolute; bottom: 15px; right: 15px; border: 2px solid #00d4ff; border-radius: 8px; background: #000; }
+#controls { position: absolute; top: 10px; left: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; width: 260px; max-height: calc(100vh - 100px); overflow-y: auto; }
+#controls h3 { color: #00d4ff; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+.ctrl { margin-bottom: 6px; }
+.ctrl label { font-size: 0.78em; color: #aaa; display: flex; justify-content: space-between; }
+.ctrl label span { color: #00d4ff; font-weight: bold; }
+input[type="range"] { width: 100%; accent-color: #00d4ff; }
+#matrixBox { position: absolute; top: 10px; right: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; font-family: 'Courier New', monospace; }
+#matrixBox h3 { color: #00d4ff; font-size: 0.9em; margin-bottom: 6px; }
+.matrix { font-size: 0.82em; line-height: 1.6; }
+.matrix .row { display: flex; gap: 10px; }
+.matrix .row span { min-width: 60px; text-align: right; color: #e0e0e0; }
+.toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8em; }
+.toggle-row input { accent-color: #00d4ff; }
+#insetLabel { position: absolute; bottom: 230px; right: 15px; color: #00d4ff; font-size: 0.75em; text-align: center; width: 260px; }
+</style>
+</head>
+<body>
+<h1>Camera Pinhole Projection - 카메라 핀홀 투영</h1>
+<p class="subtitle">마우스 드래그로 3D 뷰 회전 | Mouse orbit for 3D view</p>
+<div id="container">
+  <canvas id="threeCanvas"></canvas>
+  <div id="insetLabel">투영 이미지 (Projected Image)</div>
+  <canvas id="imageInset" width="260" height="200"></canvas>
+  <div id="controls">
+    <h3>카메라 내부 파라미터 (Intrinsics)</h3>
+    <div class="ctrl">
+      <label>Focal Length fx: <span id="vfx">500</span></label>
+      <input type="range" id="fx" min="100" max="2000" step="10" value="500">
+    </div>
+    <div class="ctrl">
+      <label>Focal Length fy: <span id="vfy">500</span></label>
+      <input type="range" id="fy" min="100" max="2000" step="10" value="500">
+    </div>
+    <div class="ctrl">
+      <label>Principal Point cx: <span id="vcx">130</span></label>
+      <input type="range" id="cx" min="50" max="250" step="1" value="130">
+    </div>
+    <div class="ctrl">
+      <label>Principal Point cy: <span id="vcy">100</span></label>
+      <input type="range" id="cy" min="50" max="200" step="1" value="100">
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="showRays" checked>
+      <label for="showRays">투영선 표시 (Show Projection Rays)</label>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="showFrustum" checked>
+      <label for="showFrustum">Frustum 표시 (Show Frustum)</label>
+    </div>
+  </div>
+  <div id="matrixBox">
+    <h3>Intrinsic Matrix K (3x3)</h3>
+    <div class="matrix" id="matrixK">
+      <div class="row"><span>500</span><span>0</span><span>130</span></div>
+      <div class="row"><span>0</span><span>500</span><span>100</span></div>
+      <div class="row"><span>0</span><span>0</span><span>1</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const threeCanvas = document.getElementById('threeCanvas');
+const insetCanvas = document.getElementById('imageInset');
+const insetCtx = insetCanvas.getContext('2d');
+const IW = 260, IH = 200;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f0f23);
+const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight - 60);
+
+const viewCam = new THREE.PerspectiveCamera(60, window.innerWidth / (window.innerHeight - 60), 0.1, 1000);
+viewCam.position.set(8, 6, 12);
+const controls = new THREE.OrbitControls(viewCam, renderer.domElement);
+controls.enableDamping = true;
+
+// Grid
+const grid = new THREE.GridHelper(20, 20, 0x333355, 0x222244);
+scene.add(grid);
+
+// Objects in scene
+const objects = [];
+const cubeGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+const cubeMat = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+const cube = new THREE.Mesh(cubeGeo, cubeMat);
+cube.position.set(2, 0.75, -3);
+scene.add(cube);
+objects.push({ mesh: cube, label: 'Cube', color: '#ff4444' });
+
+const sphereGeo = new THREE.SphereGeometry(0.8, 16, 16);
+const sphereMat = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+sphere.position.set(-1.5, 0.8, -4);
+scene.add(sphere);
+objects.push({ mesh: sphere, label: 'Sphere', color: '#44ff44' });
+
+const cylGeo = new THREE.CylinderGeometry(0.5, 0.5, 2, 16);
+const cylMat = new THREE.MeshPhongMaterial({ color: 0x4444ff });
+const cyl = new THREE.Mesh(cylGeo, cylMat);
+cyl.position.set(0, 1, -2);
+scene.add(cyl);
+objects.push({ mesh: cyl, label: 'Cylinder', color: '#4444ff' });
+
+const coneGeo = new THREE.ConeGeometry(0.6, 1.5, 16);
+const coneMat = new THREE.MeshPhongMaterial({ color: 0xffff44 });
+const cone = new THREE.Mesh(coneGeo, coneMat);
+cone.position.set(-3, 0.75, -5);
+scene.add(cone);
+objects.push({ mesh: cone, label: 'Cone', color: '#ffff44' });
+
+const torusGeo = new THREE.TorusGeometry(0.6, 0.2, 8, 16);
+const torusMat = new THREE.MeshPhongMaterial({ color: 0xff44ff });
+const torus = new THREE.Mesh(torusGeo, torusMat);
+torus.position.set(3.5, 1, -5.5);
+scene.add(torus);
+objects.push({ mesh: torus, label: 'Torus', color: '#ff44ff' });
+
+// Lights
+scene.add(new THREE.AmbientLight(0x444466));
+const dlight = new THREE.DirectionalLight(0xffffff, 0.8);
+dlight.position.set(5, 10, 5);
+scene.add(dlight);
+
+// Pinhole camera representation
+const camGroup = new THREE.Group();
+scene.add(camGroup);
+const camBody = new THREE.Mesh(
+  new THREE.BoxGeometry(0.4, 0.3, 0.3),
+  new THREE.MeshPhongMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.7 })
+);
+camGroup.add(camBody);
+
+// Frustum lines
+let frustumLines = null;
+let rayLines = [];
+
+function buildFrustum(fx, fy, cx_val, cy_val) {
+  if (frustumLines) camGroup.remove(frustumLines);
+  const near = 0.5, far = 6;
+  const hw_n = (cx_val / fx) * near, hh_n = (cy_val / fy) * near;
+  const hw_f = (cx_val / fx) * far, hh_f = (cy_val / fy) * far;
+  const ox = ((IW/2 - cx_val)/fx), oy = ((IH/2 - cy_val)/fy);
+  const pts = [
+    new THREE.Vector3(-hw_n + ox*near, hh_n + oy*near, -near),
+    new THREE.Vector3(hw_n + ox*near, hh_n + oy*near, -near),
+    new THREE.Vector3(hw_n + ox*near, -hh_n + oy*near, -near),
+    new THREE.Vector3(-hw_n + ox*near, -hh_n + oy*near, -near),
+    new THREE.Vector3(-hw_f + ox*far, hh_f + oy*far, -far),
+    new THREE.Vector3(hw_f + ox*far, hh_f + oy*far, -far),
+    new THREE.Vector3(hw_f + ox*far, -hh_f + oy*far, -far),
+    new THREE.Vector3(-hw_f + ox*far, -hh_f + oy*far, -far),
+  ];
+  const indices = [0,1,1,2,2,3,3,0, 4,5,5,6,6,7,7,4, 0,4,1,5,2,6,3,7];
+  const geo = new THREE.BufferGeometry();
+  const positions = [];
+  for (const i of indices) positions.push(pts[i].x, pts[i].y, pts[i].z);
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  frustumLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.5 }));
+  frustumLines.visible = document.getElementById('showFrustum').checked;
+  camGroup.add(frustumLines);
+}
+
+function projectPoint(p3d, fx, fy, cx_val, cy_val) {
+  // Transform to camera local coordinates (camera at origin looking -Z)
+  const local = p3d.clone();
+  camGroup.updateMatrixWorld();
+  const inv = new THREE.Matrix4().copy(camGroup.matrixWorld).invert();
+  local.applyMatrix4(inv);
+  if (local.z >= 0) return null; // behind camera
+  const u = fx * (local.x / (-local.z)) + cx_val;
+  const v = fy * (-local.y / (-local.z)) + cy_val;
+  return { u, v, z: -local.z };
+}
+
+function updateRays(fx, fy, cx_val, cy_val) {
+  rayLines.forEach(l => scene.remove(l));
+  rayLines = [];
+  if (!document.getElementById('showRays').checked) return;
+  const camPos = new THREE.Vector3();
+  camGroup.getWorldPosition(camPos);
+  for (const obj of objects) {
+    const p = obj.mesh.position.clone();
+    const proj = projectPoint(p, fx, fy, cx_val, cy_val);
+    if (!proj || proj.u < 0 || proj.u > IW || proj.v < 0 || proj.v > IH) continue;
+    const geo = new THREE.BufferGeometry().setFromPoints([camPos, p]);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: obj.color, transparent: true, opacity: 0.4 }));
+    scene.add(line);
+    rayLines.push(line);
+  }
+}
+
+function renderInset(fx, fy, cx_val, cy_val) {
+  insetCtx.fillStyle = '#111';
+  insetCtx.fillRect(0, 0, IW, IH);
+  // Draw crosshair at principal point
+  insetCtx.strokeStyle = 'rgba(0,212,255,0.3)';
+  insetCtx.setLineDash([3, 3]);
+  insetCtx.beginPath();
+  insetCtx.moveTo(cx_val, 0); insetCtx.lineTo(cx_val, IH);
+  insetCtx.moveTo(0, cy_val); insetCtx.lineTo(IW, cy_val);
+  insetCtx.stroke();
+  insetCtx.setLineDash([]);
+
+  // Project objects
+  for (const obj of objects) {
+    const p = obj.mesh.position.clone();
+    const proj = projectPoint(p, fx, fy, cx_val, cy_val);
+    if (!proj) continue;
+    if (proj.u < -20 || proj.u > IW + 20 || proj.v < -20 || proj.v > IH + 20) continue;
+    const radius = Math.max(3, Math.min(15, 60 / proj.z));
+    insetCtx.fillStyle = obj.color;
+    insetCtx.beginPath();
+    insetCtx.arc(proj.u, proj.v, radius, 0, Math.PI * 2);
+    insetCtx.fill();
+    insetCtx.fillStyle = '#fff';
+    insetCtx.font = '10px sans-serif';
+    insetCtx.fillText(obj.label, proj.u + radius + 2, proj.v + 3);
+  }
+  // Border
+  insetCtx.strokeStyle = '#00d4ff';
+  insetCtx.lineWidth = 1;
+  insetCtx.strokeRect(0, 0, IW, IH);
+}
+
+function updateMatrix(fx, fy, cx_val, cy_val) {
+  document.getElementById('matrixK').innerHTML = `
+    <div class="row"><span>${fx}</span><span>0</span><span>${cx_val}</span></div>
+    <div class="row"><span>0</span><span>${fy}</span><span>${cy_val}</span></div>
+    <div class="row"><span>0</span><span>0</span><span>1</span></div>`;
+}
+
+function updateAll() {
+  const fx = parseFloat(document.getElementById('fx').value);
+  const fy = parseFloat(document.getElementById('fy').value);
+  const cx_val = parseFloat(document.getElementById('cx').value);
+  const cy_val = parseFloat(document.getElementById('cy').value);
+  document.getElementById('vfx').textContent = fx;
+  document.getElementById('vfy').textContent = fy;
+  document.getElementById('vcx').textContent = cx_val;
+  document.getElementById('vcy').textContent = cy_val;
+  buildFrustum(fx, fy, cx_val, cy_val);
+  updateRays(fx, fy, cx_val, cy_val);
+  renderInset(fx, fy, cx_val, cy_val);
+  updateMatrix(fx, fy, cx_val, cy_val);
+}
+
+document.querySelectorAll('#controls input').forEach(el => el.addEventListener('input', updateAll));
+
+buildFrustum(500, 500, 130, 100);
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  const fx = parseFloat(document.getElementById('fx').value);
+  const fy = parseFloat(document.getElementById('fy').value);
+  const cx_val = parseFloat(document.getElementById('cx').value);
+  const cy_val = parseFloat(document.getElementById('cy').value);
+  updateRays(fx, fy, cx_val, cy_val);
+  renderInset(fx, fy, cx_val, cy_val);
+  renderer.render(scene, viewCam);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  viewCam.aspect = window.innerWidth / (window.innerHeight - 60);
+  viewCam.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight - 60);
+});
+</script>
+</body>
+</html>
