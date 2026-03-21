@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robotics Practice — Interactive Demos</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ── */
+#topbar {
+  height: 54px;
+  min-height: 54px;
+  background: #0f0f23;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 14px;
+  z-index: 100;
+}
+#hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+#hamburger:hover { background: rgba(255,255,255,0.08); }
+#topbar h1 {
+  font-size: 16px;
+  color: #e94560;
+  white-space: nowrap;
+}
+#topbar .subtitle {
+  font-size: 12px;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Layout ── */
+#layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: #12122b;
+  border-right: 1px solid #2a2a4a;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.25s ease;
+}
+#sidebar.collapsed {
+  margin-left: -260px;
+}
+
+.cat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e94560;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  padding: 14px 16px 6px;
+  user-select: none;
+}
+.nav-item {
+  display: block;
+  padding: 9px 16px 9px 24px;
+  font-size: 13px;
+  color: #b0b0c8;
+  cursor: pointer;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  position: relative;
+}
+.nav-item:hover {
+  background: rgba(233, 69, 96, 0.08);
+  color: #fff;
+}
+.nav-item.active {
+  background: rgba(233, 69, 96, 0.14);
+  color: #fff;
+  border-left-color: #e94560;
+}
+
+/* tooltip */
+.nav-item[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 264px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e1e3a;
+  color: #ccc;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+}
+
+/* ── Content ── */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#demo-iframe {
+  flex: 1;
+  border: none;
+  width: 100%;
+  height: 100%;
+  background: #1a1a2e;
+}
+
+/* ── Welcome screen ── */
+#welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #555;
+  text-align: center;
+  padding: 40px;
+}
+#welcome h2 { color: #e94560; font-size: 22px; }
+#welcome p { font-size: 14px; max-width: 440px; line-height: 1.6; }
+
+/* ── Overlay for mobile ── */
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 49;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  #hamburger { display: block; }
+  #sidebar {
+    position: fixed;
+    top: 54px;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    margin-left: 0;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  }
+  #sidebar.collapsed {
+    margin-left: -260px;
+    box-shadow: none;
+  }
+  #overlay.visible { display: block; }
+  .nav-item[data-tip]:hover::after { display: none; }
+  #topbar .subtitle { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <button id="hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">&#9776;</button>
+  <h1>Robotics Practice &mdash; Interactive Demos</h1>
+  <span class="subtitle">Spatial AI 실습 자료 &nbsp;|&nbsp; alexjunholee.github.io/robotics-practice</span>
+</div>
+
+<!-- Overlay (mobile) -->
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- Layout -->
+<div id="layout">
+  <!-- Sidebar -->
+  <nav id="sidebar" class="collapsed">
+    <!-- Computer Vision -->
+    <div class="cat-label">Computer Vision</div>
+    <a class="nav-item" data-id="canny_edge" data-tip="Gaussian Blur, Gradient, NMS, Hysteresis 파라미터 실험">Canny Edge Detection</a>
+    <a class="nav-item" data-id="lens_distortion" data-tip="방사/접선 왜곡 계수를 조절하며 렌즈 왜곡 관찰">Lens Distortion</a>
+    <a class="nav-item" data-id="feature_matching" data-tip="ORB 특징점 매칭과 Lowe's Ratio Test 시뮬레이션">Feature Matching</a>
+    <a class="nav-item" data-id="ransac" data-tip="Outlier 속에서 최적 모델을 찾는 RANSAC 시각화">RANSAC</a>
+
+    <!-- 수학/최적화 -->
+    <div class="cat-label">수학 / 최적화</div>
+    <a class="nav-item" data-id="m_estimator" data-tip="Huber, Cauchy 등 다양한 Robust 비용 함수 비교">M-Estimator</a>
+    <a class="nav-item" data-id="rotation_gimbal" data-tip="오일러 각, 쿼터니언 회전과 Gimbal Lock 체험">Rotation &amp; Gimbal Lock</a>
+    <a class="nav-item" data-id="pose_composition_3d" data-tip="SE(3) 포즈 합성 T_A * T_B 3D 시각화">Pose Composition</a>
+
+    <!-- 로보틱스 -->
+    <div class="cat-label">로보틱스</div>
+    <a class="nav-item" data-id="se2_odometry" data-tip="차동 구동 로봇의 SE(2) 오도메트리 시뮬레이션">SE(2) Odometry</a>
+    <a class="nav-item" data-id="odom_uncertainty" data-tip="오도메트리 공분산 전파와 불확실성 타원 시각화">Odometry Uncertainty</a>
+    <a class="nav-item" data-id="xyzrpy_6dof" data-tip="X, Y, Z, Roll, Pitch, Yaw 6자유도 포즈 조작">6DoF Pose (XYZ+RPY)</a>
+    <a class="nav-item" data-id="robot_arm_fk" data-tip="3-DOF 로봇 팔 순기구학 관절 각도 시뮬레이션">Robot Arm FK</a>
+
+    <!-- 3D / SLAM -->
+    <div class="cat-label">3D / SLAM</div>
+    <a class="nav-item" data-id="icp_steps" data-tip="2D 점군 정합 ICP 알고리즘 단계별 시각화">ICP 2D</a>
+    <a class="nav-item" data-id="icp_3d" data-tip="3D 포인트 클라우드 ICP 정합 시각화">ICP 3D</a>
+    <a class="nav-item" data-id="pose_graph" data-tip="포즈 그래프 최적화 (루프 클로저) 시각화">Pose Graph Optimization</a>
+  </nav>
+
+  <!-- Content -->
+  <div id="content">
+    <div id="welcome">
+      <h2>Interactive Demos</h2>
+      <p>왼쪽 사이드바에서 데모를 선택하세요.<br>각 데모는 독립적으로 동작하는 인터랙티브 시각화입니다.</p>
+    </div>
+    <iframe id="demo-iframe" style="display:none;" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+(function () {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const iframe  = document.getElementById('demo-iframe');
+  const welcome = document.getElementById('welcome');
+  const items   = document.querySelectorAll('.nav-item');
+
+  // Map data-id to file names
+  const fileMap = {
+    canny_edge:          'canny_edge.html',
+    lens_distortion:     'lens_distortion.html',
+    feature_matching:    'feature_matching.html',
+    ransac:              'ransac.html',
+    m_estimator:         'm_estimator.html',
+    rotation_gimbal:     'rotation_gimbal.html',
+    pose_composition_3d: 'pose_composition_3d.html',
+    se2_odometry:        'se2_odometry.html',
+    odom_uncertainty:    'odom_uncertainty.html',
+    xyzrpy_6dof:        'xyzrpy_6dof.html',
+    robot_arm_fk:        'robot_arm_fk.html',
+    icp_steps:           'icp_steps.html',
+    icp_3d:              'icp_3d.html',
+    pose_graph:          'pose_graph.html'
+  };
+
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+
+  // Toggle sidebar
+  window.toggleSidebar = function () {
+    sidebar.classList.toggle('collapsed');
+    overlay.classList.toggle('visible', !sidebar.classList.contains('collapsed') && isMobile());
+  };
+
+  // Load a demo by id
+  function loadDemo(id) {
+    const file = fileMap[id];
+    if (!file) return;
+
+    // Update active state
+    items.forEach(function (el) {
+      el.classList.toggle('active', el.getAttribute('data-id') === id);
+    });
+
+    // Show iframe, hide welcome
+    welcome.style.display = 'none';
+    iframe.style.display = 'block';
+    iframe.src = 'interactive/' + file;
+
+    // Update hash
+    history.replaceState(null, '', '#' + id);
+
+    // Close sidebar on mobile
+    if (isMobile()) {
+      sidebar.classList.add('collapsed');
+      overlay.classList.remove('visible');
+    }
+  }
+
+  // Click handlers
+  items.forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      loadDemo(el.getAttribute('data-id'));
+    });
+  });
+
+  // On load: read hash or show sidebar expanded (desktop)
+  function init() {
+    var hash = location.hash.replace('#', '');
+    if (hash && fileMap[hash]) {
+      loadDemo(hash);
+    }
+    // On desktop, start with sidebar open
+    if (!isMobile()) {
+      sidebar.classList.remove('collapsed');
+    }
+  }
+
+  // Handle hash changes (back/forward)
+  window.addEventListener('hashchange', function () {
+    var hash = location.hash.replace('#', '');
+    if (hash && fileMap[hash]) {
+      loadDemo(hash);
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
