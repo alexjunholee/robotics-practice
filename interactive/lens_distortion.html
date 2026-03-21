@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>렌즈 왜곡 (Lens Distortion) 시뮬레이션</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 6px;
+  color: #0f3460;
+  background: linear-gradient(90deg, #e94560, #0f3460);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.95em;
+  color: #888;
+  margin-bottom: 20px;
+}
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.main-layout {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.controls-panel {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 280px;
+  flex: 0 0 280px;
+}
+.controls-panel h3 {
+  color: #e94560;
+  margin-bottom: 14px;
+  font-size: 1em;
+}
+.control-group {
+  margin-bottom: 16px;
+}
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+.control-group .value {
+  color: #e94560;
+  font-weight: bold;
+  font-family: monospace;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+.distortion-label {
+  text-align: center;
+  font-size: 1.1em;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+.barrel { background: #2d1b4e; color: #c49bff; }
+.pincushion { background: #1b3a4e; color: #9bddff; }
+.none { background: #333; color: #888; }
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { background: #c73650; }
+.canvas-box {
+  text-align: center;
+}
+canvas {
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #0a0a1a;
+}
+.formula-box {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 16px;
+  font-family: monospace;
+  font-size: 0.82em;
+  color: #aaa;
+  line-height: 1.7;
+  text-align: center;
+}
+.formula-box span { color: #e94560; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>렌즈 왜곡 (Lens Distortion) 시뮬레이션</h1>
+  <p class="subtitle">Radial & Tangential distortion 모델의 파라미터를 조절하여 격자의 왜곡을 관찰합니다</p>
+
+  <div class="main-layout">
+    <div class="controls-panel">
+      <h3>Radial Distortion (방사 왜곡)</h3>
+      <div class="control-group">
+        <label>k1: <span class="value" id="k1Val">0.000</span></label>
+        <input type="range" id="k1" min="-1000" max="1000" value="0" step="1">
+      </div>
+      <div class="control-group">
+        <label>k2: <span class="value" id="k2Val">0.000</span></label>
+        <input type="range" id="k2" min="-500" max="500" value="0" step="1">
+      </div>
+
+      <h3 style="margin-top:18px;">Tangential Distortion (접선 왜곡)</h3>
+      <div class="control-group">
+        <label>p1: <span class="value" id="p1Val">0.000</span></label>
+        <input type="range" id="p1" min="-100" max="100" value="0" step="1">
+      </div>
+      <div class="control-group">
+        <label>p2: <span class="value" id="p2Val">0.000</span></label>
+        <input type="range" id="p2" min="-100" max="100" value="0" step="1">
+      </div>
+
+      <div id="distLabel" class="distortion-label none">No distortion</div>
+
+      <button id="resetBtn">초기화 (Reset)</button>
+    </div>
+
+    <div class="canvas-box">
+      <canvas id="canvas" width="560" height="560"></canvas>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    <span>x<sub>d</sub></span> = x(1 + k1&middot;r&sup2; + k2&middot;r&#8308;) + 2&middot;p1&middot;x&middot;y + p2&middot;(r&sup2; + 2&middot;x&sup2;)<br>
+    <span>y<sub>d</sub></span> = y(1 + k1&middot;r&sup2; + k2&middot;r&#8308;) + p1&middot;(r&sup2; + 2&middot;y&sup2;) + 2&middot;p2&middot;x&middot;y<br>
+    r&sup2; = x&sup2; + y&sup2;
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const CW = canvas.width, CH = canvas.height;
+
+const sliders = {
+  k1: document.getElementById('k1'),
+  k2: document.getElementById('k2'),
+  p1: document.getElementById('p1'),
+  p2: document.getElementById('p2'),
+};
+const valLabels = {
+  k1: document.getElementById('k1Val'),
+  k2: document.getElementById('k2Val'),
+  p1: document.getElementById('p1Val'),
+  p2: document.getElementById('p2Val'),
+};
+
+const GRID = 20; // number of grid cells per axis
+
+function getParams() {
+  return {
+    k1: parseInt(sliders.k1.value) / 1000,
+    k2: parseInt(sliders.k2.value) / 1000,
+    p1: parseInt(sliders.p1.value) / 1000,
+    p2: parseInt(sliders.p2.value) / 1000,
+  };
+}
+
+function distort(x, y, params) {
+  const r2 = x * x + y * y;
+  const r4 = r2 * r2;
+  const radial = 1 + params.k1 * r2 + params.k2 * r4;
+  const xd = x * radial + 2 * params.p1 * x * y + params.p2 * (r2 + 2 * x * x);
+  const yd = y * radial + params.p1 * (r2 + 2 * y * y) + 2 * params.p2 * x * y;
+  return [xd, yd];
+}
+
+// Map normalized coords [-1,1] to canvas coords
+function toCanvas(nx, ny) {
+  const margin = 40;
+  const sx = margin + (nx + 1) * 0.5 * (CW - 2 * margin);
+  const sy = margin + (ny + 1) * 0.5 * (CH - 2 * margin);
+  return [sx, sy];
+}
+
+function draw() {
+  const params = getParams();
+  valLabels.k1.textContent = params.k1.toFixed(3);
+  valLabels.k2.textContent = params.k2.toFixed(3);
+  valLabels.p1.textContent = params.p1.toFixed(3);
+  valLabels.p2.textContent = params.p2.toFixed(3);
+
+  // Update distortion label
+  const label = document.getElementById('distLabel');
+  if (params.k1 < -0.001) {
+    label.textContent = 'Pincushion Distortion (핀쿠션 왜곡)';
+    label.className = 'distortion-label pincushion';
+  } else if (params.k1 > 0.001) {
+    label.textContent = 'Barrel Distortion (배럴 왜곡)';
+    label.className = 'distortion-label barrel';
+  } else {
+    label.textContent = 'No distortion';
+    label.className = 'distortion-label none';
+  }
+
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Draw original grid (gray, thin)
+  ctx.strokeStyle = 'rgba(100,100,120,0.4)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID; i++) {
+    const t = -1 + (2 * i / GRID);
+    // Vertical line
+    const [x1, y1] = toCanvas(t, -1);
+    const [x2, y2] = toCanvas(t, 1);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    // Horizontal line
+    const [x3, y3] = toCanvas(-1, t);
+    const [x4, y4] = toCanvas(1, t);
+    ctx.beginPath(); ctx.moveTo(x3, y3); ctx.lineTo(x4, y4); ctx.stroke();
+  }
+
+  // Draw distorted grid (colored, thick)
+  const steps = 80; // subdivisions per grid line for smooth curves
+  // Color based on distance from center
+  function getColor(nx, ny) {
+    const d = Math.sqrt(nx*nx + ny*ny);
+    const hue = 200 + d * 80;
+    return `hsl(${hue}, 80%, 60%)`;
+  }
+
+  ctx.lineWidth = 1.8;
+
+  // Horizontal lines of distorted grid
+  for (let i = 0; i <= GRID; i++) {
+    const ny = -1 + (2 * i / GRID);
+    ctx.beginPath();
+    for (let j = 0; j <= steps; j++) {
+      const nx = -1 + (2 * j / steps);
+      const [dx, dy] = distort(nx, ny, params);
+      const [cx, cy] = toCanvas(dx, dy);
+      if (j === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = getColor(0, ny);
+    ctx.stroke();
+  }
+
+  // Vertical lines of distorted grid
+  for (let i = 0; i <= GRID; i++) {
+    const nx = -1 + (2 * i / GRID);
+    ctx.beginPath();
+    for (let j = 0; j <= steps; j++) {
+      const ny = -1 + (2 * j / steps);
+      const [dx, dy] = distort(nx, ny, params);
+      const [cx, cy] = toCanvas(dx, dy);
+      if (j === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = getColor(nx, 0);
+    ctx.stroke();
+  }
+
+  // Center crosshair
+  ctx.strokeStyle = 'rgba(233,69,96,0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(CW/2, 0); ctx.lineTo(CW/2, CH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, CH/2); ctx.lineTo(CW, CH/2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+Object.values(sliders).forEach(s => s.addEventListener('input', draw));
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  sliders.k1.value = 0;
+  sliders.k2.value = 0;
+  sliders.p1.value = 0;
+  sliders.p2.value = 0;
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>

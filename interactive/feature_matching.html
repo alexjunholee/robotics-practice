@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feature Matching과 Ratio Test</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#header {
+  padding: 16px 24px;
+  background: rgba(16, 16, 40, 0.95);
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+h1 { font-size: 17px; color: #fff; white-space: nowrap; }
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.control-group label {
+  font-size: 13px;
+  color: #bbb;
+  white-space: nowrap;
+}
+input[type="range"] {
+  width: 200px;
+  accent-color: #7b68ee;
+  cursor: pointer;
+}
+#ratio-val {
+  font-family: monospace;
+  font-size: 14px;
+  color: #7bf;
+  min-width: 36px;
+}
+
+.stats {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+}
+.stat-item { display: flex; gap: 5px; }
+.stat-label { color: #888; }
+.stat-value { color: #7bf; font-family: monospace; }
+
+button {
+  padding: 7px 14px;
+  background: #3a2a7a;
+  border: 1px solid #5a4aaa;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 12px;
+  cursor: pointer;
+}
+button:hover { background: #4a3a9a; }
+
+#canvas-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  position: relative;
+}
+canvas {
+  border: 1px solid #333;
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+#tooltip {
+  position: fixed;
+  background: rgba(16, 16, 40, 0.95);
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #ccc;
+  max-width: 320px;
+  line-height: 1.6;
+  pointer-events: none;
+  display: none;
+  z-index: 100;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-line { width: 20px; height: 3px; border-radius: 1px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Feature Matching과 Ratio Test</h1>
+
+  <div class="control-group">
+    <label>Lowe's Ratio Threshold:</label>
+    <input type="range" id="ratio-slider" min="0.3" max="1.0" value="0.75" step="0.01"
+           oninput="updateRatio()">
+    <span id="ratio-val">0.75</span>
+    <button onclick="regenerate()" style="margin-left:8px;">새 데이터</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-item"><span class="stat-label">전체 매칭:</span><span class="stat-value" id="s-total">0</span></div>
+    <div class="stat-item"><span class="stat-label">수락:</span><span class="stat-value" id="s-accepted" style="color:#44dd66;">0</span></div>
+    <div class="stat-item"><span class="stat-label">거부:</span><span class="stat-value" id="s-rejected" style="color:#ff6666;">0</span></div>
+    <div class="stat-item"><span class="stat-label">거부율:</span><span class="stat-value" id="s-rate">0%</span></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line" style="background:#44dd66;"></div> 수락된 매칭</div>
+    <div class="legend-item"><div class="legend-line" style="background:rgba(255,80,80,0.4);"></div> 거부된 매칭</div>
+  </div>
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="tooltip">
+  <strong>Lowe's Ratio Test</strong><br><br>
+  ratio가 낮을수록 엄격한 필터링.<br>
+  0.75는 Lowe가 원논문에서 제안한 값.<br><br>
+  ratio = (1st best distance) / (2nd best distance)<br>
+  ratio &lt; threshold → 수락 (distinctive match)<br>
+  ratio &ge; threshold → 거부 (ambiguous match)
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+const IMG_W = 400;
+const IMG_H = 400;
+const GAP = 120;
+const CANVAS_W = IMG_W * 2 + GAP;
+const CANVAS_H = IMG_H + 40;
+const PAD = 20;
+
+canvas.width = CANVAS_W + PAD * 2;
+canvas.height = CANVAS_H + PAD * 2;
+canvas.style.width = (CANVAS_W + PAD * 2) + 'px';
+canvas.style.height = (CANVAS_H + PAD * 2) + 'px';
+
+// --- Generate synthetic images with geometric shapes ---
+const SHAPES = ['triangle', 'circle', 'star', 'rect', 'diamond'];
+const COLORS_PALETTE = ['#ff6666', '#66aaff', '#66ff88', '#ffaa44', '#cc66ff', '#44dddd', '#ffff66', '#ff66cc'];
+
+let shapes1 = [], shapes2 = [];
+let features1 = [], features2 = [];
+let descriptors1 = [], descriptors2 = [];
+let matches = [];
+let correctMatches = [];
+
+function randRange(a, b) { return a + Math.random() * (b - a); }
+function randInt(a, b) { return Math.floor(randRange(a, b)); }
+
+function generateShapes() {
+  const shapeList = [];
+  const numShapes = randInt(12, 18);
+  for (let i = 0; i < numShapes; i++) {
+    shapeList.push({
+      type: SHAPES[randInt(0, SHAPES.length)],
+      x: randRange(40, IMG_W - 40),
+      y: randRange(40, IMG_H - 40),
+      size: randRange(15, 35),
+      color: COLORS_PALETTE[randInt(0, COLORS_PALETTE.length)],
+      rotation: randRange(0, Math.PI * 2)
+    });
+  }
+  return shapeList;
+}
+
+function drawShape(cx, cy, shape, offsetX) {
+  const x = offsetX + PAD + shape.x;
+  const y = PAD + shape.y;
+  const s = shape.size;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(shape.rotation);
+  ctx.fillStyle = shape.color;
+  ctx.strokeStyle = shape.color;
+  ctx.lineWidth = 2;
+
+  switch (shape.type) {
+    case 'triangle':
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s * 0.87, s * 0.5);
+      ctx.lineTo(-s * 0.87, s * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'circle':
+      ctx.beginPath();
+      ctx.arc(0, 0, s, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    case 'star':
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a1 = (i * 72 - 90) * Math.PI / 180;
+        const a2 = ((i * 72 + 36) - 90) * Math.PI / 180;
+        ctx.lineTo(Math.cos(a1) * s, Math.sin(a1) * s);
+        ctx.lineTo(Math.cos(a2) * s * 0.4, Math.sin(a2) * s * 0.4);
+      }
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'rect':
+      ctx.fillRect(-s, -s * 0.6, s * 2, s * 1.2);
+      break;
+    case 'diamond':
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s * 0.6, 0);
+      ctx.lineTo(0, s);
+      ctx.lineTo(-s * 0.6, 0);
+      ctx.closePath();
+      ctx.fill();
+      break;
+  }
+  ctx.restore();
+}
+
+function generateFeatures() {
+  const NUM_CORRECT = 30;
+  const NUM_WRONG = 10;
+  const DESC_DIM = 32;
+
+  features1 = [];
+  features2 = [];
+  descriptors1 = [];
+  descriptors2 = [];
+  correctMatches = [];
+
+  // Generate correct matches: similar positions with slight offset, similar descriptors
+  for (let i = 0; i < NUM_CORRECT; i++) {
+    const x1 = randRange(20, IMG_W - 20);
+    const y1 = randRange(20, IMG_H - 20);
+    const x2 = x1 + randRange(-25, 25);
+    const y2 = y1 + randRange(-25, 25);
+    features1.push([x1, y1]);
+    features2.push([x2, y2]);
+
+    // Similar descriptors (small distance)
+    const baseDesc = Array.from({ length: DESC_DIM }, () => Math.random());
+    const desc1 = baseDesc.map(v => v + randRange(-0.05, 0.05));
+    const desc2 = baseDesc.map(v => v + randRange(-0.08, 0.08));
+    descriptors1.push(desc1);
+    descriptors2.push(desc2);
+    correctMatches.push(true);
+  }
+
+  // Generate wrong feature points (extra features with no true match)
+  for (let i = 0; i < NUM_WRONG; i++) {
+    const x1 = randRange(20, IMG_W - 20);
+    const y1 = randRange(20, IMG_H - 20);
+    features1.push([x1, y1]);
+    // Random descriptor
+    descriptors1.push(Array.from({ length: DESC_DIM }, () => Math.random()));
+  }
+  for (let i = 0; i < NUM_WRONG; i++) {
+    const x2 = randRange(20, IMG_W - 20);
+    const y2 = randRange(20, IMG_H - 20);
+    features2.push([x2, y2]);
+    descriptors2.push(Array.from({ length: DESC_DIM }, () => Math.random()));
+  }
+
+  computeMatches();
+}
+
+function descDist(d1, d2) {
+  let sum = 0;
+  for (let i = 0; i < d1.length; i++) {
+    const diff = d1[i] - d2[i];
+    sum += diff * diff;
+  }
+  return Math.sqrt(sum);
+}
+
+function computeMatches() {
+  matches = [];
+  for (let i = 0; i < features1.length; i++) {
+    // Find two nearest neighbors in features2
+    let best1 = { idx: -1, dist: Infinity };
+    let best2 = { idx: -1, dist: Infinity };
+
+    for (let j = 0; j < features2.length; j++) {
+      const d = descDist(descriptors1[i], descriptors2[j]);
+      if (d < best1.dist) {
+        best2 = { ...best1 };
+        best1 = { idx: j, dist: d };
+      } else if (d < best2.dist) {
+        best2 = { idx: j, dist: d };
+      }
+    }
+
+    if (best1.idx >= 0 && best2.idx >= 0 && best2.dist > 0) {
+      const ratio = best1.dist / best2.dist;
+      const isCorrect = i < 30 && best1.idx === i; // True match
+      matches.push({
+        f1: i,
+        f2: best1.idx,
+        ratio,
+        isCorrect,
+        dist1: best1.dist,
+        dist2: best2.dist
+      });
+    }
+  }
+}
+
+function updateRatio() {
+  const val = document.getElementById('ratio-slider').value;
+  document.getElementById('ratio-val').textContent = val;
+  drawAll();
+}
+
+function regenerate() {
+  shapes1 = generateShapes();
+  shapes2 = generateShapes();
+  generateFeatures();
+  drawAll();
+}
+
+// --- Drawing ---
+function drawAll() {
+  const ratio = parseFloat(document.getElementById('ratio-slider').value);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Image backgrounds
+  ctx.fillStyle = '#0d0d20';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+
+  // Image 1
+  ctx.fillRect(PAD, PAD, IMG_W, IMG_H);
+  ctx.strokeRect(PAD, PAD, IMG_W, IMG_H);
+
+  // Image 2
+  ctx.fillRect(PAD + IMG_W + GAP, PAD, IMG_W, IMG_H);
+  ctx.strokeRect(PAD + IMG_W + GAP, PAD, IMG_W, IMG_H);
+
+  // Labels
+  ctx.fillStyle = '#888';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Image 1', PAD + IMG_W / 2, PAD + IMG_H + 18);
+  ctx.fillText('Image 2', PAD + IMG_W + GAP + IMG_W / 2, PAD + IMG_H + 18);
+
+  // Draw shapes
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PAD, PAD, IMG_W, IMG_H);
+  ctx.clip();
+  for (const s of shapes1) drawShape(0, 0, s, 0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PAD + IMG_W + GAP, PAD, IMG_W, IMG_H);
+  ctx.clip();
+  for (const s of shapes2) drawShape(0, 0, s, IMG_W + GAP);
+  ctx.restore();
+
+  // Draw matches
+  let accepted = 0, rejected = 0, total = matches.length;
+
+  // Draw rejected first (behind)
+  for (const m of matches) {
+    const pass = m.ratio < ratio;
+    if (pass) continue;
+
+    rejected++;
+    const x1 = PAD + features1[m.f1][0];
+    const y1 = PAD + features1[m.f1][1];
+    const x2 = PAD + IMG_W + GAP + features2[m.f2][0];
+    const y2 = PAD + features2[m.f2][1];
+
+    ctx.strokeStyle = 'rgba(255, 80, 80, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw accepted on top
+  for (const m of matches) {
+    const pass = m.ratio < ratio;
+    if (!pass) continue;
+
+    accepted++;
+    const x1 = PAD + features1[m.f1][0];
+    const y1 = PAD + features1[m.f1][1];
+    const x2 = PAD + IMG_W + GAP + features2[m.f2][0];
+    const y2 = PAD + features2[m.f2][1];
+
+    const color = m.isCorrect ? 'rgba(68, 221, 102, 0.7)' : 'rgba(255, 170, 68, 0.7)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Draw feature points
+  for (let i = 0; i < features1.length; i++) {
+    const x = PAD + features1[i][0];
+    const y = PAD + features1[i][1];
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#4488ff';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+  for (let i = 0; i < features2.length; i++) {
+    const x = PAD + IMG_W + GAP + features2[i][0];
+    const y = PAD + features2[i][1];
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#44dd66';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Update stats
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-accepted').textContent = accepted;
+  document.getElementById('s-rejected').textContent = rejected;
+  document.getElementById('s-rate').textContent = total > 0 ? (rejected / total * 100).toFixed(1) + '%' : '0%';
+}
+
+// --- Tooltip ---
+const ratioSlider = document.getElementById('ratio-slider');
+ratioSlider.addEventListener('mouseenter', e => {
+  tooltip.style.display = 'block';
+});
+ratioSlider.addEventListener('mousemove', e => {
+  tooltip.style.left = (e.clientX + 15) + 'px';
+  tooltip.style.top = (e.clientY - 120) + 'px';
+});
+ratioSlider.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});
+
+// Also show tooltip on the ratio label area
+document.querySelector('.control-group').addEventListener('mouseenter', e => {
+  if (e.target === ratioSlider || e.target.closest('.control-group')) {
+    tooltip.style.display = 'block';
+  }
+});
+document.querySelector('.control-group').addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});
+document.querySelector('.control-group').addEventListener('mousemove', e => {
+  tooltip.style.left = (e.clientX + 15) + 'px';
+  tooltip.style.top = (e.clientY + 15) + 'px';
+});
+
+// --- Resize ---
+window.addEventListener('resize', () => {
+  // Canvas size is fixed, but we could scale if needed
+});
+
+// --- Init ---
+regenerate();
+</script>
+</body>
+</html>

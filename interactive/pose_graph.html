@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pose Graph Optimization 시각화</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+#app { display: flex; height: 100vh; }
+#canvas-container {
+  flex: 1; position: relative; min-width: 0;
+}
+canvas {
+  width: 100%; height: 100%; display: block;
+  cursor: crosshair;
+}
+#sidebar {
+  width: 330px;
+  background: rgba(16, 16, 40, 0.95);
+  border-left: 1px solid #333;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+h1 { font-size: 17px; margin-bottom: 14px; color: #fff; }
+h2 { font-size: 14px; margin-bottom: 8px; color: #aab; margin-top: 12px; }
+
+button {
+  padding: 8px 14px;
+  background: #3a2a7a;
+  border: 1px solid #5a4aaa;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover { background: #4a3a9a; }
+button.primary { background: #2a6a3a; border-color: #3a8a4a; }
+button.primary:hover { background: #3a8a4a; }
+button.danger { background: #6a2a2a; border-color: #8a3a3a; }
+button.danger:hover { background: #8a3a3a; }
+.btn-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+
+.metrics {
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.metrics .label { color: #888; }
+.metrics .value { color: #7bf; }
+
+.legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 10px; font-size: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-line { width: 20px; height: 3px; }
+
+.instructions {
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.instructions strong { color: #bbb; }
+
+#status {
+  padding: 8px 12px;
+  background: rgba(60, 60, 160, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 14px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.loop-closure-list {
+  font-size: 12px; color: #aaa;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+.loop-closure-list div {
+  padding: 3px 0;
+  border-bottom: 1px solid #222;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div id="sidebar">
+    <h1>Pose Graph Optimization 시각화</h1>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-line" style="background:#888;"></div> Ground Truth</div>
+      <div class="legend-item"><div class="legend-line" style="background:#ff4444;"></div> Noisy Trajectory</div>
+      <div class="legend-item"><div class="legend-line" style="background:#4488ff; height:4px;"></div> Loop Closure</div>
+      <div class="legend-item"><div class="legend-line" style="background:#44dd66;"></div> Optimized</div>
+    </div>
+
+    <div class="instructions">
+      <strong>Loop Closure 추가:</strong> "Add Loop Closure" 버튼을 누른 후 두 개의 pose를 차례로 클릭하세요.
+      첫 번째와 마지막 pose 사이의 loop closure는 기본으로 추가되어 있습니다.
+    </div>
+
+    <div id="status">준비 완료</div>
+
+    <div class="btn-row">
+      <button class="primary" onclick="startLoopClosureMode()">Add Loop Closure</button>
+      <button onclick="optimize()">Optimize</button>
+      <button class="danger" onclick="resetAll()">Reset</button>
+    </div>
+
+    <h2>Loop Closures</h2>
+    <div class="loop-closure-list" id="lc-list"></div>
+
+    <h2>Metrics</h2>
+    <div class="metrics">
+      <div><span class="label">Poses: </span><span class="value" id="m-poses">0</span></div>
+      <div><span class="label">Odometry Edges: </span><span class="value" id="m-odom">0</span></div>
+      <div><span class="label">Loop Closures: </span><span class="value" id="m-lc">0</span></div>
+      <div><span class="label">최적화 전 오차: </span><span class="value" id="m-err-before">-</span></div>
+      <div><span class="label">최적화 후 오차: </span><span class="value" id="m-err-after">-</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// --- Generate Trajectory ---
+const NUM_POSES = 20;
+let groundTruth = [];
+let noisyPoses = [];
+let optimizedPoses = [];
+let loopClosures = [];
+let odometryEdges = [];
+let lcMode = false;
+let lcFirst = -1;
+let optimized = false;
+
+function generateTrajectory() {
+  groundTruth = [];
+  // Square-ish loop
+  const sideLen = 5;
+  const posesPerSide = Math.floor(NUM_POSES / 4);
+  const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+
+  let x = 0, y = 0;
+  groundTruth.push([x, y]);
+
+  for (let s = 0; s < 4; s++) {
+    const count = (s === 3) ? NUM_POSES - 1 - posesPerSide * 3 : posesPerSide;
+    for (let i = 0; i < count; i++) {
+      x += dirs[s][0] * sideLen / posesPerSide;
+      y += dirs[s][1] * sideLen / posesPerSide;
+      groundTruth.push([x, y]);
+    }
+  }
+
+  // Add cumulative noise
+  noisyPoses = [[groundTruth[0][0], groundTruth[0][1]]];
+  let cumNx = 0, cumNy = 0;
+  odometryEdges = [];
+  for (let i = 1; i < groundTruth.length; i++) {
+    const dx = groundTruth[i][0] - groundTruth[i - 1][0];
+    const dy = groundTruth[i][1] - groundTruth[i - 1][1];
+    // Noise grows with each step
+    const noiseMag = 0.06;
+    cumNx += (Math.random() - 0.5) * noiseMag * 2;
+    cumNy += (Math.random() - 0.5) * noiseMag * 2;
+    noisyPoses.push([
+      groundTruth[i][0] + cumNx,
+      groundTruth[i][1] + cumNy
+    ]);
+    odometryEdges.push({
+      from: i - 1, to: i,
+      dx: dx + (Math.random() - 0.5) * 0.02,
+      dy: dy + (Math.random() - 0.5) * 0.02
+    });
+  }
+
+  optimizedPoses = noisyPoses.map(p => [...p]);
+  optimized = false;
+
+  // Default loop closure: first to last
+  loopClosures = [{
+    from: 0,
+    to: groundTruth.length - 1,
+    dx: groundTruth[0][0] - groundTruth[groundTruth.length - 1][0],
+    dy: groundTruth[0][1] - groundTruth[groundTruth.length - 1][1]
+  }];
+}
+
+// --- Coordinate Transforms ---
+let viewScale, viewOffX, viewOffY;
+
+function updateView() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Find bounding box of all points
+  const allPts = [...groundTruth, ...noisyPoses, ...optimizedPoses];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of allPts) {
+    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+  }
+  const pad = 2;
+  minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  const scaleX = w / (maxX - minX);
+  const scaleY = h / (maxY - minY);
+  viewScale = Math.min(scaleX, scaleY);
+  viewOffX = (w - (maxX - minX) * viewScale) / 2 - minX * viewScale;
+  viewOffY = (h - (maxY - minY) * viewScale) / 2 - minY * viewScale;
+}
+
+function toScreen(p) {
+  return [p[0] * viewScale + viewOffX, p[1] * viewScale + viewOffY];
+}
+
+function fromScreen(sx, sy) {
+  return [(sx - viewOffX) / viewScale, (sy - viewOffY) / viewScale];
+}
+
+// --- Drawing ---
+function draw() {
+  updateView();
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = '#222244';
+  ctx.lineWidth = 1;
+  const gridStep = 1;
+  for (let gx = -20; gx <= 20; gx += gridStep) {
+    const s = toScreen([gx, -20]);
+    const e = toScreen([gx, 20]);
+    ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]); ctx.stroke();
+  }
+  for (let gy = -20; gy <= 20; gy += gridStep) {
+    const s = toScreen([-20, gy]);
+    const e = toScreen([20, gy]);
+    ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]); ctx.stroke();
+  }
+
+  // Ground truth (gray dashed)
+  ctx.strokeStyle = '#666';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  for (let i = 0; i < groundTruth.length; i++) {
+    const s = toScreen(groundTruth[i]);
+    if (i === 0) ctx.moveTo(s[0], s[1]);
+    else ctx.lineTo(s[0], s[1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Odometry edges (thin gray) on noisy
+  const drawPoses = optimized ? optimizedPoses : noisyPoses;
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const e of odometryEdges) {
+    const s1 = toScreen(drawPoses[e.from]);
+    const s2 = toScreen(drawPoses[e.to]);
+    ctx.moveTo(s1[0], s1[1]);
+    ctx.lineTo(s2[0], s2[1]);
+  }
+  ctx.stroke();
+
+  // Noisy trajectory (red)
+  if (!optimized) {
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < noisyPoses.length; i++) {
+      const s = toScreen(noisyPoses[i]);
+      if (i === 0) ctx.moveTo(s[0], s[1]);
+      else ctx.lineTo(s[0], s[1]);
+    }
+    ctx.stroke();
+  }
+
+  // Optimized trajectory (green)
+  if (optimized) {
+    // Draw noisy faded
+    ctx.strokeStyle = 'rgba(255,68,68,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < noisyPoses.length; i++) {
+      const s = toScreen(noisyPoses[i]);
+      if (i === 0) ctx.moveTo(s[0], s[1]);
+      else ctx.lineTo(s[0], s[1]);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#44dd66';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i < optimizedPoses.length; i++) {
+      const s = toScreen(optimizedPoses[i]);
+      if (i === 0) ctx.moveTo(s[0], s[1]);
+      else ctx.lineTo(s[0], s[1]);
+    }
+    ctx.stroke();
+  }
+
+  // Loop closure edges (thick blue)
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 3;
+  for (const lc of loopClosures) {
+    const s1 = toScreen(drawPoses[lc.from]);
+    const s2 = toScreen(drawPoses[lc.to]);
+    ctx.beginPath();
+    ctx.moveTo(s1[0], s1[1]);
+    ctx.lineTo(s2[0], s2[1]);
+    ctx.stroke();
+  }
+
+  // Pose dots
+  for (let i = 0; i < drawPoses.length; i++) {
+    const s = toScreen(drawPoses[i]);
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], 6, 0, Math.PI * 2);
+    ctx.fillStyle = (lcMode && lcFirst === i) ? '#ffff44' :
+                    (optimized ? '#44dd66' : '#ff6666');
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Pose number
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(i, s[0], s[1] - 10);
+  }
+
+  // Ground truth dots
+  for (let i = 0; i < groundTruth.length; i++) {
+    const s = toScreen(groundTruth[i]);
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#888';
+    ctx.fill();
+  }
+}
+
+// --- Pose Graph Optimization (Gauss-Newton style) ---
+function computeTotalError(poses) {
+  let err = 0;
+  // Odometry errors
+  for (const e of odometryEdges) {
+    const dx = poses[e.to][0] - poses[e.from][0] - e.dx;
+    const dy = poses[e.to][1] - poses[e.from][1] - e.dy;
+    err += dx * dx + dy * dy;
+  }
+  // Loop closure errors (higher weight)
+  const lcWeight = 10.0;
+  for (const lc of loopClosures) {
+    const dx = poses[lc.to][0] - poses[lc.from][0] - lc.dx;
+    const dy = poses[lc.to][1] - poses[lc.from][1] - lc.dy;
+    err += lcWeight * (dx * dx + dy * dy);
+  }
+  return err;
+}
+
+function optimize() {
+  if (loopClosures.length === 0) {
+    setStatus('Loop closure가 없습니다. 먼저 추가해주세요.');
+    return;
+  }
+
+  const errBefore = computeTotalError(noisyPoses);
+  const n = noisyPoses.length;
+  let poses = noisyPoses.map(p => [...p]);
+
+  const lcWeight = 10.0;
+  const numIter = 50;
+  const damping = 0.5;
+
+  for (let iter = 0; iter < numIter; iter++) {
+    // Build 2n x 2n system (skip pose 0 as anchor)
+    const dim = (n - 1) * 2;
+    const H = Array.from({ length: dim }, () => new Float64Array(dim));
+    const b = new Float64Array(dim);
+
+    function idx(pose, xy) { return (pose - 1) * 2 + xy; }
+
+    // Odometry constraints
+    for (const e of odometryEdges) {
+      const dx = poses[e.to][0] - poses[e.from][0] - e.dx;
+      const dy = poses[e.to][1] - poses[e.from][1] - e.dy;
+
+      if (e.to > 0) {
+        const ti0 = idx(e.to, 0), ti1 = idx(e.to, 1);
+        H[ti0][ti0] += 1; H[ti1][ti1] += 1;
+        b[ti0] -= dx; b[ti1] -= dy;
+      }
+      if (e.from > 0) {
+        const fi0 = idx(e.from, 0), fi1 = idx(e.from, 1);
+        H[fi0][fi0] += 1; H[fi1][fi1] += 1;
+        b[fi0] += dx; b[fi1] += dy;
+      }
+      if (e.from > 0 && e.to > 0) {
+        const fi0 = idx(e.from, 0), fi1 = idx(e.from, 1);
+        const ti0 = idx(e.to, 0), ti1 = idx(e.to, 1);
+        H[fi0][ti0] -= 1; H[ti0][fi0] -= 1;
+        H[fi1][ti1] -= 1; H[ti1][fi1] -= 1;
+      }
+    }
+
+    // Loop closure constraints
+    for (const lc of loopClosures) {
+      const dx = poses[lc.to][0] - poses[lc.from][0] - lc.dx;
+      const dy = poses[lc.to][1] - poses[lc.from][1] - lc.dy;
+
+      if (lc.to > 0) {
+        const ti0 = idx(lc.to, 0), ti1 = idx(lc.to, 1);
+        H[ti0][ti0] += lcWeight; H[ti1][ti1] += lcWeight;
+        b[ti0] -= lcWeight * dx; b[ti1] -= lcWeight * dy;
+      }
+      if (lc.from > 0) {
+        const fi0 = idx(lc.from, 0), fi1 = idx(lc.from, 1);
+        H[fi0][fi0] += lcWeight; H[fi1][fi1] += lcWeight;
+        b[fi0] += lcWeight * dx; b[fi1] += lcWeight * dy;
+      }
+      if (lc.from > 0 && lc.to > 0) {
+        const fi0 = idx(lc.from, 0), fi1 = idx(lc.from, 1);
+        const ti0 = idx(lc.to, 0), ti1 = idx(lc.to, 1);
+        H[fi0][ti0] -= lcWeight; H[ti0][fi0] -= lcWeight;
+        H[fi1][ti1] -= lcWeight; H[ti1][fi1] -= lcWeight;
+      }
+    }
+
+    // Add damping
+    for (let i = 0; i < dim; i++) H[i][i] += 0.01;
+
+    // Solve H * dx = b using Gauss elimination
+    const A = H.map(row => [...row]);
+    const rhs = [...b];
+
+    for (let col = 0; col < dim; col++) {
+      // Pivot
+      let maxVal = Math.abs(A[col][col]);
+      let maxRow = col;
+      for (let row = col + 1; row < dim; row++) {
+        if (Math.abs(A[row][col]) > maxVal) {
+          maxVal = Math.abs(A[row][col]);
+          maxRow = row;
+        }
+      }
+      [A[col], A[maxRow]] = [A[maxRow], A[col]];
+      [rhs[col], rhs[maxRow]] = [rhs[maxRow], rhs[col]];
+
+      if (Math.abs(A[col][col]) < 1e-12) continue;
+
+      for (let row = col + 1; row < dim; row++) {
+        const f = A[row][col] / A[col][col];
+        for (let j = col; j < dim; j++) A[row][j] -= f * A[col][j];
+        rhs[row] -= f * rhs[col];
+      }
+    }
+
+    // Back substitution
+    const delta = new Float64Array(dim);
+    for (let i = dim - 1; i >= 0; i--) {
+      let sum = rhs[i];
+      for (let j = i + 1; j < dim; j++) sum -= A[i][j] * delta[j];
+      delta[i] = Math.abs(A[i][i]) > 1e-12 ? sum / A[i][i] : 0;
+    }
+
+    // Update poses
+    for (let i = 1; i < n; i++) {
+      poses[i][0] += damping * delta[(i - 1) * 2];
+      poses[i][1] += damping * delta[(i - 1) * 2 + 1];
+    }
+  }
+
+  optimizedPoses = poses;
+  optimized = true;
+
+  const errAfter = computeTotalError(optimizedPoses);
+  document.getElementById('m-err-before').textContent = errBefore.toFixed(4);
+  document.getElementById('m-err-after').textContent = errAfter.toFixed(4);
+
+  setStatus(`최적화 완료! 오차: ${errBefore.toFixed(4)} → ${errAfter.toFixed(4)}`);
+  updateMetrics();
+  draw();
+}
+
+// --- Loop Closure Mode ---
+function startLoopClosureMode() {
+  lcMode = true;
+  lcFirst = -1;
+  setStatus('첫 번째 pose를 클릭하세요...');
+  draw();
+}
+
+function findClosestPose(mx, my) {
+  const drawPoses = optimized ? optimizedPoses : noisyPoses;
+  let bestI = -1, bestD = Infinity;
+  for (let i = 0; i < drawPoses.length; i++) {
+    const s = toScreen(drawPoses[i]);
+    const d = Math.hypot(s[0] - mx, s[1] - my);
+    if (d < bestD) { bestD = d; bestI = i; }
+  }
+  return bestD < 20 ? bestI : -1;
+}
+
+canvas.addEventListener('click', e => {
+  if (!lcMode) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const poseI = findClosestPose(mx, my);
+  if (poseI < 0) return;
+
+  if (lcFirst < 0) {
+    lcFirst = poseI;
+    setStatus(`Pose ${poseI} 선택됨. 두 번째 pose를 클릭하세요...`);
+    draw();
+  } else {
+    if (poseI === lcFirst) return;
+    // Add loop closure
+    const from = Math.min(lcFirst, poseI);
+    const to = Math.max(lcFirst, poseI);
+    // Check if already exists
+    const exists = loopClosures.some(lc => lc.from === from && lc.to === to);
+    if (!exists) {
+      loopClosures.push({
+        from, to,
+        dx: groundTruth[from][0] - groundTruth[to][0],
+        dy: groundTruth[from][1] - groundTruth[to][1]
+      });
+    }
+    lcMode = false;
+    lcFirst = -1;
+    optimized = false;
+    optimizedPoses = noisyPoses.map(p => [...p]);
+    setStatus(`Loop closure 추가: Pose ${from} ↔ Pose ${to}`);
+    updateMetrics();
+    updateLCList();
+    draw();
+  }
+});
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+function updateLCList() {
+  const el = document.getElementById('lc-list');
+  el.innerHTML = loopClosures.map((lc, i) =>
+    `<div>Pose ${lc.from} ↔ Pose ${lc.to}</div>`
+  ).join('');
+}
+
+function updateMetrics() {
+  document.getElementById('m-poses').textContent = groundTruth.length;
+  document.getElementById('m-odom').textContent = odometryEdges.length;
+  document.getElementById('m-lc').textContent = loopClosures.length;
+}
+
+function resetAll() {
+  generateTrajectory();
+  lcMode = false;
+  lcFirst = -1;
+  optimized = false;
+  document.getElementById('m-err-before').textContent = '-';
+  document.getElementById('m-err-after').textContent = '-';
+  setStatus('새 trajectory 생성됨');
+  updateMetrics();
+  updateLCList();
+  draw();
+}
+
+// --- Resize ---
+window.addEventListener('resize', draw);
+
+// --- Init ---
+generateTrajectory();
+updateMetrics();
+updateLCList();
+draw();
+</script>
+</body>
+</html>

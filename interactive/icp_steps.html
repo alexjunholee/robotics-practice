@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICP (Iterative Closest Point) Step-by-Step</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+#app {
+  display: flex;
+  height: 100vh;
+}
+#main-plot {
+  flex: 1;
+  min-width: 0;
+}
+#sidebar {
+  width: 340px;
+  background: rgba(16, 16, 40, 0.95);
+  border-left: 1px solid #333;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+h1 { font-size: 17px; margin-bottom: 14px; color: #fff; }
+h2 { font-size: 14px; margin-bottom: 8px; color: #aab; }
+
+.btn-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+button {
+  padding: 8px 14px;
+  background: #3a2a7a;
+  border: 1px solid #5a4aaa;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover { background: #4a3a9a; }
+button.primary { background: #2a6a3a; border-color: #3a8a4a; }
+button.primary:hover { background: #3a8a4a; }
+button.danger { background: #6a2a2a; border-color: #8a3a3a; }
+button.danger:hover { background: #8a3a3a; }
+
+.slider-group { margin-bottom: 14px; }
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 13px; margin-bottom: 4px; color: #bbb;
+}
+input[type="range"] { width: 100%; accent-color: #7b68ee; cursor: pointer; }
+
+.metrics {
+  background: #12122a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.metrics .label { color: #888; }
+.metrics .value { color: #7bf; }
+
+#convergence-plot {
+  width: 100%;
+  height: 180px;
+  margin-top: 8px;
+}
+
+.legend {
+  display: flex; gap: 16px; margin-bottom: 10px; font-size: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="main-plot"></div>
+  <div id="sidebar">
+    <h1>ICP Step-by-Step</h1>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4488ff"></div> Source</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#44dd66"></div> Target</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff8844"></div> Original</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" onclick="icpStep()">Step</button>
+      <button onclick="runAll()">Run All</button>
+      <button class="danger" onclick="resetICP()">Reset</button>
+      <button onclick="regenerate()">새 데이터</button>
+    </div>
+
+    <div class="slider-group">
+      <label><span>최대 대응 거리</span> <span id="dist-val">2.0</span></label>
+      <input type="range" id="max-dist" min="0.3" max="5.0" value="2.0" step="0.1" oninput="document.getElementById('dist-val').textContent=this.value">
+    </div>
+
+    <h2>Metrics</h2>
+    <div class="metrics">
+      <div><span class="label">Iteration: </span><span class="value" id="m-iter">0</span></div>
+      <div><span class="label">Rotation: </span><span class="value" id="m-rot">0.000°</span></div>
+      <div><span class="label">Translation: </span><span class="value" id="m-trans">(0.000, 0.000)</span></div>
+      <div><span class="label">RMSE: </span><span class="value" id="m-rmse">-</span></div>
+      <div><span class="label">매칭 수: </span><span class="value" id="m-matches">-</span></div>
+    </div>
+
+    <h2>수렴 그래프 (RMSE vs Iteration)</h2>
+    <div id="convergence-plot"></div>
+  </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+// --- Utility ---
+function randN(mu, sigma) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return mu + sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// Generate an L-shaped point set
+function generateLShape(n) {
+  const pts = [];
+  const half = Math.floor(n / 2);
+  for (let i = 0; i < half; i++) {
+    pts.push([i / half * 4 + randN(0, 0.05), randN(0, 0.05)]);
+  }
+  for (let i = 0; i < n - half; i++) {
+    pts.push([randN(0, 0.05), i / (n - half) * 3 + randN(0, 0.05)]);
+  }
+  return pts;
+}
+
+function rotatePoint(p, angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [c * p[0] - s * p[1], s * p[0] + c * p[1]];
+}
+
+function transformPoints(pts, angle, tx, ty) {
+  return pts.map(p => {
+    const r = rotatePoint(p, angle);
+    return [r[0] + tx, r[1] + ty];
+  });
+}
+
+// --- ICP Data ---
+let targetPts, sourceOriginal, sourcePts;
+let iteration, rmseHistory, totalRotation, totalTx, totalTy;
+let correspondences = [];
+
+function initData() {
+  const nPts = 50;
+  targetPts = generateLShape(nPts);
+
+  // Random transform for source
+  const angle = (Math.random() * 60 - 30) * Math.PI / 180;
+  const tx = Math.random() * 2 - 1;
+  const ty = Math.random() * 2 - 1;
+
+  sourceOriginal = transformPoints(targetPts.map(p => [p[0] + randN(0, 0.03), p[1] + randN(0, 0.03)]), angle, tx, ty);
+  sourcePts = sourceOriginal.map(p => [...p]);
+  iteration = 0;
+  rmseHistory = [];
+  totalRotation = 0;
+  totalTx = 0;
+  totalTy = 0;
+  correspondences = [];
+  updateMetrics();
+}
+
+// --- ICP Algorithm ---
+function findCorrespondences(src, tgt, maxDist) {
+  const corr = [];
+  for (let i = 0; i < src.length; i++) {
+    let bestJ = -1, bestD = Infinity;
+    for (let j = 0; j < tgt.length; j++) {
+      const dx = src[i][0] - tgt[j][0];
+      const dy = src[i][1] - tgt[j][1];
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestD) { bestD = d; bestJ = j; }
+    }
+    if (bestD <= maxDist) {
+      corr.push({ si: i, ti: bestJ, dist: bestD });
+    }
+  }
+  return corr;
+}
+
+function computeTransform(src, tgt, corr) {
+  if (corr.length < 3) return { angle: 0, tx: 0, ty: 0 };
+
+  // Centroids
+  let sx = 0, sy = 0, tx2 = 0, ty2 = 0;
+  for (const c of corr) {
+    sx += src[c.si][0]; sy += src[c.si][1];
+    tx2 += tgt[c.ti][0]; ty2 += tgt[c.ti][1];
+  }
+  const n = corr.length;
+  const csx = sx / n, csy = sy / n;
+  const ctx = tx2 / n, cty = ty2 / n;
+
+  // SVD via cross-covariance
+  let sxx = 0, sxy = 0, syx = 0, syy = 0;
+  for (const c of corr) {
+    const dsx = src[c.si][0] - csx;
+    const dsy = src[c.si][1] - csy;
+    const dtx = tgt[c.ti][0] - ctx;
+    const dty = tgt[c.ti][1] - cty;
+    sxx += dsx * dtx;
+    sxy += dsx * dty;
+    syx += dsy * dtx;
+    syy += dsy * dty;
+  }
+
+  // For 2D, optimal rotation angle
+  const angle = Math.atan2(sxy - syx, sxx + syy);
+  const cosA = Math.cos(angle), sinA = Math.sin(angle);
+  const ttx = ctx - (cosA * csx - sinA * csy);
+  const tty = cty - (sinA * csx + cosA * csy);
+
+  return { angle, tx: ttx, ty: tty };
+}
+
+function computeRMSE(src, tgt, corr) {
+  if (corr.length === 0) return Infinity;
+  let sum = 0;
+  for (const c of corr) {
+    const dx = src[c.si][0] - tgt[c.ti][0];
+    const dy = src[c.si][1] - tgt[c.ti][1];
+    sum += dx * dx + dy * dy;
+  }
+  return Math.sqrt(sum / corr.length);
+}
+
+function icpStep() {
+  const maxDist = parseFloat(document.getElementById('max-dist').value);
+  correspondences = findCorrespondences(sourcePts, targetPts, maxDist);
+  if (correspondences.length < 3) {
+    alert('매칭된 점이 너무 적습니다. 최대 대응 거리를 늘려보세요.');
+    return;
+  }
+
+  const tf = computeTransform(sourcePts, targetPts, correspondences);
+  const cosA = Math.cos(tf.angle), sinA = Math.sin(tf.angle);
+
+  sourcePts = sourcePts.map(p => {
+    const x = cosA * p[0] - sinA * p[1] + tf.tx;
+    const y = sinA * p[0] + cosA * p[1] + tf.ty;
+    return [x, y];
+  });
+
+  totalRotation += tf.angle * 180 / Math.PI;
+  totalTx += tf.tx;
+  totalTy += tf.ty;
+  iteration++;
+
+  // Recompute correspondences after transform for RMSE
+  const corrAfter = findCorrespondences(sourcePts, targetPts, maxDist);
+  correspondences = corrAfter;
+  const rmse = computeRMSE(sourcePts, targetPts, corrAfter);
+  rmseHistory.push(rmse);
+
+  updateMetrics();
+  plotAll();
+}
+
+function runAll() {
+  let prevRMSE = Infinity;
+  for (let i = 0; i < 100; i++) {
+    icpStep();
+    const curRMSE = rmseHistory[rmseHistory.length - 1];
+    if (Math.abs(prevRMSE - curRMSE) < 1e-6) break;
+    prevRMSE = curRMSE;
+  }
+}
+
+function resetICP() {
+  sourcePts = sourceOriginal.map(p => [...p]);
+  iteration = 0;
+  rmseHistory = [];
+  totalRotation = 0;
+  totalTx = 0;
+  totalTy = 0;
+  correspondences = [];
+  updateMetrics();
+  plotAll();
+}
+
+function regenerate() {
+  initData();
+  plotAll();
+}
+
+function updateMetrics() {
+  document.getElementById('m-iter').textContent = iteration;
+  document.getElementById('m-rot').textContent = totalRotation.toFixed(3) + '°';
+  document.getElementById('m-trans').textContent = `(${totalTx.toFixed(3)}, ${totalTy.toFixed(3)})`;
+  document.getElementById('m-rmse').textContent = rmseHistory.length > 0 ? rmseHistory[rmseHistory.length - 1].toFixed(5) : '-';
+  document.getElementById('m-matches').textContent = correspondences.length || '-';
+}
+
+// --- Plotting ---
+function plotAll() {
+  // Main scatter plot
+  const traces = [];
+
+  // Correspondence lines
+  if (correspondences.length > 0) {
+    const lx = [], ly = [];
+    for (const c of correspondences) {
+      lx.push(sourcePts[c.si][0], targetPts[c.ti][0], null);
+      ly.push(sourcePts[c.si][1], targetPts[c.ti][1], null);
+    }
+    traces.push({
+      x: lx, y: ly, mode: 'lines',
+      line: { color: 'rgba(150,150,150,0.25)', width: 1, dash: 'dot' },
+      hoverinfo: 'skip', showlegend: false
+    });
+  }
+
+  // Original source (faded)
+  traces.push({
+    x: sourceOriginal.map(p => p[0]),
+    y: sourceOriginal.map(p => p[1]),
+    mode: 'markers',
+    marker: { color: '#ff8844', size: 5, opacity: 0.3 },
+    name: 'Original Source'
+  });
+
+  // Target
+  traces.push({
+    x: targetPts.map(p => p[0]),
+    y: targetPts.map(p => p[1]),
+    mode: 'markers',
+    marker: { color: '#44dd66', size: 7, symbol: 'diamond' },
+    name: 'Target'
+  });
+
+  // Current source
+  traces.push({
+    x: sourcePts.map(p => p[0]),
+    y: sourcePts.map(p => p[1]),
+    mode: 'markers',
+    marker: { color: '#4488ff', size: 7 },
+    name: 'Source'
+  });
+
+  const layout = {
+    paper_bgcolor: '#1a1a2e',
+    plot_bgcolor: '#12122a',
+    font: { color: '#ccc', size: 11 },
+    margin: { l: 50, r: 20, t: 40, b: 50 },
+    title: { text: `ICP Iteration ${iteration}`, font: { size: 15, color: '#ddd' } },
+    xaxis: { gridcolor: '#2a2a4a', zerolinecolor: '#3a3a5a', title: 'X' },
+    yaxis: { gridcolor: '#2a2a4a', zerolinecolor: '#3a3a5a', title: 'Y', scaleanchor: 'x' },
+    legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(16,16,40,0.8)' },
+    dragmode: 'pan'
+  };
+
+  Plotly.react('main-plot', traces, layout, { responsive: true, displayModeBar: false });
+
+  // Convergence subplot
+  if (rmseHistory.length > 0) {
+    const convTrace = {
+      x: rmseHistory.map((_, i) => i + 1),
+      y: rmseHistory,
+      mode: 'lines+markers',
+      line: { color: '#ff6688', width: 2 },
+      marker: { size: 4, color: '#ff6688' }
+    };
+    const convLayout = {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: '#0d0d20',
+      font: { color: '#999', size: 10 },
+      margin: { l: 45, r: 10, t: 8, b: 30 },
+      xaxis: { gridcolor: '#222244', title: 'Iteration', dtick: Math.max(1, Math.floor(rmseHistory.length / 5)) },
+      yaxis: { gridcolor: '#222244', title: 'RMSE' },
+      height: 170
+    };
+    Plotly.react('convergence-plot', [convTrace], convLayout, { responsive: true, displayModeBar: false });
+  }
+}
+
+// --- Init ---
+initData();
+plotAll();
+</script>
+</body>
+</html>

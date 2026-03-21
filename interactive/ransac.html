@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RANSAC 알고리즘 시각화</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 6px;
+  color: #e94560;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.95em;
+  color: #888;
+  margin-bottom: 20px;
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.main-layout {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.left-panel {
+  flex: 1 1 600px;
+  max-width: 650px;
+}
+.right-panel {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+canvas {
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #0d0d1a;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+.panel-box {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 16px;
+}
+.panel-box h3 {
+  color: #e94560;
+  font-size: 0.95em;
+  margin-bottom: 10px;
+}
+.control-group {
+  margin-bottom: 12px;
+}
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82em;
+  color: #aaa;
+  margin-bottom: 3px;
+}
+.control-group .value {
+  color: #e94560;
+  font-weight: bold;
+  font-family: monospace;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button {
+  flex: 1;
+  padding: 9px 6px;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85em;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+button:hover { background: #c73650; }
+button:disabled { background: #555; cursor: not-allowed; }
+button.secondary {
+  background: #0f3460;
+}
+button.secondary:hover { background: #1a4a80; }
+.stats {
+  font-family: monospace;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.stats .label { color: #888; }
+.stats .val { color: #4fc3f7; }
+.stats .best { color: #66bb6a; }
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.8em;
+  margin-top: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>RANSAC 알고리즘 시각화</h1>
+  <p class="subtitle">RANdom SAmple Consensus: 이상치(outlier)에 강건한 모델 피팅 과정을 단계별로 관찰합니다</p>
+
+  <div class="main-layout">
+    <div class="left-panel">
+      <canvas id="canvas" width="600" height="500"></canvas>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#888"></span> 미분류 점</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#66bb6a"></span> Inlier</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef5350"></span> Outlier</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ffa726"></span> 현재 샘플</div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="panel-box">
+        <h3>제어 (Controls)</h3>
+        <div class="control-group">
+          <label>Inlier 임계값 (threshold): <span class="value" id="threshVal">15</span> px</label>
+          <input type="range" id="threshold" min="1" max="30" value="15">
+        </div>
+        <div class="control-group">
+          <label>반복 횟수 (iterations): <span class="value" id="iterVal">100</span></label>
+          <input type="range" id="iterations" min="10" max="500" value="100" step="10">
+        </div>
+        <div class="control-group">
+          <label>애니메이션 속도: <span class="value" id="speedVal">보통</span></label>
+          <input type="range" id="speed" min="1" max="5" value="3">
+        </div>
+        <div class="btn-row">
+          <button id="newDataBtn">새 데이터</button>
+          <button id="runBtn">Run RANSAC</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button id="stepBtn" class="secondary">Step (1단계)</button>
+          <button id="stopBtn" class="secondary">정지</button>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>결과 (Results)</h3>
+        <div class="stats" id="stats">
+          <div><span class="label">현재 반복:</span> <span class="val" id="statIter">-</span></div>
+          <div><span class="label">현재 Inlier 수:</span> <span class="val" id="statCurInliers">-</span></div>
+          <div><span class="label">최고 Inlier 수:</span> <span class="best" id="statBestInliers">-</span></div>
+          <div><span class="label">Best Model (ax+by+c=0):</span></div>
+          <div style="padding-left:10px;"><span class="best" id="statModel">-</span></div>
+          <div><span class="label">상태:</span> <span class="val" id="statStatus">대기 중</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const CW = canvas.width, CH = canvas.height;
+
+let points = [];
+let running = false;
+let animId = null;
+let currentIter = 0;
+let bestModel = null;
+let bestInliers = [];
+let bestInlierCount = 0;
+let totalIter = 0;
+let classified = false; // whether final classification is shown
+
+const speedDelays = [200, 100, 50, 20, 5];
+
+function generatePoints() {
+  points = [];
+  // Random line through canvas: pick two random points
+  const x1 = Math.random() * CW * 0.3 + CW * 0.05;
+  const y1 = Math.random() * CH * 0.3 + CH * 0.1;
+  const x2 = CW - Math.random() * CW * 0.3 - CW * 0.05;
+  const y2 = CH - Math.random() * CH * 0.3 - CH * 0.1;
+
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+
+  // ~60 inliers along the line
+  for (let i = 0; i < 60; i++) {
+    const t = Math.random();
+    const noise = (Math.random() - 0.5) * 16;
+    const px = x1 + t * dx + noise * (-dy / len);
+    const py = y1 + t * dy + noise * (dx / len);
+    points.push({ x: px, y: py, type: 'unknown' });
+  }
+
+  // ~20 outliers
+  for (let i = 0; i < 20; i++) {
+    points.push({
+      x: Math.random() * (CW - 40) + 20,
+      y: Math.random() * (CH - 40) + 20,
+      type: 'unknown'
+    });
+  }
+
+  // Shuffle
+  for (let i = points.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [points[i], points[j]] = [points[j], points[i]];
+  }
+}
+
+function resetState() {
+  running = false;
+  if (animId) { clearTimeout(animId); animId = null; }
+  currentIter = 0;
+  bestModel = null;
+  bestInliers = [];
+  bestInlierCount = 0;
+  classified = false;
+  points.forEach(p => p.type = 'unknown');
+  updateStats('-', '-', '-', '-', '대기 중');
+}
+
+function updateStats(iter, curInl, bestInl, model, status) {
+  document.getElementById('statIter').textContent = iter;
+  document.getElementById('statCurInliers').textContent = curInl;
+  document.getElementById('statBestInliers').textContent = bestInl;
+  document.getElementById('statModel').textContent = model;
+  document.getElementById('statStatus').textContent = status;
+}
+
+function drawScene(currentSample, currentLine, currentInlierSet) {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Draw grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < CW; x += 50) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+  }
+  for (let y = 0; y < CH; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+  }
+
+  // Draw best line so far (if any)
+  if (bestModel) {
+    drawLine(bestModel, 'rgba(102,187,106,0.35)', 2);
+  }
+
+  // Draw current candidate line
+  if (currentLine) {
+    drawLine(currentLine, 'rgba(255,167,38,0.7)', 1.5);
+  }
+
+  // Draw threshold band around current line
+  if (currentLine) {
+    const thresh = parseInt(document.getElementById('threshold').value);
+    drawThresholdBand(currentLine, thresh);
+  }
+
+  // Draw points
+  for (const p of points) {
+    let color = '#888';
+    let r = 4;
+    if (classified) {
+      if (p.type === 'inlier') { color = '#66bb6a'; r = 5; }
+      else if (p.type === 'outlier') { color = '#ef5350'; r = 4; }
+    } else if (currentInlierSet && currentInlierSet.has(p)) {
+      color = '#81c784'; r = 5;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // Highlight current sample points
+  if (currentSample) {
+    for (const p of currentSample) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffa726';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+  }
+
+  // Draw final best line on top
+  if (classified && bestModel) {
+    drawLine(bestModel, '#66bb6a', 3);
+  }
+}
+
+function drawLine(model, color, width) {
+  const { a, b, c } = model;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  // Find intersection with canvas borders
+  const pts = [];
+  if (Math.abs(b) > 1e-9) {
+    // y = -(a*x + c) / b
+    const y0 = -(a * 0 + c) / b;
+    const yCW = -(a * CW + c) / b;
+    if (y0 >= -50 && y0 <= CH + 50) pts.push([0, y0]);
+    if (yCW >= -50 && yCW <= CH + 50) pts.push([CW, yCW]);
+  }
+  if (Math.abs(a) > 1e-9) {
+    const x0 = -(b * 0 + c) / a;
+    const xCH = -(b * CH + c) / a;
+    if (x0 >= -50 && x0 <= CW + 50) pts.push([x0, 0]);
+    if (xCH >= -50 && xCH <= CW + 50) pts.push([xCH, CH]);
+  }
+  if (pts.length >= 2) {
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    ctx.lineTo(pts[1][0], pts[1][1]);
+    ctx.stroke();
+  }
+}
+
+function drawThresholdBand(model, thresh) {
+  const { a, b, c } = model;
+  const norm = Math.sqrt(a*a + b*b);
+  if (norm < 1e-9) return;
+  ctx.fillStyle = 'rgba(255,167,38,0.07)';
+
+  // Draw band as a polygon following the line offset by thresh
+  const pts1 = getLineEdgePoints(a, b, c + thresh * norm);
+  const pts2 = getLineEdgePoints(a, b, c - thresh * norm);
+  if (pts1.length >= 2 && pts2.length >= 2) {
+    ctx.beginPath();
+    ctx.moveTo(pts1[0][0], pts1[0][1]);
+    ctx.lineTo(pts1[1][0], pts1[1][1]);
+    ctx.lineTo(pts2[1][0], pts2[1][1]);
+    ctx.lineTo(pts2[0][0], pts2[0][1]);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function getLineEdgePoints(a, b, c) {
+  const pts = [];
+  if (Math.abs(b) > 1e-9) {
+    const y0 = -(a * 0 + c) / b;
+    const yCW = -(a * CW + c) / b;
+    pts.push([0, y0]);
+    pts.push([CW, yCW]);
+  }
+  if (Math.abs(a) > 1e-9 && pts.length < 2) {
+    const x0 = -(b * 0 + c) / a;
+    const xCH = -(b * CH + c) / a;
+    pts.push([x0, 0]);
+    pts.push([xCH, CH]);
+  }
+  return pts;
+}
+
+function fitLine(p1, p2) {
+  // Line through two points: a*x + b*y + c = 0
+  const a = p2.y - p1.y;
+  const b = p1.x - p2.x;
+  const c = p2.x * p1.y - p1.x * p2.y;
+  const norm = Math.sqrt(a*a + b*b);
+  if (norm < 1e-9) return null;
+  return { a: a/norm, b: b/norm, c: c/norm };
+}
+
+function pointLineDist(p, model) {
+  return Math.abs(model.a * p.x + model.b * p.y + model.c);
+}
+
+function getInliers(model, thresh) {
+  const inliers = [];
+  for (const p of points) {
+    if (pointLineDist(p, model) <= thresh) {
+      inliers.push(p);
+    }
+  }
+  return inliers;
+}
+
+function doOneStep() {
+  const thresh = parseInt(document.getElementById('threshold').value);
+  // Pick two random points
+  const i1 = Math.floor(Math.random() * points.length);
+  let i2 = Math.floor(Math.random() * points.length);
+  while (i2 === i1) i2 = Math.floor(Math.random() * points.length);
+
+  const sample = [points[i1], points[i2]];
+  const model = fitLine(sample[0], sample[1]);
+  if (!model) return { sample: null, model: null, inliers: [], count: 0 };
+
+  const inliers = getInliers(model, thresh);
+  currentIter++;
+
+  if (inliers.length > bestInlierCount) {
+    bestInlierCount = inliers.length;
+    bestModel = model;
+    bestInliers = inliers;
+  }
+
+  return { sample, model, inliers, count: inliers.length };
+}
+
+function runAnimation() {
+  totalIter = parseInt(document.getElementById('iterations').value);
+  currentIter = 0;
+  bestModel = null;
+  bestInliers = [];
+  bestInlierCount = 0;
+  classified = false;
+  points.forEach(p => p.type = 'unknown');
+  running = true;
+
+  function step() {
+    if (!running || currentIter >= totalIter) {
+      finalize();
+      return;
+    }
+    const result = doOneStep();
+    const inlierSet = new Set(result.inliers);
+    drawScene(result.sample, result.model, inlierSet);
+    const modelStr = bestModel
+      ? `${bestModel.a.toFixed(3)}x + ${bestModel.b.toFixed(3)}y + ${bestModel.c.toFixed(1)} = 0`
+      : '-';
+    updateStats(
+      `${currentIter} / ${totalIter}`,
+      result.count,
+      bestInlierCount,
+      modelStr,
+      '실행 중...'
+    );
+    const speedIdx = parseInt(document.getElementById('speed').value) - 1;
+    animId = setTimeout(step, speedDelays[speedIdx]);
+  }
+  step();
+}
+
+function finalize() {
+  running = false;
+  if (animId) { clearTimeout(animId); animId = null; }
+  classified = true;
+  const thresh = parseInt(document.getElementById('threshold').value);
+  if (bestModel) {
+    for (const p of points) {
+      p.type = pointLineDist(p, bestModel) <= thresh ? 'inlier' : 'outlier';
+    }
+  }
+  drawScene(null, null, null);
+  const modelStr = bestModel
+    ? `${bestModel.a.toFixed(3)}x + ${bestModel.b.toFixed(3)}y + ${bestModel.c.toFixed(1)} = 0`
+    : '-';
+  updateStats(currentIter, '-', bestInlierCount, modelStr, '완료');
+}
+
+function stepOnce() {
+  if (currentIter === 0) {
+    totalIter = parseInt(document.getElementById('iterations').value);
+    bestModel = null;
+    bestInliers = [];
+    bestInlierCount = 0;
+    classified = false;
+    points.forEach(p => p.type = 'unknown');
+  }
+  if (currentIter >= totalIter) {
+    finalize();
+    return;
+  }
+  const result = doOneStep();
+  const inlierSet = new Set(result.inliers);
+  drawScene(result.sample, result.model, inlierSet);
+  const modelStr = bestModel
+    ? `${bestModel.a.toFixed(3)}x + ${bestModel.b.toFixed(3)}y + ${bestModel.c.toFixed(1)} = 0`
+    : '-';
+  updateStats(
+    `${currentIter} / ${totalIter}`,
+    result.count,
+    bestInlierCount,
+    modelStr,
+    '단계별 실행'
+  );
+  if (currentIter >= totalIter) finalize();
+}
+
+// Event listeners
+document.getElementById('newDataBtn').addEventListener('click', () => {
+  resetState();
+  generatePoints();
+  drawScene(null, null, null);
+});
+
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (running) return;
+  runAnimation();
+});
+
+document.getElementById('stepBtn').addEventListener('click', () => {
+  if (running) return;
+  stepOnce();
+});
+
+document.getElementById('stopBtn').addEventListener('click', () => {
+  running = false;
+  if (animId) { clearTimeout(animId); animId = null; }
+  updateStats(currentIter, '-', bestInlierCount,
+    bestModel ? `${bestModel.a.toFixed(3)}x + ${bestModel.b.toFixed(3)}y + ${bestModel.c.toFixed(1)} = 0` : '-',
+    '정지됨'
+  );
+});
+
+document.getElementById('threshold').addEventListener('input', function() {
+  document.getElementById('threshVal').textContent = this.value;
+});
+document.getElementById('iterations').addEventListener('input', function() {
+  document.getElementById('iterVal').textContent = this.value;
+});
+document.getElementById('speed').addEventListener('input', function() {
+  const names = ['매우 느림', '느림', '보통', '빠름', '매우 빠름'];
+  document.getElementById('speedVal').textContent = names[this.value - 1];
+});
+
+// Initialize
+generatePoints();
+drawScene(null, null, null);
+</script>
+</body>
+</html>

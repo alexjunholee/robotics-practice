@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M-Estimator 비용 함수 비교</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 6px;
+  color: #e94560;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.95em;
+  color: #888;
+  margin-bottom: 20px;
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.controls {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+}
+.control-group {
+  min-width: 220px;
+  flex: 1;
+}
+.control-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+.control-group .value {
+  color: #e94560;
+  font-weight: bold;
+  font-family: monospace;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: #e94560;
+  cursor: pointer;
+}
+.plot-container {
+  background: #111;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.annotation-box {
+  text-align: center;
+  background: #16213e;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+  font-size: 0.9em;
+  color: #ffa726;
+  border-left: 4px solid #ffa726;
+}
+.formulas {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 0.8em;
+  line-height: 1.8;
+}
+.formula-item {
+  min-width: 200px;
+}
+.formula-item .fname { font-weight: bold; margin-bottom: 2px; }
+.f-l2 .fname { color: #42a5f5; }
+.f-huber .fname { color: #ffa726; }
+.f-cauchy .fname { color: #66bb6a; }
+.f-gm .fname { color: #ab47bc; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>M-Estimator 비용 함수 비교</h1>
+  <p class="subtitle">다양한 robust cost function의 비용(cost)과 가중치(weight) 함수를 비교합니다</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Huber delta (<span style="color:#ffa726">&delta;</span>): <span class="value" id="huberVal">1.5</span></label>
+      <input type="range" id="huberDelta" min="1" max="50" value="15" step="1">
+    </div>
+    <div class="control-group">
+      <label>Cauchy c: <span class="value" id="cauchyVal">2.0</span></label>
+      <input type="range" id="cauchyC" min="1" max="50" value="20" step="1">
+    </div>
+    <div class="control-group">
+      <label>Geman-McClure c: <span class="value" id="gmVal">2.0</span></label>
+      <input type="range" id="gmC" min="1" max="50" value="20" step="1">
+    </div>
+  </div>
+
+  <div class="plot-container">
+    <div id="costPlot"></div>
+    <div id="weightPlot"></div>
+  </div>
+
+  <div class="annotation-box">
+    outlier가 클 때 어떤 함수가 영향을 덜 받는지 관찰하라 &#8212;
+    residual이 커질수록 weight가 0에 가까워지는 함수일수록 outlier에 강건(robust)하다.
+  </div>
+
+  <div class="formulas">
+    <div class="formula-item f-l2">
+      <div class="fname">L2 (Least Squares)</div>
+      <div>&rho;(r) = r&sup2;</div>
+      <div>w(r) = 2</div>
+    </div>
+    <div class="formula-item f-huber">
+      <div class="fname">Huber</div>
+      <div>&rho;(r) = r&sup2; if |r|&le;&delta;, 2&delta;|r|-&delta;&sup2; otherwise</div>
+      <div>w(r) = 2 if |r|&le;&delta;, 2&delta;/|r| otherwise</div>
+    </div>
+    <div class="formula-item f-cauchy">
+      <div class="fname">Cauchy (Lorentzian)</div>
+      <div>&rho;(r) = c&sup2; ln(1 + (r/c)&sup2;)</div>
+      <div>w(r) = 2 / (1 + (r/c)&sup2;)</div>
+    </div>
+    <div class="formula-item f-gm">
+      <div class="fname">Geman-McClure</div>
+      <div>&rho;(r) = r&sup2; / (c&sup2; + r&sup2;)</div>
+      <div>w(r) = 2c&sup2; / (c&sup2; + r&sup2;)&sup2; &middot; (c&sup2; + r&sup2;) / 1 &#8594; simplified</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const N = 500;
+const rMin = -10, rMax = 10;
+const rVals = [];
+for (let i = 0; i < N; i++) {
+  rVals.push(rMin + (rMax - rMin) * i / (N - 1));
+}
+
+function costL2(r) { return r * r; }
+function weightL2(r) { return 2; }
+
+function costHuber(r, delta) {
+  const ar = Math.abs(r);
+  return ar <= delta ? r * r : 2 * delta * ar - delta * delta;
+}
+function weightHuber(r, delta) {
+  const ar = Math.abs(r);
+  if (ar < 1e-12) return 2;
+  return ar <= delta ? 2 : 2 * delta / ar;
+}
+
+function costCauchy(r, c) {
+  return c * c * Math.log(1 + (r / c) * (r / c));
+}
+function weightCauchy(r, c) {
+  return 2 / (1 + (r / c) * (r / c));
+}
+
+function costGM(r, c) {
+  return (r * r) / (c * c + r * r);
+}
+function weightGM(r, c) {
+  if (Math.abs(r) < 1e-12) return 2 / (c * c);
+  const denom = c * c + r * r;
+  // rho'(r) = 2*r*c^2 / (c^2 + r^2)^2
+  // w(r) = rho'(r)/r = 2*c^2 / (c^2 + r^2)^2
+  return 2 * c * c / (denom * denom);
+}
+
+const plotBg = '#0d0d1a';
+const paperBg = '#0d0d1a';
+const gridColor = 'rgba(255,255,255,0.08)';
+const axisColor = '#555';
+
+function updatePlots() {
+  const huberDelta = parseInt(document.getElementById('huberDelta').value) / 10;
+  const cauchyC = parseInt(document.getElementById('cauchyC').value) / 10;
+  const gmC = parseInt(document.getElementById('gmC').value) / 10;
+
+  document.getElementById('huberVal').textContent = huberDelta.toFixed(1);
+  document.getElementById('cauchyVal').textContent = cauchyC.toFixed(1);
+  document.getElementById('gmVal').textContent = gmC.toFixed(1);
+
+  const cL2 = [], cHub = [], cCau = [], cGM = [];
+  const wL2 = [], wHub = [], wCau = [], wGM = [];
+
+  for (const r of rVals) {
+    cL2.push(costL2(r));
+    cHub.push(costHuber(r, huberDelta));
+    cCau.push(costCauchy(r, cauchyC));
+    cGM.push(costGM(r, gmC));
+
+    wL2.push(weightL2(r));
+    wHub.push(weightHuber(r, huberDelta));
+    wCau.push(weightCauchy(r, cauchyC));
+    wGM.push(weightGM(r, gmC));
+  }
+
+  const traceStyle = { mode: 'lines', line: { width: 2.5 } };
+
+  const costTraces = [
+    { x: rVals, y: cL2, name: 'L2 (r\u00B2)', ...traceStyle, line: { ...traceStyle.line, color: '#42a5f5' } },
+    { x: rVals, y: cHub, name: `Huber (\u03B4=${huberDelta.toFixed(1)})`, ...traceStyle, line: { ...traceStyle.line, color: '#ffa726' } },
+    { x: rVals, y: cCau, name: `Cauchy (c=${cauchyC.toFixed(1)})`, ...traceStyle, line: { ...traceStyle.line, color: '#66bb6a' } },
+    { x: rVals, y: cGM, name: `Geman-McClure (c=${gmC.toFixed(1)})`, ...traceStyle, line: { ...traceStyle.line, color: '#ab47bc' } },
+  ];
+
+  const weightTraces = [
+    { x: rVals, y: wL2, name: 'L2', ...traceStyle, line: { ...traceStyle.line, color: '#42a5f5' }, showlegend: false },
+    { x: rVals, y: wHub, name: 'Huber', ...traceStyle, line: { ...traceStyle.line, color: '#ffa726' }, showlegend: false },
+    { x: rVals, y: wCau, name: 'Cauchy', ...traceStyle, line: { ...traceStyle.line, color: '#66bb6a' }, showlegend: false },
+    { x: rVals, y: wGM, name: 'Geman-McClure', ...traceStyle, line: { ...traceStyle.line, color: '#ab47bc' }, showlegend: false },
+  ];
+
+  const commonAxisLayout = {
+    gridcolor: gridColor,
+    zerolinecolor: axisColor,
+    tickfont: { color: '#888', size: 11 },
+    titlefont: { color: '#aaa', size: 13 },
+  };
+
+  // Compute a reasonable y-max for the cost plot
+  const maxCost = Math.max(
+    costHuber(10, huberDelta),
+    costCauchy(10, cauchyC),
+    costGM(10, gmC),
+    30
+  );
+  const costYMax = Math.min(maxCost * 1.15, 120);
+
+  const costLayout = {
+    title: { text: 'Cost Function \u03C1(r)', font: { color: '#e0e0e0', size: 15 } },
+    plot_bgcolor: plotBg,
+    paper_bgcolor: paperBg,
+    margin: { t: 50, b: 50, l: 60, r: 30 },
+    height: 320,
+    xaxis: { title: 'Residual r', ...commonAxisLayout },
+    yaxis: { title: '\u03C1(r)', range: [0, costYMax], ...commonAxisLayout },
+    legend: {
+      font: { color: '#ccc', size: 12 },
+      bgcolor: 'rgba(22,33,62,0.85)',
+      bordercolor: '#333',
+      borderwidth: 1,
+      x: 0.02, y: 0.98,
+    },
+  };
+
+  // Weight plot y-max
+  const maxW = Math.max(2.2, weightHuber(0, huberDelta) * 1.1);
+  const weightYMax = Math.min(maxW, 5);
+
+  const weightLayout = {
+    title: { text: 'Weight Function w(r) = \u03C1\'(r)/r', font: { color: '#e0e0e0', size: 15 } },
+    plot_bgcolor: plotBg,
+    paper_bgcolor: paperBg,
+    margin: { t: 50, b: 50, l: 60, r: 30 },
+    height: 280,
+    xaxis: { title: 'Residual r', ...commonAxisLayout },
+    yaxis: { title: 'w(r)', range: [0, weightYMax], ...commonAxisLayout },
+    legend: {
+      font: { color: '#ccc', size: 12 },
+      bgcolor: 'rgba(22,33,62,0.85)',
+    },
+  };
+
+  const config = { responsive: true, displayModeBar: false };
+
+  Plotly.react('costPlot', costTraces, costLayout, config);
+  Plotly.react('weightPlot', weightTraces, weightLayout, config);
+}
+
+updatePlots();
+
+document.getElementById('huberDelta').addEventListener('input', updatePlots);
+document.getElementById('cauchyC').addEventListener('input', updatePlots);
+document.getElementById('gmC').addEventListener('input', updatePlots);
+</script>
+</body>
+</html>

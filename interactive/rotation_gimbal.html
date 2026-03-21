@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 회전과 Gimbal Lock 체험</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+#container { position: relative; width: 100%; height: 100vh; }
+#three-canvas { width: 100%; height: 100%; display: block; }
+
+#controls {
+  position: absolute; top: 16px; left: 16px;
+  background: rgba(16, 16, 40, 0.92);
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 20px;
+  width: 320px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+h1 { font-size: 18px; margin-bottom: 14px; color: #fff; }
+.slider-group { margin-bottom: 12px; }
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 13px; margin-bottom: 4px;
+}
+.slider-group label .axis-x { color: #ff4444; }
+.slider-group label .axis-y { color: #44ff44; }
+.slider-group label .axis-z { color: #4488ff; }
+input[type="range"] {
+  width: 100%; cursor: pointer;
+  accent-color: #7b68ee;
+}
+.toggle-group {
+  margin: 14px 0;
+  display: flex; gap: 4px;
+}
+.toggle-btn {
+  flex: 1; padding: 8px 6px;
+  background: #2a2a4a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.toggle-btn.active {
+  background: #4a3a8a;
+  border-color: #7b68ee;
+  color: #fff;
+}
+button.action {
+  width: 100%; padding: 10px;
+  background: #3a2a7a;
+  border: 1px solid #5a4aaa;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+button.action:hover { background: #4a3a9a; }
+button.action:disabled { opacity: 0.5; cursor: default; }
+
+#gimbal-warning {
+  display: none;
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 60, 60, 0.2);
+  border: 1px solid #ff4444;
+  border-radius: 6px;
+  color: #ff6666;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+#info {
+  position: absolute; bottom: 16px; left: 16px;
+  background: rgba(16, 16, 40, 0.85);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #aaa;
+}
+#info span { color: #ccc; }
+
+.euler-vals {
+  font-size: 12px; color: #888;
+  margin-top: 6px;
+  font-family: monospace;
+}
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="three-canvas"></canvas>
+  <div id="controls">
+    <h1>3D 회전과 Gimbal Lock 체험</h1>
+
+    <div class="slider-group">
+      <label><span class="axis-x">Roll (X)</span> <span id="roll-val">0°</span></label>
+      <input type="range" id="roll" min="-180" max="180" value="0" step="1">
+    </div>
+    <div class="slider-group">
+      <label><span class="axis-y">Pitch (Y)</span> <span id="pitch-val">0°</span></label>
+      <input type="range" id="pitch" min="-180" max="180" value="0" step="1">
+    </div>
+    <div class="slider-group">
+      <label><span class="axis-z">Yaw (Z)</span> <span id="yaw-val">0°</span></label>
+      <input type="range" id="yaw" min="-180" max="180" value="0" step="1">
+    </div>
+
+    <div class="euler-vals" id="euler-display"></div>
+
+    <div id="gimbal-warning">Gimbal Lock!</div>
+
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="btn-euler" onclick="setMode('euler')">Euler Angles</button>
+      <button class="toggle-btn" id="btn-quat" onclick="setMode('quaternion')">Quaternion SLERP</button>
+    </div>
+
+    <button class="action" id="btn-animate" onclick="startAnimation()">
+      Animate Interpolation (2초)
+    </button>
+    <button class="action" onclick="resetSliders()">초기화</button>
+  </div>
+
+  <div id="info">
+    마우스 드래그로 카메라 회전 | 스크롤로 줌
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// --- Three.js Setup ---
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x1a1a2e);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(4, 3, 5);
+camera.lookAt(0, 0, 0);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0x404060, 1.0);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 5, 5);
+scene.add(dirLight);
+
+// Grid
+const gridHelper = new THREE.GridHelper(8, 16, 0x333355, 0x222244);
+scene.add(gridHelper);
+
+// World axes (thin, faded)
+function makeWorldAxis(dir, color) {
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.3 });
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-4 * dir.x, -4 * dir.y, -4 * dir.z),
+    new THREE.Vector3(4 * dir.x, 4 * dir.y, 4 * dir.z)
+  ]);
+  scene.add(new THREE.Line(geo, mat));
+}
+makeWorldAxis(new THREE.Vector3(1,0,0), 0xff4444);
+makeWorldAxis(new THREE.Vector3(0,1,0), 0x44ff44);
+makeWorldAxis(new THREE.Vector3(0,0,1), 0x4488ff);
+
+// Object group
+const objGroup = new THREE.Group();
+scene.add(objGroup);
+
+// Build coordinate axes on the object
+function createAxisArrow(dir, color, len) {
+  const group = new THREE.Group();
+  // Shaft
+  const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, len, 8);
+  const shaftMat = new THREE.MeshPhongMaterial({ color });
+  const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+  shaft.position.set(dir.x * len / 2, dir.y * len / 2, dir.z * len / 2);
+  if (dir.x === 1) shaft.rotation.z = -Math.PI / 2;
+  else if (dir.z === 1) shaft.rotation.x = Math.PI / 2;
+  group.add(shaft);
+  // Cone
+  const coneGeo = new THREE.ConeGeometry(0.1, 0.25, 12);
+  const coneMat = new THREE.MeshPhongMaterial({ color });
+  const cone = new THREE.Mesh(coneGeo, coneMat);
+  cone.position.set(dir.x * (len + 0.12), dir.y * (len + 0.12), dir.z * (len + 0.12));
+  if (dir.x === 1) cone.rotation.z = -Math.PI / 2;
+  else if (dir.z === 1) cone.rotation.x = Math.PI / 2;
+  group.add(cone);
+  return group;
+}
+
+objGroup.add(createAxisArrow(new THREE.Vector3(1, 0, 0), 0xff4444, 2));
+objGroup.add(createAxisArrow(new THREE.Vector3(0, 1, 0), 0x44ff44, 2));
+objGroup.add(createAxisArrow(new THREE.Vector3(0, 0, 1), 0x4488ff, 2));
+
+// Small box at origin for orientation reference
+const boxGeo = new THREE.BoxGeometry(0.5, 0.35, 0.7);
+const boxMat = new THREE.MeshPhongMaterial({ color: 0x8866cc, transparent: true, opacity: 0.7 });
+const box = new THREE.Mesh(boxGeo, boxMat);
+objGroup.add(box);
+
+// Trail for animation
+const trailMaxPoints = 300;
+const trailPositions = new Float32Array(trailMaxPoints * 3);
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+trailGeo.setDrawRange(0, 0);
+const trailMat = new THREE.LineBasicMaterial({ color: 0xffaa44, transparent: true, opacity: 0.8 });
+const trailLine = new THREE.Line(trailGeo, trailMat);
+scene.add(trailLine);
+
+// --- Orbit Controls (minimal implementation) ---
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
+let spherical = { r: 7, theta: Math.PI / 4, phi: Math.PI / 5 };
+
+function updateCamera() {
+  camera.position.x = spherical.r * Math.sin(spherical.theta) * Math.cos(spherical.phi);
+  camera.position.y = spherical.r * Math.sin(spherical.phi);
+  camera.position.z = spherical.r * Math.cos(spherical.theta) * Math.cos(spherical.phi);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+canvas.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  spherical.theta -= dx * 0.008;
+  spherical.phi = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, spherical.phi + dy * 0.008));
+  prevMouse = { x: e.clientX, y: e.clientY };
+  updateCamera();
+});
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
+canvas.addEventListener('wheel', e => {
+  spherical.r = Math.max(2, Math.min(20, spherical.r + e.deltaY * 0.01));
+  updateCamera();
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  isDragging = true;
+  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+});
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging || !e.touches.length) return;
+  e.preventDefault();
+  const dx = e.touches[0].clientX - prevMouse.x;
+  const dy = e.touches[0].clientY - prevMouse.y;
+  spherical.theta -= dx * 0.008;
+  spherical.phi = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, spherical.phi + dy * 0.008));
+  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  updateCamera();
+}, { passive: false });
+canvas.addEventListener('touchend', () => isDragging = false);
+
+// --- Rotation Logic ---
+let mode = 'euler'; // 'euler' or 'quaternion'
+let animating = false;
+let animStart = 0;
+const ANIM_DURATION = 2000;
+
+const rollSlider = document.getElementById('roll');
+const pitchSlider = document.getElementById('pitch');
+const yawSlider = document.getElementById('yaw');
+const rollVal = document.getElementById('roll-val');
+const pitchVal = document.getElementById('pitch-val');
+const yawVal = document.getElementById('yaw-val');
+const gimbalWarning = document.getElementById('gimbal-warning');
+const eulerDisplay = document.getElementById('euler-display');
+
+function deg2rad(d) { return d * Math.PI / 180; }
+function rad2deg(r) { return r * 180 / Math.PI; }
+
+function getSliderAngles() {
+  return {
+    roll: parseFloat(rollSlider.value),
+    pitch: parseFloat(pitchSlider.value),
+    yaw: parseFloat(yawSlider.value)
+  };
+}
+
+function applyRotation() {
+  if (animating) return;
+  const { roll, pitch, yaw } = getSliderAngles();
+
+  rollVal.textContent = roll + '°';
+  pitchVal.textContent = pitch + '°';
+  yawVal.textContent = yaw + '°';
+
+  const rx = deg2rad(roll);
+  const ry = deg2rad(pitch);
+  const rz = deg2rad(yaw);
+
+  if (mode === 'euler') {
+    objGroup.rotation.order = 'XYZ';
+    objGroup.rotation.set(rx, ry, rz);
+  } else {
+    const euler = new THREE.Euler(rx, ry, rz, 'XYZ');
+    const quat = new THREE.Quaternion().setFromEuler(euler);
+    objGroup.quaternion.copy(quat);
+  }
+
+  // Gimbal lock detection
+  const absPitch = Math.abs(pitch);
+  if (absPitch >= 85) {
+    gimbalWarning.style.display = 'block';
+    gimbalWarning.textContent = `Gimbal Lock! (Pitch = ${pitch}°)`;
+  } else {
+    gimbalWarning.style.display = 'none';
+  }
+
+  // Display actual Euler from matrix
+  const e = new THREE.Euler().setFromQuaternion(objGroup.quaternion, 'XYZ');
+  eulerDisplay.textContent =
+    `Euler (from matrix): X=${rad2deg(e.x).toFixed(1)}° Y=${rad2deg(e.y).toFixed(1)}° Z=${rad2deg(e.z).toFixed(1)}°`;
+}
+
+rollSlider.addEventListener('input', applyRotation);
+pitchSlider.addEventListener('input', applyRotation);
+yawSlider.addEventListener('input', applyRotation);
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-euler').classList.toggle('active', m === 'euler');
+  document.getElementById('btn-quat').classList.toggle('active', m === 'quaternion');
+  applyRotation();
+}
+
+function resetSliders() {
+  rollSlider.value = 0;
+  pitchSlider.value = 0;
+  yawSlider.value = 0;
+  animating = false;
+  trailGeo.setDrawRange(0, 0);
+  document.getElementById('btn-animate').disabled = false;
+  applyRotation();
+}
+
+// --- Animation ---
+let animTargetAngles = { roll: 0, pitch: 0, yaw: 0 };
+let animTargetQuat = new THREE.Quaternion();
+let trailCount = 0;
+
+function startAnimation() {
+  if (animating) return;
+  animTargetAngles = getSliderAngles();
+  const euler = new THREE.Euler(
+    deg2rad(animTargetAngles.roll),
+    deg2rad(animTargetAngles.pitch),
+    deg2rad(animTargetAngles.yaw),
+    'XYZ'
+  );
+  animTargetQuat = new THREE.Quaternion().setFromEuler(euler);
+  animating = true;
+  animStart = performance.now();
+  trailCount = 0;
+  trailGeo.setDrawRange(0, 0);
+  document.getElementById('btn-animate').disabled = true;
+}
+
+// Tip point for trail
+const tipOffset = new THREE.Vector3(0, 0, 2.3);
+
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  if (animating) {
+    let t = (time - animStart) / ANIM_DURATION;
+    if (t >= 1) {
+      t = 1;
+      animating = false;
+      document.getElementById('btn-animate').disabled = false;
+    }
+
+    // Ease in-out
+    const te = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    if (mode === 'euler') {
+      // Linear interpolation of Euler angles
+      const rx = deg2rad(animTargetAngles.roll * te);
+      const ry = deg2rad(animTargetAngles.pitch * te);
+      const rz = deg2rad(animTargetAngles.yaw * te);
+      objGroup.rotation.order = 'XYZ';
+      objGroup.rotation.set(rx, ry, rz);
+    } else {
+      // SLERP
+      const identityQuat = new THREE.Quaternion();
+      const q = new THREE.Quaternion();
+      q.slerpQuaternions(identityQuat, animTargetQuat, te);
+      objGroup.quaternion.copy(q);
+    }
+
+    // Trail
+    if (trailCount < trailMaxPoints) {
+      const tip = tipOffset.clone().applyQuaternion(objGroup.quaternion);
+      trailPositions[trailCount * 3] = tip.x;
+      trailPositions[trailCount * 3 + 1] = tip.y;
+      trailPositions[trailCount * 3 + 2] = tip.z;
+      trailCount++;
+      trailGeo.attributes.position.needsUpdate = true;
+      trailGeo.setDrawRange(0, trailCount);
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// --- Resize ---
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+applyRotation();
+</script>
+</body>
+</html>
