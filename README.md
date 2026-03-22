@@ -1,4 +1,4 @@
-# Robotics Practice
+# Robotics Practice (DRAFT)
 
 Spatial AI 연구실 신입생 가이드의 실습 자료.
 
