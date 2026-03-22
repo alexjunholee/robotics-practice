@@ -791,9 +791,9 @@ AI 발전으로 개선되는 영역이 분명히 있다. 인식 정확도, 의�
 > - **~2005**: 고전적 로보틱스 — 수학적 모델 기반, Kalman Filter, EKF-SLAM. 수작업 특징점과 기하학적 방법이 주류.
 > - **2007~2015**: 실시간 Visual SLAM의 등장 — MonoSLAM(2007), PTAM(2007), ORB-SLAM(2015). 카메라만으로 실시간 위치 추정과 지도 생성이 가능해짐.
 > - **2012~2018**: 딥러닝 혁명 — AlexNet(2012)을 시작으로 ResNet(2015), Faster R-CNN(2015) 등 인식 성능 급상승. Spatial AI에도 학습 기반 방법 도입 시작.
-> - **2020~2023**: Foundation Model 시대 — CLIP(2021), SAM(2023), DINOv2(2023) 등 대규모 사전학습 모델 등장. Zero-shot 인식, 범용 특징 표현의 패러다임 전환.
-> - **2024~**: End-to-End 시스템과 Embodied AI — VLA(Vision-Language-Action) 모델, World Models, 3D Gaussian Splatting + SLAM 등. 인식-계획-제어를 통합하는 방향으로 진화 중.
-> - **지금 주목할 것**: Foundation Model을 로봇 인식에 접목하는 연구(예: Open-vocabulary SLAM, VFM 기반 Scene Understanding)가 가장 활발하다. 고전적 기하학과 학습 기반 방법의 결합이 주요 트렌드이다.
+> - **2020~2023**: Foundation Model 시대 — CLIP(2021), SAM(2023), DINOv2(2023) 등 대규모 사전학습 모델 등장. 이전에는 새 환경마다 데이터 수집→라벨링→학습을 반복해야 했으나, zero-shot으로 처리 가능한 태스크가 크게 늘었다.
+> - **2024~**: End-to-End 시스템과 Embodied AI — VLA(Vision-Language-Action) 모델, World Models, 3D Gaussian Splatting + SLAM 등. 인식-계획-제어를 단일 모델로 통합하는 시도가 나오고 있으나, 2026년 기준 실제 배포 시스템은 여전히 모듈형이 주류다.
+> - **지금 주목할 것**: Foundation Model을 로봇 인식에 접목하는 연구(예: Open-vocabulary SLAM, VFM 기반 Scene Understanding)가 CVPR/ICRA 2025에서 눈에 띄게 늘었다. 고전적 기하학과 학습 기반 방법을 결합하는 흐름도 계속되고 있다.
 
 > **실습 자료**: 이 문서의 주요 개념에 대한 interactive 실습은 [여기](https://alexjunholee.github.io/robotics-practice/)에서 확인할 수 있다.
 
@@ -912,7 +912,7 @@ RGB 이미지와 Depth 이미지를 직접 제공하는 센서이다.
 
 기존 카메라와 다른 패러다임의 센서이다. 프레임 단위로 촬영하는 것이 아니라, 각 픽셀이 **밝기 변화**가 발생할 때만 비동기적으로 이벤트를 출력한다.
 
-최근 Event Camera가 급격히 주목받고 있다. 기존 프레임 기반 카메라로는 해결하기 어려운 고속 환경(드론 고속 비행, 자동차 급회전)에서의 모션 블러 문제를 해결할 수 있기 때문이다. 아직 주류는 아니지만, Event Camera 기반 SLAM, 객체 추적, 광학 흐름(Optical Flow) 연구가 빠르게 늘어나고 있으므로 개념은 알아두면 좋다.
+Event Camera 관련 논문은 CVPR 기준 2019년 5편 수준에서 2024년 30편 이상으로 늘었다. 고속 환경(드론 고속 비행, 자동차 급회전)에서 모션 블러 없이 동작하기 때문이다. 아직 주류는 아니지만, 고속(>100km/h) 환경이나 HDR 조건을 다룰 예정이라면 Gallego et al. survey (TPAMI 2020)와 rpg_dvs_ros 패키지를 살펴보라.
 
 **이벤트 출력 형식**:
 
@@ -1453,7 +1453,7 @@ LM이 실전에서 가장 많이 쓰이는 이유: Gauss-Newton은 초기값이 
 
 **온라인 강의**:
 - MIT 18.06 Linear Algebra (Gilbert Strang) - YouTube — 세계에서 가장 유명한 선형대수 강의
-- Coursera: Mathematics for Machine Learning — 머신러닝에 필요한 수학을 커버
+- Coursera: Mathematics for Machine Learning — 선형대수, 다변수 미적분, PCA를 다룬다. 딥러닝 입문 전 수학이 부족하면 여기서 시작
 - 3Blue1Brown: Essence of Linear Algebra — 기하학적 직관을 최우선으로 다루는 시각적 강의
 
 ### 3.6 심화: Lie Group과 Lie Algebra
@@ -2945,7 +2945,7 @@ DINOv2는 self-distillation 방식으로 학습한다. Teacher-student 구조이
 
 - **Self-distillation**: student와 teacher가 같은 구조. teacher의 weight는 student weight의 EMA.
 - **Centering + Sharpening**: teacher output에 centering(평균 빼기)과 sharpening(낮은 temperature)을 적용하여 mode collapse를 방지한다.
-- 결과물인 DINOv2 feature는 별도 학습 없이도 다양한 비전 태스크에서 좋은 성능을 보인다.
+- 결과물인 DINOv2 feature는 별도 학습 없이도 ImageNet k-NN 83.0%, ADE20K linear probe 82.0% 등 supervised 방법에 필적하는 성능을 보인다.
 
 **실무 -- HuggingFace에서 self-supervised backbone fine-tune**:
 
@@ -3133,13 +3133,13 @@ for batch in test_loader:
 > - **2017**: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
 > - **2020~2021**: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 새 패러다임. DETR로 detection에도 Transformer 적용. Swin Transformer가 다양한 비전 태스크에서 SOTA 달성
 > - **2022~**: ConvNeXt가 "CNN도 아직 죽지 않았다"를 보여줌. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. Spatial AI로의 확장 — depth estimation, 3D scene understanding이 딥러닝의 다음 전장
-> - **지금 주목할 것**: 단일 태스크 모델에서 foundation model로의 전환. 하나의 모델이 detection, segmentation, depth를 동시에 처리하는 방향으로 진화 중. 로보틱스에서는 이런 통합 인식 모델이 Spatial AI의 핵심이 될 것이다
+> - **지금 주목할 것**: 단일 태스크 모델에서 foundation model로의 전환. DINOv2 하나로 detection, segmentation, depth feature를 모두 추출하는 파이프라인이 실험적으로 등장하고 있다
 
 ---
 
 ## 6. Vision Foundation Models (VFM)
 
-이 챕터는 컴퓨터 비전의 가장 최신 패러다임인 Foundation Model을 다룬다. 앞서 배운 딥러닝 모델들이 "특정 데이터셋에서 특정 태스크를 잘 하도록 학습"된 specialist였다면, foundation model은 "거대한 데이터로 범용적 시각 능력을 학습"한 generalist이다. 이 차이를 이해하면, 왜 2023년 이후 로보틱스 연구가 이 방향으로 급격히 움직이는지 감이 올 것이다.
+이 챕터는 컴퓨터 비전의 가장 최신 패러다임인 Foundation Model을 다룬다. 앞서 배운 딥러닝 모델들이 "특정 데이터셋에서 특정 태스크를 잘 하도록 학습"된 specialist였다면, foundation model은 "거대한 데이터로 범용적 시각 능력을 학습"한 generalist이다. 이 차이를 이해하면, 2023년 이후 ICRA/IROS에서 VFM 기반 인식 논문이 빠르게 늘어난 이유를 알 수 있다.
 
 ---
 
@@ -3160,7 +3160,7 @@ for batch in test_loader:
 - 특정 데이터셋에 대한 annotation 없이도 사용 가능
 - 연구실의 Global Module에서 핵심 역할
 
-여기서 "Scale Law"라는 개념이 중요하다. 모델 크기, 데이터 크기, 연산량을 키우면 성능이 power law로 향상된다는 경험적 법칙이다. GPT, CLIP, SAM 등 최근의 대형 모델들이 모두 이 법칙을 활용한다. 즉, "더 크면 더 좋다"가 어느 정도 성립한다는 것이고, 이 때문에 대형 연구소들이 대규모 학습에 투자하는 것이다.
+여기서 "Scale Law"라는 개념이 중요하다. 모델 크기, 데이터 크기, 연산량을 키우면 성능이 power law로 향상된다는 경험적 법칙이다. GPT, CLIP, SAM 등 최근의 대형 모델들이 모두 이 법칙을 활용한다. 즉, "더 크면 더 좋다"가 일정 범위에서 성립한다 (Kaplan et al., 2020; Zhai et al., 2022 for ViT). 단, Hoffmann et al. (2022, Chinchilla)이 보여줬듯 모델 크기만 키우는 것보다 데이터와 연산량의 균형이 더 중요하다.
 
 > **추천 자료**
 > - [Bommasani et al., "On the Opportunities and Risks of Foundation Models" (2021)](https://arxiv.org/abs/2108.07258) — Foundation Model이라는 용어를 정의한 Stanford 보고서
@@ -3177,7 +3177,7 @@ for batch in test_loader:
 
 **Self-Supervised Vision Transformer**로, 라벨 없이 이미지에서 풍부한 특징을 학습한다.
 
-DINOv2는 "라벨 없이도" 범용적인 시각 특징을 학습한다. 이 특징은 분류, 분할, 매칭 등 다양한 태스크에 그대로 사용할 수 있다. 특히 로보틱스에서는 DINOv2의 dense feature가 텍스처 없는 영역에서도 안정적인 매칭을 가능하게 해서, SLAM이나 Visual Odometry의 성능을 크게 끌어올릴 수 있다.
+DINOv2는 "라벨 없이도" 범용적인 시각 특징을 학습한다. 이 특징은 분류, 분할, 매칭 등 다양한 태스크에 그대로 사용할 수 있다. 특히 로보틱스에서는 DINOv2의 dense feature가 텍스처 없는 영역에서도 안정적인 매칭을 가능하게 해서, SLAM이나 Visual Odometry에서 textureless 환경의 tracking failure rate를 줄이는 데 쓰이고 있다.
 
 **특징**:
 - Contrastive learning + Self-distillation
@@ -3293,7 +3293,7 @@ with torch.no_grad():
 
 **Monocular Depth Foundation Model**: 단일 이미지에서 상대적 깊이를 추정한다.
 
-5.7에서 depth estimation을 다뤘지만, Depth Anything은 그것을 foundation model 수준으로 끌어올린 모델이다. 1.5M 라벨 데이터에 62M 비라벨 데이터까지 활용해서, 실내, 실외, 수중, 의료 영상 등 **어떤 도메인에서든** 안정적으로 깊이를 추정한다. 로봇이 새로운 환경에 배치될 때 추가 학습 없이 바로 깊이 정보를 얻을 수 있다.
+5.7에서 depth estimation을 다뤘지만, Depth Anything은 그것을 foundation model 수준으로 끌어올린 모델이다. 1.5M 라벨 데이터에 62M 비라벨 데이터까지 활용해서, 실내(NYU), 실외(KITTI), zero-shot 도메인에서 안정적으로 깊이를 추정한다. 단, 학습 데이터와 크게 다른 도메인(내시경, 수중 등)에서는 정확도가 떨어질 수 있다. 로봇이 새로운 환경에 배치될 때 추가 학습 없이 바로 깊이 정보를 얻을 수 있다.
 
 **특징**:
 - 1.5M 라벨 데이터 + 62M 비라벨 데이터 학습
@@ -3362,7 +3362,7 @@ Grounded-SAM은 로보틱스에서 매우 강력한 조합이다. "red cup"이�
 - 2D VFM features를 3D로 리프팅
 - Semantic NeRF, Feature 3DGS
 
-2D에서 추출한 VFM feature를 3D 표현(NeRF, 3D Gaussian Splatting)에 심어넣으면, 3D 공간 자체에 시맨틱 정보를 담을 수 있다. 예를 들어, "이 3D 맵에서 의자는 어디에 있지?"라는 질문에 텍스트 쿼리로 답할 수 있게 된다. 이런 방향이 Spatial AI에서 가장 활발하다.
+2D에서 추출한 VFM feature를 3D 표현(NeRF, 3D Gaussian Splatting)에 심어넣으면, 3D 공간 자체에 시맨틱 정보를 담을 수 있다. 예를 들어, "이 3D 맵에서 의자는 어디에 있지?"라는 질문에 텍스트 쿼리로 답할 수 있게 된다. 이 방향의 연구가 Spatial AI에서 늘고 있다 (LERF, LangSplat, ConceptGraphs 등).
 
 > **추천 자료**
 > - [Kerr et al., "LERF: Language Embedded Radiance Fields" (2023)](https://arxiv.org/abs/2303.09553) — CLIP feature를 NeRF에 심는 연구. Spatial AI의 대표적 예
@@ -3540,12 +3540,12 @@ VFM adaptation 연구에서는 다음 프로토콜로 비교하는 것이 표준
 > - **2023**: SAM (Segment Anything Model) 발표. 11M 이미지, 1.1B 마스크로 학습. "어떤 물체든 분할"이라는 foundation model 수준의 범용성 달성. 같은 해 DINOv2 발표 — self-supervised 비전 feature의 새 기준
 > - **2024**: SAM2 (비디오 segmentation 확장), Depth Anything V2 (metric depth 지원), Florence-2 (통합 비전 모델) 등 VFM이 빠르게 진화. 모델들의 경량화와 edge 배포가 활발해짐
 > - **2025~**: VFM들의 3D 확장과 멀티모달 통합이 가속. 하나의 foundation model이 detection, segmentation, depth, tracking을 통합 처리하는 방향. 로보틱스에서는 VFM이 perception의 표준 백본으로 자리잡는 추세
-> - **지금 주목할 것**: Foundation model의 핵심 가치는 **zero-shot 능력**이다. 새 환경, 새 물체에서도 추가 학습 없이 작동하는 것 — 이것이 로봇의 범용성을 좌우한다. CLIP+SAM+DINOv2 조합은 현재 로보틱스 perception의 "golden trio"로 불리고 있다. 경량화(FastSAM, MobileSAM)를 통해 실제 로봇에 올리는 것까지가 완전한 파이프라인이다
+> - **지금 주목할 것**: Foundation model의 핵심 가치는 **zero-shot 능력**이다. 새 환경, 새 물체에서도 추가 학습 없이 작동하므로 로봇의 범용성을 높인다. CLIP+SAM+DINOv2 조합은 NLMap, ConceptGraphs 등에서 open-vocabulary 로봇 인식의 대표적 파이프라인으로 쓰이고 있다. 경량화(FastSAM, MobileSAM)를 통해 실제 로봇에 올리는 것까지가 완전한 파이프라인이다
 
 ---
 ## 7. Vision-Language-Action (VLA) & Embodied AI
 
-로봇이 "빨간 컵을 집어서 테이블 위에 놓아줘"라는 말을 듣고 실제로 행동할 수 있다면 어떨까? 지금까지 배운 비전, 언어 모델, 제어를 하나로 합치는 분야가 바로 VLA와 Embodied AI이다. 이걸 모르면 "왜 ChatGPT가 로봇을 움직이지 못하는지", "왜 시뮬레이션에서 잘 되던 정책이 실제 로봇에서 망하는지"를 이해할 수 없다. 최근 로보틱스에서 가장 뜨거운 영역이니, 이 챕터를 잘 잡아두면 연구 트렌드를 읽는 눈이 생긴다.
+로봇이 "빨간 컵을 집어서 테이블 위에 놓아줘"라는 자연어 명령을 받아 실행하는 것이 VLA의 목표다. 비전, 언어 모델, 제어를 하나로 합치는 분야이며, "왜 ChatGPT가 로봇을 움직이지 못하는지", "왜 시뮬레이션에서 잘 되던 정책이 실제 로봇에서 망하는지"를 이해하려면 이 챕터의 개념이 필요하다. CoRL, ICRA 2024-2025에서 VLA 관련 논문 비중이 크게 늘었다.
 
 ### 7.1 VLA 개념
 
@@ -3916,7 +3916,7 @@ DR과 SysID의 장점을 결합한 최근 접근이다.
 > - **2020~**: 대규모 언어 모델(LLM)과 비전의 결합 시도. CLIPort, SayCan 등 언어 기반 로봇 제어 등장
 > - **2022~**: RT-1, RT-2, PaLM-E 등 Foundation Model 기반 로봇 정책 등장. Open X-Embodiment 데이터셋 구축
 > - **2024~**: OpenVLA, Octo 등 오픈소스 VLA 모델 공개. World Model 기반 계획(planning)이 자율주행과 조작 모두에서 주목. End-to-End 자율주행(UniAD, VAD, GenAD)이 modular 방식을 대체하기 시작
-> - **지금 주목할 것**: Foundation Model을 로봇에 적용하는 연구가 폭발적으로 늘고 있다. OpenVLA/Octo처럼 오픈소스 모델을 자기 로봇에 파인튜닝하는 것이 연구의 진입장벽을 크게 낮추고 있으니, 직접 실험해보는 것을 추천한다.
+> - **지금 주목할 것**: Foundation Model을 로봇에 적용하는 연구가 2023년 이후 빠르게 늘고 있다 (RT-2, OpenVLA, Octo, pi0 등). OpenVLA/Octo처럼 오픈소스 모델을 자기 로봇에 파인튜닝할 수 있으니, 직접 실험해보는 것을 추천한다.
 
 ---
 
@@ -5564,7 +5564,7 @@ ROS와 시뮬레이터 외에도, 특정 용도에 특화된 프레임워크와 
 2025+ ── Embodied AI + Foundation Models 시대
           시뮬레이터에서 대규모 사전학습 → Sim-to-Real 전이
           언어 명령 기반 로봇 조작 (VLA)
-          디지털 트윈 기반 로봇 배포 파이프라인
+          NVIDIA Isaac Lab 등에서 시뮬레이터→학습→실제 로봇 배포를 일관된 파이프라인으로 제공 시작
 ```
 
 ---
