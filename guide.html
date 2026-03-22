@@ -7275,7 +7275,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
     - 재구현 시도
     - 여기까지 오면 그 논문의 전문가
 
-> 팁: 처음에는 일주일에 1편을 3-패스로 완전히 이해하는 게, 매일 1편을 대충 읽는 것보다 훨씬 낫다. 나중에 속도가 붙으면 자연스럽게 빨라진다.
+> 팁: 처음에는 일주일에 1편을 3-패스로 완전히 이해하는 게, 매일 1편을 대충 읽는 것보다 낫다. 나중에 속도가 붙으면 자연스럽게 빨라진다.
+
+> AI 활용: 1패스 후에 Claude나 GPT에게 논문 PDF를 주고 "이 논문의 contribution 3줄 요약", "이 수식(Eq.5)을 단계별로 설명", "이 논문과 [비교 논문]의 차이점"을 물어보면 2패스 시간을 크게 줄일 수 있다. 단, AI 요약만 읽고 원문을 안 읽는 건 안 된다 — AI가 미묘한 가정이나 한계를 놓치는 경우가 많다. AI는 이해 보조 도구이지 대체재가 아니다.
 
 #### 필독 논문 리스트
 
@@ -7557,7 +7559,11 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 **15.8.5 도구**
 - LaTeX: Overleaf 또는 로컬 (texlive + vscode)
-- 참고 문헌: Zotero + Better BibTeX, 또는 Adobe Acrobat + 수동 .bib 관리. 본인에게 맞는 워크플로우를 찾으면 된다
+- 참고 문헌 관리: 예전에는 Mendeley, Zotero 같은 전용 도구를 썼지만, 요즘은 **PDF 리더 + AI** 조합이 더 효율적이다. 예를 들어:
+  - Adobe Acrobat으로 논문을 읽고 형광펜/메모를 남긴 뒤, Claude나 GPT에게 PDF를 던져서 핵심 요약, BibTeX 생성, related work 비교를 시킬 수 있다
+  - Google Scholar에서 논문을 찾고, "Cite" 버튼으로 BibTeX를 직접 복사하는 것만으로도 충분한 경우가 많다
+  - Zotero + Better BibTeX는 여전히 쓸만하지만 필수는 아니다. 논문 수가 100편을 넘어가면 관리 도구가 있는 게 편하다
+  - Semantic Scholar의 Research Feed로 관련 논문 추천을 받는 것도 추천한다
 - 파이프라인 그림: TikZ (정밀 제어), draw.io (빠른 제작), Inkscape (SVG 편집)
 - 테이블: booktabs 패키지 (\toprule, \midrule, \bottomrule)
 - 알고리즘: algorithm2e 패키지
@@ -7944,7 +7950,7 @@ sudo apt-get install libeigen3-dev
 
 #### D.3 연구 도구
 
-- [ ] 논문 관리 도구 (Zotero, Adobe Acrobat, Mendeley 등 본인에게 맞는 것)
+- [ ] 논문 읽기/관리 환경 세팅 (PDF 리더 + AI 요약 워크플로우, 또는 Zotero)
 - [ ] 코드 에디터 (VS Code — 원격 서버 SSH 연결 가능)
 - [ ] 실험 로깅 (Weights & Biases 또는 MLflow)
 - [ ] GitHub 계정 (+ SSH 키 설정)
@@ -7992,7 +7998,7 @@ sudo apt-get install libeigen3-dev
 
 ```
 [ ] 지도교수/선배에게 "먼저 읽어야 할 논문 3편" 추천받기
-[ ] 논문 관리 도구 설치 (Zotero, Adobe Acrobat, Mendeley 등)
+[ ] 논문 관리 환경 세팅 (PDF 리더 + AI 워크플로우)
 [ ] 추천받은 논문 3편의 Abstract과 Conclusion 읽기
 [ ] 모르는 용어 정리 (본 문서의 부록 A 활용)
 ```
