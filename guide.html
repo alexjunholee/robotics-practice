@@ -2587,7 +2587,7 @@ CNN은 "이미지의 지역적 패턴(에지, 코너, 텍스처)을 자동으로
 **주요 구성 요소**:
 - **Convolution Layer**: 필터로 특징 추출
 - **Pooling Layer**: 공간 크기 축소 (Max, Average)
-- **Activation**: 비선형성 도입 (ReLU, GELU)
+- **Activation**: nonlinearity 도입 (ReLU, GELU)
 - **Batch Normalization**: 학습 안정화
 
 ```python
@@ -4365,7 +4365,7 @@ density σ(x) = max(-dΦ_s(f(x))/dt, 0) / Φ_s(f(x))
 
 **Surface 추출**
 
-학습된 SDF에서 `f(x) = 0`인 등위면(iso-surface)을 mesh로 변환하는 표준 방법이 **Marching Cubes** 알고리즘이다. 공간을 격자로 나누고, 각 격자 꼭짓점에서 SDF 부호를 확인하여 surface가 지나가는 위치를 보간으로 결정한다.
+학습된 SDF에서 `f(x) = 0`인 iso-surface를 mesh로 변환하는 표준 방법이 **Marching Cubes** 알고리즘이다. 공간을 격자로 나누고, 각 격자 꼭짓점에서 SDF 부호를 확인하여 surface가 지나가는 위치를 보간으로 결정한다.
 
 **비교표**
 

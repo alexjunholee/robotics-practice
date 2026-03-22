@@ -121,8 +121,7 @@ button {
 
   <div class="note">
     SE(3)에서 변환의 순서가 결과를 바꾼다.<br>
-    이것이 Lie group의 비가환성이다.<br>
-    T1&middot;T2 &ne; T2&middot;T1 (일반적으로)
+    T1&middot;T2 &ne; T2&middot;T1 — 곱하는 순서에 따라 결과가 다르다 (non-commutative).
   </div>
 </div>
 
@@ -457,7 +456,7 @@ function updateScene() {
     label.style.display = 'block';
     // Compute positional difference
     const posDiff = p12.distanceTo(p21);
-    label.innerHTML = `비가환: T1&middot;T2 &ne; T2&middot;T1 &nbsp; (위치 차이: ${posDiff.toFixed(3)} m)`;
+    label.innerHTML = `T1&middot;T2 &ne; T2&middot;T1 (non-commutative) &nbsp; (위치 차이: ${posDiff.toFixed(3)} m)`;
   }
 }
 
