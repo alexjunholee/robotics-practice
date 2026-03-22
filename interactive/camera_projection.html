@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Camera Pinhole Projection - 카메라 핀홀 투영</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,7 +73,38 @@ input[type="range"] { width: 100%; accent-color: #00d4ff; }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// OrbitControls inline (minimal)
+!function(){
+const EPS=0.000001,STATE={NONE:-1,ROTATE:0,DOLLY:1,PAN:2};
+class OrbitControls{
+constructor(camera,domElement){
+this.camera=camera;this.domElement=domElement;this.target=new THREE.Vector3();
+this.enableDamping=false;this.dampingFactor=0.05;
+this.rotateSpeed=1;this.zoomSpeed=1;this.panSpeed=1;
+this.minDistance=0;this.maxDistance=Infinity;
+let state=STATE.NONE,spherical=new THREE.Spherical(),sphericalDelta=new THREE.Spherical();
+let panOffset=new THREE.Vector3(),scale=1;
+let rotateStart=new THREE.Vector2(),rotateEnd=new THREE.Vector2(),rotateDelta=new THREE.Vector2();
+let panStart=new THREE.Vector2(),panEnd=new THREE.Vector2(),panDelta=new THREE.Vector2();
+const getZoomScale=()=>Math.pow(0.95,this.zoomSpeed);
+const rotateLeft=a=>{sphericalDelta.theta-=a};
+const rotateUp=a=>{sphericalDelta.phi-=a};
+const panLeft=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,0);v.multiplyScalar(-d);panOffset.add(v)};
+const panUp=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,1);v.multiplyScalar(d);panOffset.add(v)};
+const pan=(dx,dy)=>{let el=this.domElement;if(this.camera.isPerspectiveCamera){let pos=this.camera.position;let tOff=pos.clone().sub(this.target);let tDist=tOff.length();tDist*=Math.tan(this.camera.fov/2*Math.PI/180);panLeft(2*dx*tDist/el.clientHeight,this.camera.matrix);panUp(2*dy*tDist/el.clientHeight,this.camera.matrix)}};
+const onMouseDown=e=>{e.preventDefault();if(e.button===0)state=STATE.ROTATE,rotateStart.set(e.clientX,e.clientY);else if(e.button===1)state=STATE.DOLLY;else if(e.button===2)state=STATE.PAN,panStart.set(e.clientX,e.clientY);if(state!==STATE.NONE){document.addEventListener('mousemove',onMouseMove);document.addEventListener('mouseup',onMouseUp)}};
+const onMouseMove=e=>{e.preventDefault();if(state===STATE.ROTATE){rotateEnd.set(e.clientX,e.clientY);rotateDelta.subVectors(rotateEnd,rotateStart);rotateLeft(2*Math.PI*rotateDelta.x/domElement.clientHeight*this.rotateSpeed);rotateUp(2*Math.PI*rotateDelta.y/domElement.clientHeight*this.rotateSpeed);rotateStart.copy(rotateEnd)}else if(state===STATE.PAN){panEnd.set(e.clientX,e.clientY);panDelta.subVectors(panEnd,panStart);pan(panDelta.x,panDelta.y);panStart.copy(panEnd)}};
+const onMouseUp=()=>{state=STATE.NONE;document.removeEventListener('mousemove',onMouseMove);document.removeEventListener('mouseup',onMouseUp)};
+const onWheel=e=>{e.preventDefault();if(e.deltaY<0)scale/=getZoomScale();else scale*=getZoomScale()};
+const onContextMenu=e=>e.preventDefault();
+domElement.addEventListener('mousedown',onMouseDown);domElement.addEventListener('wheel',onWheel,{passive:false});domElement.addEventListener('contextmenu',onContextMenu);
+this.update=function(){let offset=new THREE.Vector3();let quat=new THREE.Quaternion().setFromUnitVectors(camera.up,new THREE.Vector3(0,1,0));let quatI=quat.clone().invert();offset.copy(camera.position).sub(this.target);offset.applyQuaternion(quat);spherical.setFromVector3(offset);spherical.theta+=sphericalDelta.theta;spherical.phi+=sphericalDelta.phi;spherical.phi=Math.max(EPS,Math.min(Math.PI-EPS,spherical.phi));spherical.radius*=scale;spherical.radius=Math.max(this.minDistance,Math.min(this.maxDistance,spherical.radius));this.target.add(panOffset);offset.setFromSpherical(spherical);offset.applyQuaternion(quatI);camera.position.copy(this.target).add(offset);camera.lookAt(this.target);sphericalDelta.set(0,0,0);panOffset.set(0,0,0);scale=1};
+}
+}
+THREE.OrbitControls=OrbitControls;
+}();
+</script>
 <script>
 const threeCanvas = document.getElementById('threeCanvas');
 const insetCanvas = document.getElementById('imageInset');

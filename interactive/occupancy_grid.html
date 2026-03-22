@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Occupancy Grid Mapping - 점유 격자 지도</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -268,7 +269,12 @@ function render() {
 }
 
 const keys = {};
-document.addEventListener('keydown', e => { keys[e.key] = true; e.preventDefault(); });
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)) {
+    e.preventDefault();
+  }
+});
 document.addEventListener('keyup', e => { keys[e.key] = false; });
 
 function gameLoop() {

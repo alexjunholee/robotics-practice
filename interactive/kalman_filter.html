@@ -49,8 +49,8 @@
       <input type="range" id="qSlider" min="0.01" max="10" step="0.01" value="1.0">
     </div>
     <div class="slider-group">
-      <label>Measurement Noise R <span class="slider-val" id="rVal">2.00</span></label>
-      <input type="range" id="rSlider" min="0.01" max="10" step="0.01" value="2.0">
+      <label>Measurement Noise R <span class="slider-val" id="rVal">50.00</span></label>
+      <input type="range" id="rSlider" min="1" max="200" step="1" value="50">
     </div>
     <div class="buttons">
       <button id="playBtn" class="active">재생 (Play)</button>
@@ -81,7 +81,7 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
-let Q = 1.0, R = 2.0;
+let Q = 1.0, R = 50;
 let playing = true;
 let step = 0;
 
@@ -140,11 +140,11 @@ function doStep() {
   P = P + Q;
 
   // Measurement
-  let z = trueX + gaussRand() * Math.sqrt(R) * 15;
+  let z = trueX + gaussRand() * Math.sqrt(R);
 
   // Update
   currentPhase = 'Update';
-  K = P / (P + R * 15 * 15);
+  K = P / (P + R);
   x_hat = x_hat + K * (z - x_hat);
   P = (1 - K) * P;
 
@@ -278,7 +278,7 @@ document.getElementById('qSlider').addEventListener('input', e => {
 });
 document.getElementById('rSlider').addEventListener('input', e => {
   R = parseFloat(e.target.value);
-  document.getElementById('rVal').textContent = R.toFixed(2);
+  document.getElementById('rVal').textContent = R.toFixed(0);
 });
 
 // Buttons

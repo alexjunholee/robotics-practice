@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stereo Disparity Map - 스테레오 시차 맵</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -52,6 +53,9 @@ input[type="range"] { width: 140px; accent-color: #00d4ff; }
     <label>Focal Length f (초점 거리, px)</label>
     <div class="value" id="valFocal">500</div>
     <input type="range" id="focal" min="100" max="2000" step="50" value="500">
+  </div>
+  <div class="control-group" style="justify-content:center;">
+    <button id="newSceneBtn" style="background:#00d4ff;color:#1a1a2e;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.9em;">New Scene (새 장면)</button>
   </div>
 </div>
 
@@ -164,6 +168,17 @@ function computeDisparity(grayL, grayR, blockSz, searchR, minDisp) {
   return disp;
 }
 
+// Store generated images and their grayscale versions
+let storedGrayL = null;
+let storedGrayR = null;
+
+function generateScene() {
+  const imgL = generateImage(ctxL, 0);
+  const imgR = generateImage(ctxR, 30);
+  storedGrayL = toGray(imgL);
+  storedGrayR = toGray(imgR);
+}
+
 function update() {
   const blockSz = parseInt(document.getElementById('blockSize').value);
   const searchR = parseInt(document.getElementById('searchRange').value);
@@ -179,13 +194,8 @@ function update() {
   document.getElementById('fVal').textContent = f;
   document.getElementById('bVal').textContent = B;
 
-  const imgL = generateImage(ctxL, 0);
-  const imgR = generateImage(ctxR, 30);
-  const grayL = toGray(imgL);
-  const grayR = toGray(imgR);
-
   const t0 = performance.now();
-  const disp = computeDisparity(grayL, grayR, blockSz, searchR, minDisp);
+  const disp = computeDisparity(storedGrayL, storedGrayR, blockSz, searchR, minDisp);
   const t1 = performance.now();
 
   let maxD = 0, minD = Infinity;
@@ -219,6 +229,12 @@ document.querySelectorAll('input[type="range"]').forEach(el => {
   el.addEventListener('input', update);
 });
 
+document.getElementById('newSceneBtn').addEventListener('click', () => {
+  generateScene();
+  update();
+});
+
+generateScene();
 update();
 </script>
 </body>
