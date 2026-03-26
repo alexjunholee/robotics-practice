@@ -697,26 +697,7 @@ AI가 코드를 짜고, 논문을 요약하고, 실험을 제안하는 시대에
 
 AI가 코드를 짜주고 논문을 요약해줘도, 위 네 가지는 대신 못 한다.
 
-### 1.4 로보티시스트에게 필요한 10가지 역량
-
-탑티어 로봇 회사(Boston Dynamics, NVIDIA, Google DeepMind, Figure 등)에서 일하려면 어떤 것을 알아야 하는가? 아래 10가지는 순서가 아니라 영역이다. 자기 전공에 따라 깊이의 차이가 있을 뿐, 전부 한 번은 접해야 한다.
-
-| # | 역량 | 이 가이드에서 다루는 챕터 |
-|---|------|------------------------|
-| 1 | **강체 역학 & 동역학** — 뉴턴-오일러, 라그랑주, Featherstone. 매니퓰레이터든 휴머노이드든 여기서 시작한다. | 5장 |
-| 2 | **제어 이론** — PID는 시작일 뿐. LQR, MPC, impedance control이 실무다. Locomotion은 MPC가 사실상 표준이다. | 6장 |
-| 3 | **상태 추정 & SLAM** — 칼만 필터, factor graph 최적화, LiDAR/Visual SLAM. 로봇이 자기 위치를 모르면 아무것도 못 한다. | 3장, 14장 |
-| 4 | **모션 플래닝 & 궤적 최적화** — RRT/PRM, trajectory optimization, OMPL, Drake. 실제 현장에서는 constrained NLP를 매일 푼다. | 7장 |
-| 5 | **컴퓨터 비전 & 3D 인지** — 캘리브레이션부터 포인트 클라우드, 6D pose estimation, NeRF/3DGS까지. 로봇의 눈이다. | 9장, 10장, 13장 |
-| 6 | **기구학 & 메카트로닉스** — FK/IK, 자코비안, 액추에이터 선정, 통신 프로토콜, 실시간 시스템. 이걸 모르면 "로봇을 만드는 사람"이 아니라 "알고리즘만 짜는 사람"이다. | 4장 |
-| 7 | **수치 최적화 & 수학적 기초** — SVD, Lie group/algebra, convex optimization, nonlinear least squares. 거의 모든 로보틱스 알고리즘이 결국 최적화 문제다. | 3장 |
-| 8 | **학습 기반 로봇 제어** — RL(PPO, SAC), sim-to-real, imitation learning, diffusion policy. Locomotion과 dexterous manipulation에서 이미 전통적 방법을 넘어서고 있다. | 8장 |
-| 9 | **시스템 소프트웨어 엔지니어링** — ROS2, 실시간 시스템(RTOS, EtherCAT), C++/Python, CI/CD. 알고리즘을 실제 로봇에 올려서 안정적으로 돌릴 줄 모르면 회사에서 쓸 수 없다. | 15장, 16장 |
-| 10 | **Foundation Models for Robotics** — VLM/LLM 기반 task planning, language-conditioned policy, open-vocabulary perception. 이 방향이 폭발적으로 성장 중이고, "고전 역량 + FM 활용 능력"을 동시에 갖춘 사람이 가장 희소하다. | 11장, 12장 |
-
-이 가이드는 원래 Spatial AI(3, 5, 7, 9, 10번)에 특화되어 있었지만, 1, 2, 4, 6, 8번도 다루도록 확장했다. 각 영역의 깊이는 전공자 수준은 아니지만, "이 분야가 뭘 하는지, 핵심 개념이 뭔지, 더 공부하려면 뭘 봐야 하는지"는 충분히 다룬다.
-
-### 1.5 이 문서의 활용 방법
+### 1.4 이 문서의 활용 방법
 
 이 문서는 **참고서(Reference)**로 활용하길 권장한다:
 
