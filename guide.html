@@ -6628,6 +6628,8 @@ DETR은 detection을 "집합 예측 문제"로 재정의했다. 기존 방법들
 > - [Carion et al., "End-to-End Object Detection with Transformers" (2020)](https://arxiv.org/abs/2005.12872) — DETR 원논문
 > - [Yannic Kilcher — DETR 설명](https://www.youtube.com/watch?v=T35ba_VXkMY) — 논문을 잘 풀어서 설명
 > - [HuggingFace — Object Detection 가이드](https://huggingface.co/docs/transformers/tasks/object_detection) — Transformers 라이브러리로 DETR 사용하기
+> - [Zhao et al., "DETRs Beat YOLOs on Real-time Object Detection" (RT-DETR, CVPR 2024, arXiv:2304.08069)](https://arxiv.org/abs/2304.08069) — DETR 계열 최초로 YOLO급 실시간 속도 달성. 실시간 detection의 새로운 방향
+> - [Cheng et al., "YOLO-World: Real-Time Open-Vocabulary Object Detection" (CVPR 2024, arXiv:2401.17270)](https://arxiv.org/abs/2401.17270) — YOLO에 텍스트 프롬프트 기반 open-vocabulary detection 추가. 로보틱스에서 임의 물체 탐지에 실용적
 
 ---
 
@@ -7821,6 +7823,12 @@ DR과 SysID의 장점을 결합한 최근 접근이다.
 > - [Muratore et al., "Robot Learning from Randomized Simulations" (2022)](https://arxiv.org/abs/2111.00137) — DR 체계적 정리
 > - [Hanna & Stone, "Grounded Action Transformation for Sim-to-Real" (AAAI 2017)](https://arxiv.org/abs/1511.07461) — transfer 방법론
 > - [NVIDIA Isaac Lab Tutorials](https://isaac-sim.github.io/IsaacLab/) — 실습용 DR/SysID 파이프라인
+
+> **추가 논문 (3D/Spatial 이해 + 벤치마크)**
+> - [Hong et al., "3D-LLM: Injecting the 3D World into Large Language Models" (NeurIPS 2023, arXiv:2307.12981)](https://arxiv.org/abs/2307.12981) — LLM에 3D 공간 이해 능력을 부여. 3D captioning, QA, navigation
+> - [Chen et al., "SpatialVLM: Endowing Vision-Language Models with Spatial Reasoning" (CVPR 2024, arXiv:2401.12168)](https://arxiv.org/abs/2401.12168) — VLM에 거리/크기 등 공간 추론 능력 추가
+> - [Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots" (RSS 2024, arXiv:2406.02523)](https://arxiv.org/abs/2406.02523) — 100개 주방 태스크, 150+ 물체 카테고리. 가정용 로봇 벤치마크
+> - [Szot et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — 사람-로봇 공존 시뮬레이션. Social navigation, 협업 태스크
 
 > **기술 흐름: VLA & Embodied AI**
 > - **~2015**: 개별 태스크별 모방학습(imitation learning), 단일 물체 grasping 연구 중심
