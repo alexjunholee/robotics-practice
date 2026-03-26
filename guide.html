@@ -5792,28 +5792,126 @@ WORKDIR /workspace
 > - [NetworkChuck - Docker Tutorial](https://www.youtube.com/watch?v=eGz9DS-aIeY) — Docker를 재미있고 쉽게 설명하는 영상. 입문에 최고
 > - [Fireship - Docker in 100 Seconds](https://www.youtube.com/watch?v=Gjnup-PuquQ) — Docker 핵심 개념을 빠르게 훑어보기
 
-### 11.3.3 NVIDIA Docker
+### 11.3.3 NVIDIA Container Toolkit
 
-GPU를 컨테이너에서 사용하기 위한 도구이다.
+일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 거의 100% 필요하다.
 
-일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 거의 100% 이것이 필요하다.
+참고: 과거에 쓰던 `nvidia-docker2`는 deprecated되었다. 현재는 `nvidia-container-toolkit`이 표준이고, `--runtime=nvidia` 대신 `--gpus all`을 쓴다.
 
 ```bash
-# nvidia-container-toolkit 설치
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
-    sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+# nvidia-container-toolkit 설치 (Ubuntu 22.04/24.04)
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+    sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 
-# 사용
-docker run --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
+# Docker 데몬에 NVIDIA 런타임 등록
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# 테스트
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 ```
 
-> **추천 자료**
-> - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — NVIDIA Docker 공식 설치 및 설정 가이드
+### 11.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
 
-> **⚠ AI 에이전트 주의**: AI에게 Docker 설정을 물어볼 때는 "ROS2 + GPU + USB 센서 + GUI 시각화"를 동시에 쓸 건지 알려줘라. 각각을 따로 물어보면 서로 충돌하는 설정을 받게 된다. 한번에 전체 요구사항을 전달해야 한다.
+로보틱스에서 Docker를 쓸 때는 GPU, GUI(RViz/Gazebo), USB 센서를 동시에 써야 하는 경우가 대부분이다. 이걸 하나씩 붙이면 충돌하기 쉽고, 한번에 설정하는 게 낫다.
+
+[turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)가 이 조합을 잘 정리해둔 프로젝트이니 참고할 것. 아래는 그 구조를 기반으로 현재 환경(nvidia-container-toolkit + ROS2 Humble)에 맞춘 레시피다.
+
+**1단계: X11 포워딩 준비 (호스트)**
+
+```bash
+# 호스트에서 한 번만 실행
+sudo apt-get install -y xauth
+xhost +local:docker
+```
+
+`xhost +local:docker`는 Docker 컨테이너에서만 X 서버 접근을 허용한다. `xhost +`(전체 허용)보다 안전하지만, 보안이 중요한 환경이라면 `xauth` 기반 인증을 쓰는 게 맞다.
+
+**2단계: 실행 스크립트**
+
+```bash
+#!/bin/bash
+# run_ros2_docker.sh — GPU + GUI + USB 센서 풀 세팅
+
+docker run --rm -it \
+    --gpus all \
+    --privileged \
+    --net=host \
+    --ipc=host \
+    -e DISPLAY=$DISPLAY \
+    -e QT_X11_NO_MITSHM=1 \
+    -e ROS_DOMAIN_ID=42 \
+    -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+    -v $HOME/.Xauthority:/root/.Xauthority:ro \
+    -v /dev:/dev \
+    -v $HOME/catkin_ws:/root/catkin_ws \
+    --name ros2_dev \
+    osrf/ros:humble-desktop \
+    bash
+```
+
+각 플래그가 뭘 하는지:
+
+| 플래그 | 역할 |
+|--------|------|
+| `--gpus all` | GPU 패스스루 (nvidia-container-toolkit) |
+| `--privileged` | USB/시리얼 디바이스 전체 접근. 프로덕션에서는 `--device`로 개별 매핑할 것 |
+| `--net=host` | DDS multicast 통신을 위해 호스트 네트워크 공유. ROS2 노드 간 통신에 필수 |
+| `--ipc=host` | 공유 메모리. Rviz 등 GUI 도구에서 필요 |
+| `-e QT_X11_NO_MITSHM=1` | 이거 빠지면 RViz가 segfault로 죽는다. MIT-SHM이 Docker에서 안 됨 |
+| `-e ROS_DOMAIN_ID=42` | 같은 네트워크의 다른 ROS2 시스템과 격리. 연구실에서 여러 명이 쓸 때 필수 |
+| `-v /dev:/dev` | 센서 USB가 언제 꽂힐지 모르므로 /dev 전체 마운트. `--privileged`와 세트 |
+| `-v .Xauthority` | X11 인증. 이걸 안 걸면 `cannot open display` |
+
+**3단계: 작업 후 컨테이너 저장**
+
+```bash
+# 컨테이너 안에서 패키지 설치 등 작업을 했으면 커밋
+docker commit ros2_dev my_ros2_workspace:v1
+
+# 다음번에는 저장된 이미지로 실행
+# run_ros2_docker.sh에서 이미지 이름만 바꾸면 된다
+```
+
+**Dockerfile로 관리하는 방식** (더 권장):
+
+```dockerfile
+FROM osrf/ros:humble-desktop
+
+# 기본 도구
+RUN apt-get update && apt-get install -y \
+    python3-pip git wget curl vim \
+    ros-humble-rviz2 \
+    ros-humble-rqt* \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 패키지
+RUN pip3 install torch torchvision numpy opencv-python-headless
+
+# ROS2 워크스페이스
+RUN mkdir -p /root/ros2_ws/src
+WORKDIR /root/ros2_ws
+
+# 소스 빌드가 필요한 패키지가 있으면 여기서
+# RUN cd src && git clone https://github.com/...
+# RUN . /opt/ros/humble/setup.sh && colcon build
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["bash"]
+```
+
+`docker commit`보다 Dockerfile이 나은 이유: 나중에 "이 이미지에 뭐가 깔려있지?"를 추적할 수 있다. commit으로 만든 이미지는 히스토리가 없어서 재현이 안 된다.
+
+> **추천 자료**
+> - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — ROS + NVIDIA + GUI Docker 설정 레퍼런스. Melodic부터 Humble까지 지원
+> - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — 공식 설치 가이드
+> - [OSRF Docker Images](https://hub.docker.com/r/osrf/ros) — ROS 공식 Docker 이미지. `humble-desktop`이 GUI 포함 버전
+
+> **AI 에이전트 주의**: AI에게 Docker 설정을 물어볼 때는 "ROS2 + GPU + USB 센서 + GUI 시각화"를 동시에 쓸 건지 한번에 알려줘라. 각각을 따로 물어보면 서로 충돌하는 설정을 준다. 특히 `QT_X11_NO_MITSHM=1`과 `ROS_DOMAIN_ID`는 AI가 빠뜨리는 대표적인 항목이다.
 
 ### 11.4 버전 관리: Git/GitHub
 
