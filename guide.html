@@ -3431,6 +3431,7 @@ for i in range(n_contacts):
 > **추천 자료**
 > - Stewart, "Rigid-Body Dynamics with Friction and Impact", SIAM Review 2000 — 접촉 역학의 수학적 기초
 > - Todorov, "Convex and analytically-invertible dynamics with contacts and constraints", ICRA 2014 — MuJoCo의 접촉 모델 논문
+> - [Todorov et al., "MuJoCo: A Physics Engine for Model-Based Control" (IROS 2012)](https://ieeexplore.ieee.org/document/6386109) — 접촉 기반 제어 시뮬레이션의 표준. 볼록 접촉 모델과 velocity stepping 소개
 > - Drake의 접촉 모델 documentation (https://drake.mit.edu/doxygen_cxx/group__hydroelastic__user__guide.html) — Hydroelastic contact 설명
 > - Russ Tedrake, *Underactuated Robotics*, Ch. "Contact" (https://underactuated.csail.mit.edu/) — 접촉 역학 개론
 
@@ -4587,6 +4588,11 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 > https://osqp.org/
 > Linear MPC용 QP solver. 빠르고, robust하고, 코드 생성(code generation)이 가능하여 임베디드 시스템에 배포할 수 있다. C 구현 기반으로 Python, MATLAB, Julia 등 다양한 바인딩을 제공한다.
 
+> **주요 논문**
+> - [Hogan, "Impedance Control: An Approach to Manipulation" (ASME JDSMC 1985)](https://doi.org/10.1115/1.3140702) — 임피던스 제어의 원논문. 위치 제어와 힘 제어를 통합하는 프레임워크 제시
+> - [Khatib, "A Unified Approach for Motion and Force Control of Robot Manipulators: The Operational Space Formulation" (IEEE RA 1987)](https://doi.org/10.1109/JRA.1987.1087068) — Operational Space Control의 원논문. Task-space 동역학 유도와 제어의 기초
+> - [Khazoom et al., "Tailoring Solution Accuracy for Fast Whole-Body MPC" (RA-L 2024, arXiv:2407.10789)](https://arxiv.org/abs/2407.10789) — 실시간 whole-body MPC의 최신 접근
+
 ---
 
 ### 기술 흐름
@@ -5072,6 +5078,10 @@ MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Langua
 > **CasADi**
 > https://web.casadi.org/
 > Nonlinear trajectory optimization 구현 표준 도구.
+
+> **추가 논문**
+> - [Garrett et al., "Integrated Task and Motion Planning" (2021, arXiv:2010.01083)](https://arxiv.org/abs/2010.01083) — TAMP의 표준 서베이 논문
+> - [Janner et al., "Planning with Diffusion for Flexible Behavior Synthesis" (ICML 2022, arXiv:2205.09991)](https://arxiv.org/abs/2205.09991) — trajectory-level diffusion 기반 planning의 시작
 
 ---
 
@@ -5708,6 +5718,12 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 > https://robomimic.github.io/
 > 모방학습 알고리즘 벤치마크. BC, BC-RNN, HBC 등 다양한 모방학습 방법을 동일 조건에서 비교할 수 있다.
 
+> **추가 논문**
+> - [Andrychowicz et al., "Hindsight Experience Replay" (NeurIPS 2017, arXiv:1707.01495)](https://arxiv.org/abs/1707.01495) — sparse reward 문제 해결의 핵심. 실패한 trajectory를 성공으로 재레이블링
+> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — 단일 하이퍼파라미터로 150+ 도메인 학습. World model 기반 RL의 현 시점 최고 성과
+> - [Chi et al., "Universal Manipulation Interface" (UMI, RSS 2024, arXiv:2402.10329)](https://arxiv.org/abs/2402.10329) — 핸드헬드 그리퍼로 데이터 수집, 다양한 로봇에 zero-shot 배포
+> - [Fu et al., "Mobile ALOHA" (CoRL 2024, arXiv:2401.02117)](https://arxiv.org/abs/2401.02117) — 모바일 베이스 + 양팔 텔레오퍼레이션. co-training으로 성공률 대폭 향상
+
 
 ---
 
@@ -6168,6 +6184,7 @@ flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5
 > **추천 자료**
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — 광류의 수학적 원리
 > - [Teed & Deng, "RAFT: Recurrent All-Pairs Field Transforms for Optical Flow" (2020)](https://arxiv.org/abs/2003.12039) — 딥러닝 기반 optical flow의 대표작
+> - [Huang et al., "FlowFormer: A Transformer Architecture for Optical Flow" (ECCV 2022, arXiv:2203.16194)](https://arxiv.org/abs/2203.16194) — Transformer 기반 optical flow
 > - [OpenCV Optical Flow 튜토리얼](https://docs.opencv.org/4.x/d4/dee/tutorial_optical_flow.html) — Lucas-Kanade, Farneback 코드 예제
 
 > **실습**: [Optical Flow 시각화](https://alexjunholee.github.io/robotics-practice/app.html#optical_flow)
@@ -6688,6 +6705,7 @@ depth = result['depth']
 
 > **추천 자료**
 > - [Yang et al., "Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data" (2024)](https://arxiv.org/abs/2401.10891) — Depth Anything 원논문
+> - [Godard et al., "Digging Into Self-Supervised Monocular Depth Estimation" (Monodepth2, ICCV 2019, arXiv:1806.01260)](https://arxiv.org/abs/1806.01260) — self-supervised depth의 기준선
 > - [HuggingFace — Monocular Depth Estimation](https://huggingface.co/docs/transformers/tasks/monocular_depth_estimation) — 바로 돌려볼 수 있는 코드
 > - [Papers With Code — Monocular Depth Estimation](https://paperswithcode.com/task/monocular-depth-estimation) — 최신 벤치마크 확인
 
@@ -7004,6 +7022,7 @@ for batch in test_loader:
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) -- Domain randomization 원논문
 > - [Ganin et al., "Domain-Adversarial Training of Neural Networks" (2016)](https://arxiv.org/abs/1505.07818) -- Adversarial domain adaptation 원논문 (GRL 제안)
 > - [Wang et al., "TENT: Fully Test-Time Adaptation by Entropy Minimization" (2021)](https://arxiv.org/abs/2006.10726) -- TTA 대표작
+> - [Wen et al., "FoundationPose: Unified 6D Pose Estimation and Tracking of Novel Objects" (CVPR 2024, arXiv:2312.08344)](https://arxiv.org/abs/2312.08344) — 새로운 물체의 6D pose 추정. CAD 모델 또는 참조 이미지 몇 장으로 동작
 
 ---
 
@@ -8190,8 +8209,11 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 > **추천 자료**
 > - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — 3DGS 원 논문
+> - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — 2D Gaussian으로 표면 복원 품질 향상
 > - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — 3DGS + SLAM의 대표작
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
+> - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — 카메라 내부/외부 파라미터 없이 이미지 쌍에서 dense 3D 복원. 3D reconstruction 패러다임 전환
+> - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching 추가. 복원 + 정밀 대응점 동시 제공
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF/3DGS 실험 통합 프레임워크
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — 공식 코드
 
@@ -8647,6 +8669,7 @@ Factor Graph가 뭐냐면: 변수(로봇 포즈, 랜드마크 위치)와 제약(
 
 > **추천 자료**
 > - [Shan et al., "LIO-SAM: Tightly-coupled Lidar Inertial Odometry via Smoothing and Mapping" (2020)](https://arxiv.org/abs/2007.00258) — LIO-SAM 논문
+> - [Vizzo et al., "KISS-ICP: In Defense of Point-to-Point ICP" (RA-L 2023, arXiv:2209.15397)](https://arxiv.org/abs/2209.15397) — 잘 만든 vanilla ICP가 복잡한 LiDAR odometry와 동등한 성능. 단순함의 힘
 > - [LIO-SAM GitHub](https://github.com/TixiaoShan/LIO-SAM) — 공식 코드, ROS 지원
 > - [GTSAM Documentation](https://gtsam.org/) — Factor Graph 최적화 라이브러리. LIO-SAM, ORB-SLAM3 등 다양한 SLAM 시스템의 백엔드로 사용된다
 > - [Frank Dellaert — Factor Graphs for Robot Perception (ICRA Tutorial)](https://www.youtube.com/watch?v=yDRIIeNA-dc) — GTSAM 개발자가 직접 설명하는 Factor Graph
