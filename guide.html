@@ -1062,6 +1062,8 @@ SLAM을 돌렸는데 드리프트가 심할 때, IMU 특성을 이해하지 못�
 > - [Titterton & Weston — Strapdown Inertial Navigation Technology](https://ieeexplore.ieee.org/book/5765860) — IMU 원리와 관성 항법의 교과서
 > - [Cyrill Stachniss — IMU and Inertial Navigation](https://www.youtube.com/watch?v=uHbRKvD8TWg) — IMU의 작동 원리와 오차 특성을 시각적으로 설명
 > - [Allan Variance — IMU 노이즈 분석 가이드 (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--background/specifications--allan-variance) — Allan Variance를 이용한 IMU 노이즈 파라미터 추출 방법
+> - [정진용 블로그 — IMU Filter (AHRS)](https://jinyongjeong.github.io/2020/01/10/IMU_filter/) — IMU 센서의 AHRS 필터 개요. Madgwick 필터와 ROS 패키지 소개
+> - [정진용 블로그 — Realsense Ubuntu driver 설치](https://jinyongjeong.github.io/2020/06/20/Realsense-Ubuntu-driver-%EC%84%A4%EC%B9%98/) — Intel RealSense 드라이버 설치 가이드
 
 ### 2.4 GPS/GNSS
 
@@ -1715,6 +1717,7 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 > - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) -- Lie group의 핵심만 20페이지로 요약. 논문 읽기 전에 이것부터
 > - [TUM Multiple View Geometry, Ch.2 -- Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) -- Daniel Cremers 교수의 강의. SO(3), SE(3)를 시각적으로 설명
 > - [Sophus GitHub](https://github.com/strasdat/Sophus) -- C++ Lie group 라이브러리. 코드를 읽으면 이해가 빨라진다
+> - [정진용 블로그 — SE(3) and SO(3) transformation](https://jinyongjeong.github.io/2016/06/07/se3_so3_transformation/) — SE(3), SO(3) 변환의 한글 정리. GL(3), O(3)부터 체계적으로 설명
 
 ### 3.7 심화: Factor Graph
 
@@ -1876,6 +1879,7 @@ GTSAM vs Ceres 비교:
 > **추천 자료**
 > - [Ceres Solver 공식 pose_graph_3d 예제](https://ceres-solver.googlesource.com/ceres-solver/+/master/examples/slam/pose_graph_3d/) -- 위 코드의 전체 버전
 > - [Ceres Solver Tutorial](http://ceres-solver.org/tutorial.html) -- AutoDiff, Manifold 개념 설명
+> - [정진용 블로그 — Ceres Solver Tutorial](https://jinyongjeong.github.io/2023/07/22/Ceres_tutorial/) — Ceres Solver 발표자료와 GitHub 실습 코드. 비선형 최적화 입문에 적합
 
 ### 3.8 심화: Robust Estimation
 
@@ -1938,6 +1942,7 @@ OpenCV의 `cv::findHomography`, `cv::findFundamentalMat` 등에서 `cv::USAC_MAG
 > **추천 자료**
 > - [State Estimation for Robotics, Ch.5 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) -- 바이어스, 대응 문제, outlier를 다루는 실전적 챕터
 > - [Hartley & Zisserman, Ch.4 -- Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) -- RANSAC의 원본 설명과 robust estimation 이론
+> - [정진용 블로그 — Bundle Adjustment의 Jacobian 계산](https://jinyongjeong.github.io/2020/03/01/Jacobian_of_BA/) — BA의 reprojection error Jacobian을 Lie algebra와 quaternion으로 유도. 손필기 수식 포함
 
 > **실습**: [RANSAC 시각화](https://alexjunholee.github.io/robotics-practice/app.html#ransac)
 > Outlier가 포함된 데이터에서 RANSAC이 inlier/outlier를 분류하고 모델을 피팅하는 과정을 단계별로 확인할 수 있다.
@@ -5914,6 +5919,8 @@ Opening과 Closing의 순서를 헷갈리는 사람이 많은데 — Opening은 
 > - [Stanford CS231A — Camera Models](https://web.stanford.edu/class/cs231a/) — 기하 기반 CV의 핵심 강의
 > - [First Principles of CV — Camera and Imaging](https://www.youtube.com/playlist?list=PL2zRqk16wsdoYzrWStQ2SQHXXS2K6ofd4) — Pinhole부터 실제 렌즈까지 차근차근 설명
 > - [Szeliski Ch.2 — Image Formation](https://szeliski.org/Book/) — 카메라 모델의 수학적 기초
+> - [정진용 블로그 — Camera Models and Distortion (Perspective, Fisheye, Omni)](https://jinyongjeong.github.io/2020/06/15/Camera_and_distortion_model/) — Perspective, Equidistant, Omni 카메라 모델 비교 정리
+> - [정진용 블로그 — OpenCV Camera model 정리](https://jinyongjeong.github.io/2020/06/19/SLAM-Opencv-Camera-model-%EC%A0%95%EB%A6%AC/) — OpenCV의 핀홀/어안 카메라 모델 구현 기준 정리
 
 > **실습**: [Camera Projection](https://alexjunholee.github.io/robotics-practice/app.html#camera_projection)
 > 3D 공간의 점이 카메라 내부/외부 파라미터에 의해 2D 이미지로 투영되는 과정을 인터랙티브하게 확인할 수 있다.
@@ -8493,6 +8500,7 @@ Foundation model (CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구�
 > - [Thrun, Burgard, Fox, "Probabilistic Robotics" (Textbook)](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/) — SLAM의 수학적 기반을 다루는 교과서. 칼만 필터, 파티클 필터, EKF-SLAM 등
 > - [Barfoot, "State Estimation for Robotics" (Free PDF)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 상태 추정의 수학을 깊이 있게 다루는 교재. 무료 PDF 제공
 > - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — SLAM 관련 논문, 라이브러리, 데이터셋을 모아놓은 목록
+> - [정진용 블로그 — SLAM 강의 시리즈 (Freiburg Robot Mapping 기반)](https://jinyongjeong.github.io/2017/02/13/lec01_SLAM_bayes_filter/) — Bayes filter부터 EKF/UKF/Particle filter, Graph SLAM, Robust SLAM까지 15편 시리즈. 한글로 된 SLAM 입문 자료 중 가장 체계적
 
 > **실습**: [SE(2) Odometry](https://alexjunholee.github.io/robotics-practice/app.html#se2_odometry)
 > 2D 평면에서의 odometry 누적 과정을 직접 조작하며, drift가 어떻게 발생하는지 확인할 수 있다.
@@ -8594,6 +8602,7 @@ ORB-SLAM의 역사적 맥락:
 > - [Campos et al., "ORB-SLAM3: An Accurate Open-Source Library for Visual, Visual-Inertial and Multi-Map SLAM" (2021)](https://arxiv.org/abs/2007.11898) — ORB-SLAM3 논문
 > - [ORB-SLAM3 GitHub](https://github.com/UZ-SLAMLab/ORB_SLAM3) — 공식 코드
 > - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — ORB-SLAM3 테스트용 표준 데이터셋
+> - [정진용 블로그 — Visual SLAM 비교 실험 (KAIST Urban Dataset)](https://jinyongjeong.github.io/2019/10/22/visual_slam_compare/) — ORB-SLAM2 vs VINS-Fusion 실전 비교. 실제 데이터셋에서의 성능 차이 분석
 
 ### 14.3.2 DSO (Direct Sparse Odometry)
 
@@ -8783,6 +8792,7 @@ SLAM을 돌려보면 시간이 지날수록 지도가 뒤틀리는 걸 볼 수 �
 > - [GTSAM Documentation & Tutorials](https://gtsam.org/) — Factor Graph 기반 최적화 라이브러리. Pose Graph Optimization 예제 포함
 > - [Cyrill Stachniss — Graph-based SLAM](https://www.youtube.com/watch?v=uHbRKvD8TWg) — Pose Graph Optimization의 직관적 설명
 > - [g2o GitHub](https://github.com/RainerKuemmerle/g2o) — Graph Optimization 프레임워크
+> - [정진용 블로그 — Robust Graph SLAM](https://jinyongjeong.github.io/2017/03/04/lec15_Robust_Graph_SLAM/) — M-estimator, Max-mixture, DCS 등 robust SLAM 기법 한글 해설
 
 > **실습**: [Pose Graph Optimization](https://alexjunholee.github.io/robotics-practice/app.html#pose_graph)
 > Pose Graph의 노드(포즈)와 에지(제약)를 조작하고, loop closure 추가 시 전체 경로가 어떻게 보정되는지 확인할 수 있다.
@@ -9664,6 +9674,8 @@ nvcc --version      # CUDA 버전
 > **추천 자료**
 > - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — PyTorch와 CUDA 버전 매칭 확인. 설치 전 확인할 것
 > - [NVIDIA CUDA Toolkit Documentation](https://docs.nvidia.com/cuda/) — CUDA 공식 문서
+> - [정진용 블로그 — Ubuntu NVIDIA Graphic Driver 설치](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/) — nouveau 커널 문제 등 드라이버 설치 트러블슈팅
+> - [정진용 블로그 — 그래픽 카드별 CUDA 및 OpenCV 설정](https://jinyongjeong.github.io/2016/09/19/cuda_setting/) — GPU 모델별 CUDA/cuDNN/OpenCV 호환 설정
 
 ### 16.2.3 환경 관리
 
@@ -10064,6 +10076,8 @@ TEST(MyTest, BasicTest) {
 > - [Real Python - Python Testing with pytest](https://realpython.com/pytest-python-testing/) — pytest 사용법 상세 튜토리얼
 > - [The Missing Semester (MIT)](https://missing.csail.mit.edu/) — 셸, 에디터, 디버깅, 프로파일링 등 개발 도구 전반. 연구실 입학 전에 한 번 쭉 보면 좋다
 > - [Fireship YouTube](https://www.youtube.com/@Fireship) — 각종 개발 도구를 "100 Seconds" 시리즈로 빠르게 훑어볼 수 있다
+> - [정진용 블로그 — 로봇 소프트웨어 개발 문화](https://jinyongjeong.github.io/2025/02/14/developmen_culture/) — 코드 리뷰, CI/CD, 스타일 가이드 등 로봇 개발팀의 개발 문화 정착 방법
+> - [정진용 블로그 — 로봇 개발과 테스트 코드](https://jinyongjeong.github.io/2025/02/19/test_code/) — 로봇 소프트웨어에서 테스트 코드가 필수인 6가지 이유
 
 ### 기술 흐름: 개발 환경 & 도구의 과거 → 현재 → 미래
 
@@ -11866,6 +11880,11 @@ A: 이건 정말 시간이 해결해준다. 몇 가지 팁:
 - **PDF 리더에서 형광펜을 활용하라**: 핵심 문장을 색칠하면서 읽으면 집중도가 올라간다. Adobe Acrobat, Zotero 내장 뷰어 등 본인이 편한 도구를 쓰면 된다.
 
 ### C. 트러블슈팅 가이드
+
+> **추천 자료**
+> - [정진용 블로그 — Ubuntu apt-get 명령어 정리](https://jinyongjeong.github.io/2016/06/07/Ubuntu_apt_get_commend/) — apt-get 기본 명령어 레퍼런스
+> - [정진용 블로그 — SSH keygen 설정](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/) — SSH 키 생성 및 서버 접속 설정
+> - [정진용 블로그 — Ubuntu CPU Frequency 최적화](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/) — 실험 시 CPU 성능 최대로 올리기
 
 #### C.1 CUDA / PyTorch 관련
 
