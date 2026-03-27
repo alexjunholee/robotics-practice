@@ -600,20 +600,25 @@ mark.search-highlight {
 1. [서론: Spatial AI란?](#1-서론-spatial-ai란)
 2. [센서 (Sensors)](#2-센서-sensors)
 3. [수학적 기초 (Mathematical Foundations)](#3-수학적-기초-mathematical-foundations)
-4. [컴퓨터 비전 기초 (Computer Vision Fundamentals)](#4-컴퓨터-비전-기초-computer-vision-fundamentals)
-5. [딥러닝 기반 인식 (Deep Learning for Perception)](#5-딥러닝-기반-인식-deep-learning-for-perception)
-6. [Vision Foundation Models (VFM)](#6-vision-foundation-models-vfm)
-7. [Vision-Language-Action (VLA) & Embodied AI](#7-vision-language-action-vla--embodied-ai)
-8. [3D 비전 (3D Vision)](#8-3d-비전-3d-vision)
-9. [SLAM & Odometry](#9-slam--odometry)
-10. [로봇 프레임워크 (Robot Frameworks)](#10-로봇-프레임워크-robot-frameworks)
-11. [개발 환경 & 도구](#11-개발-환경--도구)
-12. [데이터셋 & 벤치마크](#12-데이터셋--벤치마크)
-13. [연구실 연구 방향](#13-연구실-연구-방향)
-14. [AI 코딩 에이전트와 협업하기](#14-ai-코딩-에이전트와-협업하기)
-15. [추천 자료](#15-추천-자료)
-16. [부록](#16-부록)
-17. [마무리: 어디서부터 시작할까?](#마무리-어디서부터-시작할까)
+4. [기구학 & 메카트로닉스 (Kinematics & Mechatronics)](#4-기구학--메카트로닉스-kinematics--mechatronics)
+5. [강체 역학 & 동역학 (Rigid Body Dynamics)](#5-강체-역학--동역학-rigid-body-dynamics)
+6. [제어 이론 (Control Theory)](#6-제어-이론-control-theory)
+7. [모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)](#7-모션-플래닝--궤적-최적화-motion-planning--trajectory-optimization)
+8. [로봇 러닝 (Robot Learning)](#8-로봇-러닝-robot-learning)
+9. [컴퓨터 비전 기초 (Computer Vision Fundamentals)](#9-컴퓨터-비전-기초-computer-vision-fundamentals)
+10. [딥러닝 기반 인식 (Deep Learning for Perception)](#10-딥러닝-기반-인식-deep-learning-for-perception)
+11. [Vision Foundation Models (VFM)](#11-vision-foundation-models-vfm)
+12. [Vision-Language-Action (VLA) & Embodied AI](#12-vision-language-action-vla--embodied-ai)
+13. [3D 비전 (3D Vision)](#13-3d-비전-3d-vision)
+14. [SLAM & Odometry](#14-slam--odometry)
+15. [로봇 프레임워크 (Robot Frameworks)](#15-로봇-프레임워크-robot-frameworks)
+16. [개발 환경 & 도구](#16-개발-환경--도구)
+17. [데이터셋 & 벤치마크](#17-데이터셋--벤치마크)
+18. [연구실 연구 방향](#18-연구실-연구-방향)
+19. [AI 코딩 에이전트와 협업하기](#19-ai-코딩-에이전트와-협업하기)
+20. [추천 자료](#20-추천-자료)
+21. [부록](#21-부록)
+22. [마무리: 어디서부터 시작할까?](#마무리-어디서부터-시작할까)
 
 ---
 
@@ -3058,7 +3063,7 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 1969 ── Stanford Arm (최초의 전기식 컴퓨터 제어 로봇 팔)
 1985 ── Product of Exponentials 정형화
 1998 ── Harmonic Drive 로봇 적용 확산
-2015 ── MIT Mini Cheetah: QDD 액추에이터
+2019 ── MIT Mini Cheetah: QDD 액추에이터
 2019 ── MoveIt2 (ROS2 기반 모션 플래닝 프레임워크)
 2023 ── ALOHA: 저비용 양팔 텔레오퍼레이션 플랫폼
 2024 ── SO-ARM100: 오픈소스 5축 로봇 팔 ($200 이하)
@@ -3139,7 +3144,7 @@ RNEA(model, q, q̇, q̈):
     return τ
 ```
 
-여기서 S[i]는 관절 i의 motion subspace matrix (관절 축 방향), v[i]는 링크 i의 공간 속도, I[i]는 링크 i의 공간 관성이다. 이 표기는 Featherstone의 spatial vector 표기를 따른 것인데, 7.7절에서 더 자세히 다룬다.
+여기서 S[i]는 관절 i의 motion subspace matrix (관절 축 방향), v[i]는 링크 i의 공간 속도, I[i]는 링크 i의 공간 관성이다. 이 표기는 Featherstone의 spatial vector 표기를 따른 것인데, 5.7절에서 더 자세히 다룬다.
 
 #### 실제 코드: Pinocchio
 
@@ -3614,7 +3619,7 @@ Spatial inertia의 장점:
 
 #### RNEA와 ABA의 Spatial Vector 표현
 
-7.2절과 7.5절에서 보인 의사 코드가 사실 spatial vector 표기였다. S[i]는 관절 i의 motion subspace (revolute 관절이면 [e_z; 0], prismatic이면 [0; e_z]), v[i]는 spatial velocity, f[i]는 spatial force이다.
+5.2절과 5.5절에서 보인 의사 코드가 사실 spatial vector 표기였다. S[i]는 관절 i의 motion subspace (revolute 관절이면 [e_z; 0], prismatic이면 [0; e_z]), v[i]는 spatial velocity, f[i]는 spatial force이다.
 
 Spatial vector를 쓰면 회전 관절이든 직동 관절이든 같은 코드로 처리할 수 있다. 이것이 Pinocchio, Drake 등의 라이브러리가 내부적으로 spatial algebra를 사용하는 이유이다.
 
@@ -3834,11 +3839,11 @@ print("CoM velocity:", data.vcom[0])
 2012 ── MuJoCo 공개 (Todorov, Erez, Tassa)
 2015 ── Bullet Physics 2.x → PyBullet 인터페이스
 2016 ── Pinocchio 1.0 공개 (LAAS-CNRS)
-2019 ── Drake 1.0 (MIT → Toyota Research Institute)
+2022 ── Drake 1.0 (MIT → Toyota Research Institute)
 2021 ── MuJoCo 오픈소스화 (DeepMind 인수 후)
 2022 ── MuJoCo 2.3: implicit integration, elliptic friction cone
 2023 ── Pinocchio 3.0: CasADi/JAX autodiff 지원
-2024 ── MuJoCo 3.0: MJX (JAX backend for GPU parallelism)
+2023 ── MuJoCo 3.0: MJX (JAX backend for GPU parallelism)
 ```
 
 ---
@@ -4701,7 +4706,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 > 상태공간, 가제어성, 가관측성, LQR을 직관적으로 설명한다. 영상 하나가 15분 내외로 짧고 밀도가 높다. 교과서를 읽기 전에 먼저 보면 이해가 훨씬 빠르다.
 
 > **Slotine & Li, "Applied Nonlinear Control"**
-> 비선형 제어, Lyapunov 안정성, 적응 제어의 표준 교재. 7.8절의 내용을 본격적으로 공부하려면 이 책이다. 절판이지만 PDF가 돌아다닌다 (알아서 찾아라).
+> 비선형 제어, Lyapunov 안정성, 적응 제어의 표준 교재. 6.8절의 내용을 본격적으로 공부하려면 이 책이다. 절판이지만 PDF가 돌아다닌다 (알아서 찾아라).
 
 > **Russ Tedrake, "Underactuated Robotics" (MIT OCW)**
 > https://underactuated.csail.mit.edu/
@@ -4732,7 +4737,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 1922 ── PID 제어 개념 정립 (Minorsky)
 1960 ── 상태공간 이론 (Kalman)
 1960 ── LQR (Kalman)
-1978 ── Impedance Control 개념 (Hogan)
+1985 ── Impedance Control 개념 (Hogan)
 1987 ── Operational Space Control (Khatib)
 1990s ─ Robust control (H-infinity) 산업 적용
 2004 ── 실시간 MPC 실용화 시작
@@ -5446,7 +5451,7 @@ model.learn(total_timesteps=1_000_000)
 DeepMind가 인수한 후 2022년에 오픈소스로 공개했다. Contact physics 모델이 정확하고 빠르다. RL 연구에서 사실상 표준 벤치마크 역할을 한다.
 
 - 장점: 접촉 시뮬레이션 품질, 안정적인 수치 적분, gymnasium과의 통합
-- 단점: GPU 가속 미지원 (CPU 기반), 대규모 병렬화가 어려움
+- 단점: 기본 엔진은 CPU 기반. MuJoCo 3.0+에서 MJX (JAX backend)를 통해 GPU 병렬화 가능하지만, Isaac Lab 대비 생태계가 작음
 - 용도: 단일 환경 벤치마크, 알고리즘 연구, 소규모 실험
 
 #### Isaac Lab (NVIDIA)
@@ -5477,7 +5482,7 @@ Google에서 개발한 JAX 기반 물리 엔진이다. JAX의 JIT 컴파일과 �
 
 | 시뮬레이터 | 물리 정확도 | 속도 | GPU 병렬화 | 설치 난이도 | 주 용도 |
 |-----------|-----------|------|-----------|-----------|---------|
-| MuJoCo | 높음 | 보통 | 불가 | 쉬움 | 알고리즘 벤치마크 |
+| MuJoCo | 높음 | 보통 | MJX로 가능 | 쉬움 | 알고리즘 벤치마크 |
 | Isaac Lab | 높음 | 매우 빠름 | 수천~만 | 어려움 | 대규모 로봇 학습 |
 | PyBullet | 보통 | 느림 | 불가 | 매우 쉬움 | 입문/교육 |
 | Brax | 낮음 | 매우 빠름 | 가능 | 보통 | 빠른 반복 실험 |
@@ -5786,7 +5791,7 @@ Agent가 reward를 최대화하되, 설계자가 의도하지 않은 방식으�
 대표적인 예시:
 - 로봇 팔이 물체를 "옮기라"고 했는데 물체를 밀어서 목표 위치로 보내기 (잡지 않음)
 - 보행 로봇이 "빠르게 이동하라"고 했는데 넘어지면서 미끄러지기
-- 점프를 학습하라고 했는데 매우 키가 큰 형태로 성장하는 거시기 (형태 최적화와 결합 시)
+- 점프를 학습하라고 했는데 비정상적으로 긴 형태로 진화 (형태 최적화와 결합 시)
 
 대응 방법:
 - reward 함수를 반복적으로 수정하고 학습된 행동을 검토한다 (사실상 trial-and-error).
@@ -5851,7 +5856,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 > **추가 논문**
 > - [Andrychowicz et al., "Hindsight Experience Replay" (NeurIPS 2017, arXiv:1707.01495)](https://arxiv.org/abs/1707.01495) — sparse reward 문제 해결의 핵심. 실패한 trajectory를 성공으로 재레이블링
-> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — 단일 하이퍼파라미터로 150+ 도메인 학습. World model 기반 RL의 현 시점 최고 성과
+> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — 단일 하이퍼파라미터로 150+ 도메인 학습. World model 기반 RL의 현 시점 대표적 성과
 > - [Chi et al., "Universal Manipulation Interface" (UMI, RSS 2024, arXiv:2402.10329)](https://arxiv.org/abs/2402.10329) — 핸드헬드 그리퍼로 데이터 수집, 다양한 로봇에 zero-shot 배포
 > - [Fu et al., "Mobile ALOHA" (CoRL 2024, arXiv:2401.02117)](https://arxiv.org/abs/2401.02117) — 모바일 베이스 + 양팔 텔레오퍼레이션. co-training으로 성공률 대폭 향상
 
@@ -6057,37 +6062,24 @@ Opening과 Closing의 순서를 헷갈리는 사람이 많은데 — Opening은 
 
 왜곡 보정을 빠뜨리면 바로 문제가 보인다. 실제 카메라로 찍은 이미지는 Pinhole Model이 가정하는 것처럼 깔끔하지 않다. 특히 광각 렌즈나 fisheye 렌즈를 쓰면, 직선이 곡선으로 보이는 왜곡이 심하다. 이 왜곡을 보정하지 않으면 SLAM의 정확도가 뚝 떨어지고, 3D reconstruction 결과가 찌그러진다.
 
-**Radial Distortion (방사 왜곡)**:
-- 이미지 중심에서 멀어질수록 휘어짐
-- Barrel (통 모양) 또는 Pincushion (핀쿠션)
-- 파라미터: k1, k2, k3
+카메라 렌즈는 완벽한 핀홀이 아니다. 렌즈를 통과하면서 빛이 휘어지고, 이 휘어짐이 이미지에 왜곡으로 나타난다.
 
-**Tangential Distortion (접선 왜곡)**:
-- 렌즈가 이미지 센서와 평행하지 않아 발생
-- 파라미터: p1, p2
+**Radial distortion** (방사 왜곡): 이미지 중심에서 멀어질수록 심해진다. 파라미터 k1, k2, k3로 모델링한다. k1 < 0이면 barrel distortion (직선이 바깥으로 볼록), k1 > 0이면 pincushion distortion (직선이 안쪽으로 오목). 대부분의 렌즈는 barrel distortion을 가진다. 광각 렌즈일수록 심하다.
+
+**Tangential distortion** (접선 왜곡): 렌즈가 이미지 센서와 완벽하게 평행하지 않을 때 발생한다. 파라미터 p1, p2. 보통 radial보다 영향이 작지만, 저가 카메라에서는 무시할 수 없다.
 
 **왜곡 보정**:
 
 ```python
-# 보정된 이미지
+# 단순 보정 (매 프레임 계산 — 느림)
 undistorted = cv2.undistort(distorted, K, dist_coeffs)
 
-# 보정 맵 (빠른 처리용)
+# 보정 맵 미리 계산 후 재사용 (빠름 — SLAM 파이프라인 표준)
 map1, map2 = cv2.initUndistortRectifyMap(K, dist_coeffs, None, K, (w, h), cv2.CV_32FC1)
 undistorted = cv2.remap(distorted, map1, map2, cv2.INTER_LINEAR)
 ```
 
-`cv2.undistort`는 매 프레임마다 왜곡 계수를 새로 계산하지만, `initUndistortRectifyMap` + `remap` 조합은 맵을 한 번만 만들어두고 재사용하므로 실시간 시스템에서는 후자를 쓰는 것이 훨씬 빠르다.
-
-**왜곡의 직관적 이해**
-
-카메라 렌즈는 완벽한 핀홀이 아니다. 렌즈를 통과하면서 빛이 휘어지고, 이 휘어짐이 이미지에 왜곡으로 나타난다.
-
-**Radial distortion** (방사 왜곡): 이미지 중심에서 멀어질수록 심해진다. k1 > 0이면 pincushion (바깥으로 볼록), k1 < 0이면 barrel (안쪽으로 볼록). 대부분의 렌즈는 barrel distortion을 가진다. 광각 렌즈일수록 심하다.
-
-**Tangential distortion** (접선 왜곡): 렌즈가 이미지 센서와 완벽하게 평행하지 않을 때 발생한다. 보통 radial보다 영향이 작지만, 저가 카메라에서는 무시할 수 없다.
-
-**실무 팁**: OpenCV의 `cv2.undistort()`는 매 프레임마다 호출하면 느리다. 대신 `cv2.initUndistortRectifyMap()`으로 보정 맵을 미리 계산해두고, `cv2.remap()`으로 적용하면 훨씬 빠르다. SLAM 파이프라인에서는 이 방식이 표준이다.
+`cv2.undistort()`는 매 프레임마다 호출하면 느리다. `initUndistortRectifyMap()`으로 맵을 미리 계산해두고 `cv2.remap()`으로 적용하는 것이 실시간 시스템에서의 표준이다.
 
 **어안 렌즈 (Fisheye)**: 일반 핀홀 왜곡 모델로는 보정이 안 된다. 어안 렌즈는 빛의 입사각 θ에 대해 왜곡을 모델링한다 (equidistant model: r = f·θ). OpenCV의 `cv2.fisheye` 모듈을 별도로 사용해야 한다. 혼동하면 보정 결과가 오히려 나빠지니 주의.
 
@@ -6507,7 +6499,7 @@ H, mask = cv2.findHomography(
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-4.3에서 다룬 ORB, SIFT 같은 hand-crafted feature는 수십 년간 잘 작동해왔지만, 반복 패턴, 텍스처 부족, 극단적 조명 변화 등에서 실패한다. 2018년 이후 딥러닝 기반 특징 추출과 매칭이 고전 방법을 넘어서기 시작했다.
+9.3에서 다룬 ORB, SIFT 같은 hand-crafted feature는 수십 년간 잘 작동해왔지만, 반복 패턴, 텍스처 부족, 극단적 조명 변화 등에서 실패한다. 2018년 이후 딥러닝 기반 특징 추출과 매칭이 고전 방법을 넘어서기 시작했다.
 
 **파이프라인 발전 과정**:
 
@@ -7379,7 +7371,7 @@ with torch.no_grad():
 
 **Monocular Depth Foundation Model**: 단일 이미지에서 상대적 깊이를 추정한다.
 
-5.7에서 depth estimation을 다뤘지만, Depth Anything은 그것을 foundation model 수준으로 끌어올린 모델이다. 1.5M 라벨 데이터에 62M 비라벨 데이터까지 활용해서, 실내(NYU), 실외(KITTI), zero-shot 도메인에서 안정적으로 깊이를 추정한다. 단, 학습 데이터와 크게 다른 도메인(내시경, 수중 등)에서는 정확도가 떨어질 수 있다. 로봇이 새로운 환경에 배치될 때 추가 학습 없이 바로 깊이 정보를 얻을 수 있다.
+10.7에서 depth estimation을 다뤘지만, Depth Anything은 그것을 foundation model 수준으로 끌어올린 모델이다. 1.5M 라벨 데이터에 62M 비라벨 데이터까지 활용해서, 실내(NYU), 실외(KITTI), zero-shot 도메인에서 안정적으로 깊이를 추정한다. 단, 학습 데이터와 크게 다른 도메인(내시경, 수중 등)에서는 정확도가 떨어질 수 있다. 로봇이 새로운 환경에 배치될 때 추가 학습 없이 바로 깊이 정보를 얻을 수 있다.
 
 **특징**:
 - 1.5M 라벨 데이터 + 62M 비라벨 데이터 학습
@@ -7817,7 +7809,7 @@ r_t = h(z_t, a_t)         # Reward model (보상 예측)
 - **부분 업데이트**: perception 모듈만 개선하고 싶을 때, 모듈형이면 해당 모듈만 교체하면 된다. End-to-end는 전체를 재학습해야 한다.
 - **데이터 효율**: end-to-end 학습은 대규모 데이터가 필요하다. RT-2는 130k 에피소드, OpenVLA는 970k 에피소드를 사용했다. 대부분의 연구실은 이 규모의 데이터를 수집할 여력이 없다.
 
-현실적 방향: **하이브리드**. 인식은 VFM(foundation model)으로 범용화하고, 계획/제어는 모듈형으로 안전성을 확보하는 구조. 연구실의 Local/Global Module 설계(13장)가 이 방향이다.
+현실적 방향: **하이브리드**. 인식은 VFM(foundation model)으로 범용화하고, 계획/제어는 모듈형으로 안전성을 확보하는 구조. 연구실의 Local/Global Module 설계(18장)가 이 방향이다.
 
 end-to-end가 모듈형을 완전히 대체하려면, (1) 디버깅 가능한 end-to-end, (2) safety guarantee가 가능한 학습 기반 제어, (3) 소규모 데이터로도 학습 가능한 few-shot 정책이 필요하다. 세 가지 모두 아직 해결되지 않았다.
 
@@ -7955,7 +7947,7 @@ Action trajectory는 단일 action이 아니라 미래 수 스텝의 action 시�
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-7.6에서 시뮬레이션 플랫폼과 Domain Randomization을 간략히 다뤘다. 여기서는 Sim-to-Real transfer의 구체적 기법들을 체계적으로 정리한다.
+12.6에서 시뮬레이션 플랫폼과 Domain Randomization을 간략히 다뤘다. 여기서는 Sim-to-Real transfer의 구체적 기법들을 체계적으로 정리한다.
 
 **1. Domain Randomization (DR)**
 
@@ -8417,7 +8409,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-8.5에서 NeRF와 3DGS를 다뤘다. NeRF는 density field를 사용하여 volume rendering을 수행하지만, density에서 명확한 surface를 추출하기 어렵다는 근본적 한계가 있다. 로보틱스에서 물체를 잡거나 충돌을 판단하려면 정확한 surface가 필요하다. 여기서 Signed Distance Function (SDF) 기반 접근이 등장한다.
+13.5에서 NeRF와 3DGS를 다뤘다. NeRF는 density field를 사용하여 volume rendering을 수행하지만, density에서 명확한 surface를 추출하기 어렵다는 근본적 한계가 있다. 로보틱스에서 물체를 잡거나 충돌을 판단하려면 정확한 surface가 필요하다. 여기서 Signed Distance Function (SDF) 기반 접근이 등장한다.
 
 **Signed Distance Function (SDF)**
 
@@ -9021,7 +9013,7 @@ MCL의 직관: 수천 개의 "가상 로봇(파티클)"을 지도 위에 뿌린�
 DROID-SLAM이 왜 주목받는지: 기존 feature-based SLAM(ORB-SLAM)은 특징점이 없는 환경에서 실패하고, direct method(DSO)는 조명 변화에 약하다. DROID-SLAM은 학습된 representation을 사용하기 때문에 이런 한계를 상당 부분 극복한다. 다만 GPU가 필수이고 실시간 성능은 아직 기존 방법에 미치지 못하는 경우가 있다.
 
 **3DGS-SLAM 융합**:
-8.5.2에서 다룬 3D Gaussian Splatting이 SLAM의 맵 표현(map representation)으로도 활용되고 있다. SplaTAM, MonoGS 등이 대표적이며, 기존 SLAM의 sparse/dense 포인트 맵 대신 3D Gaussian으로 환경을 표현한다. 장면의 시각적 충실도가 높아지고, 렌더링 기반의 새로운 응용(가상 뷰 생성, AR 오버레이 등)이 가능해진다.
+13.5.2에서 다룬 3D Gaussian Splatting이 SLAM의 맵 표현(map representation)으로도 활용되고 있다. SplaTAM, MonoGS 등이 대표적이며, 기존 SLAM의 sparse/dense 포인트 맵 대신 3D Gaussian으로 환경을 표현한다. 장면의 시각적 충실도가 높아지고, 렌더링 기반의 새로운 응용(가상 뷰 생성, AR 오버레이 등)이 가능해진다.
 
 > **추천 자료**
 > - [Teed & Deng, "DROID-SLAM: Deep Visual SLAM for Monocular, Stereo, and RGB-D Cameras" (2021)](https://arxiv.org/abs/2108.10869) — DROID-SLAM 논문
@@ -9149,7 +9141,7 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-9.3.3에서 VINS-Mono를 소개할 때 IMU preintegration을 간단히 언급했다. 여기서는 그 수학적 배경을 다룬다.
+14.3.3에서 VINS-Mono를 소개할 때 IMU preintegration을 간단히 언급했다. 여기서는 그 수학적 배경을 다룬다.
 
 **문제 정의**: IMU는 보통 200~1000 Hz로 가속도와 각속도를 출력한다. 반면 SLAM 최적화는 키프레임 단위(수 Hz~수십 Hz)로 수행한다. 키프레임 사이에 수백 개의 IMU 측정이 존재하는데, 최적화할 때 이것을 전부 상태 변수로 넣으면 문제 크기가 폭발한다.
 
@@ -9282,7 +9274,7 @@ SLAM/VIO 분야에서 오래된 논쟁이다. 결론부터 말하면, 수학적�
 
 3. **Open-vocabulary SLAM**: 사전 정의된 카테고리에 국한되지 않고, CLIP 등 vision-language model의 feature를 지도에 저장한다. 자연어 쿼리로 "빨간색 머그컵이 어디 있었지?"를 지도에서 검색할 수 있다.
    - ConceptGraphs: 3D scene graph에 open-vocabulary feature를 부여
-   - 8장에서 다룬 3D Scene Graph (Hydra 등)와 직접 연결되는 주제
+   - 13장에서 다룬 3D Scene Graph (Hydra 등)와 직접 연결되는 주제
 
 **동적 물체 처리**: Semantic label은 동적 환경에서 SLAM의 robustness를 높이는 데도 쓰인다. "사람", "차" 등 동적일 가능성이 높은 클래스의 feature를 tracking/mapping에서 제외하면, 정적 환경만으로 깨끗한 SLAM이 가능하다.
 - DynaSLAM: ORB-SLAM2 + Mask R-CNN으로 동적 물체 마스킹
@@ -9300,7 +9292,7 @@ for feature in detected_features:
 
 > **추천 자료**
 > - [Nicholson et al., "QuadricSLAM: Dual Quadrics from Object Detections as Landmarks in Object-Oriented SLAM" (RA-L 2019)](https://arxiv.org/abs/1804.04011) — Object-level SLAM의 대표 논문
-> - [ConceptGraphs (arXiv:2309.16650)](https://arxiv.org/abs/2309.16650) — Open-vocabulary 3D scene graph. 8장과 연계해서 읽을 것
+> - [ConceptGraphs (arXiv:2309.16650)](https://arxiv.org/abs/2309.16650) — Open-vocabulary 3D scene graph. 13장과 연계해서 읽을 것
 > - [Bescos et al., "DynaSLAM: Tracking, Mapping and Inpainting in Dynamic Scenes" (RA-L 2018)](https://arxiv.org/abs/1806.05620) — 동적 환경 SLAM
 
 ### 14.13 심화: Multi-Robot SLAM
@@ -9319,7 +9311,7 @@ for feature in detected_features:
 
 **핵심 문제들**:
 
-1. **Inter-robot loop closure**: 로봇 A가 방문한 장소를 로봇 B가 나중에 방문했을 때, 이를 인식하는 것. 9.14에서 다루는 place recognition이 여기서 핵심이다.
+1. **Inter-robot loop closure**: 로봇 A가 방문한 장소를 로봇 B가 나중에 방문했을 때, 이를 인식하는 것. 14.14에서 다루는 place recognition이 여기서 핵심이다.
 
 2. **좌표계 정렬(coordinate frame alignment)**: 각 로봇이 독립적으로 시작하면, 서로의 초기 좌표계가 다르다. Inter-robot loop closure를 통해 상대 변환을 추정해야 한다. 최소 3개의 inter-robot correspondence가 있으면 상대 SE(3) 변환을 풀 수 있다.
 
@@ -9707,27 +9699,27 @@ ROS와 시뮬레이터 외에도, 특정 용도에 특화된 프레임워크와 
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-**10.4.1 Latency Budgeting**
+**15.4.1 Latency Budgeting**
 - 전체 파이프라인의 latency를 구간별로 할당
 - 예시: 자율주행 — 센서 입력(10ms) → 인식(50ms) → 계획(30ms) → 제어(10ms) = 100ms total
 - 각 구간이 budget을 초과하면 전체가 실패. 가장 느린 구간이 bottleneck
 - profiling 방법: ROS2 callback duration, `ros2 topic delay`, tracing (ros2_tracing)
 
-**10.4.2 Behavior Tree**
+**15.4.2 Behavior Tree**
 - 유한 상태 기계(FSM)보다 확장성이 좋은 로봇 행동 설계 방법
 - 노드 유형: Sequence (순차), Fallback (대안), Action (실행), Condition (조건)
 - 장점: 모듈적 — 하위 트리를 독립적으로 테스트/재사용 가능
 - ROS2에서: BehaviorTree.CPP, Nav2에서 사용
 - FSM은 상태가 늘어나면 전이가 기하급수적으로 복잡해진다. BT는 트리 구조로 복잡도를 관리
 
-**10.4.3 Safety와 Failsafe**
+**15.4.3 Safety와 Failsafe**
 - Watchdog timer: 특정 시간 내에 heartbeat 없으면 safe stop
 - E-stop (Emergency Stop): 하드웨어 레벨의 전원 차단
 - Software safety: 속도 제한, workspace 제한, collision check
 - ISO 13482: 서비스 로봇 안전 표준 (개요만)
 - 실무: 새 알고리즘을 올릴 때는 safety wrapper를 먼저 만들고, 그 안에서 실험
 
-**10.4.4 배포와 필드 테스트**
+**15.4.4 배포와 필드 테스트**
 - CI/CD: colcon build + test 자동화, Docker 이미지 빌드
 - Hardware-in-the-Loop (HIL): 실제 센서 데이터를 재생하면서 새 코드 테스트
 - 필드 테스트 프로토콜: 통제된 환경 → 반통제 → 실제 환경, 단계적으로
@@ -9961,7 +9953,7 @@ sudo make install
 
 `CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus)에서 확인.
 
-주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (14장 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
+주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (19장 AI 에이전트 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
 
 (참고: [다크 프로그래머 — OpenCV + CUDA 직접 빌드하기](https://darkpgmr.tistory.com/184))
 
@@ -11490,7 +11482,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7 AI를 연구 도구로 쓰는 워크플로우
 
-14.6절에서 AI의 강점과 약점을 정리했다. 이 절에서는 그걸 바탕으로, 로보틱스 연구자가 하루 일과에서 AI를 어떻게 쓰면 되는지 구체적 워크플로우를 정리한다. 원칙론이 아니라 실전 가이드다.
+19.6절에서 AI의 강점과 약점을 정리했다. 이 절에서는 그걸 바탕으로, 로보틱스 연구자가 하루 일과에서 AI를 어떻게 쓰면 되는지 구체적 워크플로우를 정리한다. 원칙론이 아니라 실전 가이드다.
 
 #### 19.7.1 논문 읽기
 
@@ -11503,7 +11495,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 - 프로토타이핑: "KITTI 데이터셋에서 ORB 특징점 뽑아서 매칭하는 코드 짜줘. OpenCV 쓰고, Lowe's ratio test 0.75로" — 이런 식으로 구체적으로 지시
 - 디버깅: 에러 메시지 + 코드 + "이 에러의 원인이 뭐야" — AI가 잘하는 영역
 - 리팩토링: "이 코드를 PyTorch Dataset 클래스로 바꿔줘" — 구조 변환에 강함
-- AI가 못하는 것 (14장 앞부분 참조): ROS QoS, 하드웨어 권한, 네트워크 설정, 실시간 타이밍
+- AI가 못하는 것 (19장 앞부분 참조): ROS QoS, 하드웨어 권한, 네트워크 설정, 실시간 타이밍
 
 #### 19.7.3 실험 설계
 
@@ -11527,7 +11519,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 09:30 — 흥미로운 1편 선택, 2패스 읽기. 모르는 수식은 AI에게 유도 요청
 10:30 — 어제 학습 결과 분석. loss curve 캡처해서 AI에게 "이 패턴이 정상인가?" 확인
 11:00 — 새 실험 코드 작성. AI에게 DataLoader 구조 생성 시킴. 수동으로 augmentation 로직 수정
-14:00 — SLAM 코드 디버깅. ROS2 에러 → 14장 참고해서 직접 해결 (AI는 QoS를 모른다)
+14:00 — SLAM 코드 디버깅. ROS2 에러 → 19장 참고해서 직접 해결 (AI는 QoS를 모른다)
 16:00 — 논문 Related Work 섹션 초고. AI에게 비교 논문 5편의 차이점 표 만들게 시킴
 17:00 — 표 검증. AI가 2편의 method를 혼동한 것 발견, 수동 수정
 ```
@@ -11889,7 +11881,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 **실습 과제**:
 - OpenCV로 이미지 처리 (grayscale 변환, edge detection, feature 추출)
 - 간단한 ROS2 노드 작성 (publisher/subscriber)
-- 카메라 캘리브레이션 수행 — 본 문서 3장 참고
+- 카메라 캘리브레이션 수행 — 본 문서 9장 참고
 - 본 문서의 **2장, 3장**을 읽으면서 좌표 변환과 카메라 모델을 이해한다
 
 **마일스톤**: Python으로 이미지를 읽어서 특징점을 추출하고, 두 이미지 간 매칭을 시각화할 수 있으면 입문 단계 졸업이다.
@@ -11901,17 +11893,17 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
 | 딥러닝 기초 (PyTorch) | CNN, 학습, 역전파 | [CS231n](https://www.youtube.com/playlist?list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv) + [PyTorch 공식 튜토리얼](https://pytorch.org/tutorials/) |
-| Object Detection | YOLO, Faster R-CNN | [Ultralytics 문서](https://docs.ultralytics.com/) + 본 문서 7장 |
-| Visual SLAM 이해 | ORB-SLAM3 분석 | [Cyrill Stachniss SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) + 본 문서 9장 |
-| 포인트 클라우드 처리 | Open3D 사용법 | [Open3D 튜토리얼](http://www.open3d.org/docs/release/tutorial/) + 본 문서 5장 |
-| Depth Estimation | 단안 카메라 depth 추정 | 본 문서 6장 + [Depth Anything 코드](https://github.com/DepthAnything/Depth-Anything-V2) |
+| Object Detection | YOLO, Faster R-CNN | [Ultralytics 문서](https://docs.ultralytics.com/) + 본 문서 10장 |
+| Visual SLAM 이해 | ORB-SLAM3 분석 | [Cyrill Stachniss SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) + 본 문서 14장 |
+| 포인트 클라우드 처리 | Open3D 사용법 | [Open3D 튜토리얼](http://www.open3d.org/docs/release/tutorial/) + 본 문서 13장 |
+| Depth Estimation | 단안 카메라 depth 추정 | 본 문서 10장 + [Depth Anything 코드](https://github.com/DepthAnything/Depth-Anything-V2) |
 
 **실습 과제**:
 - KITTI 데이터셋 다루기 — [KITTI 홈페이지](https://www.cvlibs.net/datasets/kitti/)
 - YOLOv8 파인튜닝 — 커스텀 데이터셋으로 fine-tuning
 - ORB-SLAM3 실행 및 분석 — TUM RGB-D 데이터셋으로 평가
 - TUM RGB-D 벤치마크 — ATE, RPE 계산해보기
-- 본 문서의 **4-9장**을 읽으면서 이론적 배경을 다진다
+- 본 문서의 **9-14장**을 읽으면서 이론적 배경을 다진다
 
 **마일스톤**: ORB-SLAM3를 직접 빌드하고 데이터셋으로 돌려서, trajectory를 ground truth와 비교할 수 있으면 중급 단계 졸업이다.
 
@@ -11922,7 +11914,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
 | VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10-11장 + 논문 직접 읽기 |
-| 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 8장 |
+| 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
 | 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) |
 | 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크샵 참여 |
 | 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) |
@@ -11980,31 +11972,31 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 (이 섹션은 [Giseop Kim, "연구 초입자를 위한 지속가능한 성장 가이드"](https://gsk1m.github.io/productivity/2024/05/25/entering-research.html)의 내용을 참고하여 재구성했다.)
 
-**15.8.1 논문 쓰기**
+**20.8.1 논문 쓰기**
 - 구조: Abstract → Introduction → Related Work → Method → Experiments → Conclusion
 - Introduction 쓰는 법: (1) 문제 정의, (2) 기존 방법의 한계, (3) 우리의 접근, (4) contribution 목록
 - 실험 섹션: baseline 비교, ablation study, 정성적 결과
 - 흔한 실수: contribution이 불명확, 실험이 불공정한 비교, related work에서 핵심 논문 빠뜨림
 - 팁: 논문을 쓰기 전에 figure/table을 먼저 그려라. 스토리가 잡힌다
 
-**15.8.2 실험 설계와 Ablation Study**
+**20.8.2 실험 설계와 Ablation Study**
 - Ablation: 모델/시스템의 각 구성 요소를 하나씩 빼면서 기여도를 측정
 - 변인 통제: 한 번에 하나만 바꿔라. 두 개 이상 동시에 바꾸면 어떤 것의 효과인지 모른다
 - 통계적 유의성: 같은 실험을 여러 번(최소 3회) 반복하고 평균/표준편차 보고
 - 공정한 비교: 같은 데이터, 같은 split, 같은 하드웨어에서 비교. 다른 논문의 숫자를 그대로 가져오면 조건이 다를 수 있다
 
-**15.8.3 학회 발표**
+**20.8.3 학회 발표**
 - 발표 구조: 문제(1분) → 기존 한계(1분) → 제안 방법(3분) → 실험 결과(3분) → 결론(1분)
 - 슬라이드: 글자 줄이고 그림/다이어그램 위주. 한 슬라이드에 하나의 메시지
 - 포스터: 3m 거리에서 제목과 핵심 figure가 보여야 한다
 - 데모 영상: 30초~1분. 처음에 결과 요약, 그 다음 상세
 
-**15.8.4 논문 리뷰 (Peer Review)**
+**20.8.4 논문 리뷰 (Peer Review)**
 - 리뷰어 관점에서 체크할 것: novelty, technical soundness, experiments, clarity, reproducibility
 - 건설적 피드백: "이 부분이 잘못됐다" 대신 "이 부분은 X를 추가하면 더 강해질 것 같다"
 - Rebuttal 쓰기: 리뷰어의 핵심 우려를 하나씩 주소를 달아 답변. 감정적 대응 금지
 
-**15.8.5 도구**
+**20.8.5 도구**
 - LaTeX: Overleaf 또는 로컬 (texlive + vscode)
 - 참고 문헌 관리: 예전에는 Mendeley, Zotero 같은 전용 도구를 썼지만, 요즘은 **PDF 리더 + AI** 조합이 더 효율적이다. 예를 들어:
   - Adobe Acrobat으로 논문을 읽고 형광펜/메모를 남긴 뒤, Claude나 GPT에게 PDF를 던져서 핵심 요약, BibTeX 생성, related work 비교를 시킬 수 있다
@@ -12118,7 +12110,7 @@ A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버), [Google Scholar]
 
 **Q: SLAM을 공부하려면 어디서 시작해야 하나요?**
 
-A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작하고, ORB-SLAM3 코드를 분석해보자. 그 전에 본 문서의 3장(카메라 모델)과 4장(Visual Odometry)을 읽으면 강의가 훨씬 잘 들릴 것이다.
+A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작하고, ORB-SLAM3 코드를 분석해보자. 그 전에 본 문서의 9장(카메라 모델)과 14장(Visual Odometry)을 읽으면 강의가 훨씬 잘 들릴 것이다.
 
 **Q: 연구 아이디어는 어떻게 찾나요?**
 
@@ -12167,7 +12159,7 @@ A: GPU 선택에서 가장 중요한 스펙은 **VRAM**이다. 모델 크기가 
 
 **Q: 논문은 하루에 몇 편 읽어야 하나요?**
 
-A: "하루에 N편" 같은 기준은 의미 없다. 처음에는 **일주일에 1편을 완벽하게** 이해하는 게 훨씬 낫다. 위 15.4의 3-패스 방법을 따라서, 한 편을 깊이 파고들자. 6개월쯤 지나면 Abstract만 봐도 "아, 이런 류의 논문이구나" 감이 온다. 그때부터 속도가 붙는다. 참고로, 랩미팅 발표를 위해 논문을 읽는 것과 자기 연구를 위해 읽는 것은 깊이가 다르다. 후자는 코드까지 분석해야 한다.
+A: "하루에 N편" 같은 기준은 의미 없다. 처음에는 **일주일에 1편을 완벽하게** 이해하는 게 훨씬 낫다. 위 20.4의 3-패스 방법을 따라서, 한 편을 깊이 파고들자. 6개월쯤 지나면 Abstract만 봐도 "아, 이런 류의 논문이구나" 감이 온다. 그때부터 속도가 붙는다. 참고로, 랩미팅 발표를 위해 논문을 읽는 것과 자기 연구를 위해 읽는 것은 깊이가 다르다. 후자는 코드까지 분석해야 한다.
 
 **Q: 코딩을 잘 못하는데 연구를 할 수 있나요?**
 
@@ -12513,7 +12505,7 @@ sudo apt-get install libeigen3-dev
 ```
 [ ] 연구실 최근 논문/프로젝트 살펴보기
 [ ] 선배들의 연구 주제 파악 (누가 어떤 주제를 하고 있는지)
-[ ] 본 문서의 13장 (연구실 연구 방향) 읽기
+[ ] 본 문서의 18장 (연구실 연구 방향) 읽기
 [ ] 관심 있는 연구 방향 2-3개 메모
 [ ] 다음 주 랩미팅에서 발표할 자기소개 준비
 ```
@@ -12538,7 +12530,7 @@ sudo apt-get install libeigen3-dev
 
 ## 마무리: 어디서부터 시작할까?
 
-학습 순서는 **15.7절의 학습 경로**를 기준으로 진행하면 된다. 막히면 이 문서의 해당 섹션을 다시 참고하고, 그래도 해결이 안 되면 선배나 연구실 Slack에 질문하자. AI 코딩 에이전트를 활용하는 법은 14장을 참고하라.
+학습 순서는 **20.7절의 학습 경로**를 기준으로 진행하면 된다. 막히면 이 문서의 해당 섹션을 다시 참고하고, 그래도 해결이 안 되면 선배나 연구실 Slack에 질문하자. AI 코딩 에이전트를 활용하는 법은 19장을 참고하라.
 
 이 문서는 지속적으로 업데이트할 예정이다.
 
