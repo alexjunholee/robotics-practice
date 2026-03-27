@@ -185,6 +185,20 @@ body {
 
 .toc-item.toc-hidden { display: none; }
 
+.toc-group-label {
+  display: block;
+  padding: 10px 16px 4px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toc-group-label:first-child { padding-top: 4px; }
+
+.toc-group-label.toc-hidden { display: none; }
+
 .toc-no-results {
   padding: 16px;
   color: var(--text-muted);
@@ -597,20 +611,34 @@ mark.search-highlight {
 
 ## 목차
 
+**기초 지식**
+
 1. [서론: Spatial AI란?](#1-서론-spatial-ai란)
 2. [센서 (Sensors)](#2-센서-sensors)
 3. [수학적 기초 (Mathematical Foundations)](#3-수학적-기초-mathematical-foundations)
+
+**로봇 역학과 제어**
+
 4. [기구학 & 메카트로닉스 (Kinematics & Mechatronics)](#4-기구학--메카트로닉스-kinematics--mechatronics)
 5. [강체 역학 & 동역학 (Rigid Body Dynamics)](#5-강체-역학--동역학-rigid-body-dynamics)
 6. [제어 이론 (Control Theory)](#6-제어-이론-control-theory)
 7. [모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)](#7-모션-플래닝--궤적-최적화-motion-planning--trajectory-optimization)
+
+**로봇 학습**
+
 8. [로봇 러닝 (Robot Learning)](#8-로봇-러닝-robot-learning)
+
+**인식과 공간 이해**
+
 9. [컴퓨터 비전 기초 (Computer Vision Fundamentals)](#9-컴퓨터-비전-기초-computer-vision-fundamentals)
 10. [딥러닝 기반 인식 (Deep Learning for Perception)](#10-딥러닝-기반-인식-deep-learning-for-perception)
 11. [Vision Foundation Models (VFM)](#11-vision-foundation-models-vfm)
 12. [Vision-Language-Action (VLA) & Embodied AI](#12-vision-language-action-vla--embodied-ai)
 13. [3D 비전 (3D Vision)](#13-3d-비전-3d-vision)
 14. [SLAM & Odometry](#14-slam--odometry)
+
+**연구 실전**
+
 15. [로봇 프레임워크 (Robot Frameworks)](#15-로봇-프레임워크-robot-frameworks)
 16. [개발 환경 & 도구](#16-개발-환경--도구)
 17. [데이터셋 & 벤치마크](#17-데이터셋--벤치마크)
@@ -12645,6 +12673,28 @@ sudo apt-get install libeigen3-dev
     const tocContainer = document.getElementById('toc-container');
     const fragment = document.createDocumentFragment();
 
+    // Part groupings: insert label before the first chapter number of each group
+    // Chapters appear in order: 1..7, 8, 9..11, 12, 13..14, 15..22
+    var groupFirstChapter = {
+      '1.': '기초 지식',
+      '4.': '로봇 역학과 제어',
+      '8.': '로봇 학습',
+      '9.': '인식과 공간 이해',
+      '15.': '연구 실전'
+    };
+
+    function getGroupLabel(text) {
+      var trimmed = text.trim();
+      for (var prefix in groupFirstChapter) {
+        if (trimmed.indexOf(prefix) === 0) {
+          var label = groupFirstChapter[prefix];
+          delete groupFirstChapter[prefix];
+          return label;
+        }
+      }
+      return null;
+    }
+
     headings.forEach(function(heading, index) {
       // Create ID from heading text
       let id = heading.id;
@@ -12655,6 +12705,17 @@ sudo apt-get install libeigen3-dev
           .replace(/\s+/g, '-')
           .substring(0, 60);
         heading.id = id;
+      }
+
+      // Insert group label before first chapter of each part (h2 only)
+      if (heading.tagName === 'H2') {
+        var groupLabel = getGroupLabel(heading.textContent);
+        if (groupLabel) {
+          var label = document.createElement('div');
+          label.className = 'toc-group-label';
+          label.textContent = groupLabel;
+          fragment.appendChild(label);
+        }
       }
 
       const link = document.createElement('a');
@@ -12770,6 +12831,7 @@ sudo apt-get install libeigen3-dev
   function setupSearch() {
     const searchInput = document.getElementById('search-input');
     const tocItems = document.querySelectorAll('.toc-item');
+    const groupLabels = document.querySelectorAll('.toc-group-label');
     const noResults = document.getElementById('toc-no-results');
 
     searchInput.addEventListener('input', function() {
@@ -12777,6 +12839,7 @@ sudo apt-get install libeigen3-dev
 
       if (!query) {
         tocItems.forEach(function(item) { item.classList.remove('toc-hidden'); });
+        groupLabels.forEach(function(label) { label.classList.remove('toc-hidden'); });
         noResults.style.display = 'none';
         return;
       }
@@ -12791,6 +12854,9 @@ sudo apt-get install libeigen3-dev
           item.classList.add('toc-hidden');
         }
       });
+
+      // Hide group labels when searching
+      groupLabels.forEach(function(label) { label.classList.add('toc-hidden'); });
 
       noResults.style.display = matchCount === 0 ? 'block' : 'none';
     });
