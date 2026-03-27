@@ -12695,7 +12695,7 @@ sudo apt-get install libeigen3-dev
       // Create ID from heading text
       let id = heading.id;
       if (!id) {
-        id = 'section-' + index + '-' + heading.textContent
+        id = heading.textContent
           .toLowerCase()
           .replace(/[^\w\s가-힣-]/g, '')
           .replace(/\s+/g, '-')
