@@ -1114,11 +1114,37 @@ SLAM을 돌렸는데 드리프트가 심할 때, IMU 특성을 이해하지 못�
 
 ### 2.5 기타 센서
 
-**Radar**:
-- 전파를 이용한 거리/속도 측정
-- 악천후(비, 안개)에서도 동작
-- 해상도는 LiDAR보다 낮음
-- 자율주행에서 보조 센서로 활용
+**Radar**
+
+자율주행과 로보틱스에서 레이더의 중요성이 높아지고 있다. LiDAR와 카메라가 안 되는 환경 — 안개, 비, 먼지, 강한 역광 — 에서도 레이더는 안정적으로 동작한다. 가격도 LiDAR보다 저렴하다.
+
+**FMCW (Frequency Modulated Continuous Wave) Radar**:
+- 주파수를 시간에 따라 변조하여 송신하고, 반사파와의 주파수 차이로 거리와 속도를 동시에 측정한다.
+- 출력: Range-Doppler map (거리 × 속도 2D 맵), Range-Azimuth map
+- 자동차용 77GHz radar가 가장 흔하다.
+
+**로보틱스에서의 활용**:
+- 자율주행: 전방 충돌 감지, 적응형 크루즈 컨트롤 (ACC)
+- Radar odometry: 레이더만으로 자기 위치 변화 추정
+- Radar SLAM: 레이더 기반 지도 작성 + 위치 추정
+
+**카메라/LiDAR와의 비교**:
+
+| 특성 | 카메라 | LiDAR | Radar |
+|------|--------|-------|-------|
+| 해상도 | 매우 높음 | 높음 | 낮음 |
+| 거리 측정 | 불가 (단안) | 정확 | 가능 |
+| 속도 측정 | 불가 | 불가 (직접) | 가능 (Doppler) |
+| 악천후 | 취약 | 취약 (비, 안개) | 강건 |
+| 가격 | 저렴 | 비쌈 | 중간 |
+| 야간 | 불가 | 가능 | 가능 |
+
+**대표 제품**: Texas Instruments AWR1843, Continental ARS548, Navtech CTS350-X (spinning radar)
+
+> **추천 자료**
+> - [김기섭 블로그 — ICRA 2021 Radar in Robotics Workshop 요약](https://gisbi-kim.github.io/blog/2021/05/31/icra21-radar-ws.html) — 레이더 로보틱스의 전반적 동향 정리
+> - [김기섭 블로그 — Radar Odometry Results on MulRan dataset](https://gisbi-kim.github.io/blog/2021/05/30/yeti-radar-odom-mulran1.html) — 레이더 오도메트리 실험 결과. 도시 환경에서 LiDAR급 성능
+> - [Kim et al., "MulRan: Multimodal Range Dataset for Urban Place Recognition" (ICRA 2020)](https://sites.google.com/view/mulran-pr/home) — LiDAR + radar + GPS 멀티모달 데이터셋
 
 **Ultrasonic (초음파)**:
 - 가까운 거리 장애물 감지 (0.2-5m)
@@ -9903,6 +9929,41 @@ python -c "import torch; print(torch.version.cuda)"
 ```
 
 (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/09/19/cuda_setting/))
+
+**OpenCV + CUDA 직접 빌드**
+
+apt로 설치하는 `python3-opencv`나 `pip install opencv-python`은 CUDA 가속이 안 된다. GPU 가속이 필요하면 (DNN 모듈, optical flow 등) 소스에서 직접 빌드해야 한다.
+
+```bash
+# 의존성 설치
+sudo apt install -y cmake git libgtk2.0-dev pkg-config \
+    libavcodec-dev libavformat-dev libswscale-dev \
+    libtbb-dev libjpeg-dev libpng-dev
+
+# OpenCV + contrib 소스
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+
+# 빌드 (CUDA 활성화)
+cd opencv && mkdir build && cd build
+cmake -D CMAKE_BUILD_TYPE=Release \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+      -D WITH_CUDA=ON \
+      -D CUDA_ARCH_BIN="8.6"  \  # GPU에 맞게 조정 (RTX 3090=8.6, RTX 4090=8.9)
+      -D WITH_CUDNN=ON \
+      -D OPENCV_DNN_CUDA=ON \
+      -D BUILD_opencv_python3=ON \
+      ..
+make -j$(nproc)
+sudo make install
+```
+
+`CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus)에서 확인.
+
+주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (14장 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
+
+(참고: [다크 프로그래머 — OpenCV + CUDA 직접 빌드하기](https://darkpgmr.tistory.com/184))
 
 ### 16.2.3 환경 관리
 
