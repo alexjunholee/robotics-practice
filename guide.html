@@ -919,6 +919,29 @@ RGB 이미지와 Depth 이미지를 직접 제공하는 센서이다.
 > - [Intel RealSense — Depth Camera Technology Overview](https://www.youtube.com/watch?v=UaGRGBQxjGQ) — Intel에서 직접 설명하는 깊이 카메라 원리
 > - [Open3D RGB-D Reconstruction Tutorial](http://www.open3d.org/docs/release/tutorial/pipelines/rgbd_integration.html) — RGB-D 데이터로 3D 복원을 실습하는 튜토리얼
 
+**RealSense 드라이버 설치 (Ubuntu 22.04)**
+
+```bash
+# Intel RealSense SDK 설치
+sudo mkdir -p /etc/apt/keyrings
+curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | sudo tee /etc/apt/keyrings/librealsense.pgp > /dev/null
+echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo `lsb_release -cs` main" | \
+    sudo tee /etc/apt/sources.list.d/librealsense.list
+sudo apt-get update
+sudo apt-get install -y librealsense2-dkms librealsense2-utils librealsense2-dev
+
+# 테스트
+realsense-viewer
+```
+
+ROS2에서 사용하려면 추가로:
+```bash
+sudo apt install ros-humble-realsense2-camera
+ros2 launch realsense2_camera rs_launch.py
+```
+
+(참고: [정진용 블로그](https://jinyongjeong.github.io/2020/06/20/Realsense-Ubuntu-driver-%EC%84%A4%EC%B9%98/))
+
 ### 2.1.4 Event Camera (이벤트 카메라)
 
 기존 카메라와 다른 패러다임의 센서이다. 프레임 단위로 촬영하는 것이 아니라, 각 픽셀이 **밝기 변화**가 발생할 때만 비동기적으로 이벤트를 출력한다.
@@ -1063,7 +1086,6 @@ SLAM을 돌렸는데 드리프트가 심할 때, IMU 특성을 이해하지 못�
 > - [Cyrill Stachniss — IMU and Inertial Navigation](https://www.youtube.com/watch?v=uHbRKvD8TWg) — IMU의 작동 원리와 오차 특성을 시각적으로 설명
 > - [Allan Variance — IMU 노이즈 분석 가이드 (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--background/specifications--allan-variance) — Allan Variance를 이용한 IMU 노이즈 파라미터 추출 방법
 > - [정진용 블로그 — IMU Filter (AHRS)](https://jinyongjeong.github.io/2020/01/10/IMU_filter/) — IMU 센서의 AHRS 필터 개요. Madgwick 필터와 ROS 패키지 소개
-> - [정진용 블로그 — Realsense Ubuntu driver 설치](https://jinyongjeong.github.io/2020/06/20/Realsense-Ubuntu-driver-%EC%84%A4%EC%B9%98/) — Intel RealSense 드라이버 설치 가이드
 
 ### 2.4 GPS/GNSS
 
@@ -9674,8 +9696,47 @@ nvcc --version      # CUDA 버전
 > **추천 자료**
 > - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — PyTorch와 CUDA 버전 매칭 확인. 설치 전 확인할 것
 > - [NVIDIA CUDA Toolkit Documentation](https://docs.nvidia.com/cuda/) — CUDA 공식 문서
-> - [정진용 블로그 — Ubuntu NVIDIA Graphic Driver 설치](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/) — nouveau 커널 문제 등 드라이버 설치 트러블슈팅
-> - [정진용 블로그 — 그래픽 카드별 CUDA 및 OpenCV 설정](https://jinyongjeong.github.io/2016/09/19/cuda_setting/) — GPU 모델별 CUDA/cuDNN/OpenCV 호환 설정
+
+**NVIDIA 드라이버 설치 트러블슈팅**
+
+Ubuntu에서 NVIDIA 드라이버 설치 시 가장 흔한 문제는 `nouveau` (오픈소스 드라이버)와의 충돌이다.
+
+```bash
+# nouveau 비활성화
+sudo bash -c "echo blacklist nouveau > /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+sudo bash -c "echo options nouveau modeset=0 >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+sudo update-initramfs -u
+sudo reboot
+
+# 드라이버 설치 (권장: apt 사용)
+sudo apt install nvidia-driver-535  # 버전은 GPU에 맞게 조정
+sudo reboot
+
+# 확인
+nvidia-smi
+```
+
+설치 후 `nvidia-smi`에서 GPU가 안 보이면: (1) Secure Boot가 켜져 있는지 확인 (BIOS에서 끌 것), (2) `sudo dkms status`로 드라이버 모듈 상태 확인. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
+
+**CUDA/cuDNN 버전 호환성**
+
+PyTorch와 CUDA 버전이 안 맞으면 `import torch` 한 줄에서 에러가 난다. 확인 순서:
+
+```bash
+# 1. GPU 확인
+nvidia-smi  # 오른쪽 상단의 CUDA Version은 "드라이버가 지원하는 최대 버전"
+
+# 2. 설치된 CUDA toolkit 확인
+nvcc --version
+
+# 3. PyTorch가 사용하는 CUDA 확인
+python -c "import torch; print(torch.version.cuda)"
+
+# 세 버전이 호환되어야 한다. PyTorch 공식 사이트에서 조합 확인:
+# https://pytorch.org/get-started/locally/
+```
+
+(참고: [정진용 블로그](https://jinyongjeong.github.io/2016/09/19/cuda_setting/))
 
 ### 16.2.3 환경 관리
 
@@ -11881,10 +11942,55 @@ A: 이건 정말 시간이 해결해준다. 몇 가지 팁:
 
 ### C. 트러블슈팅 가이드
 
-> **추천 자료**
-> - [정진용 블로그 — Ubuntu apt-get 명령어 정리](https://jinyongjeong.github.io/2016/06/07/Ubuntu_apt_get_commend/) — apt-get 기본 명령어 레퍼런스
-> - [정진용 블로그 — SSH keygen 설정](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/) — SSH 키 생성 및 서버 접속 설정
-> - [정진용 블로그 — Ubuntu CPU Frequency 최적화](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/) — 실험 시 CPU 성능 최대로 올리기
+**자주 쓰는 apt 명령어**
+
+```bash
+sudo apt update                  # 패키지 목록 갱신
+sudo apt upgrade                 # 설치된 패키지 업그레이드
+sudo apt install <package>       # 패키지 설치
+sudo apt remove <package>        # 패키지 제거 (설정 파일 유지)
+sudo apt purge <package>         # 패키지 + 설정 파일 완전 제거
+sudo apt autoremove              # 사용하지 않는 의존성 제거
+apt list --installed             # 설치된 패키지 목록
+apt search <keyword>             # 패키지 검색
+sudo apt --fix-broken install    # 의존성 깨졌을 때 복구
+```
+
+(참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/07/Ubuntu_apt_get_commend/))
+
+**SSH 키 설정 (비밀번호 없이 서버 접속)**
+
+```bash
+# 키 생성 (Enter 연타로 기본값 사용)
+ssh-keygen -t ed25519
+
+# 공개키를 서버에 복사
+ssh-copy-id user@server_ip
+
+# 이후 비밀번호 없이 접속 가능
+ssh user@server_ip
+```
+
+GitHub에도 같은 공개키(`~/.ssh/id_ed25519.pub`)를 등록하면 `git push`에 비밀번호가 필요 없다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
+
+**CPU 성능 모드 설정 (실험 시)**
+
+SLAM이나 딥러닝 실험에서 CPU throttling 때문에 성능이 들쭉날쭉한 경우가 있다.
+
+```bash
+# 현재 CPU governor 확인
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+# performance 모드로 변경 (모든 코어)
+echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+# 영구 설정 (재부팅 후에도 유지)
+sudo apt install cpufrequtils
+echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+sudo systemctl restart cpufrequtils
+```
+
+노트북에서는 배터리 소모가 커지니 전원 연결 상태에서만 사용할 것. (참고: [정진용 블로그](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/))
 
 #### C.1 CUDA / PyTorch 관련
 
