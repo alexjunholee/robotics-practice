@@ -10182,9 +10182,13 @@ CMD ["bash"]
 
 > **AI 에이전트 주의**: AI에게 Docker 설정을 물어볼 때는 "ROS2 + GPU + USB 센서 + GUI 시각화"를 동시에 쓸 건지 한번에 알려줘라. 각각을 따로 물어보면 서로 충돌하는 설정을 준다. 특히 `QT_X11_NO_MITSHM=1`과 `ROS_DOMAIN_ID`는 AI가 빠뜨리는 대표적인 항목이다.
 
-### 16.4 버전 관리: Git/GitHub
+### 16.4 원격 관리: Git, SSH, 파일 전송
 
-### 16.4.1 기본 워크플로우
+연구실 서버에 SSH로 접속해서 실험을 돌리고, 코드는 Git으로 관리하고, 데이터는 서버 간에 주고받는 것이 일상이다. 여기 나오는 도구들을 익혀 두면 이 과정이 매끄러워진다.
+
+### 16.4.1 Git/GitHub
+
+### 16.4.1.1 기본 워크플로우
 
 코드를 관리하지 않으면, "어제 돌아가던 코드가 오늘은 왜 안 되지?"라는 상황이 반복된다. Git은 모든 변경 이력을 추적해 주므로, 언제든 과거 상태로 돌아갈 수 있다. 연구 코드라도 Git으로 관리하는 습관을 들이자.
 
@@ -10208,7 +10212,7 @@ git push origin main
 > - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — Git 핵심 개념을 깔끔하게 정리한 공식 가이드
 > - [The Missing Semester - Version Control (Git)](https://missing.csail.mit.edu/2020/version-control/) — MIT 강의. Git의 내부 모델(DAG)까지 설명해 줘서 깊이 있게 이해 가능
 
-### 16.4.2 브랜치 전략
+### 16.4.1.2 브랜치 전략
 
 **Git Flow**:
 - `main`: 안정 버전
@@ -10222,7 +10226,7 @@ git push origin main
 
 연구실에서 여러 사람이 같은 코드를 수정할 때 브랜치 전략 없이 `main`에 직접 push하면 충돌이 끊이질 않는다. 연구 코드라면 GitHub Flow 정도면 충분하다. 기능 하나당 브랜치 하나를 만들고, PR을 통해 머지하는 습관을 들이자.
 
-### 16.4.3 협업
+### 16.4.1.3 협업
 
 **Pull Request (PR)**:
 1. Fork 또는 브랜치 생성
@@ -10244,6 +10248,100 @@ chore: 빌드/설정 변경
 > **추천 자료**
 > - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — GitHub에서 직접 만든 Git 입문 가이드
 > - [Conventional Commits Specification](https://www.conventionalcommits.org/) — 커밋 메시지 규칙 공식 스펙
+
+### 16.4.2 SSH
+
+연구실 GPU 서버에 접속하는 기본 도구이다. 비밀번호 대신 키 인증을 쓰면 편하고 안전하다.
+
+```bash
+# 키 생성 (처음 한 번)
+ssh-keygen -t ed25519
+
+# 서버에 공개키 등록
+ssh-copy-id user@server_ip
+
+# 접속
+ssh user@server_ip
+
+# 포트 포워딩 (서버의 Jupyter/TensorBoard를 로컬에서 보기)
+ssh -L 8888:localhost:8888 user@server_ip
+```
+
+**~/.ssh/config**를 설정해 두면 매번 IP와 사용자명을 입력하지 않아도 된다:
+
+```
+Host lab-server
+    HostName 192.168.1.100
+    User junholee
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+이후 `ssh lab-server`로 바로 접속 가능. VS Code Remote-SSH도 이 설정을 읽는다.
+
+### 16.4.3 SCP & rsync
+
+서버와 로컬 간에 파일을 주고받는 도구이다.
+
+**SCP** — 단순한 파일 복사:
+
+```bash
+# 로컬 → 서버
+scp model.pth user@server:/home/user/weights/
+
+# 서버 → 로컬
+scp user@server:/home/user/results/log.txt ./
+
+# 디렉토리 복사
+scp -r dataset/ user@server:/data/
+```
+
+**rsync** — 변경된 부분만 전송. 대용량 데이터셋이나 반복 전송에 유리하다:
+
+```bash
+# 로컬 → 서버 (변경분만 전송, 진행률 표시)
+rsync -avz --progress dataset/ user@server:/data/dataset/
+
+# 서버 → 로컬
+rsync -avz user@server:/home/user/results/ ./results/
+
+# 삭제된 파일도 동기화 (미러링)
+rsync -avz --delete source/ user@server:/data/source/
+```
+
+`scp`는 매번 전체를 복사하지만, `rsync`는 diff만 보내므로 수십 GB 데이터셋을 동기화할 때 차이가 크다.
+
+### 16.4.4 Tailscale
+
+연구실 서버가 NAT/방화벽 뒤에 있으면 외부에서 SSH 접속이 안 된다. Tailscale은 WireGuard 기반 VPN으로, 설치만 하면 어디서든 연구실 서버에 직접 접속할 수 있게 해 준다.
+
+```bash
+# 설치 (서버와 로컬 양쪽에)
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# 상태 확인 — 연결된 기기 목록과 IP 확인
+tailscale status
+
+# 이후 Tailscale IP로 SSH
+ssh user@100.x.y.z
+```
+
+**장점**:
+- 포트 포워딩이나 공유기 설정이 필요 없다
+- 카페, 집, 학교 어디서든 같은 IP로 서버에 접속
+- Tailscale SSH를 쓰면 SSH 키 관리도 자동화 가능
+
+**~/.ssh/config**에 Tailscale IP를 등록해 두면 편하다:
+
+```
+Host lab-gpu
+    HostName 100.x.y.z
+    User junholee
+```
+
+> **추천 자료**
+> - [Tailscale 공식 문서](https://tailscale.com/kb/) — 설치부터 ACL 설정까지
+> - [The Missing Semester - Remote Machines](https://missing.csail.mit.edu/2020/command-line/#remote-machines) — SSH, 포트 포워딩, tmux 등 원격 작업 기초
 
 ### 16.5 실험 관리
 
