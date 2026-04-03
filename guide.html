@@ -13281,19 +13281,19 @@ sudo apt-get install libeigen3-dev
         async src="//gc.zgo.at/count.js"></script>
 <script>
 (function() {
-  var attempts = 0;
-  var timer = setInterval(function() {
-    if (window.goatcounter && goatcounter.visit_count) {
-      clearInterval(timer);
-      var main = document.querySelector('main#main-content');
-      var el = document.createElement('div');
-      el.style.cssText = 'margin-left:var(--sidebar-width);text-align:center;padding:24px 0 16px;color:#9a9ab0;font-size:12px;';
-      el.innerHTML = '<span id="gc-total"></span> views';
-      main.appendChild(el);
-      goatcounter.visit_count({type:'html', append:'#gc-total', path:'TOTAL', no_branding:true});
-    }
-    if (++attempts > 50) clearInterval(timer);
-  }, 200);
+  var main = document.querySelector('main#main-content');
+  var el = document.createElement('div');
+  el.style.cssText = 'margin-left:var(--sidebar-width);text-align:center;padding:24px 0 16px;color:#9a9ab0;font-size:12px;';
+  main.appendChild(el);
+
+  fetch('https://alexjunholee.goatcounter.com/counter/TOTAL.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.count) {
+        el.textContent = data.count.replace(/\s/g, '') + ' views';
+      }
+    })
+    .catch(function() {});
 })();
 </script>
 </body>
