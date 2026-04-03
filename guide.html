@@ -388,6 +388,27 @@ body {
 #content blockquote p { margin-bottom: 8px; }
 #content blockquote p:last-child { margin-bottom: 0; }
 
+#content blockquote.quote-person {
+  border-left: none;
+  background: transparent;
+  text-align: center;
+  padding: 24px 32px;
+  margin: 8px 0 20px 0;
+}
+
+#content blockquote.quote-person p:first-child {
+  font-style: italic;
+  font-size: 17px;
+  color: var(--text);
+  line-height: 1.8;
+}
+
+#content blockquote.quote-person p:last-child {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
 #content blockquote strong {
   color: #8ab4f8;
 }
@@ -12074,6 +12095,7 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 **모든 것은 최적화 문제다**
 
 > "이 세상 모든것이 optimization이다."
+>
 > — Dr. Dongjin Hyun, Head of Robotics LAB, Hyundai Motor Company
 
 엔지니어링에는 100%가 없다. 0%도 없다. 사이언스는 자연 법칙을 발견하는 학문이다. "빛의 속도는 299,792,458 m/s이다" 같은 단정적인 진술을 만든다. 엔지니어링은 다르다. 우리가 다루는 건 현실 세계의 더럽고 애매한 문제들이다. 센서는 노이즈를 뱉고, 모터는 명령한 토크를 정확히 내지 않고, 환경은 예측 불가능하게 변한다. 이런 문제에는 "정답"이 없다. 있는 건 "이 조건 하에서 가장 나은 선택"뿐이다.
@@ -13042,6 +13064,14 @@ sudo apt-get install libeigen3-dev
       'hf_depth':            { file: 'interactive/hf_depth.html',            name: 'Depth Anything V2' },
       'hf_grounding_dino':   { file: 'interactive/hf_grounding_dino.html',   name: 'Grounding DINO' }
     };
+
+    // Tag person-quote blockquotes (containing "—" attribution)
+    contentEl.querySelectorAll('blockquote').forEach(function(bq) {
+      var text = bq.textContent;
+      if (text.indexOf('\u2014') !== -1 && !bq.querySelector('strong')) {
+        bq.classList.add('quote-person');
+      }
+    });
 
     // Find all blockquotes in the rendered content
     var blockquotes = contentEl.querySelectorAll('blockquote');
