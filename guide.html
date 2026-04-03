@@ -13279,5 +13279,25 @@ sudo apt-get install libeigen3-dev
 </script>
 <script data-goatcounter="https://alexjunholee.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<script>
+(function() {
+  // Wait for GoatCounter to load, then show visitor count
+  var attempts = 0;
+  var timer = setInterval(function() {
+    if (window.goatcounter && goatcounter.visit_count) {
+      clearInterval(timer);
+      var container = document.createElement('div');
+      container.style.cssText = 'text-align:center;padding:24px 0;color:#9a9ab0;font-size:13px;margin-left:var(--sidebar-width);';
+      container.innerHTML = 'Total views: ';
+      var counter = document.createElement('span');
+      counter.id = 'gc-counter';
+      container.appendChild(counter);
+      document.querySelector('main#main-content').appendChild(container);
+      goatcounter.visit_count({type: 'html', append: '#gc-counter', path: 'TOTAL', no_branding: true});
+    }
+    if (++attempts > 50) clearInterval(timer);
+  }, 200);
+})();
+</script>
 </body>
 </html>
