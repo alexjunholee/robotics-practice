@@ -13285,57 +13285,15 @@ sudo apt-get install libeigen3-dev
   var timer = setInterval(function() {
     if (window.goatcounter && goatcounter.visit_count) {
       clearInterval(timer);
-      buildDashboard();
+      var main = document.querySelector('main#main-content');
+      var el = document.createElement('div');
+      el.style.cssText = 'margin-left:var(--sidebar-width);text-align:center;padding:24px 0 16px;color:#9a9ab0;font-size:12px;';
+      el.innerHTML = '<span id="gc-total"></span> views';
+      main.appendChild(el);
+      goatcounter.visit_count({type:'html', append:'#gc-total', path:'TOTAL', no_branding:true});
     }
     if (++attempts > 50) clearInterval(timer);
   }, 200);
-
-  function buildDashboard() {
-    var main = document.querySelector('main#main-content');
-    var dash = document.createElement('div');
-    dash.innerHTML = '\
-      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">\
-        <div style="background:rgba(255,255,255,0.04);border:1px solid #2a2a4a;border-radius:12px;padding:20px 32px;min-width:140px;text-align:center;">\
-          <div style="font-size:12px;color:#9a9ab0;margin-bottom:6px;letter-spacing:0.5px;">TOTAL VIEWS</div>\
-          <div id="gc-total" style="font-size:28px;font-weight:700;color:#6fa8dc;">-</div>\
-        </div>\
-        <div style="background:rgba(255,255,255,0.04);border:1px solid #2a2a4a;border-radius:12px;padding:20px 32px;min-width:140px;text-align:center;">\
-          <div style="font-size:12px;color:#9a9ab0;margin-bottom:6px;letter-spacing:0.5px;">TODAY</div>\
-          <div id="gc-today" style="font-size:28px;font-weight:700;color:#6fa8dc;">-</div>\
-        </div>\
-      </div>';
-    dash.style.cssText = 'margin-left:var(--sidebar-width);padding:32px 20px 24px;';
-    main.appendChild(dash);
-
-    // Total views
-    goatcounter.visit_count({type:'html', append:'#gc-total', path:'TOTAL', no_branding:true});
-
-    // Today views via public API
-    var today = new Date().toISOString().slice(0, 10);
-    fetch('https://alexjunholee.goatcounter.com/counter/' + encodeURIComponent('/guide.html') + '.json')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        // This endpoint returns {count: "N"} for total, no daily breakdown
-        // Fall back: try the stats API with date range
-        return fetch('https://alexjunholee.goatcounter.com/counter/' + encodeURIComponent('/guide.html') + '.json?period=' + today + ',' + today);
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var el = document.getElementById('gc-today');
-        if (data && data.count_unique !== undefined) {
-          el.textContent = data.count_unique;
-        } else if (data && data.count !== undefined) {
-          el.textContent = data.count;
-        }
-      })
-      .catch(function() {
-        // If API doesn't support daily, just show total in both
-        var el = document.getElementById('gc-today');
-        el.textContent = '-';
-        el.style.fontSize = '14px';
-        el.style.color = '#9a9ab0';
-      });
-  }
 })();
 </script>
 </body>
