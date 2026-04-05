@@ -164,21 +164,13 @@ let optimized = false;
 
 function generateTrajectory() {
   groundTruth = [];
-  // Square-ish loop
-  const sideLen = 5;
-  const posesPerSide = Math.floor(NUM_POSES / 4);
-  const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  // Circular loop — guarantees closure
+  const radius = 4;
+  const n = NUM_POSES;
 
-  let x = 0, y = 0;
-  groundTruth.push([x, y]);
-
-  for (let s = 0; s < 4; s++) {
-    const count = (s === 3) ? NUM_POSES - 1 - posesPerSide * 3 : posesPerSide;
-    for (let i = 0; i < count; i++) {
-      x += dirs[s][0] * sideLen / posesPerSide;
-      y += dirs[s][1] * sideLen / posesPerSide;
-      groundTruth.push([x, y]);
-    }
+  for (let i = 0; i < n; i++) {
+    const angle = (2 * Math.PI * i) / n;
+    groundTruth.push([radius * Math.cos(angle), radius * Math.sin(angle)]);
   }
 
   // Add cumulative noise
@@ -206,12 +198,13 @@ function generateTrajectory() {
   optimizedPoses = noisyPoses.map(p => [...p]);
   optimized = false;
 
-  // Default loop closure: first to last
+  // Default loop closure: first to last (with measurement noise)
+  const lcNoise = 0.05;
   loopClosures = [{
     from: 0,
     to: groundTruth.length - 1,
-    dx: groundTruth[0][0] - groundTruth[groundTruth.length - 1][0],
-    dy: groundTruth[0][1] - groundTruth[groundTruth.length - 1][1]
+    dx: groundTruth[0][0] - groundTruth[groundTruth.length - 1][0] + (Math.random() - 0.5) * lcNoise,
+    dy: groundTruth[0][1] - groundTruth[groundTruth.length - 1][1] + (Math.random() - 0.5) * lcNoise
   }];
 }
 
