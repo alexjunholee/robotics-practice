@@ -1382,6 +1382,7 @@ T_WC: Camera → World 변환 행렬 (4×4)
 > - [3Blue1Brown — Quaternions and 3D Rotation](https://www.youtube.com/watch?v=zjMuIxRvygQ) — 쿼터니언의 기하학적 의미를 시각화한 영상. 4차원이 왜 3D 회전에 필요한지 직관적으로 이해할 수 있다.
 > - [State Estimation for Robotics, Ch.7 — Rotation (Tim Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 모든 회전 표현과 그들 사이의 변환을 깔끔하게 정리한 교재
 > - [Sola — Quaternion Kinematics for the Error-State Kalman Filter (Tech Report)](https://arxiv.org/abs/1711.02508) — VIO/INS 구현 시 쿼터니언 기반 에러 상태 칼만 필터의 수학적 기초. 실전에서 매우 유용한 테크니컬 리포트.
+> - [3D Rotation Converter](https://www.andre-gaschler.com/rotationconverter/) — 쿼터니언, 오일러 각, 회전 행렬 간 변환을 확인할 수 있는 온라인 도구
 
 > **실습**: [회전 표현과 Gimbal Lock](https://alexjunholee.github.io/robotics-practice/app.html#rotation_gimbal) | [6DoF 포즈 시각화](https://alexjunholee.github.io/robotics-practice/app.html#xyzrpy_6dof)
 > 오일러 각의 Gimbal Lock 현상과 쿼터니언 회전을 직접 조작하며 비교하고, 6자유도 포즈(x, y, z, roll, pitch, yaw)를 인터랙티브하게 확인할 수 있다.
@@ -1438,6 +1439,7 @@ p(x) = N(μ, Σ)
 
 > **추천 자료**
 > - [3Blue1Brown — But what is the Central Limit Theorem?](https://www.youtube.com/watch?v=zeJD6dqJ5lo) — 중심극한정리를 시각적으로 설명. 왜 정규분포가 어디에나 나타나는지 직관적으로 이해할 수 있다.
+> - [Kalman Filter — How it works, in pictures](http://www.bzarg.com/p/how-a-kalman-filter-works-in-pictures/) — 칼만 필터의 작동 원리를 시각적으로 설명. 수식 전에 직관을 잡기 좋다
 
 > **실습**: [Kalman Filter](https://alexjunholee.github.io/robotics-practice/app.html#kalman_filter)
 > 칼만 필터의 predict-update 사이클을 인터랙티브하게 조작하며, 정규분포 기반 상태 추정 과정을 확인할 수 있다.
@@ -1892,6 +1894,7 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 > - [TUM Multiple View Geometry, Ch.2 -- Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) -- Daniel Cremers 교수의 강의. SO(3), SE(3)를 시각적으로 설명
 > - [Sophus GitHub](https://github.com/strasdat/Sophus) -- C++ Lie group 라이브러리. 코드를 읽으면 이해가 빨라진다
 > - [정진용 블로그 — SE(3) and SO(3) transformation](https://jinyongjeong.github.io/2016/06/07/se3_so3_transformation/) — SE(3), SO(3) 변환의 한글 정리. GL(3), O(3)부터 체계적으로 설명
+> - [T-Robotics: Lie Group Formulation for Robot Mechanics](http://t-robotics.blogspot.com/2015/07/lie-group-formulation-for-robot.html) — 한국어로 작성된 Lie Group 설명. 로봇 역학에서의 Lie Group 활용을 정리
 
 ### 3.7 심화: Factor Graph
 
@@ -6182,6 +6185,7 @@ reprojection error가 0.5 픽셀 이하면 양호, 0.1 이하면 매우 좋다. 
 > - [OpenCV 카메라 캘리브레이션 튜토리얼](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — 체커보드 캘리브레이션 step-by-step
 > - [Kalibr 공식 Wiki](https://github.com/ethz-asl/kalibr/wiki) — Camera-IMU 캘리브레이션의 사실상 표준 도구
 > - [Zhang, "A Flexible New Technique for Camera Calibration" (2000)](https://www.microsoft.com/en-us/research/publication/a-flexible-new-technique-for-camera-calibration/) — 현재 OpenCV 캘리브레이션의 기반이 되는 논문
+> - [Tangram Vision Blog](https://www.tangramvision.com/blog) — 카메라 캘리브레이션, 센서 퓨전 등 실전 엔지니어링 글 모음
 
 ---
 
@@ -8715,6 +8719,7 @@ Foundation model (CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구�
 > - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — SLAM 관련 논문, 라이브러리, 데이터셋을 모아놓은 목록
 > - [정진용 블로그 — SLAM 강의 시리즈 (Freiburg Robot Mapping 기반)](https://jinyongjeong.github.io/2017/02/13/lec01_SLAM_bayes_filter/) — Bayes filter부터 EKF/UKF/Particle filter, Graph SLAM, Robust SLAM까지 15편 시리즈. 한글로 된 SLAM 입문 자료 중 가장 체계적
 > - [김기섭 블로그 — SLAM Back-end 공부자료 5개 추천](https://gisbi-kim.github.io/blog/2021/10/03/slam-textbooks.html) — Error-state KF, Factor Graphs, Bundle Adjustment 등 핵심 자료 큐레이션
+> - [Robot Mapping Course (Uni Freiburg, Cyrill Stachniss)](http://ais.informatik.uni-freiburg.de/teaching/ws13/mapping/) — SLAM 강의 슬라이드와 과제 자료. 영상과 함께 보면 좋다
 
 > **실습**: [SE(2) Odometry](https://alexjunholee.github.io/robotics-practice/app.html#se2_odometry)
 > 2D 평면에서의 odometry 누적 과정을 직접 조작하며, drift가 어떻게 발생하는지 확인할 수 있다.
@@ -9844,6 +9849,7 @@ auto func = [&](int x) { return x * 2; };
 > **추천 자료**
 > - [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) — 모던 C++ 코딩 가이드 (Bjarne Stroustrup, Herb Sutter)
 > - [The Cherno - C++ Playlist](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) — C++ 기초부터 고급까지 영상 시리즈
+> - [Modernes C++](https://www.modernescpp.com/index.php) — 모던 C++ (C++17/20/23) 기능을 체계적으로 정리한 블로그
 
 > **⚠ AI 에이전트 주의**: AI가 생성한 C++ 코드가 x86에서는 빌드되지만 Jetson(ARM)에서 실패하는 경우가 많다. 크로스 컴파일 환경이나 타겟 아키텍처를 알려줘라.
 
@@ -11853,6 +11859,16 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 > 논문 검색 팁: [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [Papers With Code](https://paperswithcode.com/), [arXiv](https://arxiv.org/)를 활용하자. Papers With Code는 특히 벤치마크 순위와 코드 링크를 같이 보여줘서 편하다.
 
+#### 논문 작성 도구
+
+> **추천 자료**
+> - [Overleaf](https://www.overleaf.com/) — 온라인 LaTeX 에디터. 논문 공동 작성의 사실상 표준
+> - [Mathpix](https://mathpix.com/) — 수식 스크린샷을 LaTeX 코드로 변환
+> - [Detexify](http://detexify.kirelabs.org/classify.html) — 손으로 그려서 LaTeX 기호를 검색
+> - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 테이블 생성기
+> - [QuillBot](https://quillbot.com/) — 영어 문장 paraphrasing 도구. 논문 영작에 유용
+> - [Ludwig](https://ludwig.guru/) — 영어 표현 검색 엔진. 원어민이 실제로 쓰는 표현을 확인
+
 ### 20.5 주요 학회
 
 #### Computer Vision
@@ -11882,6 +11898,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 | **CVPR Workshop** (WAD, OmniCV) | 자율주행 워크샵 |
 | **T-IV** | 지능형 차량 저널 |
 | **T-ITS** | 교통 시스템 저널 |
+
+> **추천 자료**
+> - [CV Conference Deadlines](http://conferences.visionbib.com/Iris-Conferences.html) — 주요 CV/로보틱스 학회 마감일 모음
 
 ### 20.6 유용한 GitHub 저장소
 
