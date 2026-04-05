@@ -170,7 +170,7 @@ scene.add(dlight);
 
 // Pinhole camera representation
 const camGroup = new THREE.Group();
-camGroup.position.set(0, 0.8, 0);
+camGroup.position.set(0, 0.85, 0);
 scene.add(camGroup);
 const camBody = new THREE.Mesh(
   new THREE.BoxGeometry(0.4, 0.3, 0.3),
@@ -280,10 +280,12 @@ function renderInset(fx, fy, cx_val, cy_val) {
   const prevFrustum = frustumLines ? frustumLines.visible : false;
   const prevBody = camBody.visible;
   const prevGrid = grid.visible;
+  const prevBg = scene.background;
   if (frustumLines) frustumLines.visible = false;
   camBody.visible = false;
   grid.visible = false;
   rayLines.forEach(l => l.visible = false);
+  scene.background = new THREE.Color(0x111111);
 
   insetRenderer.render(scene, projCam);
 
@@ -292,6 +294,7 @@ function renderInset(fx, fy, cx_val, cy_val) {
   camBody.visible = prevBody;
   grid.visible = prevGrid;
   rayLines.forEach(l => l.visible = true);
+  scene.background = prevBg;
 
   // Copy to inset canvas
   insetCtx.drawImage(insetRenderer.domElement, 0, 0, IW, IH);
