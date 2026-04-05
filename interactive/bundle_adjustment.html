@@ -182,8 +182,12 @@ function generateScene() {
 function project(cam, pt) {
   const dx = pt.x - cam.x;
   const dy = pt.y - cam.y;
-  const bearing = Math.atan2(dy, dx) - cam.angle;
-  return FOCAL * Math.tan(bearing);
+  // Transform to camera local frame
+  const ca = Math.cos(cam.angle), sa = Math.sin(cam.angle);
+  const lx = ca * dx + sa * dy;  // forward
+  const ly = -sa * dx + ca * dy; // lateral
+  if (Math.abs(lx) < 1e-6) return ly > 0 ? 1e6 : -1e6;
+  return FOCAL * ly / lx;
 }
 
 function computeTotalError(cams, pts) {
@@ -206,61 +210,51 @@ function optimizeStep() {
   const savedCams = optCams.map(c => ({ ...c }));
   const savedPts = optPts.map(p => ({ ...p }));
 
-  // Gradient descent on camera poses and point positions
-  for (let ci = 0; ci < NUM_CAMS; ci++) {
-    const relObs = observations.filter(o => o.cam === ci);
-    if (relObs.length === 0) continue;
+  // Compute all gradients first, then apply
+  const camGrads = optCams.map(() => ({ gx: 0, gy: 0, ga: 0 }));
+  const ptGrads = optPts.map(() => ({ gx: 0, gy: 0 }));
 
-    let gx = 0, gy = 0, ga = 0;
-    for (const obs of relObs) {
-      const pred = project(optCams[ci], optPts[obs.pt]);
-      const err = pred - obs.measured;
+  for (const obs of observations) {
+    const ci = obs.cam, pi = obs.pt;
+    const pred = project(optCams[ci], optPts[pi]);
+    const err = pred - obs.measured;
 
-      optCams[ci].x += eps;
-      const px = project(optCams[ci], optPts[obs.pt]);
-      optCams[ci].x -= eps;
+    // Camera gradients
+    optCams[ci].x += eps;
+    const cpx = project(optCams[ci], optPts[pi]);
+    optCams[ci].x -= eps;
+    optCams[ci].y += eps;
+    const cpy = project(optCams[ci], optPts[pi]);
+    optCams[ci].y -= eps;
+    optCams[ci].angle += eps;
+    const cpa = project(optCams[ci], optPts[pi]);
+    optCams[ci].angle -= eps;
 
-      optCams[ci].y += eps;
-      const py = project(optCams[ci], optPts[obs.pt]);
-      optCams[ci].y -= eps;
+    camGrads[ci].gx += 2 * err * (cpx - pred) / eps;
+    camGrads[ci].gy += 2 * err * (cpy - pred) / eps;
+    camGrads[ci].ga += 2 * err * (cpa - pred) / eps;
 
-      optCams[ci].angle += eps;
-      const pa = project(optCams[ci], optPts[obs.pt]);
-      optCams[ci].angle -= eps;
+    // Point gradients
+    optPts[pi].x += eps;
+    const ppx = project(optCams[ci], optPts[pi]);
+    optPts[pi].x -= eps;
+    optPts[pi].y += eps;
+    const ppy = project(optCams[ci], optPts[pi]);
+    optPts[pi].y -= eps;
 
-      gx += 2 * err * (px - pred) / eps;
-      gy += 2 * err * (py - pred) / eps;
-      ga += 2 * err * (pa - pred) / eps;
-    }
-
-    optCams[ci].x -= stepSize * gx;
-    optCams[ci].y -= stepSize * gy;
-    optCams[ci].angle -= stepSize * ga;
+    ptGrads[pi].gx += 2 * err * (ppx - pred) / eps;
+    ptGrads[pi].gy += 2 * err * (ppy - pred) / eps;
   }
 
+  // Apply gradients
+  for (let ci = 0; ci < NUM_CAMS; ci++) {
+    optCams[ci].x -= stepSize * camGrads[ci].gx;
+    optCams[ci].y -= stepSize * camGrads[ci].gy;
+    optCams[ci].angle -= stepSize * camGrads[ci].ga;
+  }
   for (let pi = 0; pi < NUM_PTS; pi++) {
-    const relObs = observations.filter(o => o.pt === pi);
-    if (relObs.length === 0) continue;
-
-    let gx = 0, gy = 0;
-    for (const obs of relObs) {
-      const pred = project(optCams[obs.cam], optPts[pi]);
-      const err = pred - obs.measured;
-
-      optPts[pi].x += eps;
-      const px = project(optCams[obs.cam], optPts[pi]);
-      optPts[pi].x -= eps;
-
-      optPts[pi].y += eps;
-      const py = project(optCams[obs.cam], optPts[pi]);
-      optPts[pi].y -= eps;
-
-      gx += 2 * err * (px - pred) / eps;
-      gy += 2 * err * (py - pred) / eps;
-    }
-
-    optPts[pi].x -= stepSize * gx;
-    optPts[pi].y -= stepSize * gy;
+    optPts[pi].x -= stepSize * ptGrads[pi].gx;
+    optPts[pi].y -= stepSize * ptGrads[pi].gy;
   }
 
   // Check if error decreased; if not, rollback and halve step size
