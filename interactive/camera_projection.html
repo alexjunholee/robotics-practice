@@ -38,12 +38,12 @@ input[type="range"] { width: 100%; accent-color: #00d4ff; }
   <div id="controls">
     <h3>카메라 내부 파라미터 (Intrinsics)</h3>
     <div class="ctrl">
-      <label>Focal Length fx: <span id="vfx">500</span></label>
-      <input type="range" id="fx" min="100" max="2000" step="10" value="500">
+      <label>Focal Length fx: <span id="vfx">300</span></label>
+      <input type="range" id="fx" min="50" max="800" step="10" value="300">
     </div>
     <div class="ctrl">
-      <label>Focal Length fy: <span id="vfy">500</span></label>
-      <input type="range" id="fy" min="100" max="2000" step="10" value="500">
+      <label>Focal Length fy: <span id="vfy">300</span></label>
+      <input type="range" id="fy" min="50" max="800" step="10" value="300">
     </div>
     <div class="ctrl">
       <label>Principal Point cx: <span id="vcx">130</span></label>
@@ -65,8 +65,8 @@ input[type="range"] { width: 100%; accent-color: #00d4ff; }
   <div id="matrixBox">
     <h3>Intrinsic Matrix K (3x3)</h3>
     <div class="matrix" id="matrixK">
-      <div class="row"><span>500</span><span>0</span><span>130</span></div>
-      <div class="row"><span>0</span><span>500</span><span>100</span></div>
+      <div class="row"><span>300</span><span>0</span><span>130</span></div>
+      <div class="row"><span>0</span><span>300</span><span>100</span></div>
       <div class="row"><span>0</span><span>0</span><span>1</span></div>
     </div>
   </div>
@@ -320,7 +320,7 @@ function updateAll() {
 
 document.querySelectorAll('#controls input').forEach(el => el.addEventListener('input', updateAll));
 
-buildFrustum(500, 500, 130, 100);
+buildFrustum(300, 300, 130, 100);
 
 function animate() {
   requestAnimationFrame(animate);
