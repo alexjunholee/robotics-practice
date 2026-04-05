@@ -203,8 +203,8 @@ function generateTrajectory() {
   loopClosures = [{
     from: 0,
     to: groundTruth.length - 1,
-    dx: groundTruth[0][0] - groundTruth[groundTruth.length - 1][0] + (Math.random() - 0.5) * lcNoise,
-    dy: groundTruth[0][1] - groundTruth[groundTruth.length - 1][1] + (Math.random() - 0.5) * lcNoise
+    dx: groundTruth[groundTruth.length - 1][0] - groundTruth[0][0] + (Math.random() - 0.5) * lcNoise,
+    dy: groundTruth[groundTruth.length - 1][1] - groundTruth[0][1] + (Math.random() - 0.5) * lcNoise
   }];
 }
 
@@ -555,8 +555,8 @@ canvas.addEventListener('click', e => {
     if (!exists) {
       loopClosures.push({
         from, to,
-        dx: groundTruth[from][0] - groundTruth[to][0],
-        dy: groundTruth[from][1] - groundTruth[to][1]
+        dx: groundTruth[to][0] - groundTruth[from][0] + (Math.random() - 0.5) * 0.05,
+        dy: groundTruth[to][1] - groundTruth[from][1] + (Math.random() - 0.5) * 0.05
       });
     }
     lcMode = false;
