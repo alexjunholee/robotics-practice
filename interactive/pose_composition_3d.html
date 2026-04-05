@@ -6,13 +6,16 @@
 <title>SE(3) 포즈 합성 시각화 — Pose Composition</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body {
+html, body {
   background: #1a1a2e;
   color: #e0e0e0;
   font-family: 'Segoe UI', sans-serif;
-  display: flex;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+}
+body {
+  display: flex;
 }
 #sidebar {
   width: 400px;
@@ -62,7 +65,7 @@ button {
   text-align: center; padding: 4px;
   background: rgba(255,96,96,0.1); border-radius: 4px;
 }
-#three-container { flex: 1; position: relative; }
+#three-container { flex: 1; position: relative; min-height: 0; }
 #three-container canvas { display: block; }
 .legend-3d {
   position: absolute; bottom: 10px; left: 14px; font-size: 11px; line-height: 1.6;
@@ -269,15 +272,16 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
 function resizeRenderer() {
-  const w = container.clientWidth;
-  const h = container.clientHeight;
+  const w = container.clientWidth || (window.innerWidth - 400);
+  const h = container.clientHeight || window.innerHeight;
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resizeRenderer);
-resizeRenderer();
+// Delay initial resize to ensure layout is computed (important in iframes)
+setTimeout(resizeRenderer, 50);
 
 // Grid
 const gridHelper = new THREE.GridHelper(10, 10, 0x334466, 0x1a2744);
