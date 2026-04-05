@@ -57,8 +57,8 @@ canvas#sceneCanvas { background: #0f0f23; }
         <input type="range" id="noiseLevel" min="2" max="40" step="1" value="15">
       </div>
       <div class="ctrl">
-        <label>Step Size (스텝 크기): <span id="vStep">0.01</span></label>
-        <input type="range" id="stepSize" min="0.001" max="0.05" step="0.001" value="0.01">
+        <label>Step Size (스텝 크기): <span id="vStep">0.001</span></label>
+        <input type="range" id="stepSize" min="0.0001" max="0.01" step="0.0001" value="0.001">
       </div>
       <div class="btn-row">
         <button id="resetBtn">초기화 (Reset)</button>
@@ -197,16 +197,20 @@ function computeTotalError(cams, pts) {
 }
 
 function optimizeStep() {
-  const stepSize = parseFloat(document.getElementById('stepSize').value);
-  const eps = 0.1;
+  let stepSize = parseFloat(document.getElementById('stepSize').value);
+  const eps = 1e-4;
+
+  const errBefore = computeTotalError(optCams, optPts);
+
+  // Save state for rollback
+  const savedCams = optCams.map(c => ({ ...c }));
+  const savedPts = optPts.map(p => ({ ...p }));
 
   // Gradient descent on camera poses and point positions
-  // Compute numerical gradients
   for (let ci = 0; ci < NUM_CAMS; ci++) {
     const relObs = observations.filter(o => o.cam === ci);
     if (relObs.length === 0) continue;
 
-    // Gradient for x
     let gx = 0, gy = 0, ga = 0;
     for (const obs of relObs) {
       const pred = project(optCams[ci], optPts[obs.pt]);
@@ -231,7 +235,7 @@ function optimizeStep() {
 
     optCams[ci].x -= stepSize * gx;
     optCams[ci].y -= stepSize * gy;
-    optCams[ci].angle -= stepSize * ga * 0.1;
+    optCams[ci].angle -= stepSize * ga;
   }
 
   for (let pi = 0; pi < NUM_PTS; pi++) {
@@ -257,6 +261,18 @@ function optimizeStep() {
 
     optPts[pi].x -= stepSize * gx;
     optPts[pi].y -= stepSize * gy;
+  }
+
+  // Check if error decreased; if not, rollback and halve step size
+  const errAfter = computeTotalError(optCams, optPts);
+  if (errAfter > errBefore) {
+    optCams = savedCams.map(c => ({ ...c }));
+    optPts = savedPts.map(p => ({ ...p }));
+    // Try with smaller step
+    const ss = document.getElementById('stepSize');
+    const newStep = Math.max(0.001, stepSize * 0.5);
+    ss.value = newStep;
+    document.getElementById('vStep').textContent = newStep.toFixed(3);
   }
 
   iteration++;
