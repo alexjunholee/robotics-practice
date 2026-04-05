@@ -57,8 +57,8 @@ canvas#sceneCanvas { background: #0f0f23; }
         <input type="range" id="noiseLevel" min="2" max="40" step="1" value="15">
       </div>
       <div class="ctrl">
-        <label>Step Size (스텝 크기): <span id="vStep">0.001</span></label>
-        <input type="range" id="stepSize" min="0.0001" max="0.01" step="0.0001" value="0.001">
+        <label>Step Size (스텝 크기): <span id="vStep">1.0</span></label>
+        <input type="range" id="stepSize" min="0.1" max="10" step="0.1" value="1.0">
       </div>
       <div class="btn-row">
         <button id="resetBtn">초기화 (Reset)</button>
@@ -243,15 +243,26 @@ function optimizeStep() {
     ptGrads[pi].gy += 2 * err * (ppy - pred) / eps;
   }
 
-  // Apply gradients
-  for (let ci = 0; ci < NUM_CAMS; ci++) {
-    optCams[ci].x -= stepSize * camGrads[ci].gx;
-    optCams[ci].y -= stepSize * camGrads[ci].gy;
-    optCams[ci].angle -= stepSize * camGrads[ci].ga;
+  // Compute gradient norm for adaptive scaling
+  let gradNorm = 0;
+  for (let ci = 1; ci < NUM_CAMS; ci++) {
+    gradNorm += camGrads[ci].gx * camGrads[ci].gx + camGrads[ci].gy * camGrads[ci].gy + camGrads[ci].ga * camGrads[ci].ga;
   }
   for (let pi = 0; pi < NUM_PTS; pi++) {
-    optPts[pi].x -= stepSize * ptGrads[pi].gx;
-    optPts[pi].y -= stepSize * ptGrads[pi].gy;
+    gradNorm += ptGrads[pi].gx * ptGrads[pi].gx + ptGrads[pi].gy * ptGrads[pi].gy;
+  }
+  gradNorm = Math.sqrt(gradNorm);
+  const scale = gradNorm > 1 ? stepSize / gradNorm : stepSize;
+
+  // Apply gradients (fix first camera as anchor to resolve gauge freedom)
+  for (let ci = 1; ci < NUM_CAMS; ci++) {
+    optCams[ci].x -= scale * camGrads[ci].gx;
+    optCams[ci].y -= scale * camGrads[ci].gy;
+    optCams[ci].angle -= scale * camGrads[ci].ga;
+  }
+  for (let pi = 0; pi < NUM_PTS; pi++) {
+    optPts[pi].x -= scale * ptGrads[pi].gx;
+    optPts[pi].y -= scale * ptGrads[pi].gy;
   }
 
   // Check if error decreased; if not, rollback and halve step size
