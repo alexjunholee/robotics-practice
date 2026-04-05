@@ -243,22 +243,21 @@ function optimizeStep() {
     ptGrads[pi].gy += 2 * err * (ppy - pred) / eps;
   }
 
-  // Compute gradient norm for adaptive scaling
-  let gradNorm = 0;
+  // Normalize each gradient component independently to prevent angle from dominating
+  let maxGrad = 1e-12;
   for (let ci = 1; ci < NUM_CAMS; ci++) {
-    gradNorm += camGrads[ci].gx * camGrads[ci].gx + camGrads[ci].gy * camGrads[ci].gy + camGrads[ci].ga * camGrads[ci].ga;
+    maxGrad = Math.max(maxGrad, Math.abs(camGrads[ci].gx), Math.abs(camGrads[ci].gy), Math.abs(camGrads[ci].ga));
   }
   for (let pi = 0; pi < NUM_PTS; pi++) {
-    gradNorm += ptGrads[pi].gx * ptGrads[pi].gx + ptGrads[pi].gy * ptGrads[pi].gy;
+    maxGrad = Math.max(maxGrad, Math.abs(ptGrads[pi].gx), Math.abs(ptGrads[pi].gy));
   }
-  gradNorm = Math.sqrt(gradNorm);
-  const scale = gradNorm > 1 ? stepSize / gradNorm : stepSize;
+  const scale = stepSize / maxGrad;
 
   // Apply gradients (fix first camera as anchor to resolve gauge freedom)
   for (let ci = 1; ci < NUM_CAMS; ci++) {
     optCams[ci].x -= scale * camGrads[ci].gx;
     optCams[ci].y -= scale * camGrads[ci].gy;
-    optCams[ci].angle -= scale * camGrads[ci].ga;
+    optCams[ci].angle -= scale * camGrads[ci].ga * 0.01; // angle moves much slower
   }
   for (let pi = 0; pi < NUM_PTS; pi++) {
     optPts[pi].x -= scale * ptGrads[pi].gx;
