@@ -263,9 +263,16 @@ function draw() {
   }
 }
 
+let frameCount = 0;
+const STEP_EVERY = 15; // doStep every N frames (~4 steps/sec at 60fps)
+
 function loop() {
   if (playing) {
-    doStep();
+    frameCount++;
+    if (frameCount >= STEP_EVERY) {
+      doStep();
+      frameCount = 0;
+    }
   }
   draw();
   requestAnimationFrame(loop);
