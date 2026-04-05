@@ -243,7 +243,7 @@ insetRenderer.setSize(IW, IH);
 const projCam = new THREE.PerspectiveCamera(60, IW / IH, 0.3, 50);
 camGroup.add(projCam);
 projCam.position.set(0, 0, 0);
-projCam.lookAt(0, 0, -1);
+// Default camera looks down -Z in local space, which is what we want
 
 function updateProjCam(fx, fy, cx_val, cy_val) {
   // Build projection matrix directly from intrinsics
