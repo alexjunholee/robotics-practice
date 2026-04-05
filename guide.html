@@ -12748,7 +12748,9 @@ sudo apt-get install libeigen3-dev
   });
 
   // ---- Render markdown ----
-  const mdSource = document.getElementById('md-source').value;
+  var mdSource = document.getElementById('md-source').value;
+  // Fix: marked.js doesn't recognize **text** when immediately followed by Korean characters
+  mdSource = mdSource.replace(/\*\*([^*\n]+)\*\*(?=[가-힣])/g, '<strong>$1</strong>');
   const contentEl = document.getElementById('content');
   const loadingEl = document.getElementById('loading');
 
