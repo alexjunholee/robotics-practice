@@ -185,8 +185,16 @@ function update() {
   }
   if (minD === Infinity) minD = 1;
 
+  const half = Math.floor(blockSz / 2);
   const dispImg = ctxD.createImageData(W, H);
   for (let i = 0; i < W * H; i++) {
+    const x = i % W, y = Math.floor(i / W);
+    if (x < half + searchR || x >= W - half || y < half || y >= H - half) {
+      // No data region — dark gray
+      dispImg.data[i*4] = 30; dispImg.data[i*4+1] = 30; dispImg.data[i*4+2] = 30;
+      dispImg.data[i*4+3] = 255;
+      continue;
+    }
     const v = maxD > 0 ? disp[i] / maxD : 0;
     const [r, g, b] = jetColormap(v);
     dispImg.data[i*4] = r;
