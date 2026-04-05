@@ -142,11 +142,8 @@ function generateScene() {
       const dx = gtPts[pi].x - gtCams[ci].x;
       const dy = gtPts[pi].y - gtCams[ci].y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      // Camera sees point if within some range and roughly in front
       if (dist < 350 && dist > 20) {
-        // Project: simplified 2D projection (bearing angle)
-        const bearing = Math.atan2(dy, dx) - gtCams[ci].angle;
-        const projected = FOCAL * Math.tan(bearing);
+        const projected = project(gtCams[ci], gtPts[pi]);
         if (Math.abs(projected) < FOCAL * 2) {
           observations.push({ cam: ci, pt: pi, measured: projected + (Math.random() - 0.5) * 0.5 });
         }
