@@ -281,7 +281,7 @@ function resample() {
       i++;
       c += particles[i].w;
     }
-    newParticles.push({ x: particles[i].x, y: particles[i].y, w: 1 / N });
+    newParticles.push({ x: particles[i].x + gaussRand() * 0.5, y: particles[i].y + gaussRand() * 0.5, w: 1 / N });
   }
   particles = newParticles;
 }
