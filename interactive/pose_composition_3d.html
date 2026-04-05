@@ -257,14 +257,18 @@ document.getElementById('btn-reset').addEventListener('click', resetAll);
 
 // ---- Three.js ----
 const container = document.getElementById('three-container');
+const initW = Math.max(container.clientWidth, window.innerWidth - 400, 400);
+const initH = Math.max(container.clientHeight, window.innerHeight, 400);
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1b38);
 
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(50, initW / initH, 0.1, 100);
 camera.position.set(6, 5, 8);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(initW, initH);
 container.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -281,9 +285,7 @@ function resizeRenderer() {
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resizeRenderer);
-resizeRenderer();
-setTimeout(resizeRenderer, 100);
-setTimeout(resizeRenderer, 500);
+setTimeout(resizeRenderer, 200);
 
 // Grid
 const gridHelper = new THREE.GridHelper(10, 10, 0x334466, 0x1a2744);
