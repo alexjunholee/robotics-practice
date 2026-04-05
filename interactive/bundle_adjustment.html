@@ -80,8 +80,8 @@ canvas#sceneCanvas { background: #0f0f23; }
         <div class="row"><span>초기 오차 (Initial Error):</span><span id="initError">-</span></div>
         <div class="row"><span>현재 오차 (Current Error):</span><span id="curError">-</span></div>
         <div class="row"><span>오차 감소율 (Reduction):</span><span id="reduction">-</span></div>
-        <div class="row"><span>카메라 수 (Cameras):</span><span>5</span></div>
-        <div class="row"><span>포인트 수 (Points):</span><span>20</span></div>
+        <div class="row"><span>카메라 수 (Cameras):</span><span>8</span></div>
+        <div class="row"><span>포인트 수 (Points):</span><span>30</span></div>
         <div class="row"><span>관측 수 (Observations):</span><span id="obsCount">-</span></div>
       </div>
     </div>
@@ -95,8 +95,8 @@ const plotCanvas = document.getElementById('plotCanvas');
 const pCtx = plotCanvas.getContext('2d');
 const SW = 550, SH = 450, PW = 296, PH = 160;
 
-const NUM_CAMS = 5;
-const NUM_PTS = 20;
+const NUM_CAMS = 8;
+const NUM_PTS = 30;
 const FOCAL = 200;
 
 let gtCams = [], gtPts = [];
@@ -116,15 +116,15 @@ function generateScene() {
   gtCams = [];
   gtPts = [];
 
-  // Cameras arranged in a rough arc
+  // Cameras arranged around the scene looking inward
   for (let i = 0; i < NUM_CAMS; i++) {
-    const angle = -Math.PI / 3 + (i / (NUM_CAMS - 1)) * (2 * Math.PI / 3);
-    const r = 180;
-    gtCams.push({
-      x: SW / 2 + r * Math.cos(angle),
-      y: SH - 60 + r * Math.sin(angle) * 0.3 - 80,
-      angle: angle + Math.PI / 2 + (Math.random() - 0.5) * 0.3
-    });
+    const angle = (2 * Math.PI * i) / NUM_CAMS;
+    const r = 200;
+    const cx = SW / 2 + r * Math.cos(angle);
+    const cy = SH / 2 + r * Math.sin(angle) * 0.6;
+    // Point camera toward scene center
+    const lookAngle = Math.atan2(SH / 2 - cy, SW / 2 - cx);
+    gtCams.push({ x: cx, y: cy, angle: lookAngle });
   }
 
   // Points scattered in the scene
@@ -141,10 +141,12 @@ function generateScene() {
     for (let pi = 0; pi < NUM_PTS; pi++) {
       const dx = gtPts[pi].x - gtCams[ci].x;
       const dy = gtPts[pi].y - gtCams[ci].y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 350 && dist > 20) {
+      // Check if point is in front of camera
+      const ca = Math.cos(gtCams[ci].angle), sa = Math.sin(gtCams[ci].angle);
+      const lx = ca * dx + sa * dy;
+      if (lx > 10) { // point is in front
         const projected = project(gtCams[ci], gtPts[pi]);
-        if (Math.abs(projected) < FOCAL * 2) {
+        if (Math.abs(projected) < FOCAL * 3) {
           observations.push({ cam: ci, pt: pi, measured: projected + (Math.random() - 0.5) * 0.5 });
         }
       }
@@ -425,8 +427,8 @@ document.getElementById('runBtn').addEventListener('click', () => {
   document.getElementById('stopBtn').disabled = false;
   function step() {
     if (!animating) return;
-    optimizeStep();
-    if (iteration < 200) {
+    for (let i = 0; i < 5; i++) optimizeStep();
+    if (iteration < 1000) {
       animId = requestAnimationFrame(step);
     } else {
       stopAnimation();
