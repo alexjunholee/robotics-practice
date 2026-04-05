@@ -14,12 +14,10 @@ html, body {
   width: 100%;
   overflow: hidden;
 }
-body {
-  display: flex;
-}
 #sidebar {
-  width: 400px;
-  min-width: 400px;
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 360px;
   padding: 16px;
   background: #16213e;
   overflow-y: auto;
@@ -27,6 +25,7 @@ body {
   flex-direction: column;
   gap: 10px;
   border-right: 2px solid #0f3460;
+  z-index: 10;
 }
 h1 { font-size: 17px; color: #e94560; }
 h2 { font-size: 12px; color: #0f3460; background: #e94560; padding: 3px 8px; border-radius: 4px; margin-top: 2px; }
@@ -65,8 +64,8 @@ button {
   text-align: center; padding: 4px;
   background: rgba(255,96,96,0.1); border-radius: 4px;
 }
-#three-container { flex: 1; position: relative; min-height: 0; min-width: 0; overflow: hidden; }
-#three-container canvas { display: block; width: 100% !important; height: 100% !important; }
+#three-container { position: absolute; top: 0; left: 360px; right: 0; bottom: 0; overflow: hidden; }
+#three-container canvas { display: block; }
 .legend-3d {
   position: absolute; bottom: 10px; left: 14px; font-size: 11px; line-height: 1.6;
 }
@@ -257,7 +256,7 @@ document.getElementById('btn-reset').addEventListener('click', resetAll);
 
 // ---- Three.js ----
 const container = document.getElementById('three-container');
-const initW = Math.max(container.clientWidth, window.innerWidth - 400, 400);
+const initW = Math.max(container.clientWidth, window.innerWidth - 360, 400);
 const initH = Math.max(container.clientHeight, window.innerHeight, 400);
 
 const scene = new THREE.Scene();
@@ -276,7 +275,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
 function resizeRenderer() {
-  const w = container.clientWidth || (window.innerWidth - 400);
+  const w = container.clientWidth || (window.innerWidth - 360);
   const h = container.clientHeight || window.innerHeight;
   if (w <= 0 || h <= 0) return;
   renderer.setSize(w, h);
