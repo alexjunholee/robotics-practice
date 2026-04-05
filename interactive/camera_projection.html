@@ -245,10 +245,9 @@ projCam.position.set(0, 0, 0);
 projCam.lookAt(0, 0, -1);
 
 function updateProjCam(fx, fy, cx_val, cy_val) {
-  // Approximate FOV from focal length
   const fovY = 2 * Math.atan(IH / (2 * fy)) * (180 / Math.PI);
   projCam.fov = fovY;
-  projCam.aspect = IW / IH;
+  projCam.aspect = (fx / fy) * (IW / IH);
   projCam.updateProjectionMatrix();
 }
 
