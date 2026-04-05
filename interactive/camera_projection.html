@@ -246,10 +246,31 @@ projCam.position.set(0, 0, 0);
 projCam.lookAt(0, 0, -1);
 
 function updateProjCam(fx, fy, cx_val, cy_val) {
-  const fovY = 2 * Math.atan(IH / (2 * fy)) * (180 / Math.PI);
-  projCam.fov = fovY;
-  projCam.aspect = (fx / fy) * (IW / IH);
-  projCam.updateProjectionMatrix();
+  // Build projection matrix directly from intrinsics
+  const near = projCam.near, far = projCam.far;
+  const left   = -cx_val * near / fx;
+  const right  = (IW - cx_val) * near / fx;
+  const top    = cy_val * near / fy;
+  const bottom = -(IH - cy_val) * near / fy;
+
+  const m = projCam.projectionMatrix.elements;
+  m[0] = 2 * near / (right - left);
+  m[4] = 0;
+  m[8] = (right + left) / (right - left);
+  m[12] = 0;
+  m[1] = 0;
+  m[5] = 2 * near / (top - bottom);
+  m[9] = (top + bottom) / (top - bottom);
+  m[13] = 0;
+  m[2] = 0;
+  m[6] = 0;
+  m[10] = -(far + near) / (far - near);
+  m[14] = -2 * far * near / (far - near);
+  m[3] = 0;
+  m[7] = 0;
+  m[11] = -1;
+  m[15] = 0;
+  projCam.projectionMatrixInverse.copy(projCam.projectionMatrix).invert();
 }
 
 function renderInset(fx, fy, cx_val, cy_val) {
