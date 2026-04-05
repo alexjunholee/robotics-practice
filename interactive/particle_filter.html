@@ -231,9 +231,15 @@ function predict(dx, dy) {
   for (let p of particles) {
     p.x += dx + gaussRand() * motionNoise;
     p.y += dy + gaussRand() * motionNoise;
-    // Clamp
-    p.x = Math.max(CELL, Math.min(W - CELL, p.x));
-    p.y = Math.max(CELL, Math.min(H - CELL, p.y));
+    // If particle ends up in wall, re-place randomly in free space
+    if (isWall(p.x, p.y)) {
+      let attempts = 0;
+      do {
+        p.x = Math.random() * (W - 60) + 30;
+        p.y = Math.random() * (H - 60) + 30;
+        attempts++;
+      } while (isWall(p.x, p.y) && attempts < 100);
+    }
   }
 }
 
@@ -325,10 +331,9 @@ function drawParticles() {
   if (maxW === 0) maxW = 1;
 
   for (let p of particles) {
-    let sz = 1.5 + (p.w / maxW) * 4;
     let alpha = 0.3 + (p.w / maxW) * 0.7;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(255, 136, 68, ${alpha})`;
     ctx.fill();
   }
