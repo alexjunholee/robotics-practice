@@ -262,6 +262,10 @@ function sobelGradient(gray) {
       dir[idx] = Math.atan2(sy, sx);
     }
   }
+  // Normalize magnitude to 0-255
+  let maxMag = 0;
+  for (let i = 0; i < W * H; i++) { if (mag[i] > maxMag) maxMag = mag[i]; }
+  if (maxMag > 0) { for (let i = 0; i < W * H; i++) { mag[i] = mag[i] * 255 / maxMag; } }
   return { mag, dir };
 }
 
