@@ -12782,6 +12782,9 @@ sudo apt-get install libeigen3-dev
     breaks: false,
     gfm: true
   });
+  // Disable strikethrough: ~ is used as range separator throughout this document
+  marked.use({ renderer: { del: function(token) { return '~' + (token.text || token) + '~'; } }
+  });
 
   // ---- Render markdown ----
   var mdSource = document.getElementById('md-source').value;
