@@ -250,8 +250,8 @@ function updateProjCam(fx, fy, cx_val, cy_val) {
   const near = projCam.near, far = projCam.far;
   const left   = -cx_val * near / fx;
   const right  = (IW - cx_val) * near / fx;
-  const top    = cy_val * near / fy;
-  const bottom = -(IH - cy_val) * near / fy;
+  const top    = (IH - cy_val) * near / fy;
+  const bottom = -cy_val * near / fy;
 
   const m = projCam.projectionMatrix.elements;
   m[0] = 2 * near / (right - left);
