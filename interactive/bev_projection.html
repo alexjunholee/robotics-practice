@@ -103,7 +103,7 @@ function update(){
     const zp = sp * yc + cp * zc_raw;
     if(zp <= 0.1) return null;
     const u = cx + focal * xc / zp;
-    const v = cy + focal * yp / zp;
+    const v = cy - focal * yp / zp;
     return {u, v};
   }
 
