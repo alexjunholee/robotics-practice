@@ -255,11 +255,13 @@ function updateProjCam(fx, fy, cx_val, cy_val) {
 function renderInset(fx, fy, cx_val, cy_val) {
   updateProjCam(fx, fy, cx_val, cy_val);
 
-  // Hide frustum/rays/camBody for clean render
+  // Hide helpers for clean camera render
   const prevFrustum = frustumLines ? frustumLines.visible : false;
   const prevBody = camBody.visible;
+  const prevGrid = grid.visible;
   if (frustumLines) frustumLines.visible = false;
   camBody.visible = false;
+  grid.visible = false;
   rayLines.forEach(l => l.visible = false);
 
   insetRenderer.render(scene, projCam);
@@ -267,6 +269,7 @@ function renderInset(fx, fy, cx_val, cy_val) {
   // Restore
   if (frustumLines) frustumLines.visible = prevFrustum;
   camBody.visible = prevBody;
+  grid.visible = prevGrid;
   rayLines.forEach(l => l.visible = true);
 
   // Copy to inset canvas
@@ -280,17 +283,6 @@ function renderInset(fx, fy, cx_val, cy_val) {
   insetCtx.moveTo(0, cy_val); insetCtx.lineTo(IW, cy_val);
   insetCtx.stroke();
   insetCtx.setLineDash([]);
-
-  // Draw projected labels
-  for (const obj of objects) {
-    const p = obj.mesh.position.clone();
-    const proj = projectPoint(p, fx, fy, cx_val, cy_val);
-    if (!proj) continue;
-    if (proj.u < -20 || proj.u > IW + 20 || proj.v < -20 || proj.v > IH + 20) continue;
-    insetCtx.fillStyle = '#fff';
-    insetCtx.font = '10px sans-serif';
-    insetCtx.fillText(obj.label, proj.u + 8, proj.v - 5);
-  }
 
   // Border
   insetCtx.strokeStyle = '#00d4ff';
