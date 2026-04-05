@@ -1621,6 +1621,7 @@ LM이 실전에서 가장 많이 쓰이는 이유: Gauss-Newton은 초기값이 
 > - [Ceres Solver Tutorial](http://ceres-solver.org/tutorial.html) — Google의 비선형 최소자승 최적화 라이브러리. 실제로 LM 알고리즘을 코드로 어떻게 사용하는지 실습할 수 있다.
 > - [다크 프로그래머 — 최적화 기법의 직관적 이해](https://darkpgmr.tistory.com/149) — Gradient Descent, Newton, LM 등의 기하학적 직관
 > - [김기섭 블로그 — SLAM Back-end 공부자료 5개 추천](https://gisbi-kim.github.io/blog/2021/10/03/slam-textbooks.html) — Error-state KF, Factor Graphs, Bundle Adjustment 등 핵심 자료 큐레이션
+> - [Derivative Calculator](https://www.derivative-calculator.net/) — 수식 미분을 단계별로 보여주는 온라인 도구. Jacobian 유도할 때 검산에 유용
 
 **LM의 직관: Gauss-Newton과 Gradient Descent 사이의 스위칭**
 
@@ -5997,6 +5998,7 @@ cv2.destroyAllWindows()
 > - [OpenCV 공식 튜토리얼](https://docs.opencv.org/4.x/d9/df8/tutorial_root.html) — Python/C++ 예제가 잘 정리되어 있다
 > - [First Principles of Computer Vision](https://www.youtube.com/channel/UCf0WB91t8Ky6AuYcQV0CcLw) — Columbia의 Shree Nayar 교수의 채널. 이미지 처리 원리를 직관적으로 설명한다
 > - [Szeliski, "Computer Vision: Algorithms and Applications"](https://szeliski.org/Book/) — 무료 PDF 제공. CV 분야의 표준 교과서
+> - [Stanford CS131 — Computer Vision: Foundations and Applications](http://vision.stanford.edu/teaching/cs131_fall1415/schedule.html) — CS231n보다 기초적인 CV 강의. 이미지 처리부터 시작하고 싶다면 여기서
 
 ### 9.1.2 필터링 (Filtering)
 
@@ -6028,6 +6030,7 @@ sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 > **추천 자료**
 > - [First Principles of Computer Vision — Edge Detection](https://www.youtube.com/playlist?list=PL2zRqk16wsdoCCLpouGuRbcJFBVVJlvgr) — 에지 검출의 수학적 원리를 시각적으로 설명
 > - [OpenCV 필터링 튜토리얼](https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html) — 코드와 함께 바로 따라할 수 있다
+> - [Papers With Code — Edge Detection](https://paperswithcode.com/task/edge-detection) — 에지 검출 최신 벤치마크와 논문 모음
 
 > **실습**: [Canny Edge Detection](https://alexjunholee.github.io/robotics-practice/app.html#canny_edge)
 > Canny 에지 검출기의 threshold 파라미터를 실시간으로 조절하며 결과 변화를 확인할 수 있다.
@@ -6679,6 +6682,7 @@ x = x.to(device)
 > - [PyTorch 공식 튜토리얼](https://pytorch.org/tutorials/) — 입문부터 고급까지 체계적으로 정리되어 있다
 > - [d2l.ai (Dive into Deep Learning)](https://d2l.ai/) — 인터랙티브 교과서. PyTorch 코드와 수학이 함께 나온다
 > - [Andrej Karpathy — Neural Networks: Zero to Hero](https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ) — 전 Tesla AI Director가 신경망을 밑바닥부터 설명
+> - [Jaejun Yoo's Playground](http://jaejunyoo.blogspot.com/search/label/kr) — 한국어로 GAN, VAE 등 생성 모델을 잘 설명한 블로그
 
 ### 10.1.2 TensorFlow / JAX
 
@@ -8720,6 +8724,7 @@ Foundation model (CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구�
 > - [정진용 블로그 — SLAM 강의 시리즈 (Freiburg Robot Mapping 기반)](https://jinyongjeong.github.io/2017/02/13/lec01_SLAM_bayes_filter/) — Bayes filter부터 EKF/UKF/Particle filter, Graph SLAM, Robust SLAM까지 15편 시리즈. 한글로 된 SLAM 입문 자료 중 가장 체계적
 > - [김기섭 블로그 — SLAM Back-end 공부자료 5개 추천](https://gisbi-kim.github.io/blog/2021/10/03/slam-textbooks.html) — Error-state KF, Factor Graphs, Bundle Adjustment 등 핵심 자료 큐레이션
 > - [Robot Mapping Course (Uni Freiburg, Cyrill Stachniss)](http://ais.informatik.uni-freiburg.de/teaching/ws13/mapping/) — SLAM 강의 슬라이드와 과제 자료. 영상과 함께 보면 좋다
+> - [EKF-SLAM 슬라이드 (Freiburg)](http://ais.informatik.uni-freiburg.de/teaching/ws12/mapping/pdf/slam04-ekf-slam.pdf) — 위 강의 중 EKF-SLAM 파트. 수식 전개가 깔끔하게 정리되어 있다
 
 > **실습**: [SE(2) Odometry](https://alexjunholee.github.io/robotics-practice/app.html#se2_odometry)
 > 2D 평면에서의 odometry 누적 과정을 직접 조작하며, drift가 어떻게 발생하는지 확인할 수 있다.
@@ -11868,6 +11873,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 > - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 테이블 생성기
 > - [QuillBot](https://quillbot.com/) — 영어 문장 paraphrasing 도구. 논문 영작에 유용
 > - [Ludwig](https://ludwig.guru/) — 영어 표현 검색 엔진. 원어민이 실제로 쓰는 표현을 확인
+> - [DL Monitor (deeplearn.org)](https://deeplearn.org/) — 주요 학회/arXiv의 딥러닝 논문을 자동 추적
 
 ### 20.5 주요 학회
 
