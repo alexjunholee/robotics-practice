@@ -236,9 +236,42 @@ function updateRays(fx, fy, cx_val, cy_val) {
   }
 }
 
+// Secondary renderer for camera view
+const insetRenderer = new THREE.WebGLRenderer({ antialias: true });
+insetRenderer.setSize(IW, IH);
+const projCam = new THREE.PerspectiveCamera(60, IW / IH, 0.3, 50);
+camGroup.add(projCam);
+projCam.position.set(0, 0, 0);
+projCam.lookAt(0, 0, -1);
+
+function updateProjCam(fx, fy, cx_val, cy_val) {
+  // Approximate FOV from focal length
+  const fovY = 2 * Math.atan(IH / (2 * fy)) * (180 / Math.PI);
+  projCam.fov = fovY;
+  projCam.aspect = IW / IH;
+  projCam.updateProjectionMatrix();
+}
+
 function renderInset(fx, fy, cx_val, cy_val) {
-  insetCtx.fillStyle = '#111';
-  insetCtx.fillRect(0, 0, IW, IH);
+  updateProjCam(fx, fy, cx_val, cy_val);
+
+  // Hide frustum/rays/camBody for clean render
+  const prevFrustum = frustumLines ? frustumLines.visible : false;
+  const prevBody = camBody.visible;
+  if (frustumLines) frustumLines.visible = false;
+  camBody.visible = false;
+  rayLines.forEach(l => l.visible = false);
+
+  insetRenderer.render(scene, projCam);
+
+  // Restore
+  if (frustumLines) frustumLines.visible = prevFrustum;
+  camBody.visible = prevBody;
+  rayLines.forEach(l => l.visible = true);
+
+  // Copy to inset canvas
+  insetCtx.drawImage(insetRenderer.domElement, 0, 0, IW, IH);
+
   // Draw crosshair at principal point
   insetCtx.strokeStyle = 'rgba(0,212,255,0.3)';
   insetCtx.setLineDash([3, 3]);
@@ -248,21 +281,17 @@ function renderInset(fx, fy, cx_val, cy_val) {
   insetCtx.stroke();
   insetCtx.setLineDash([]);
 
-  // Project objects
+  // Draw projected labels
   for (const obj of objects) {
     const p = obj.mesh.position.clone();
     const proj = projectPoint(p, fx, fy, cx_val, cy_val);
     if (!proj) continue;
     if (proj.u < -20 || proj.u > IW + 20 || proj.v < -20 || proj.v > IH + 20) continue;
-    const radius = Math.max(3, Math.min(15, 60 / proj.z));
-    insetCtx.fillStyle = obj.color;
-    insetCtx.beginPath();
-    insetCtx.arc(proj.u, proj.v, radius, 0, Math.PI * 2);
-    insetCtx.fill();
     insetCtx.fillStyle = '#fff';
     insetCtx.font = '10px sans-serif';
-    insetCtx.fillText(obj.label, proj.u + radius + 2, proj.v + 3);
+    insetCtx.fillText(obj.label, proj.u + 8, proj.v - 5);
   }
+
   // Border
   insetCtx.strokeStyle = '#00d4ff';
   insetCtx.lineWidth = 1;
