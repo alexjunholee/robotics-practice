@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>IMU Dead-reckoning — 적분 오차 누적</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px; min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+.layout { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+.canvas-wrap { background: var(--rp-bg-canvas); border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md); padding: 12px; }
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); }
+.panel {
+  width: 280px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 {
+  font-family: var(--rp-font-display);
+  font-size: 14px; font-weight: 600; color: var(--rp-text-heading); letter-spacing: -0.012em;
+}
+.slider-group label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px; }
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+.seg-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg {
+  flex: 1 1 auto; padding: 6px 10px; font-size: 12px; font-weight: 500; letter-spacing: -0.012em;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md);
+  cursor: pointer; transition: all 0.15s;
+  font-family: inherit;
+}
+.seg:hover { background: var(--rp-bg-alt); }
+.seg.active { background: var(--rp-accent); color: #fff; border-color: var(--rp-accent); }
+.btn-row { display: flex; gap: 8px; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 14px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+.legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--rp-text-body); padding-top: 8px; border-top: 1px solid var(--rp-border); }
+.legend .sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 12px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<h1>IMU Dead-reckoning</h1>
+<p class="subtitle">IMU 노이즈와 바이어스가 시간에 따라 위치 추정에 누적되는 drift 관찰</p>
+
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="c" width="720" height="540"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>궤적</h3>
+    <div class="seg-row" id="trajSeg">
+      <button class="seg active" data-t="circle">원형</button>
+      <button class="seg" data-t="figure8">8자</button>
+      <button class="seg" data-t="line">직선</button>
+    </div>
+
+    <h3>가속도계 (m/s²)</h3>
+    <div class="slider-group">
+      <label>노이즈 σ <span id="accNoiseVal">0.05</span></label>
+      <input type="range" id="accNoise" min="0" max="0.5" step="0.005" value="0.05">
+    </div>
+    <div class="slider-group">
+      <label>바이어스 <span id="accBiasVal">0.02</span></label>
+      <input type="range" id="accBias" min="-0.2" max="0.2" step="0.005" value="0.02">
+    </div>
+
+    <h3>자이로 (rad/s)</h3>
+    <div class="slider-group">
+      <label>노이즈 σ <span id="gyroNoiseVal">0.010</span></label>
+      <input type="range" id="gyroNoise" min="0" max="0.1" step="0.001" value="0.010">
+    </div>
+    <div class="slider-group">
+      <label>바이어스 <span id="gyroBiasVal">0.005</span></label>
+      <input type="range" id="gyroBias" min="-0.05" max="0.05" step="0.001" value="0.005">
+    </div>
+
+    <div class="btn-row">
+      <button id="playBtn">▶ 재생</button>
+      <button id="resetBtn" class="secondary">리셋</button>
+    </div>
+
+    <div class="legend">
+      <div><span class="sw" style="background:#34c759"></span>실제 궤적 (ground truth)</div>
+      <div><span class="sw" style="background:#0071e3"></span>IMU 적분 추정</div>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>경과 시간</span><span id="tVal">0.0 s</span></div>
+      <div class="row"><span>위치 오차</span><span id="errVal">0.00 m</span></div>
+      <div class="row"><span>yaw 오차</span><span id="yawErrVal">0.0°</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const PX_PER_M = 32;   // 1m = 32px
+  const cx = W / 2, cy = H / 2;
+
+  const dt = 0.02; // 50Hz IMU
+  let t, trueState, estState, trueHist, estHist, playing;
+  let trajectory = 'circle';
+
+  function reset() {
+    t = 0;
+    trueState = { x: 0, y: 0, theta: 0, vx: 0, vy: 0 };
+    estState  = { x: 0, y: 0, theta: 0, vx: 0, vy: 0 };
+    // initialize trueState at t=0 consistent with parametric traj
+    const s0 = truePose(0);
+    trueState.x = s0.x; trueState.y = s0.y; trueState.theta = s0.theta;
+    trueState.vx = s0.vx; trueState.vy = s0.vy;
+    estState.x = s0.x; estState.y = s0.y; estState.theta = s0.theta;
+    estState.vx = s0.vx; estState.vy = s0.vy;
+    trueHist = [{ x: s0.x, y: s0.y }];
+    estHist  = [{ x: s0.x, y: s0.y }];
+    playing = false;
+    playBtn.textContent = '▶ 재생';
+    updateStats();
+    draw();
+  }
+
+  // ── Analytic true trajectory ──
+  // returns pose (x, y, theta) and velocities (vx, vy), ω, acceleration (ax_world, ay_world) at time t
+  function truePose(t) {
+    if (trajectory === 'circle') {
+      const R = 4, omega = 0.3;   // 4m radius, 0.3 rad/s
+      const phi = omega * t;
+      const x = R * Math.sin(phi);
+      const y = -R * Math.cos(phi) + R; // start at origin
+      const vx = R * omega * Math.cos(phi);
+      const vy = R * omega * Math.sin(phi);
+      const ax = -R * omega * omega * Math.sin(phi);
+      const ay =  R * omega * omega * Math.cos(phi);
+      return { x, y, theta: phi, vx, vy, ax, ay, omega };
+    }
+    if (trajectory === 'figure8') {
+      const A = 4, k = 0.3;
+      const phi = k * t;
+      const x = A * Math.sin(phi);
+      const y = A * Math.sin(phi) * Math.cos(phi); // A sin(2φ)/2
+      const vx = A * k * Math.cos(phi);
+      const vy = A * k * Math.cos(2 * phi);
+      const ax = -A * k * k * Math.sin(phi);
+      const ay = -2 * A * k * k * Math.sin(2 * phi);
+      const theta = Math.atan2(vy, vx);
+      return { x, y, theta, vx, vy, ax, ay, omega: 2 * k * (vx * (-Math.sin(2*phi)) - vy * (-Math.sin(phi))) / (vx*vx + vy*vy + 1e-9) };
+    }
+    // line: constant velocity, slight turn
+    const vx = 0.8, vy = 0.2;
+    return { x: vx * t, y: vy * t, theta: Math.atan2(vy, vx), vx, vy, ax: 0, ay: 0, omega: 0 };
+  }
+
+  function randn() {
+    const u1 = Math.random(), u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1 + 1e-12)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  function stepOnce() {
+    const s = truePose(t);
+    // Body-frame measurements
+    const c = Math.cos(s.theta), sn = Math.sin(s.theta);
+    // World accel → body
+    const ax_b =  c * s.ax + sn * s.ay;
+    const ay_b = -sn * s.ax + c * s.ay;
+    // Add noise + bias
+    const aNoise = parseFloat(accNoise.value);
+    const aBias  = parseFloat(accBias.value);
+    const gNoise = parseFloat(gyroNoise.value);
+    const gBias  = parseFloat(gyroBias.value);
+    const ax_m = ax_b + aBias + aNoise * randn();
+    const ay_m = ay_b + aBias * 0.5 + aNoise * randn();
+    const w_m  = (s.omega || 0) + gBias + gNoise * randn();
+
+    // Dead-reckoning integration
+    estState.theta += w_m * dt;
+    const ec = Math.cos(estState.theta), es = Math.sin(estState.theta);
+    const ax_w = ec * ax_m - es * ay_m;
+    const ay_w = es * ax_m + ec * ay_m;
+    estState.vx += ax_w * dt;
+    estState.vy += ay_w * dt;
+    estState.x  += estState.vx * dt;
+    estState.y  += estState.vy * dt;
+
+    // True state update (exact)
+    trueState.x = s.x; trueState.y = s.y; trueState.theta = s.theta;
+    trueState.vx = s.vx; trueState.vy = s.vy;
+
+    t += dt;
+    if (trueHist.length < 5000) {
+      trueHist.push({ x: trueState.x, y: trueState.y });
+      estHist.push({ x: estState.x, y: estState.y });
+    }
+  }
+
+  // ── Draw ──
+  function worldToPx(p) { return { x: cx + p.x * PX_PER_M, y: cy + p.y * PX_PER_M }; }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += PX_PER_M) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += PX_PER_M) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // axes
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+    // true path
+    ctx.strokeStyle = '#34c759'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < trueHist.length; i++) {
+      const p = worldToPx(trueHist[i]);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // est path
+    ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i < estHist.length; i++) {
+      const p = worldToPx(estHist[i]);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // current poses
+    const tp = worldToPx(trueState), ep = worldToPx(estState);
+    drawAgent(tp, trueState.theta, '#34c759');
+    drawAgent(ep, estState.theta,  '#0071e3');
+  }
+  function drawAgent(p, theta, color) {
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(theta);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(10, 0); ctx.lineTo(-7, -7); ctx.lineTo(-3, 0); ctx.lineTo(-7, 7); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    document.getElementById('tVal').textContent = t.toFixed(1) + ' s';
+    const dx = estState.x - trueState.x, dy = estState.y - trueState.y;
+    document.getElementById('errVal').textContent = Math.hypot(dx, dy).toFixed(2) + ' m';
+    let dYaw = estState.theta - trueState.theta;
+    while (dYaw > Math.PI) dYaw -= 2 * Math.PI;
+    while (dYaw < -Math.PI) dYaw += 2 * Math.PI;
+    document.getElementById('yawErrVal').textContent = (dYaw * 180 / Math.PI).toFixed(1) + '°';
+  }
+
+  // ── Loop ──
+  function loop() {
+    if (playing) {
+      for (let i = 0; i < 5; i++) stepOnce();  // 5× realtime = 0.1s per frame
+      draw(); updateStats();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ── Inputs ──
+  const playBtn = document.getElementById('playBtn');
+  playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? '⏸ 일시정지' : '▶ 재생'; };
+  document.getElementById('resetBtn').onclick = reset;
+
+  const accNoise = document.getElementById('accNoise');
+  const accBias  = document.getElementById('accBias');
+  const gyroNoise = document.getElementById('gyroNoise');
+  const gyroBias  = document.getElementById('gyroBias');
+  accNoise.oninput  = e => document.getElementById('accNoiseVal').textContent = parseFloat(e.target.value).toFixed(3);
+  accBias.oninput   = e => document.getElementById('accBiasVal').textContent  = parseFloat(e.target.value).toFixed(3);
+  gyroNoise.oninput = e => document.getElementById('gyroNoiseVal').textContent = parseFloat(e.target.value).toFixed(3);
+  gyroBias.oninput  = e => document.getElementById('gyroBiasVal').textContent  = parseFloat(e.target.value).toFixed(3);
+
+  document.getElementById('trajSeg').addEventListener('click', e => {
+    if (!e.target.classList.contains('seg')) return;
+    document.querySelectorAll('#trajSeg .seg').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    trajectory = e.target.dataset.t;
+    reset();
+  });
+
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

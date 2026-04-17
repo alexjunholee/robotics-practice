@@ -236,6 +236,15 @@ body {
     <a class="nav-item" data-id="kalman_filter" data-tip="칼만 필터 예측-업데이트 사이클 시각화">Kalman Filter</a>
     <a class="nav-item" data-id="particle_filter" data-tip="파티클 필터 기반 Monte Carlo Localization 시각화">Particle Filter / MCL</a>
 
+    <!-- 플래닝 (2) -->
+    <div class="cat-label">플래닝 / Planning</div>
+    <a class="nav-item" data-id="rrt" data-tip="장애물을 피해 랜덤 트리를 뻗어 목표까지 경로 탐색 (RRT)">RRT — Rapidly-exploring Random Tree</a>
+    <a class="nav-item" data-id="a_star" data-tip="그리드에서 heuristic 기반 최단 경로 (A* / Dijkstra)">A\* / Dijkstra 그리드 탐색</a>
+
+    <!-- 센서 모델링 (1) -->
+    <div class="cat-label">센서 모델링</div>
+    <a class="nav-item" data-id="imu_dead_reckoning" data-tip="IMU 노이즈·바이어스가 위치 추정에 누적되는 drift 관찰">IMU Dead-reckoning</a>
+
     <!-- 3D / SLAM (7) -->
     <div class="cat-label">3D / SLAM</div>
     <a class="nav-item" data-id="icp_steps" data-tip="2D 점군 정합 ICP 알고리즘 단계별 시각화">ICP 2D</a>
@@ -296,6 +305,11 @@ body {
     robot_arm_fk:        'robot_arm_fk.html',
     kalman_filter:       'kalman_filter.html',
     particle_filter:     'particle_filter.html',
+    // 플래닝 (2)
+    rrt:                 'rrt.html',
+    a_star:              'a_star.html',
+    // 센서 모델링 (1)
+    imu_dead_reckoning:  'imu_dead_reckoning.html',
     // 3D / SLAM (7)
     icp_steps:           'icp_steps.html',
     icp_3d:              'icp_3d.html',

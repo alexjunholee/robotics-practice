@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>RRT — Rapidly-exploring Random Tree</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+.layout { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); cursor: crosshair; }
+.panel {
+  width: 280px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.panel h3 {
+  font-family: var(--rp-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rp-text-heading);
+  letter-spacing: -0.012em;
+}
+.slider-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--rp-text-body);
+  margin-bottom: 4px;
+}
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent);
+  color: #fff;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: var(--rp-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:hover { background: #0077ed; }
+button.secondary {
+  background: #fff;
+  color: var(--rp-text);
+  border-color: var(--rp-border);
+}
+button.secondary:hover { background: var(--rp-bg-alt); }
+.stats {
+  font-size: 12.5px;
+  color: var(--rp-text-body);
+  line-height: 1.7;
+  border-top: 1px solid var(--rp-border);
+  padding-top: 12px;
+}
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.55; }
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--rp-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rp-accent);
+  background: rgba(0, 113, 227, 0.1);
+}
+</style>
+</head>
+<body>
+<h1>RRT — Rapidly-exploring Random Tree</h1>
+<p class="subtitle">랜덤 샘플을 뻗어나가며 장애물을 피해 목표까지 도달하는 경로 탐색</p>
+
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="c" width="720" height="540"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>제어</h3>
+    <div class="btn-row">
+      <button id="playBtn">▶ 재생</button>
+      <button id="stepBtn" class="secondary">스텝</button>
+      <button id="resetBtn" class="secondary">리셋</button>
+    </div>
+
+    <h3>파라미터</h3>
+    <div class="slider-group">
+      <label>Step size <span id="stepVal">15</span></label>
+      <input type="range" id="stepSlider" min="4" max="40" step="1" value="15">
+    </div>
+    <div class="slider-group">
+      <label>Goal bias (%) <span id="biasVal">8</span></label>
+      <input type="range" id="biasSlider" min="0" max="30" step="1" value="8">
+    </div>
+    <div class="slider-group">
+      <label>초당 샘플 <span id="speedVal">120</span></label>
+      <input type="range" id="speedSlider" min="10" max="500" step="10" value="120">
+    </div>
+
+    <p class="hint">왼클릭: 장애물 추가 · 우클릭: 지우기 · Shift+클릭: 시작점 · Ctrl+클릭: 목표점</p>
+
+    <div class="stats">
+      <div class="row"><span>노드 수</span><span id="nodeCount">1</span></div>
+      <div class="row"><span>반복</span><span id="iterCount">0</span></div>
+      <div class="row"><span>경로 길이</span><span id="pathLen">—</span></div>
+      <div class="row"><span>상태</span><span id="status"><span class="chip">탐색 중</span></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // ── State ──
+  let tree;       // [{x, y, parent}]
+  let start = { x: 60, y: 270 };
+  let goal  = { x: 660, y: 270 };
+  let obstacles;  // [{x, y, w, h}]
+  let iters, playing, path;
+  const GOAL_THRESHOLD = 18;
+
+  function defaultObstacles() {
+    return [
+      { x: 200, y: 60,  w: 40, h: 300 },
+      { x: 380, y: 180, w: 40, h: 360 },
+      { x: 540, y: 40,  w: 40, h: 240 },
+      { x: 280, y: 420, w: 140, h: 40 }
+    ];
+  }
+
+  function reset() {
+    tree = [{ x: start.x, y: start.y, parent: -1 }];
+    iters = 0;
+    path = null;
+    playing = false;
+    playBtn.textContent = '▶ 재생';
+    updateStats();
+    draw();
+  }
+
+  // ── Collision ──
+  function inObstacle(x, y) {
+    for (const o of obstacles) if (x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h) return true;
+    return x < 0 || x > W || y < 0 || y > H;
+  }
+  function segmentBlocked(x1, y1, x2, y2) {
+    const steps = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      if (inObstacle(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)) return true;
+    }
+    return false;
+  }
+
+  // ── RRT step ──
+  function step() {
+    if (path) return;
+    iters++;
+    const bias = parseInt(biasSlider.value, 10) / 100;
+    let sx, sy;
+    if (Math.random() < bias) { sx = goal.x; sy = goal.y; }
+    else { sx = Math.random() * W; sy = Math.random() * H; }
+
+    // Nearest
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < tree.length; i++) {
+      const d = (tree[i].x - sx) ** 2 + (tree[i].y - sy) ** 2;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    const nx0 = tree[best].x, ny0 = tree[best].y;
+    const dx = sx - nx0, dy = sy - ny0;
+    const d = Math.hypot(dx, dy);
+    if (d < 0.5) return;
+    const stepSize = parseInt(stepSlider.value, 10);
+    const r = Math.min(stepSize, d);
+    const nx = nx0 + (dx / d) * r;
+    const ny = ny0 + (dy / d) * r;
+    if (segmentBlocked(nx0, ny0, nx, ny)) return;
+
+    tree.push({ x: nx, y: ny, parent: best });
+    if (Math.hypot(nx - goal.x, ny - goal.y) < GOAL_THRESHOLD && !segmentBlocked(nx, ny, goal.x, goal.y)) {
+      tree.push({ x: goal.x, y: goal.y, parent: tree.length - 1 });
+      buildPath();
+    }
+  }
+
+  function buildPath() {
+    path = [];
+    let idx = tree.length - 1;
+    while (idx !== -1) { path.push(tree[idx]); idx = tree[idx].parent; }
+  }
+  function pathLength() {
+    if (!path) return null;
+    let L = 0;
+    for (let i = 1; i < path.length; i++) L += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+    return L;
+  }
+
+  // ── Draw ──
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    // obstacles
+    ctx.fillStyle = '#1d1d1f';
+    for (const o of obstacles) { ctx.fillRect(o.x, o.y, o.w, o.h); }
+
+    // tree edges
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < tree.length; i++) {
+      const p = tree[tree[i].parent];
+      ctx.moveTo(p.x, p.y); ctx.lineTo(tree[i].x, tree[i].y);
+    }
+    ctx.stroke();
+
+    // tree nodes
+    ctx.fillStyle = 'rgba(0, 113, 227, 0.65)';
+    for (let i = 1; i < tree.length; i++) {
+      ctx.fillRect(tree[i].x - 1.5, tree[i].y - 1.5, 3, 3);
+    }
+
+    // final path
+    if (path) {
+      ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.stroke();
+    }
+
+    // start / goal
+    drawPoint(start.x, start.y, '#34c759', '시작');
+    drawPoint(goal.x,  goal.y,  '#ff9500', '목표');
+  }
+  function drawPoint(x, y, color, label) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#1d1d1f';
+    ctx.font = '600 11px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, y - 14);
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    document.getElementById('nodeCount').textContent = tree.length;
+    document.getElementById('iterCount').textContent = iters;
+    const L = pathLength();
+    document.getElementById('pathLen').textContent = L !== null ? L.toFixed(1) + ' px' : '—';
+    document.getElementById('status').innerHTML = path
+      ? '<span class="chip" style="background:rgba(52,199,89,0.12);color:#248a3d">도달</span>'
+      : '<span class="chip">탐색 중</span>';
+  }
+
+  // ── Loop ──
+  let lastFrame = 0;
+  function loop(now) {
+    if (playing && !path) {
+      const rate = parseInt(speedSlider.value, 10);
+      const dt = (now - lastFrame) / 1000;
+      const count = Math.max(1, Math.round(rate * dt));
+      for (let i = 0; i < count; i++) step();
+      updateStats();
+      draw();
+    }
+    lastFrame = now;
+    requestAnimationFrame(loop);
+  }
+
+  // ── Inputs ──
+  const playBtn = document.getElementById('playBtn');
+  playBtn.onclick = () => {
+    if (path) return;
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ 일시정지' : '▶ 재생';
+  };
+  document.getElementById('stepBtn').onclick = () => {
+    for (let i = 0; i < 20; i++) step();
+    updateStats(); draw();
+  };
+  document.getElementById('resetBtn').onclick = () => {
+    obstacles = defaultObstacles();
+    reset();
+  };
+
+  const stepSlider = document.getElementById('stepSlider');
+  const biasSlider = document.getElementById('biasSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  stepSlider.oninput = e => document.getElementById('stepVal').textContent = e.target.value;
+  biasSlider.oninput = e => document.getElementById('biasVal').textContent = e.target.value;
+  speedSlider.oninput = e => document.getElementById('speedVal').textContent = e.target.value;
+
+  // ── Canvas interactions ──
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('mousedown', e => {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (e.shiftKey) { start = { x, y }; reset(); return; }
+    if (e.ctrlKey || e.metaKey) { goal = { x, y }; reset(); return; }
+    if (e.button === 2) {
+      obstacles = obstacles.filter(o => !(x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h));
+      reset();
+    } else {
+      obstacles.push({ x: x - 25, y: y - 25, w: 50, h: 50 });
+      reset();
+    }
+  });
+
+  // ── Init ──
+  obstacles = defaultObstacles();
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

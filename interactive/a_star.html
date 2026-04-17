@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>A* / Dijkstra — 그리드 경로 탐색</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+.layout { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+.canvas-wrap { background: var(--rp-bg-canvas); border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md); padding: 12px; }
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); cursor: pointer; }
+.panel {
+  width: 280px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.panel h3 {
+  font-family: var(--rp-font-display);
+  font-size: 14px; font-weight: 600;
+  color: var(--rp-text-heading); letter-spacing: -0.012em;
+}
+.slider-group label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px; }
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+.seg-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg {
+  flex: 1 1 auto;
+  padding: 7px 10px; font-size: 12px; font-weight: 500; letter-spacing: -0.012em;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.seg:hover { background: var(--rp-bg-alt); }
+.seg.active { background: var(--rp-accent); color: #fff; border-color: var(--rp-accent); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 14px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--rp-text-body); }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.08); }
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 12px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.55; }
+.chip {
+  display: inline-block; padding: 2px 8px; border-radius: var(--rp-radius-pill);
+  font-size: 11px; font-weight: 600;
+  color: var(--rp-accent); background: rgba(0, 113, 227, 0.1);
+}
+</style>
+</head>
+<body>
+<h1>A\* / Dijkstra — 그리드 경로 탐색</h1>
+<p class="subtitle">OPEN/CLOSED 집합을 스텝별로 확장하며 heuristic 선택이 탐색량에 미치는 영향 관찰</p>
+
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="c" width="720" height="540"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>Heuristic</h3>
+    <div class="seg-row" id="heuristicSeg">
+      <button class="seg active" data-h="manhattan">Manhattan</button>
+      <button class="seg" data-h="euclidean">Euclidean</button>
+      <button class="seg" data-h="chebyshev">Chebyshev</button>
+      <button class="seg" data-h="zero">None (Dijkstra)</button>
+    </div>
+
+    <h3>대각 이동</h3>
+    <div class="seg-row" id="diagSeg">
+      <button class="seg" data-d="false">4-connected</button>
+      <button class="seg active" data-d="true">8-connected</button>
+    </div>
+
+    <h3>속도</h3>
+    <div class="slider-group">
+      <label>초당 노드 확장 <span id="speedVal">60</span></label>
+      <input type="range" id="speedSlider" min="5" max="400" step="5" value="60">
+    </div>
+
+    <div class="btn-row">
+      <button id="playBtn">▶ 재생</button>
+      <button id="stepBtn" class="secondary">스텝</button>
+      <button id="resetBtn" class="secondary">리셋</button>
+    </div>
+
+    <p class="hint">드래그: 장애물 그리기 · Shift+드래그: 지우기 · S+클릭: 시작 · G+클릭: 목표</p>
+
+    <div class="legend">
+      <div><span class="sw" style="background:#1d1d1f"></span>장애물</div>
+      <div><span class="sw" style="background:rgba(0,113,227,0.55)"></span>CLOSED</div>
+      <div><span class="sw" style="background:rgba(0,113,227,0.18)"></span>OPEN</div>
+      <div><span class="sw" style="background:#ff3b30"></span>경로</div>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>OPEN</span><span id="openCount">0</span></div>
+      <div class="row"><span>CLOSED</span><span id="closedCount">0</span></div>
+      <div class="row"><span>경로 길이</span><span id="pathLen">—</span></div>
+      <div class="row"><span>상태</span><span id="status"><span class="chip">대기</span></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const CELL = 18;
+  const COLS = Math.floor(canvas.width / CELL);
+  const ROWS = Math.floor(canvas.height / CELL);
+
+  // grid: 0 empty, 1 obstacle
+  let grid, start, goal;
+  let open, closed, gScore, fScore, cameFrom;
+  let playing = false, path = null;
+  let heuristic = 'manhattan';
+  let diag = true;
+
+  function idx(x, y) { return y * COLS + x; }
+
+  function reset(clearObstacles) {
+    if (clearObstacles || !grid) {
+      grid = new Uint8Array(COLS * ROWS);
+      // Default maze-ish obstacles
+      for (let y = 6; y < 20; y++) grid[idx(10, y)] = 1;
+      for (let y = 2; y < 18; y++) grid[idx(20, y)] = 1;
+      for (let x = 20; x < 32; x++) grid[idx(x, 18)] = 1;
+      for (let y = 10; y < 26; y++) grid[idx(30, y)] = 1;
+      start = { x: 3, y: 14 };
+      goal  = { x: 37, y: 14 };
+    }
+    open = new Map();
+    closed = new Set();
+    gScore = new Float32Array(COLS * ROWS); gScore.fill(Infinity);
+    fScore = new Float32Array(COLS * ROWS); fScore.fill(Infinity);
+    cameFrom = new Int32Array(COLS * ROWS); cameFrom.fill(-1);
+    gScore[idx(start.x, start.y)] = 0;
+    fScore[idx(start.x, start.y)] = h(start.x, start.y);
+    open.set(idx(start.x, start.y), { x: start.x, y: start.y, f: fScore[idx(start.x, start.y)] });
+    path = null; playing = false;
+    playBtn.textContent = '▶ 재생';
+    draw(); updateStats();
+  }
+
+  function h(x, y) {
+    const dx = Math.abs(x - goal.x), dy = Math.abs(y - goal.y);
+    if (heuristic === 'manhattan') return dx + dy;
+    if (heuristic === 'euclidean') return Math.hypot(dx, dy);
+    if (heuristic === 'chebyshev') return Math.max(dx, dy);
+    return 0;
+  }
+
+  function neighbors(x, y) {
+    const out = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      if (!diag && dx !== 0 && dy !== 0) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+      if (grid[idx(nx, ny)]) continue;
+      // block diagonal through two obstacles
+      if (dx !== 0 && dy !== 0 && (grid[idx(x + dx, y)] || grid[idx(x, y + dy)])) continue;
+      const cost = (dx !== 0 && dy !== 0) ? Math.SQRT2 : 1;
+      out.push([nx, ny, cost]);
+    }
+    return out;
+  }
+
+  function step() {
+    if (path || open.size === 0) return;
+    // Pop min-f
+    let bestKey = -1, bestF = Infinity;
+    for (const [k, v] of open) if (v.f < bestF) { bestF = v.f; bestKey = k; }
+    if (bestKey === -1) return;
+    const node = open.get(bestKey);
+    open.delete(bestKey);
+    closed.add(bestKey);
+
+    if (node.x === goal.x && node.y === goal.y) { buildPath(); return; }
+
+    const g = gScore[bestKey];
+    for (const [nx, ny, c] of neighbors(node.x, node.y)) {
+      const nk = idx(nx, ny);
+      if (closed.has(nk)) continue;
+      const tentative = g + c;
+      if (tentative < gScore[nk]) {
+        cameFrom[nk] = bestKey;
+        gScore[nk] = tentative;
+        fScore[nk] = tentative + h(nx, ny);
+        open.set(nk, { x: nx, y: ny, f: fScore[nk] });
+      }
+    }
+  }
+
+  function buildPath() {
+    path = [];
+    let k = idx(goal.x, goal.y);
+    while (k !== -1) {
+      const x = k % COLS, y = (k - x) / COLS;
+      path.push({ x, y });
+      k = cameFrom[k];
+    }
+  }
+  function pathLength() {
+    if (!path) return null;
+    let L = 0;
+    for (let i = 1; i < path.length; i++) {
+      const dx = path[i].x - path[i-1].x, dy = path[i].y - path[i-1].y;
+      L += Math.hypot(dx, dy);
+    }
+    return L;
+  }
+
+  // ── Draw ──
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.lineWidth = 1;
+    for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x*CELL, 0); ctx.lineTo(x*CELL, ROWS*CELL); ctx.stroke(); }
+    for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0, y*CELL); ctx.lineTo(COLS*CELL, y*CELL); ctx.stroke(); }
+
+    // obstacles
+    ctx.fillStyle = '#1d1d1f';
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (grid[idx(x,y)]) ctx.fillRect(x*CELL+1, y*CELL+1, CELL-2, CELL-2);
+    }
+
+    // closed
+    ctx.fillStyle = 'rgba(0,113,227,0.55)';
+    for (const k of closed) {
+      const x = k % COLS, y = (k - x) / COLS;
+      ctx.fillRect(x*CELL+2, y*CELL+2, CELL-4, CELL-4);
+    }
+    // open
+    ctx.fillStyle = 'rgba(0,113,227,0.18)';
+    for (const k of open.keys()) {
+      const x = k % COLS, y = (k - x) / COLS;
+      ctx.fillRect(x*CELL+2, y*CELL+2, CELL-4, CELL-4);
+    }
+
+    // path
+    if (path) {
+      ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo((path[0].x+0.5)*CELL, (path[0].y+0.5)*CELL);
+      for (let i = 1; i < path.length; i++) ctx.lineTo((path[i].x+0.5)*CELL, (path[i].y+0.5)*CELL);
+      ctx.stroke();
+    }
+
+    // start, goal
+    drawCell(start.x, start.y, '#34c759', 'S');
+    drawCell(goal.x,  goal.y,  '#ff9500', 'G');
+  }
+  function drawCell(x, y, color, label) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x*CELL+2, y*CELL+2, CELL-4, CELL-4);
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, x*CELL + CELL/2, y*CELL + CELL/2 + 1);
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    document.getElementById('openCount').textContent = open.size;
+    document.getElementById('closedCount').textContent = closed.size;
+    const L = pathLength();
+    document.getElementById('pathLen').textContent = L !== null ? L.toFixed(2) : '—';
+    document.getElementById('status').innerHTML = path
+      ? '<span class="chip" style="background:rgba(52,199,89,0.12);color:#248a3d">도달</span>'
+      : (open.size === 0 ? '<span class="chip" style="background:rgba(255,59,48,0.12);color:#c6281e">실패</span>' : '<span class="chip">탐색 중</span>');
+  }
+
+  // ── Loop ──
+  let lastFrame = 0;
+  function loop(now) {
+    if (playing && !path && open.size > 0) {
+      const rate = parseInt(speedSlider.value, 10);
+      const dt = (now - lastFrame) / 1000;
+      const count = Math.max(1, Math.round(rate * dt));
+      for (let i = 0; i < count; i++) step();
+      updateStats(); draw();
+    }
+    lastFrame = now;
+    requestAnimationFrame(loop);
+  }
+
+  // ── Inputs ──
+  const playBtn = document.getElementById('playBtn');
+  playBtn.onclick = () => {
+    if (path || open.size === 0) return;
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ 일시정지' : '▶ 재생';
+  };
+  document.getElementById('stepBtn').onclick = () => { for (let i = 0; i < 10; i++) step(); updateStats(); draw(); };
+  document.getElementById('resetBtn').onclick = () => reset(true);
+
+  const speedSlider = document.getElementById('speedSlider');
+  speedSlider.oninput = e => document.getElementById('speedVal').textContent = e.target.value;
+
+  document.getElementById('heuristicSeg').addEventListener('click', e => {
+    if (!e.target.classList.contains('seg')) return;
+    document.querySelectorAll('#heuristicSeg .seg').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    heuristic = e.target.dataset.h;
+    reset(false);
+  });
+  document.getElementById('diagSeg').addEventListener('click', e => {
+    if (!e.target.classList.contains('seg')) return;
+    document.querySelectorAll('#diagSeg .seg').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    diag = e.target.dataset.d === 'true';
+    reset(false);
+  });
+
+  // ── Canvas interactions ──
+  let dragging = null;
+  function cellAt(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: Math.floor((e.clientX - r.left) / CELL), y: Math.floor((e.clientY - r.top) / CELL) };
+  }
+  canvas.addEventListener('mousedown', e => {
+    const c = cellAt(e);
+    if (c.x < 0 || c.x >= COLS || c.y < 0 || c.y >= ROWS) return;
+    if (e.key === 's' || keysDown.has('s')) { start = c; reset(false); return; }
+    if (keysDown.has('g')) { goal = c; reset(false); return; }
+    dragging = e.shiftKey ? 'erase' : 'draw';
+    grid[idx(c.x, c.y)] = dragging === 'draw' ? 1 : 0;
+    reset(false);
+  });
+  canvas.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const c = cellAt(e);
+    if (c.x < 0 || c.x >= COLS || c.y < 0 || c.y >= ROWS) return;
+    const was = grid[idx(c.x, c.y)];
+    grid[idx(c.x, c.y)] = dragging === 'draw' ? 1 : 0;
+    if (was !== grid[idx(c.x, c.y)]) { draw(); }
+  });
+  window.addEventListener('mouseup', () => { if (dragging) { dragging = null; reset(false); } });
+
+  const keysDown = new Set();
+  window.addEventListener('keydown', e => keysDown.add(e.key.toLowerCase()));
+  window.addEventListener('keyup',   e => keysDown.delete(e.key.toLowerCase()));
+
+  // ── Init ──
+  reset(true);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
