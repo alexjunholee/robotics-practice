@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="shared/theme.css">
 <title>Robotics Practice — Interactive Demos</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
 }
@@ -19,8 +20,8 @@ body {
 #topbar {
   height: 54px;
   min-height: 54px;
-  background: #0f0f23;
-  border-bottom: 1px solid #2a2a4a;
+  background: #f5f5f7;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   display: flex;
   align-items: center;
   padding: 0 18px;
@@ -31,16 +32,16 @@ body {
   display: none;
   background: none;
   border: none;
-  color: #e0e0e0;
+  color: #1d1d1f;
   font-size: 22px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
 }
-#hamburger:hover { background: rgba(255,255,255,0.08); }
+#hamburger:hover { background: rgba(0,0,0,0.04); }
 #topbar h1 {
   font-size: 16px;
-  color: #e94560;
+  color: #0071e3;
   white-space: nowrap;
 }
 #topbar .subtitle {
@@ -62,8 +63,8 @@ body {
 #sidebar {
   width: 260px;
   min-width: 260px;
-  background: #12122b;
-  border-right: 1px solid #2a2a4a;
+  background: #f5f5f7;
+  border-right: 1px solid rgba(0,0,0,0.08);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -76,7 +77,7 @@ body {
 .cat-label {
   font-size: 11px;
   font-weight: 700;
-  color: #e94560;
+  color: #0071e3;
   text-transform: uppercase;
   letter-spacing: 1.2px;
   padding: 14px 16px 6px;
@@ -86,7 +87,7 @@ body {
   display: block;
   padding: 9px 16px 9px 24px;
   font-size: 13px;
-  color: #b0b0c8;
+  color: rgba(0,0,0,0.80);
   cursor: pointer;
   text-decoration: none;
   border-left: 3px solid transparent;
@@ -94,13 +95,13 @@ body {
   position: relative;
 }
 .nav-item:hover {
-  background: rgba(233, 69, 96, 0.08);
+  background: rgba(0,113,227,0.08);
   color: #fff;
 }
 .nav-item.active {
-  background: rgba(233, 69, 96, 0.14);
+  background: rgba(0,113,227,0.08);
   color: #fff;
-  border-left-color: #e94560;
+  border-left-color: #0071e3;
 }
 
 /* tooltip */
@@ -110,7 +111,7 @@ body {
   left: 264px;
   top: 50%;
   transform: translateY(-50%);
-  background: #1e1e3a;
+  background: #f5f5f7;
   color: #ccc;
   font-size: 12px;
   padding: 6px 10px;
@@ -133,7 +134,7 @@ body {
   border: none;
   width: 100%;
   height: 100%;
-  background: #1a1a2e;
+  background: #ffffff;
 }
 
 /* ── Welcome screen ── */
@@ -148,7 +149,7 @@ body {
   text-align: center;
   padding: 40px;
 }
-#welcome h2 { color: #e94560; font-size: 22px; }
+#welcome h2 { color: #0071e3; font-size: 22px; }
 #welcome p { font-size: 14px; max-width: 440px; line-height: 1.6; }
 
 /* ── Overlay for mobile ── */
@@ -156,7 +157,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.4);
   z-index: 49;
 }
 
@@ -170,7 +171,7 @@ body {
     bottom: 0;
     z-index: 50;
     margin-left: 0;
-    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.4);
   }
   #sidebar.collapsed {
     margin-left: -260px;

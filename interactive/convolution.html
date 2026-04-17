@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<link rel="stylesheet" href="../shared/theme.css">
 <meta charset="UTF-8">
 <title>이미지 필터링 (Convolution)</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; }
-h1 { text-align: center; color: #00d4ff; font-size: 1.5em; margin-bottom: 3px; }
+body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; padding: 15px; }
+h1 { text-align: center; color: #0071e3; font-size: 1.5em; margin-bottom: 3px; }
 .subtitle { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 12px; }
 .layout { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 .left-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -15,20 +16,20 @@ h1 { text-align: center; color: #00d4ff; font-size: 1.5em; margin-bottom: 3px; }
 .canvas-box canvas { border: 1px solid #333; border-radius: 5px; }
 .canvas-box .lbl { font-size: 0.78em; color: #aaa; margin-top: 4px; }
 .right-col { display: flex; flex-direction: column; gap: 10px; width: 300px; }
-.panel { background: #16213e; padding: 12px; border-radius: 10px; }
-.panel h3 { color: #00d4ff; font-size: 0.95em; margin-bottom: 8px; }
+.panel { background: #f5f5f7; padding: 12px; border-radius: 10px; }
+.panel h3 { color: #0071e3; font-size: 0.95em; margin-bottom: 8px; }
 .kernel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 10px; }
-.kernel-grid input { width: 100%; text-align: center; background: #0f0f23; border: 1px solid #444; color: #e0e0e0; padding: 6px 2px; border-radius: 4px; font-size: 0.9em; font-family: 'Courier New', monospace; }
-.kernel-grid input:focus { border-color: #00d4ff; outline: none; }
+.kernel-grid input { width: 100%; text-align: center; background: #f5f5f7; border: 1px solid #444; color: #1d1d1f; padding: 6px 2px; border-radius: 4px; font-size: 0.9em; font-family: 'Courier New', monospace; }
+.kernel-grid input:focus { border-color: #0071e3; outline: none; }
 .presets { display: flex; flex-wrap: wrap; gap: 5px; }
-.presets button { background: #2a2a4e; color: #e0e0e0; border: 1px solid #444; padding: 5px 9px; border-radius: 5px; cursor: pointer; font-size: 0.75em; transition: all 0.2s; }
-.presets button:hover { background: #00d4ff; color: #1a1a2e; border-color: #00d4ff; }
-.presets button.active { background: #00d4ff; color: #1a1a2e; border-color: #00d4ff; }
+.presets button { background: #f5f5f7; color: #1d1d1f; border: 1px solid #444; padding: 5px 9px; border-radius: 5px; cursor: pointer; font-size: 0.75em; transition: all 0.2s; }
+.presets button:hover { background: #0071e3; color: #ffffff; border-color: #0071e3; }
+.presets button.active { background: #0071e3; color: #ffffff; border-color: #0071e3; }
 .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.82em; }
-.toggle-row input { accent-color: #00d4ff; }
+.toggle-row input { accent-color: #0071e3; }
 .stats { font-size: 0.82em; margin-top: 8px; }
 .stats .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-.stats .row span:last-child { color: #00d4ff; font-weight: bold; }
+.stats .row span:last-child { color: #0071e3; font-weight: bold; }
 .kernel-display { font-family: 'Courier New', monospace; font-size: 0.8em; text-align: center; color: #888; margin-top: 5px; }
 </style>
 </head>

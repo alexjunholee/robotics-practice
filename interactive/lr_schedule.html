@@ -3,26 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Learning Rate Schedule 비교</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
-h1{text-align:center;color:#e94560;margin-bottom:8px;font-size:1.6em}
+body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#0071e3;margin-bottom:8px;font-size:1.6em}
 .annotation{text-align:center;color:#aaa;font-size:0.85em;margin-bottom:16px;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.5}
 .container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
-.chart-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333;flex:1;min-width:500px;max-width:850px}
-.panel{background:#0f0f23;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px;max-height:90vh;overflow-y:auto}
-.panel h3{color:#e94560;margin-bottom:10px;font-size:0.95em}
+.chart-wrap{background:#f5f5f7;border-radius:12px;padding:16px;border:1px solid #333;flex:1;min-width:500px;max-width:850px}
+.panel{background:#f5f5f7;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px;max-height:90vh;overflow-y:auto}
+.panel h3{color:#0071e3;margin-bottom:10px;font-size:0.95em}
 .toggle-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:0.82em;cursor:pointer;padding:4px 8px;border-radius:6px;transition:0.2s}
-.toggle-row:hover{background:rgba(255,255,255,0.05)}
-.toggle-row input{accent-color:#e94560}
+.toggle-row:hover{background:rgba(0,0,0,0.04)}
+.toggle-row input{accent-color:#0071e3}
 .toggle-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
 .section{margin-top:16px;padding-top:12px;border-top:1px solid #333}
 .section h4{color:#aaa;font-size:0.82em;margin-bottom:8px}
 .slider-group{margin:6px 0}
 .slider-group label{display:flex;justify-content:space-between;font-size:0.78em;color:#888;margin-bottom:1px}
-.slider-group input[type=range]{width:100%;accent-color:#e94560}
+.slider-group input[type=range]{width:100%;accent-color:#0071e3}
 </style>
 </head>
 <body>
@@ -34,7 +35,7 @@ h1{text-align:center;color:#e94560;margin-bottom:8px;font-size:1.6em}
   </div>
   <div class="panel">
     <h3>스케줄 토글</h3>
-    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_step"><span class="toggle-dot" style="background:#e94560"></span>Step Decay</label>
+    <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_step"><span class="toggle-dot" style="background:#0071e3"></span>Step Decay</label>
     <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_exp"><span class="toggle-dot" style="background:#4a9eff"></span>Exponential Decay</label>
     <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_cosine"><span class="toggle-dot" style="background:#50c878"></span>Cosine Annealing</label>
     <label class="toggle-row"><input type="checkbox" checked onchange="update()" id="t_restart"><span class="toggle-dot" style="background:#ffcc00"></span>Cosine Warm Restarts</label>
@@ -168,7 +169,7 @@ function update(){
   // Step Decay
   if(checked('t_step')){
     const y = x.map(e => lr0 * Math.pow(gamma, Math.floor(e/stepSize)));
-    traces.push({x,y,name:'Step Decay',line:{color:'#e94560',width:2.5}});
+    traces.push({x,y,name:'Step Decay',line:{color:'#0071e3',width:2.5}});
   }
 
   // Exponential Decay
@@ -231,22 +232,22 @@ function update(){
   }
 
   const layout = {
-    paper_bgcolor:'#0f0f23',
+    paper_bgcolor:'#f5f5f7',
     plot_bgcolor:'#0a0a1a',
-    font:{color:'#e0e0e0',family:'Segoe UI'},
-    title:{text:'Learning Rate Schedules',font:{color:'#e94560',size:16}},
+    font:{color:'#1d1d1f',family:'Segoe UI'},
+    title:{text:'Learning Rate Schedules',font:{color:'#0071e3',size:16}},
     xaxis:{
       title:'Epoch',
       color:'#888',
-      gridcolor:'rgba(255,255,255,0.08)',
-      zerolinecolor:'rgba(255,255,255,0.1)',
+      gridcolor:'rgba(0,0,0,0.04)',
+      zerolinecolor:'rgba(0,0,0,0.04)',
       range:[0,epochs]
     },
     yaxis:{
       title:'Learning Rate',
       color:'#888',
-      gridcolor:'rgba(255,255,255,0.08)',
-      zerolinecolor:'rgba(255,255,255,0.1)',
+      gridcolor:'rgba(0,0,0,0.04)',
+      zerolinecolor:'rgba(0,0,0,0.04)',
       type:'log',
       exponentformat:'e'
     },

@@ -3,29 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Camera Pinhole Projection - 카메라 핀홀 투영</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
-h1 { text-align: center; color: #00d4ff; padding-top: 10px; font-size: 1.4em; }
+body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; overflow: hidden; }
+h1 { text-align: center; color: #0071e3; padding-top: 10px; font-size: 1.4em; }
 .subtitle { text-align: center; color: #888; font-size: 0.8em; margin-bottom: 5px; }
 #container { position: relative; width: 100vw; height: calc(100vh - 60px); }
 #threeCanvas { width: 100%; height: 100%; display: block; }
-#imageInset { position: absolute; bottom: 15px; right: 15px; border: 2px solid #00d4ff; border-radius: 8px; background: #000; }
+#imageInset { position: absolute; bottom: 15px; right: 15px; border: 2px solid #0071e3; border-radius: 8px; background: #000; }
 #controls { position: absolute; top: 10px; left: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; width: 260px; max-height: calc(100vh - 100px); overflow-y: auto; }
-#controls h3 { color: #00d4ff; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+#controls h3 { color: #0071e3; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
 .ctrl { margin-bottom: 6px; }
 .ctrl label { font-size: 0.78em; color: #aaa; display: flex; justify-content: space-between; }
-.ctrl label span { color: #00d4ff; font-weight: bold; }
-input[type="range"] { width: 100%; accent-color: #00d4ff; }
+.ctrl label span { color: #0071e3; font-weight: bold; }
+input[type="range"] { width: 100%; accent-color: #0071e3; }
 #matrixBox { position: absolute; top: 10px; right: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; font-family: 'Courier New', monospace; }
-#matrixBox h3 { color: #00d4ff; font-size: 0.9em; margin-bottom: 6px; }
+#matrixBox h3 { color: #0071e3; font-size: 0.9em; margin-bottom: 6px; }
 .matrix { font-size: 0.82em; line-height: 1.6; }
 .matrix .row { display: flex; gap: 10px; }
-.matrix .row span { min-width: 60px; text-align: right; color: #e0e0e0; }
+.matrix .row span { min-width: 60px; text-align: right; color: #1d1d1f; }
 .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8em; }
-.toggle-row input { accent-color: #00d4ff; }
-#insetLabel { position: absolute; bottom: 230px; right: 15px; color: #00d4ff; font-size: 0.75em; text-align: center; width: 260px; }
+.toggle-row input { accent-color: #0071e3; }
+#insetLabel { position: absolute; bottom: 230px; right: 15px; color: #0071e3; font-size: 0.75em; text-align: center; width: 260px; }
 </style>
 </head>
 <body>
@@ -282,7 +283,7 @@ function renderInset(fx, fy, cx_val, cy_val) {
   insetCtx.drawImage(insetRenderer.domElement, 0, 0, IW, IH);
 
   // Draw crosshair at principal point
-  insetCtx.strokeStyle = 'rgba(0,212,255,0.3)';
+  insetCtx.strokeStyle = 'rgba(0,113,227,0.08)';
   insetCtx.setLineDash([3, 3]);
   insetCtx.beginPath();
   insetCtx.moveTo(cx_val, 0); insetCtx.lineTo(cx_val, IH);
@@ -291,7 +292,7 @@ function renderInset(fx, fy, cx_val, cy_val) {
   insetCtx.setLineDash([]);
 
   // Border
-  insetCtx.strokeStyle = '#00d4ff';
+  insetCtx.strokeStyle = '#0071e3';
   insetCtx.lineWidth = 1;
   insetCtx.strokeRect(0, 0, IW, IH);
 }

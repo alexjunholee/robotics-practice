@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Pose Graph Optimization 시각화</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   height: 100vh;
   overflow: hidden;
 }
@@ -38,7 +39,7 @@ button {
   background: #3a2a7a;
   border: 1px solid #5a4aaa;
   border-radius: 6px;
-  color: #e0e0e0;
+  color: #1d1d1f;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
@@ -52,7 +53,7 @@ button.danger:hover { background: #8a3a3a; }
 
 .metrics {
   background: #12122a;
-  border: 1px solid #2a2a4a;
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 14px;
@@ -72,7 +73,7 @@ button.danger:hover { background: #8a3a3a; }
 
 .instructions {
   background: #12122a;
-  border: 1px solid #2a2a4a;
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 12px;
   font-size: 12px;

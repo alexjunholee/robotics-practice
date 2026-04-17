@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>렌즈 왜곡 (Lens Distortion) 시뮬레이션</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   padding: 20px;
   min-height: 100vh;
 }
@@ -17,8 +18,8 @@ h1 {
   text-align: center;
   font-size: 1.6em;
   margin-bottom: 6px;
-  color: #0f3460;
-  background: linear-gradient(90deg, #e94560, #0f3460);
+  color: rgba(0,0,0,0.12);
+  background: linear-gradient(90deg, #0071e3, rgba(0,0,0,0.12));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -39,14 +40,14 @@ h1 {
   justify-content: center;
 }
 .controls-panel {
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 10px;
   padding: 20px;
   min-width: 280px;
   flex: 0 0 280px;
 }
 .controls-panel h3 {
-  color: #e94560;
+  color: #0071e3;
   margin-bottom: 14px;
   font-size: 1em;
 }
@@ -61,13 +62,13 @@ h1 {
   margin-bottom: 4px;
 }
 .control-group .value {
-  color: #e94560;
+  color: #0071e3;
   font-weight: bold;
   font-family: monospace;
 }
 input[type="range"] {
   width: 100%;
-  accent-color: #e94560;
+  accent-color: #0071e3;
   cursor: pointer;
 }
 .distortion-label {
@@ -85,7 +86,7 @@ button {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  background: #e94560;
+  background: #0071e3;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -103,7 +104,7 @@ canvas {
   background: #0a0a1a;
 }
 .formula-box {
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 8px;
   padding: 14px;
   margin-top: 16px;
@@ -113,7 +114,7 @@ canvas {
   line-height: 1.7;
   text-align: center;
 }
-.formula-box span { color: #e94560; }
+.formula-box span { color: #0071e3; }
 </style>
 </head>
 <body>
@@ -285,7 +286,7 @@ function draw() {
   }
 
   // Center crosshair
-  ctx.strokeStyle = 'rgba(233,69,96,0.5)';
+  ctx.strokeStyle = 'rgba(0,113,227,0.08)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath(); ctx.moveTo(CW/2, 0); ctx.lineTo(CW/2, CH); ctx.stroke();

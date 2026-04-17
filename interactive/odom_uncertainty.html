@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>오도메트리 불확실성 전파 — Odometry Uncertainty Propagation</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   display: flex;
   height: 100vh;
   overflow: hidden;
@@ -18,26 +19,26 @@ body {
   width: 370px;
   min-width: 370px;
   padding: 18px;
-  background: #16213e;
+  background: #f5f5f7;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-right: 2px solid #0f3460;
+  border-right: 2px solid rgba(0,0,0,0.12);
 }
-h1 { font-size: 17px; color: #e94560; }
-h2 { font-size: 13px; color: #0f3460; background: #e94560; padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
+h1 { font-size: 17px; color: #0071e3; }
+h2 { font-size: 13px; color: rgba(0,0,0,0.12); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
 .slider-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
 .slider-row label { width: 100px; font-size: 12px; }
-.slider-row input[type=range] { flex: 1; accent-color: #e94560; }
+.slider-row input[type=range] { flex: 1; accent-color: #0071e3; }
 .slider-row .val { width: 42px; text-align: right; font-family: monospace; font-size: 12px; color: #53d8fb; }
 button {
   padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;
   font-size: 12px; font-weight: 600; transition: background 0.2s;
 }
-.btn-primary { background: #e94560; color: #fff; }
+.btn-primary { background: #0071e3; color: #fff; }
 .btn-primary:hover { background: #c73e55; }
-.btn-secondary { background: #0f3460; color: #e0e0e0; }
+.btn-secondary { background: rgba(0,0,0,0.12); color: #1d1d1f; }
 .btn-secondary:hover { background: #1a4a8a; }
 .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .state-box {
@@ -408,8 +409,8 @@ function drawRobot() {
   ctx.lineTo(-sz * 0.3, 0);
   ctx.lineTo(-sz * 0.5, sz * 0.5);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(233, 69, 96, 0.8)';
-  ctx.strokeStyle = '#e94560';
+  ctx.fillStyle = 'rgba(0,113,227,0.08)';
+  ctx.strokeStyle = '#0071e3';
   ctx.lineWidth = 2;
   ctx.fill(); ctx.stroke();
 
@@ -447,7 +448,7 @@ function draw() {
   // Origin
   const [ocx, ocy] = w2c(0, 0);
   ctx.beginPath(); ctx.arc(ocx, ocy, 3, 0, Math.PI * 2);
-  ctx.fillStyle = '#e94560'; ctx.fill();
+  ctx.fillStyle = '#0071e3'; ctx.fill();
 }
 
 updateLabels();

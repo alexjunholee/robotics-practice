@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>RANSAC 알고리즘 시각화</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   padding: 20px;
   min-height: 100vh;
 }
@@ -17,7 +18,7 @@ h1 {
   text-align: center;
   font-size: 1.6em;
   margin-bottom: 6px;
-  color: #e94560;
+  color: #0071e3;
 }
 .subtitle {
   text-align: center;
@@ -54,12 +55,12 @@ canvas {
   cursor: crosshair;
 }
 .panel-box {
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 10px;
   padding: 16px;
 }
 .panel-box h3 {
-  color: #e94560;
+  color: #0071e3;
   font-size: 0.95em;
   margin-bottom: 10px;
 }
@@ -74,13 +75,13 @@ canvas {
   margin-bottom: 3px;
 }
 .control-group .value {
-  color: #e94560;
+  color: #0071e3;
   font-weight: bold;
   font-family: monospace;
 }
 input[type="range"] {
   width: 100%;
-  accent-color: #e94560;
+  accent-color: #0071e3;
   cursor: pointer;
 }
 .btn-row {
@@ -91,7 +92,7 @@ input[type="range"] {
 button {
   flex: 1;
   padding: 9px 6px;
-  background: #e94560;
+  background: #0071e3;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -103,7 +104,7 @@ button {
 button:hover { background: #c73650; }
 button:disabled { background: #555; cursor: not-allowed; }
 button.secondary {
-  background: #0f3460;
+  background: rgba(0,0,0,0.12);
 }
 button.secondary:hover { background: #1a4a80; }
 .stats {
@@ -266,7 +267,7 @@ function drawScene(currentSample, currentLine, currentInlierSet) {
   ctx.clearRect(0, 0, CW, CH);
 
   // Draw grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.strokeStyle = 'rgba(0,0,0,0.04)';
   ctx.lineWidth = 1;
   for (let x = 0; x < CW; x += 50) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();

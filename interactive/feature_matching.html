@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Feature Matching과 Ratio Test</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -61,7 +62,7 @@ button {
   background: #3a2a7a;
   border: 1px solid #5a4aaa;
   border-radius: 6px;
-  color: #e0e0e0;
+  color: #1d1d1f;
   font-size: 12px;
   cursor: pointer;
 }
@@ -352,7 +353,7 @@ function drawAll() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Background
-  ctx.fillStyle = '#1a1a2e';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Image backgrounds

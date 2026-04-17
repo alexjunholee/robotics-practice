@@ -3,23 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Bird's Eye View (BEV) Projection</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh}
-h1{text-align:center;color:#e94560;margin-bottom:8px;font-size:1.6em}
+body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;padding:20px;min-height:100vh}
+h1{text-align:center;color:#0071e3;margin-bottom:8px;font-size:1.6em}
 .annotation{text-align:center;color:#aaa;font-size:0.85em;margin-bottom:16px;max-width:750px;margin-left:auto;margin-right:auto;line-height:1.5}
 .container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
 .views{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
-.canvas-wrap{background:#0f0f23;border-radius:12px;padding:16px;border:1px solid #333}
-.canvas-wrap h3{color:#e94560;margin-bottom:8px;font-size:0.95em}
+.canvas-wrap{background:#f5f5f7;border-radius:12px;padding:16px;border:1px solid #333}
+.canvas-wrap h3{color:#0071e3;margin-bottom:8px;font-size:0.95em}
 canvas{display:block;border-radius:8px}
-.panel{background:#0f0f23;border-radius:12px;padding:20px;border:1px solid #333;min-width:280px;max-width:320px}
-.panel h3{color:#e94560;margin-bottom:12px;font-size:0.95em}
+.panel{background:#f5f5f7;border-radius:12px;padding:20px;border:1px solid #333;min-width:280px;max-width:320px}
+.panel h3{color:#0071e3;margin-bottom:12px;font-size:0.95em}
 .slider-group{margin:10px 0}
 .slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:#aaa;margin-bottom:2px}
-.slider-group input[type=range]{width:100%;accent-color:#e94560}
-.info-box{background:#16213e;border-radius:8px;padding:10px;margin-top:12px;font-size:0.75em;font-family:'Courier New',monospace;color:#7fdbca;line-height:1.6;overflow-x:auto}
+.slider-group input[type=range]{width:100%;accent-color:#0071e3}
+.info-box{background:#f5f5f7;border-radius:8px;padding:10px;margin-top:12px;font-size:0.75em;font-family:'Courier New',monospace;color:#7fdbca;line-height:1.6;overflow-x:auto}
 </style>
 </head>
 <body>
@@ -57,8 +58,8 @@ canvas{display:block;border-radius:8px}
       <label><span>뷰 범위 (m)</span><span id="vRange">30</span></label>
       <input type="range" id="sRange" min="10" max="60" step="1" value="30" oninput="update()">
     </div>
-    <div style="margin-top:16px;padding:12px;background:#16213e;border-radius:8px">
-      <h3 style="color:#e94560;margin-bottom:8px;font-size:0.85em">설명</h3>
+    <div style="margin-top:16px;padding:12px;background:#f5f5f7;border-radius:8px">
+      <h3 style="color:#0071e3;margin-bottom:8px;font-size:0.85em">설명</h3>
       <p style="font-size:0.78em;color:#aaa;line-height:1.6">
         왼쪽: 전방 카메라에서 본 투시 뷰. 평행 차선이 소실점으로 수렴합니다.<br><br>
         오른쪽: IPM (Inverse Perspective Mapping)으로 변환한 BEV. 평행 차선이 평행하게 보입니다.<br><br>
@@ -150,7 +151,7 @@ function update(){
 
   // lane lines
   const lanePositions = [-3.5, -1.75, 0, 1.75, 3.5];
-  const laneColors = ['#e94560','#ffcc00','#ffcc00','#ffcc00','#e94560'];
+  const laneColors = ['#0071e3','#ffcc00','#ffcc00','#ffcc00','#0071e3'];
   const laneDash = [false, true, false, true, false];
   for(let li=0; li<lanePositions.length; li++){
     const lx = lanePositions[li];
@@ -248,7 +249,7 @@ function update(){
 
   // ego car
   const ego = worldToBEV(0, 1);
-  bevCtx.fillStyle='#e94560';
+  bevCtx.fillStyle='#0071e3';
   bevCtx.fillRect(ego.u-12, ego.v-8, 24, 16);
   bevCtx.fillStyle='#fff';bevCtx.font='8px sans-serif';bevCtx.textAlign='center';
   bevCtx.fillText('EGO',ego.u,ego.v+3);

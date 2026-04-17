@@ -3,27 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>Occupancy Grid Mapping - 점유 격자 지도</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; }
-h1 { text-align: center; color: #00d4ff; margin-bottom: 3px; font-size: 1.5em; }
+body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; padding: 15px; }
+h1 { text-align: center; color: #0071e3; margin-bottom: 3px; font-size: 1.5em; }
 .subtitle { text-align: center; color: #888; margin-bottom: 10px; font-size: 0.85em; }
 .main { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 .left-panel { display: flex; flex-direction: column; align-items: center; }
-canvas { border: 1px solid #333; border-radius: 5px; background: #0f0f23; }
+canvas { border: 1px solid #333; border-radius: 5px; background: #f5f5f7; }
 .right-panel { display: flex; flex-direction: column; gap: 10px; max-width: 280px; }
-.panel-section { background: #16213e; padding: 12px; border-radius: 8px; }
-.panel-section h3 { color: #00d4ff; font-size: 0.95em; margin-bottom: 8px; }
+.panel-section { background: #f5f5f7; padding: 12px; border-radius: 8px; }
+.panel-section h3 { color: #0071e3; font-size: 0.95em; margin-bottom: 8px; }
 .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .control-row label { font-size: 0.8em; color: #aaa; }
-.control-row .val { color: #00d4ff; font-weight: bold; font-size: 0.85em; min-width: 30px; text-align: right; }
-input[type="range"] { width: 110px; accent-color: #00d4ff; }
-button { background: #00d4ff; color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
+.control-row .val { color: #0071e3; font-weight: bold; font-size: 0.85em; min-width: 30px; text-align: right; }
+input[type="range"] { width: 110px; accent-color: #0071e3; }
+button { background: #0071e3; color: #ffffff; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
 button:hover { background: #00b8d9; }
 .stats { font-size: 0.85em; }
 .stats .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.stats .row span:last-child { color: #00d4ff; font-weight: bold; }
+.stats .row span:last-child { color: #0071e3; font-weight: bold; }
 .legend { display: flex; gap: 10px; font-size: 0.75em; margin-top: 8px; justify-content: center; }
 .legend-item { display: flex; align-items: center; gap: 4px; }
 .legend-color { width: 14px; height: 14px; border: 1px solid #555; border-radius: 2px; }
@@ -42,7 +43,7 @@ button:hover { background: #00b8d9; }
       <div class="legend-item"><div class="legend-color" style="background:#111"></div> 점유 (Occupied)</div>
       <div class="legend-item"><div class="legend-color" style="background:#ddd"></div> 자유 (Free)</div>
       <div class="legend-item"><div class="legend-color" style="background:#808080"></div> 미지 (Unknown)</div>
-      <div class="legend-item"><div class="legend-color" style="background:#00d4ff"></div> 로봇 (Robot)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#0071e3"></div> 로봇 (Robot)</div>
       <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,0,0.3)"></div> 센서 (Sensor)</div>
     </div>
     <div class="keys-hint">방향키로 이동 / Arrow Keys to move</div>
@@ -251,7 +252,7 @@ function render() {
   ctx.save();
   ctx.translate(rx, ry);
   ctx.rotate(robot.angle);
-  ctx.fillStyle = '#00d4ff';
+  ctx.fillStyle = '#0071e3';
   ctx.beginPath();
   ctx.moveTo(sz, 0);
   ctx.lineTo(-sz, -sz * 0.7);

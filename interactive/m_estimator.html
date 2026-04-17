@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
 <title>M-Estimator 비용 함수 비교</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
   padding: 20px;
   min-height: 100vh;
 }
@@ -18,7 +19,7 @@ h1 {
   text-align: center;
   font-size: 1.6em;
   margin-bottom: 6px;
-  color: #e94560;
+  color: #0071e3;
 }
 .subtitle {
   text-align: center;
@@ -31,7 +32,7 @@ h1 {
   margin: 0 auto;
 }
 .controls {
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 20px;
@@ -53,13 +54,13 @@ h1 {
   margin-bottom: 4px;
 }
 .control-group .value {
-  color: #e94560;
+  color: #0071e3;
   font-weight: bold;
   font-family: monospace;
 }
 input[type="range"] {
   width: 100%;
-  accent-color: #e94560;
+  accent-color: #0071e3;
   cursor: pointer;
 }
 .plot-container {
@@ -69,7 +70,7 @@ input[type="range"] {
 }
 .annotation-box {
   text-align: center;
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 8px;
   padding: 12px;
   margin-top: 16px;
@@ -78,7 +79,7 @@ input[type="range"] {
   border-left: 4px solid #ffa726;
 }
 .formulas {
-  background: #16213e;
+  background: #f5f5f7;
   border-radius: 8px;
   padding: 14px 20px;
   margin-top: 14px;
@@ -195,7 +196,7 @@ function weightGM(r, c) {
 
 const plotBg = '#0d0d1a';
 const paperBg = '#0d0d1a';
-const gridColor = 'rgba(255,255,255,0.08)';
+const gridColor = 'rgba(0,0,0,0.04)';
 const axisColor = '#555';
 
 function updatePlots() {
@@ -255,7 +256,7 @@ function updatePlots() {
   const costYMax = Math.min(maxCost * 1.15, 120);
 
   const costLayout = {
-    title: { text: 'Cost Function \u03C1(r)', font: { color: '#e0e0e0', size: 15 } },
+    title: { text: 'Cost Function \u03C1(r)', font: { color: '#1d1d1f', size: 15 } },
     plot_bgcolor: plotBg,
     paper_bgcolor: paperBg,
     margin: { t: 50, b: 50, l: 60, r: 30 },
@@ -276,7 +277,7 @@ function updatePlots() {
   const weightYMax = Math.min(maxW, 5);
 
   const weightLayout = {
-    title: { text: 'Weight Function w(r) = \u03C1\'(r)/r', font: { color: '#e0e0e0', size: 15 } },
+    title: { text: 'Weight Function w(r) = \u03C1\'(r)/r', font: { color: '#1d1d1f', size: 15 } },
     plot_bgcolor: plotBg,
     paper_bgcolor: paperBg,
     margin: { t: 50, b: 50, l: 60, r: 30 },

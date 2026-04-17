@@ -1,37 +1,38 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<link rel="stylesheet" href="../shared/theme.css">
 <meta charset="UTF-8">
 <title>Bundle Adjustment 수렴 시각화</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; }
-h1 { text-align: center; color: #00d4ff; font-size: 1.5em; margin-bottom: 3px; }
+body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; padding: 15px; }
+h1 { text-align: center; color: #0071e3; font-size: 1.5em; margin-bottom: 3px; }
 .subtitle { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 12px; }
 .layout { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 .main-view { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .main-view canvas { border: 1px solid #333; border-radius: 5px; }
 .side-panel { display: flex; flex-direction: column; gap: 10px; width: 320px; }
-.panel { background: #16213e; padding: 12px; border-radius: 10px; }
-.panel h3 { color: #00d4ff; font-size: 0.92em; margin-bottom: 8px; }
+.panel { background: #f5f5f7; padding: 12px; border-radius: 10px; }
+.panel h3 { color: #0071e3; font-size: 0.92em; margin-bottom: 8px; }
 .ctrl { margin-bottom: 8px; }
 .ctrl label { font-size: 0.8em; color: #aaa; display: flex; justify-content: space-between; }
-.ctrl label span { color: #00d4ff; font-weight: bold; }
-input[type="range"] { width: 100%; accent-color: #00d4ff; }
+.ctrl label span { color: #0071e3; font-weight: bold; }
+input[type="range"] { width: 100%; accent-color: #0071e3; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-button { background: #00d4ff; color: #1a1a2e; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.82em; }
+button { background: #0071e3; color: #ffffff; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.82em; }
 button:hover { background: #00b8d9; }
 button:disabled { background: #555; color: #999; cursor: not-allowed; }
-button.secondary { background: #2a2a4e; color: #e0e0e0; border: 1px solid #444; }
+button.secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid #444; }
 button.secondary:hover { background: #3a3a5e; }
 .stats { font-size: 0.82em; }
 .stats .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-.stats .row span:last-child { color: #00d4ff; font-weight: bold; }
+.stats .row span:last-child { color: #0071e3; font-weight: bold; }
 .legend { display: flex; gap: 12px; font-size: 0.75em; flex-wrap: wrap; }
 .legend-item { display: flex; align-items: center; gap: 4px; }
 .legend-color { width: 12px; height: 12px; border-radius: 2px; }
-canvas#plotCanvas { background: #0f0f23; }
-canvas#sceneCanvas { background: #0f0f23; }
+canvas#plotCanvas { background: #f5f5f7; }
+canvas#sceneCanvas { background: #f5f5f7; }
 </style>
 </head>
 <body>
@@ -332,7 +333,7 @@ function drawPoint(ctx, pt, color, radius, dashed) {
 }
 
 function render() {
-  sCtx.fillStyle = '#0f0f23';
+  sCtx.fillStyle = '#f5f5f7';
   sCtx.fillRect(0, 0, SW, SH);
 
   // Draw projection lines (optimized -> points)
@@ -358,7 +359,7 @@ function render() {
   for (const pt of optPts) drawPoint(sCtx, pt, '#44ff44', 4, false);
 
   // Draw convergence plot
-  pCtx.fillStyle = '#0f0f23';
+  pCtx.fillStyle = '#f5f5f7';
   pCtx.fillRect(0, 0, PW, PH);
 
   if (errorHistory.length > 1) {
@@ -382,7 +383,7 @@ function render() {
     pCtx.fillText(minE.toFixed(0), 2, PH - 22);
 
     // Plot line
-    pCtx.strokeStyle = '#00d4ff';
+    pCtx.strokeStyle = '#0071e3';
     pCtx.lineWidth = 2;
     pCtx.beginPath();
     const plotW = PW - 45;
@@ -396,7 +397,7 @@ function render() {
     pCtx.stroke();
 
     // Dots
-    pCtx.fillStyle = '#00d4ff';
+    pCtx.fillStyle = '#0071e3';
     for (let i = 0; i < errorHistory.length; i++) {
       const x = 36 + (i / Math.max(1, errorHistory.length - 1)) * plotW;
       const y = 8 + (1 - (errorHistory[i] - minE) / range) * plotH;
