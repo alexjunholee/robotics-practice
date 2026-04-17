@@ -4,18 +4,392 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../shared/theme.css">
-<title>Depth Anything V2</title>
+<title>Depth Anything V2 — 브라우저 추론</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; background: #ffffff; color: #1d1d1f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; }
-  h1 { text-align: center; padding: 12px 0 4px; font-size: 1.3rem; color: #ffffff; flex-shrink: 0; }
-  iframe { flex: 1 1 auto; width: 100%; border: none; }
-  .note { text-align: center; padding: 6px 0 10px; font-size: 0.82rem; color: rgba(0,0,0,0.56); flex-shrink: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.wrap { max-width: 1200px; margin: 0 auto; }
+
+.status-bar {
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+.status-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(0,0,0,0.2);
+  flex-shrink: 0;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.status-dot.loading { background: #ff9500; box-shadow: 0 0 0 3px rgba(255,149,0,0.15); animation: pulse 1.4s ease-in-out infinite; }
+.status-dot.ready   { background: #34c759; }
+.status-dot.error   { background: #ff3b30; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.status-text { flex: 1; color: var(--rp-text-body); letter-spacing: -0.014em; }
+.status-text b { color: var(--rp-text-heading); font-weight: 600; }
+.progress-ring { font-family: var(--rp-font-mono); font-size: 12.5px; color: var(--rp-accent); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.controls {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px; align-items: center;
+}
+.btn {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: var(--rp-radius-md);
+  font-size: 13.5px; font-weight: 500; letter-spacing: -0.014em;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn:hover:not(:disabled) { background: #0077ed; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.secondary {
+  background: #fff; color: var(--rp-text);
+  border-color: var(--rp-border);
+}
+.btn.secondary:hover:not(:disabled) { background: var(--rp-bg-alt); }
+.file-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border);
+  padding: 8px 16px;
+  border-radius: var(--rp-radius-md);
+  font-size: 13.5px; font-weight: 500; letter-spacing: -0.014em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.file-label:hover { background: var(--rp-bg-alt); }
+.file-label input { display: none; }
+.device-badge {
+  margin-left: auto;
+  padding: 5px 11px;
+  border-radius: var(--rp-radius-pill);
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.device-badge.gpu  { background: rgba(0,113,227,0.10); color: var(--rp-accent); }
+.device-badge.cpu  { background: rgba(0,0,0,0.06); color: var(--rp-text-muted); }
+
+.canvas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 800px) {
+  .canvas-grid { grid-template-columns: 1fr; }
+}
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.canvas-wrap .label {
+  font-size: 11.5px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+canvas {
+  display: block; width: 100%; height: auto;
+  background: #fff;
+  border-radius: var(--rp-radius-sm);
+  border: 1px solid var(--rp-border);
+}
+
+.meta {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--rp-text-muted);
+  display: flex; gap: 20px; flex-wrap: wrap;
+}
+.meta .k { color: var(--rp-text-body); }
+.meta .v { color: var(--rp-accent); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.hint {
+  margin-top: 16px; padding: 12px 16px;
+  background: rgba(0,113,227,0.04);
+  border-left: 3px solid var(--rp-accent);
+  border-radius: var(--rp-radius-md);
+  font-size: 12.5px; color: var(--rp-text-body); line-height: 1.6;
+}
+.hint b { color: var(--rp-text-heading); font-weight: 600; }
+
+.err {
+  margin-top: 16px; padding: 12px 16px;
+  background: rgba(255,59,48,0.06);
+  border-left: 3px solid #ff3b30;
+  border-radius: var(--rp-radius-md);
+  font-size: 13px; color: var(--rp-text); line-height: 1.5;
+  display: none;
+}
+.err.visible { display: block; }
 </style>
 </head>
 <body>
-  <h1>Depth Anything V2</h1>
-  <iframe src="https://depth-anything-depth-anything-v2.hf.space" allow="accelerometer; camera; microphone"></iframe>
-  <div class="note">HuggingFace Space에서 실행됩니다. 로딩에 시간이 걸릴 수 있습니다.</div>
+<h1>Depth Anything V2</h1>
+<p class="subtitle">브라우저에서 직접 단안 깊이 추정 — WebGPU/WASM 로컬 추론, 외부 API 없음</p>
+
+<div class="wrap">
+  <div class="status-bar">
+    <span class="status-dot loading" id="dot"></span>
+    <span class="status-text" id="statusText"><b>모델 로딩 중</b> — 최초 1회 다운로드 (약 49 MB)</span>
+    <span class="progress-ring" id="progress"></span>
+  </div>
+
+  <div class="controls">
+    <label class="file-label">
+      이미지 업로드
+      <input type="file" id="fileInput" accept="image/*">
+    </label>
+    <button class="btn secondary" id="sampleBtn" disabled data-idx="0">샘플 1</button>
+    <button class="btn secondary" id="sampleBtn2" disabled data-idx="1">샘플 2</button>
+    <button class="btn secondary" id="sampleBtn3" disabled data-idx="2">샘플 3</button>
+    <button class="btn" id="runBtn" disabled>▶ 깊이 추정</button>
+    <span class="device-badge cpu" id="deviceBadge">CPU</span>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="canvas-grid">
+    <div class="canvas-wrap">
+      <div class="label">입력 이미지</div>
+      <canvas id="srcCanvas" width="640" height="480"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="label">추정 깊이 (Turbo colormap)</div>
+      <canvas id="depthCanvas" width="640" height="480"></canvas>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span><span class="k">입력:</span> <span class="v" id="mInput">—</span></span>
+    <span><span class="k">추론:</span> <span class="v" id="mTime">—</span></span>
+    <span><span class="k">깊이 범위:</span> <span class="v" id="mRange">—</span></span>
+  </div>
+
+  <div class="hint">
+    <b>Depth Anything V2 Small</b> (onnx-community/depth-anything-v2-small) 모델이 브라우저 내에서
+    실행됩니다. WebGPU를 지원하는 브라우저(최신 Chrome/Edge)에서는 수백 ms 이내, WASM 폴백은
+    수 초 정도 소요. Gradio Space API 없이 완전 독립 동작.
+  </div>
+</div>
+
+<script type="module">
+import {
+  pipeline, env, RawImage
+} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js';
+
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+const dot = document.getElementById('dot');
+const statusText = document.getElementById('statusText');
+const progress = document.getElementById('progress');
+const deviceBadge = document.getElementById('deviceBadge');
+const runBtn = document.getElementById('runBtn');
+const fileInput = document.getElementById('fileInput');
+const err = document.getElementById('err');
+const srcCanvas = document.getElementById('srcCanvas');
+const depthCanvas = document.getElementById('depthCanvas');
+const srcCtx = srcCanvas.getContext('2d');
+const depthCtx = depthCanvas.getContext('2d');
+
+const mInput = document.getElementById('mInput');
+const mTime  = document.getElementById('mTime');
+const mRange = document.getElementById('mRange');
+
+// ── Embedded samples (CORS-safe public Unsplash images) ──
+const SAMPLES = [
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=640&q=80',  // portrait
+  'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=640&q=80',  // cityscape
+  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=640&q=80'   // forest
+];
+
+let pipe = null;
+let currentImage = null;   // HTMLImageElement or Canvas/Blob
+
+function setStatus(state, msg, pct) {
+  dot.className = 'status-dot ' + state;
+  statusText.innerHTML = msg;
+  progress.textContent = pct != null ? pct + '%' : '';
+}
+
+function showError(msg) {
+  err.classList.add('visible');
+  err.innerHTML = '<b>오류:</b> ' + msg;
+  setStatus('error', '<b>로드 실패</b>', null);
+}
+
+// ── Load pipeline ──
+async function loadPipeline() {
+  try {
+    const hasWebGPU = 'gpu' in navigator;
+    deviceBadge.textContent = hasWebGPU ? 'WebGPU' : 'WASM (CPU)';
+    deviceBadge.className = 'device-badge ' + (hasWebGPU ? 'gpu' : 'cpu');
+
+    pipe = await pipeline(
+      'depth-estimation',
+      'onnx-community/depth-anything-v2-small',
+      {
+        device: hasWebGPU ? 'webgpu' : 'wasm',
+        dtype: hasWebGPU ? 'fp16' : 'q8',
+        progress_callback: (data) => {
+          if (data.status === 'progress' && data.total) {
+            const pct = Math.round(100 * data.loaded / data.total);
+            setStatus('loading', `<b>${data.file || 'model'}</b> 다운로드 중`, pct);
+          } else if (data.status === 'ready') {
+            setStatus('ready', '<b>모델 준비 완료</b>', null);
+          }
+        }
+      }
+    );
+    setStatus('ready', '<b>모델 준비 완료</b> — 이미지를 선택하세요', null);
+    runBtn.disabled = false;
+    enableSampleButtons();
+  } catch (e) {
+    console.error(e);
+    showError(e.message || String(e));
+  }
+}
+
+function enableSampleButtons() {
+  document.querySelectorAll('[id^=sampleBtn]').forEach(b => b.disabled = false);
+}
+
+// ── Load image ──
+function imageElementFrom(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function drawToSrcCanvas(img) {
+  const maxW = 640, maxH = 480;
+  const r = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+  srcCanvas.width  = Math.round(img.naturalWidth  * r);
+  srcCanvas.height = Math.round(img.naturalHeight * r);
+  srcCtx.drawImage(img, 0, 0, srcCanvas.width, srcCanvas.height);
+  mInput.textContent = `${srcCanvas.width} × ${srcCanvas.height}`;
+  currentImage = img;
+}
+
+async function loadSample(idx) {
+  try {
+    setStatus('loading', `<b>샘플 이미지 ${idx+1}</b> 로딩 중`, null);
+    const img = await imageElementFrom(SAMPLES[idx]);
+    drawToSrcCanvas(img);
+    setStatus('ready', '<b>이미지 로드 완료</b> — 깊이 추정 버튼을 누르세요', null);
+  } catch (e) {
+    showError('샘플 이미지 로드 실패. 파일 업로드를 이용하세요.');
+  }
+}
+
+// ── Depth inference ──
+async function runDepth() {
+  if (!pipe || !currentImage) return;
+  runBtn.disabled = true;
+  setStatus('loading', '<b>깊이 추정 중…</b>', null);
+
+  try {
+    const t0 = performance.now();
+    // Pass canvas directly — transformers.js handles HTMLCanvasElement
+    const result = await pipe(srcCanvas);
+    const t1 = performance.now();
+
+    // result.depth is a RawImage-like; .data is Uint8Array (grayscale).
+    // We'll read the float predicted_depth if available for precise range.
+    const depth = result.depth;
+    const W = depth.width, H = depth.height;
+    const data = depth.data; // Uint8Array length W*H
+    let min = 255, max = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = data[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    depthCanvas.width = W; depthCanvas.height = H;
+    const out = depthCtx.createImageData(W, H);
+    const span = Math.max(1, max - min);
+    for (let i = 0; i < data.length; i++) {
+      const norm = (data[i] - min) / span;
+      const [r, g, b] = turbo(norm);
+      const j = i * 4;
+      out.data[j]   = r;
+      out.data[j+1] = g;
+      out.data[j+2] = b;
+      out.data[j+3] = 255;
+    }
+    depthCtx.putImageData(out, 0, 0);
+
+    mTime.textContent = Math.round(t1 - t0) + ' ms';
+    mRange.textContent = `${min}–${max}`;
+    setStatus('ready', '<b>추정 완료</b>', null);
+  } catch (e) {
+    console.error(e);
+    showError(e.message || String(e));
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+// Turbo colormap (Google, Anton Mikhailov, 2019). Excellent perceptual uniformity.
+function turbo(x) {
+  x = Math.max(0, Math.min(1, x));
+  const r = Math.round(255 * Math.max(0, Math.min(1, 0.13572138 + 4.61539260*x - 42.66032258*x*x + 132.13108234*x*x*x - 152.94239396*x*x*x*x + 59.28637943*x*x*x*x*x)));
+  const g = Math.round(255 * Math.max(0, Math.min(1, 0.09140261 + 2.19418839*x + 4.84296658*x*x - 14.18503333*x*x*x + 4.27729857*x*x*x*x + 2.82956604*x*x*x*x*x)));
+  const b = Math.round(255 * Math.max(0, Math.min(1, 0.10667330 + 12.64194608*x - 60.58204836*x*x + 110.36276771*x*x*x - 89.90310912*x*x*x*x + 27.34824973*x*x*x*x*x)));
+  return [r, g, b];
+}
+
+// ── Wire up ──
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await imageElementFrom(url);
+    drawToSrcCanvas(img);
+    setStatus('ready', '<b>이미지 로드 완료</b> — 깊이 추정 버튼을 누르세요', null);
+  } catch (e) {
+    showError('이미지 파일을 읽을 수 없습니다.');
+  }
+});
+
+document.querySelectorAll('[id^=sampleBtn]').forEach(btn => {
+  btn.addEventListener('click', () => loadSample(parseInt(btn.dataset.idx, 10)));
+});
+runBtn.addEventListener('click', runDepth);
+
+// ── Boot ──
+loadPipeline();
+</script>
 </body>
 </html>
