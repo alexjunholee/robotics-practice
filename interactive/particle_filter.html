@@ -21,8 +21,8 @@
   .buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
   button { background: rgba(0,0,0,0.12); color: #1d1d1f; border: 1px solid rgba(0,113,227,0.26); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; transition: background 0.2s; }
   button:hover { background: #e8e8ed; }
-  button.danger { border-color: #ff444444; }
-  button.danger:hover { background: #5a2020; }
+  button.danger { border-color: rgba(255,68,68,0.40); color: #c23030; }
+  button.danger:hover { background: rgba(255,68,68,0.10); }
   .stats { font-size: 0.82em; line-height: 1.7; }
   .stats span { color: #0071e3; }
   .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap; }
@@ -42,7 +42,7 @@
       <div class="legend-item"><div class="legend-color" style="background:#00ff88"></div>로봇 (Robot)</div>
       <div class="legend-item"><div class="legend-color" style="background:#ff8844"></div>파티클 (Particles)</div>
       <div class="legend-item"><div class="legend-color" style="background:#ff44ff"></div>추정 위치 (Estimate)</div>
-      <div class="legend-item"><div class="legend-color" style="background:rgba(0,0,0,0.16)"></div>벽 (Walls)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(0,0,0,0.55)"></div>벽 (Walls)</div>
     </div>
   </div>
   <div class="panel">
@@ -306,16 +306,16 @@ function drawMap() {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       if (map[r][c] === 1) {
-        ctx.fillStyle = '#333355';
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-        ctx.strokeStyle = '#444477';
+        ctx.strokeStyle = 'rgba(0,0,0,0.72)';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
       }
     }
   }
   // Grid lines (faint)
-  ctx.strokeStyle = '#1a1a3e';
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
   ctx.lineWidth = 0.3;
   for (let r = 0; r <= ROWS; r++) {
     ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke();

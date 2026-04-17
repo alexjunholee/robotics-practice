@@ -64,7 +64,8 @@ input[type="range"] {
   cursor: pointer;
 }
 .plot-container {
-  background: rgba(0,0,0,0.80);
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -75,8 +76,8 @@ input[type="range"] {
   padding: 12px;
   margin-top: 16px;
   font-size: 0.9em;
-  color: #ffa726;
-  border-left: 4px solid #ffa726;
+  color: rgba(0,0,0,0.80);
+  border-left: 4px solid #ff9500;
 }
 .formulas {
   background: #f5f5f7;
@@ -194,9 +195,9 @@ function weightGM(r, c) {
   return 2 * c * c / (denom * denom);
 }
 
-const plotBg = '#0d0d1a';
-const paperBg = '#0d0d1a';
-const gridColor = 'rgba(0,0,0,0.04)';
+const plotBg = '#ffffff';
+const paperBg = '#ffffff';
+const gridColor = 'rgba(0,0,0,0.08)';
 const axisColor = 'rgba(0,0,0,0.16)';
 
 function updatePlots() {
@@ -264,9 +265,9 @@ function updatePlots() {
     xaxis: { title: 'Residual r', ...commonAxisLayout },
     yaxis: { title: '\u03C1(r)', range: [0, costYMax], ...commonAxisLayout },
     legend: {
-      font: { color: 'rgba(0,0,0,0.56)', size: 12 },
-      bgcolor: 'rgba(22,33,62,0.85)',
-      bordercolor: 'rgba(0,0,0,0.16)',
+      font: { color: 'rgba(0,0,0,0.80)', size: 12 },
+      bgcolor: 'rgba(255,255,255,0.9)',
+      bordercolor: 'rgba(0,0,0,0.08)',
       borderwidth: 1,
       x: 0.02, y: 0.98,
     },
@@ -285,8 +286,8 @@ function updatePlots() {
     xaxis: { title: 'Residual r', ...commonAxisLayout },
     yaxis: { title: 'w(r)', range: [0, weightYMax], ...commonAxisLayout },
     legend: {
-      font: { color: 'rgba(0,0,0,0.56)', size: 12 },
-      bgcolor: 'rgba(22,33,62,0.85)',
+      font: { color: 'rgba(0,0,0,0.80)', size: 12 },
+      bgcolor: 'rgba(255,255,255,0.9)',
     },
   };
 

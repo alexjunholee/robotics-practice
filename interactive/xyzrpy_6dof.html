@@ -11,12 +11,12 @@ body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system,
 #container{display:flex;height:100vh;width:100vw}
 #sidebar{width:360px;min-width:360px;background:#f5f5f7;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;border-right:1px solid rgba(0,0,0,0.12)}
 h1{font-size:18px;color:#0071e3;text-align:center;border-bottom:1px solid rgba(0,0,0,0.12);padding-bottom:8px}
-h2{font-size:13px;color:rgba(0, 0, 0, 0.56);background:#0071e3;padding:3px 8px;border-radius:4px;margin-top:2px}
+h2{font-size:11px;font-weight:700;color:rgba(0,0,0,0.56);background:transparent;padding:0 0 4px;margin:14px 0 6px;border:none;border-bottom:1px solid rgba(0,0,0,0.08);text-transform:uppercase;letter-spacing:0.08em;display:block}
 .slider-group{display:flex;flex-direction:column;gap:1px}
 .slider-group label{font-size:12px;color:rgba(0,0,0,0.56);display:flex;justify-content:space-between}
 .slider-group input[type=range]{width:100%;accent-color:#0071e3}
 .btn-row{display:flex;gap:5px;flex-wrap:wrap}
-button{background:rgba(0,0,0,0.12);color:#1d1d1f;border:1px solid #0071e3;padding:7px 12px;border-radius:4px;cursor:pointer;font-size:12px;transition:background .2s}
+button{background:#ffffff;color:#1d1d1f;border:1px solid rgba(0,0,0,0.16);padding:7px 12px;border-radius:4px;cursor:pointer;font-size:12px;transition:background .2s}
 button:hover{background:#0071e3;color:#fff}
 button.active{background:#0071e3;color:#fff}
 .info-box{background:#f5f5f7;border:1px solid rgba(0,0,0,0.12);border-radius:4px;padding:8px;font-family:'Courier New',monospace;font-size:10.5px;line-height:1.5;white-space:pre;overflow-x:auto}
@@ -132,7 +132,7 @@ function init(){
 const canvas=document.getElementById('canvas3d');
 renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x1a1a2e);
+renderer.setClearColor(0xfafafc);
 
 scene=new THREE.Scene();
 // Z-up: we set camera.up to Z, and use Three.js Y-up internally
@@ -157,7 +157,7 @@ gVerts.push(i,-gridSize/2,0,i,gridSize/2,0);
 gVerts.push(-gridSize/2,i,0,gridSize/2,i,0);
 }
 gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(gVerts,3));
-scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0x0a1838})));
+scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0xd0d0d6})));
 
 // World axes (thick)
 createAxis(scene,[0,0,0],5,true);

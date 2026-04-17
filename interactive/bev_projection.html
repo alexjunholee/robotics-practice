@@ -8,19 +8,19 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;padding:20px;min-height:100vh}
-h1{text-align:center;color:#0071e3;margin-bottom:8px;font-size:1.6em}
-.annotation{text-align:center;color:rgba(0,0,0,0.48);font-size:0.85em;margin-bottom:16px;max-width:750px;margin-left:auto;margin-right:auto;line-height:1.5}
+h1{text-align:center;color:#1d1d1f;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;margin-bottom:8px;font-size:1.6em;font-weight:700}
+.annotation{text-align:center;color:rgba(0,0,0,0.56);font-size:0.85em;margin-bottom:16px;max-width:750px;margin-left:auto;margin-right:auto;line-height:1.5}
 .container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
 .views{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
 .canvas-wrap{background:#f5f5f7;border-radius:12px;padding:16px;border:1px solid rgba(0,0,0,0.16)}
-.canvas-wrap h3{color:#0071e3;margin-bottom:8px;font-size:0.95em}
+.canvas-wrap h3{color:rgba(0,0,0,0.56);margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding-bottom:4px;border-bottom:1px solid rgba(0,0,0,0.08)}
 canvas{display:block;border-radius:8px}
 .panel{background:#f5f5f7;border-radius:12px;padding:20px;border:1px solid rgba(0,0,0,0.16);min-width:280px;max-width:320px}
-.panel h3{color:#0071e3;margin-bottom:12px;font-size:0.95em}
+.panel h3{color:rgba(0,0,0,0.56);margin-bottom:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding-bottom:4px;border-bottom:1px solid rgba(0,0,0,0.08)}
 .slider-group{margin:10px 0}
-.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:rgba(0,0,0,0.48);margin-bottom:2px}
+.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:rgba(0,0,0,0.56);margin-bottom:2px}
 .slider-group input[type=range]{width:100%;accent-color:#0071e3}
-.info-box{background:#f5f5f7;border-radius:8px;padding:10px;margin-top:12px;font-size:0.75em;font-family:'Courier New',monospace;color:#7fdbca;line-height:1.6;overflow-x:auto}
+.info-box{background:#ffffff;border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:10px;margin-top:12px;font-size:0.75em;font-family:'SF Mono', ui-monospace, 'Menlo', 'Monaco', 'JetBrains Mono', monospace;color:rgba(0,0,0,0.80);line-height:1.6;overflow-x:auto}
 </style>
 </head>
 <body>
@@ -58,9 +58,9 @@ canvas{display:block;border-radius:8px}
       <label><span>뷰 범위 (m)</span><span id="vRange">30</span></label>
       <input type="range" id="sRange" min="10" max="60" step="1" value="30" oninput="update()">
     </div>
-    <div style="margin-top:16px;padding:12px;background:#f5f5f7;border-radius:8px">
-      <h3 style="color:#0071e3;margin-bottom:8px;font-size:0.85em">설명</h3>
-      <p style="font-size:0.78em;color:rgba(0,0,0,0.48);line-height:1.6">
+    <div style="margin-top:16px;padding:12px;background:#ffffff;border:1px solid rgba(0,0,0,0.08);border-radius:8px">
+      <h3 style="color:rgba(0,0,0,0.56);margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding-bottom:4px;border-bottom:1px solid rgba(0,0,0,0.08)">설명</h3>
+      <p style="font-size:0.78em;color:rgba(0,0,0,0.80);line-height:1.6">
         왼쪽: 전방 카메라에서 본 투시 뷰. 평행 차선이 소실점으로 수렴합니다.<br><br>
         오른쪽: IPM (Inverse Perspective Mapping)으로 변환한 BEV. 평행 차선이 평행하게 보입니다.<br><br>
         슬라이더로 카메라 파라미터를 변경하면 BEV 변환이 실시간 갱신됩니다.
@@ -108,25 +108,25 @@ function update(){
     return {u, v};
   }
 
-  // Draw camera view
-  camCtx.fillStyle = '#0a0a1a';
+  // Draw camera view (road base)
+  camCtx.fillStyle = '#e5e5ea';
   camCtx.fillRect(0,0,W,H);
 
   // sky gradient
   const skyGrad = camCtx.createLinearGradient(0,0,0,H*0.5);
-  skyGrad.addColorStop(0,'#0d1b2a');
-  skyGrad.addColorStop(1,'#1b2838');
+  skyGrad.addColorStop(0,'#d5e7f5');
+  skyGrad.addColorStop(1,'#eef3f7');
   camCtx.fillStyle = skyGrad;
   camCtx.fillRect(0,0,W,H*0.6);
 
   // horizon line
   const horizon = worldToImage(0, 500);
   if(horizon){
-    camCtx.strokeStyle='rgba(255,255,255,0.15)';
+    camCtx.strokeStyle='rgba(0,0,0,0.30)';
     camCtx.setLineDash([4,4]);
     camCtx.beginPath();camCtx.moveTo(0,horizon.v);camCtx.lineTo(W,horizon.v);camCtx.stroke();
     camCtx.setLineDash([]);
-    camCtx.fillStyle='rgba(255,255,255,0.3)';camCtx.font='10px sans-serif';
+    camCtx.fillStyle='rgba(0,0,0,0.56)';camCtx.font='10px sans-serif';
     camCtx.fillText('소실점 (Vanishing Point)',horizon.u+5,horizon.v-5);
   }
 
@@ -136,7 +136,7 @@ function update(){
     const left = worldToImage(-8, z);
     const right = worldToImage(8, z);
     if(left && right){
-      camCtx.strokeStyle = `rgba(100,100,150,${0.1 + 0.2*(1-z/range)})`;
+      camCtx.strokeStyle = `rgba(0,0,0,${0.08 + 0.12*(1-z/range)})`;
       camCtx.beginPath();camCtx.moveTo(left.u,left.v);camCtx.lineTo(right.u,right.v);camCtx.stroke();
     }
   }
@@ -144,7 +144,7 @@ function update(){
     const near = worldToImage(x, 2);
     const far = worldToImage(x, range);
     if(near && far){
-      camCtx.strokeStyle = 'rgba(100,100,150,0.1)';
+      camCtx.strokeStyle = 'rgba(0,0,0,0.08)';
       camCtx.beginPath();camCtx.moveTo(near.u,near.v);camCtx.lineTo(far.u,far.v);camCtx.stroke();
     }
   }
@@ -186,17 +186,17 @@ function update(){
     for(let i=1;i<4;i++) camCtx.lineTo(projected[i].u, projected[i].v);
     camCtx.closePath();
     camCtx.fill();
-    camCtx.strokeStyle='rgba(255,255,255,0.3)';camCtx.lineWidth=1;camCtx.stroke();
+    camCtx.strokeStyle='rgba(0,0,0,0.30)';camCtx.lineWidth=1;camCtx.stroke();
   }
   drawCar3D(-1.75, 12, 1.8, 4.5, '#2a6fdb');
   drawCar3D(1.75, 20, 1.8, 4.5, '#c73650');
   drawCar3D(-1.75, 25, 1.8, 4.5, '#50c878');
 
-  camCtx.fillStyle='rgba(255,255,255,0.4)';camCtx.font='11px sans-serif';
+  camCtx.fillStyle='rgba(0,0,0,0.56)';camCtx.font='11px sans-serif';
   camCtx.fillText('카메라 뷰 (Perspective)', 10, H-10);
 
   // BEV
-  bevCtx.fillStyle = '#0a0a1a';
+  bevCtx.fillStyle = '#f5f5f7';
   bevCtx.fillRect(0,0,W,H);
 
   const bevScale = H / range;
@@ -209,12 +209,12 @@ function update(){
   bevCtx.lineWidth = 1;
   for(let z=2;z<=range;z+=2){
     const y = H - z*bevScale;
-    bevCtx.strokeStyle = 'rgba(100,100,150,0.15)';
+    bevCtx.strokeStyle = 'rgba(0,0,0,0.08)';
     bevCtx.beginPath();bevCtx.moveTo(0,y);bevCtx.lineTo(W,y);bevCtx.stroke();
   }
   for(let x=-8;x<=8;x+=2){
     const bx = bevCx + x*bevScale*1.8;
-    bevCtx.strokeStyle = 'rgba(100,100,150,0.15)';
+    bevCtx.strokeStyle = 'rgba(0,0,0,0.08)';
     bevCtx.beginPath();bevCtx.moveTo(bx,0);bevCtx.lineTo(bx,H);bevCtx.stroke();
   }
 
@@ -240,7 +240,7 @@ function update(){
     const h = carL * bevScale;
     bevCtx.fillStyle = color;
     bevCtx.fillRect(p.u - w/2, p.v - h/2, w, h);
-    bevCtx.strokeStyle='rgba(255,255,255,0.3)';bevCtx.lineWidth=1;
+    bevCtx.strokeStyle='rgba(0,0,0,0.30)';bevCtx.lineWidth=1;
     bevCtx.strokeRect(p.u - w/2, p.v - h/2, w, h);
   }
   drawCarBEV(-1.75, 12, 1.8, 4.5, '#2a6fdb');
@@ -255,11 +255,11 @@ function update(){
   bevCtx.fillText('EGO',ego.u,ego.v+3);
   bevCtx.textAlign='start';
 
-  bevCtx.fillStyle='rgba(255,255,255,0.4)';bevCtx.font='11px sans-serif';
+  bevCtx.fillStyle='rgba(0,0,0,0.56)';bevCtx.font='11px sans-serif';
   bevCtx.fillText('Bird\'s Eye View (BEV)', 10, H-10);
 
   // distance markers
-  bevCtx.fillStyle='rgba(255,255,255,0.3)';bevCtx.font='9px monospace';
+  bevCtx.fillStyle='rgba(0,0,0,0.56)';bevCtx.font='9px ui-monospace, monospace';
   for(let z=5;z<=range;z+=5){
     const y = H - z*bevScale;
     if(y>10) bevCtx.fillText(z+'m', 5, y+3);

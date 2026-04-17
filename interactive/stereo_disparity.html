@@ -191,8 +191,8 @@ function update() {
   for (let i = 0; i < W * H; i++) {
     const x = i % W, y = Math.floor(i / W);
     if (x < half + searchR || x >= W - half || y < half || y >= H - half) {
-      // No data region — dark gray
-      dispImg.data[i*4] = 30; dispImg.data[i*4+1] = 30; dispImg.data[i*4+2] = 30;
+      // No data region — light surface
+      dispImg.data[i*4] = 245; dispImg.data[i*4+1] = 245; dispImg.data[i*4+2] = 247;
       dispImg.data[i*4+3] = 255;
       continue;
     }

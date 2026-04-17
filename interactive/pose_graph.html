@@ -31,7 +31,7 @@ canvas {
   flex-direction: column;
   overflow-y: auto;
 }
-h1 { font-size: 17px; margin-bottom: 14px; color: #fff; }
+h1 { font-size: 17px; margin-bottom: 14px; color: #1d1d1f; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; }
 h2 { font-size: 11px; font-weight: 700; margin-bottom: 8px; color: rgba(0,0,0,0.56); margin-top: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
 
 button {
@@ -45,19 +45,19 @@ button {
   transition: background 0.2s;
 }
 button:hover { background: #0077ed; }
-button.primary { background: #2a6a3a; border-color: #3a8a4a; }
-button.primary:hover { background: #3a8a4a; }
-button.danger { background: #6a2a2a; border-color: #8a3a3a; }
-button.danger:hover { background: #8a3a3a; }
+button.primary { background: #0071e3; border-color: transparent; }
+button.primary:hover { background: #0077ed; }
+button.danger { background: #ffffff; border-color: rgba(0,0,0,0.16); color: #1d1d1f; }
+button.danger:hover { background: #f5f5f7; }
 .btn-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
 
 .metrics {
-  background: #12122a;
+  background: #f5f5f7;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 14px;
-  font-family: monospace;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', 'Monaco', 'JetBrains Mono', monospace;
   font-size: 13px;
   line-height: 1.8;
 }
@@ -72,22 +72,24 @@ button.danger:hover { background: #8a3a3a; }
 .legend-line { width: 20px; height: 3px; }
 
 .instructions {
-  background: #12122a;
+  background: #f5f5f7;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 12px;
   font-size: 12px;
-  color: rgba(0,0,0,0.48);
+  color: rgba(0,0,0,0.56);
   line-height: 1.6;
   margin-bottom: 14px;
 }
-.instructions strong { color: rgba(0,0,0,0.56); }
+.instructions strong { color: rgba(0,0,0,0.80); }
 
 #status {
   padding: 8px 12px;
-  background: rgba(60, 60, 160, 0.3);
+  background: #f5f5f7;
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: 6px;
   font-size: 13px;
+  color: rgba(0,0,0,0.80);
   margin-bottom: 14px;
   min-height: 36px;
   display: flex;
@@ -95,14 +97,14 @@ button.danger:hover { background: #8a3a3a; }
 }
 
 .loop-closure-list {
-  font-size: 12px; color: rgba(0,0,0,0.48);
+  font-size: 12px; color: rgba(0,0,0,0.56);
   max-height: 120px;
   overflow-y: auto;
   margin-bottom: 10px;
 }
 .loop-closure-list div {
   padding: 3px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.80);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 </style>
 </head>
@@ -253,7 +255,7 @@ function draw() {
   ctx.clearRect(0, 0, w, h);
 
   // Grid
-  ctx.strokeStyle = '#222244';
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
   ctx.lineWidth = 1;
   const gridStep = 1;
   for (let gx = -20; gx <= 20; gx += gridStep) {
@@ -350,13 +352,13 @@ function draw() {
     ctx.fillStyle = (lcMode && lcFirst === i) ? '#ffff44' :
                     (optimized ? '#44dd66' : '#ff6666');
     ctx.fill();
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     // Pose number
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.80)';
+    ctx.font = '10px ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.fillText(i, s[0], s[1] - 10);
   }

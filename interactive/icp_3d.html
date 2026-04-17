@@ -11,9 +11,9 @@ body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system,
 #container{display:flex;height:100vh;width:100vw}
 #sidebar{width:340px;min-width:340px;background:#f5f5f7;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(0,0,0,0.12)}
 h1{font-size:18px;color:#0071e3;text-align:center;border-bottom:1px solid rgba(0,0,0,0.12);padding-bottom:10px}
-h2{font-size:14px;color:rgba(0, 0, 0, 0.56);background:#0071e3;padding:4px 8px;border-radius:4px;margin-top:4px}
+h2{font-size:11px;font-weight:700;color:rgba(0,0,0,0.56);background:transparent;padding:0 0 4px;margin:14px 0 6px;border:none;border-bottom:1px solid rgba(0,0,0,0.08);text-transform:uppercase;letter-spacing:0.08em;display:block}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap}
-button{background:rgba(0,0,0,0.12);color:#1d1d1f;border:1px solid #0071e3;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:13px;transition:background .2s}
+button{background:#ffffff;color:#1d1d1f;border:1px solid rgba(0,0,0,0.12);padding:8px 14px;border-radius:4px;cursor:pointer;font-size:13px;transition:background .2s}
 button:hover{background:#0071e3;color:#fff}
 button.active{background:#0071e3;color:#fff}
 .slider-group{display:flex;flex-direction:column;gap:2px}
@@ -23,8 +23,8 @@ button.active{background:#0071e3;color:#fff}
 .legend{display:flex;gap:12px;font-size:12px;align-items:center;flex-wrap:wrap}
 .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
 #canvas3d{flex:1;display:block}
-#convergence-canvas{position:absolute;bottom:10px;right:10px;background:rgba(22,33,62,0.92);border:1px solid rgba(0,0,0,0.12);border-radius:6px}
-#convergence-label{position:absolute;bottom:175px;right:10px;font-size:11px;color:rgba(0,0,0,0.56);background:rgba(22,33,62,0.85);padding:2px 8px;border-radius:3px}
+#convergence-canvas{position:absolute;bottom:10px;right:10px;background:#ffffff;border:1px solid rgba(0,0,0,0.12);border-radius:6px}
+#convergence-label{position:absolute;bottom:175px;right:10px;font-size:11px;color:rgba(0,0,0,0.80);background:#f5f5f7;padding:2px 8px;border-radius:3px;border:1px solid rgba(0,0,0,0.08)}
 </style>
 </head>
 <body>
@@ -168,7 +168,7 @@ function init(){
 const canvas=document.getElementById('canvas3d');
 renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x1a1a2e);
+renderer.setClearColor(0xfafafc);
 
 scene=new THREE.Scene();
 camera=new THREE.PerspectiveCamera(50,1,0.1,200);
@@ -181,7 +181,7 @@ scene.add(new THREE.AmbientLight(0xffffff,0.6));
 let dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(10,20,10);scene.add(dl);
 
 // grid
-let grid=new THREE.GridHelper(20,20,0x0f3460,0x0a1030);
+let grid=new THREE.GridHelper(20,20,0xc7c7cc,0xe5e5ea);
 scene.add(grid);
 
 // axes
@@ -440,7 +440,7 @@ let c=document.getElementById('convergence-canvas');
 let ctx=c.getContext('2d');
 let w=c.width,h=c.height;
 ctx.clearRect(0,0,w,h);
-ctx.fillStyle='rgba(22,33,62,0.9)';
+ctx.fillStyle='#ffffff';
 ctx.fillRect(0,0,w,h);
 
 if(rmseHistory.length<1)return;

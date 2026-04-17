@@ -29,7 +29,7 @@ html, body {
   z-index: 10;
 }
 h1 { font-size: 17px; color: #0071e3; }
-h2 { font-size: 12px; color: rgba(0, 0, 0, 0.56); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 2px; }
+h2 { font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.56); background: transparent; padding: 0 0 4px; margin: 14px 0 6px; border: none; border-bottom: 1px solid rgba(0,0,0,0.08); text-transform: uppercase; letter-spacing: 0.08em; display: block; }
 .slider-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 .slider-row label { width: 50px; font-size: 11px; font-family: monospace; }
 .slider-row input[type=range] { flex: 1; accent-color: #0071e3; }
@@ -45,7 +45,7 @@ button {
   font-size: 11px; font-weight: 600;
 }
 .btn-primary { background: #0071e3; color: #fff; }
-.btn-secondary { background: rgba(0,0,0,0.12); color: #1d1d1f; }
+.btn-secondary { background: #ffffff; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.16); }
 .btn-row { display: flex; gap: 5px; flex-wrap: wrap; }
 .toggle-row { display: flex; gap: 8px; font-size: 11px; align-items: center; }
 .toggle-row label { display: flex; align-items: center; gap: 3px; cursor: pointer; }
@@ -56,7 +56,7 @@ button {
   border-left: 3px solid;
 }
 .note {
-  font-size: 11px; color: #f0c040; background: rgba(240,192,64,0.1);
+  font-size: 11px; color: rgba(0,0,0,0.80); background: rgba(240,192,64,0.12);
   padding: 8px; border-radius: 4px; border-left: 3px solid #f0c040;
   line-height: 1.5;
 }
@@ -88,7 +88,7 @@ button {
 
   <h2>프레임 표시 Visibility</h2>
   <div class="toggle-row">
-    <label><input type="checkbox" id="show-world" checked> World (흰색)</label>
+    <label><input type="checkbox" id="show-world" checked> World (검정)</label>
     <label><input type="checkbox" id="show-t1" checked> T1 (빨강)</label>
     <label><input type="checkbox" id="show-t1t2" checked> T1&middot;T2 (파랑)</label>
     <label><input type="checkbox" id="show-t2t1" checked> T2&middot;T1 (초록)</label>
@@ -261,7 +261,7 @@ const initW = Math.max(container.clientWidth, window.innerWidth - 360, 400);
 const initH = Math.max(container.clientHeight, window.innerHeight, 400);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0d1b38);
+scene.background = new THREE.Color(0xfafafc);
 
 const camera = new THREE.PerspectiveCamera(50, initW / initH, 0.1, 100);
 camera.position.set(6, 5, 8);
@@ -288,7 +288,7 @@ window.addEventListener('resize', resizeRenderer);
 setTimeout(resizeRenderer, 200);
 
 // Grid
-const gridHelper = new THREE.GridHelper(10, 10, 0x334466, 0x1a2744);
+const gridHelper = new THREE.GridHelper(10, 10, 0xcccccc, 0xe5e5e5);
 scene.add(gridHelper);
 
 // Ambient + directional light
@@ -330,7 +330,7 @@ function createFrame(length, lineWidth, opacity) {
   // Small sphere at origin
   const sph = new THREE.Mesh(
     new THREE.SphereGeometry(0.06 * lineWidth, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity })
+    new THREE.MeshBasicMaterial({ color: 0x333333, transparent: true, opacity })
   );
   group.add(sph);
   return group;

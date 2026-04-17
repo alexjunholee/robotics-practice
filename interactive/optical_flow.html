@@ -329,7 +329,7 @@ function drawSparseFlow() {
     // Feature point
     ctx.beginPath();
     ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.56)';
     ctx.fill();
 
     // Flow arrow
@@ -417,7 +417,7 @@ function drawHSVWheel() {
   }
 
   // Direction labels
-  wctx.fillStyle = '#fff';
+  wctx.fillStyle = 'rgba(0,0,0,0.80)';
   wctx.font = '8px monospace';
   wctx.textAlign = 'center';
   wctx.fillText('→', 74, 43);
@@ -456,7 +456,7 @@ function draw() {
   document.getElementById('frameCount').textContent = frameCount;
 
   // Mode label
-  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  ctx.fillStyle = 'rgba(0,0,0,0.56)';
   ctx.font = '11px monospace';
   ctx.textAlign = 'left';
   ctx.fillText(mode === 'sparse' ? 'Sparse Optical Flow (Lucas-Kanade)' : 'Dense Optical Flow (Block Matching HSV)', 10, H - 10);

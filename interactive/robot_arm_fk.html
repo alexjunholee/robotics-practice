@@ -11,7 +11,7 @@ body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system,
 #container{display:flex;height:100vh;width:100vw}
 #sidebar{width:370px;min-width:370px;background:#f5f5f7;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;border-right:1px solid rgba(0,0,0,0.12)}
 h1{font-size:18px;color:#0071e3;text-align:center;border-bottom:1px solid rgba(0,0,0,0.12);padding-bottom:8px}
-h2{font-size:13px;color:rgba(0, 0, 0, 0.56);background:#0071e3;padding:3px 8px;border-radius:4px;margin-top:2px}
+h2{font-size:11px;font-weight:700;color:rgba(0,0,0,0.56);background:transparent;padding:0 0 4px;margin:14px 0 6px;border:none;border-bottom:1px solid rgba(0,0,0,0.08);text-transform:uppercase;letter-spacing:0.08em;display:block}
 .section{border:1px solid rgba(0,0,0,0.12);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:4px}
 .slider-group{display:flex;flex-direction:column;gap:1px}
 .slider-group label{font-size:12px;color:rgba(0,0,0,0.56);display:flex;justify-content:space-between}
@@ -141,7 +141,7 @@ function init(){
 const canvas=document.getElementById('canvas3d');
 renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x1a1a2e);
+renderer.setClearColor(0xf5f5f7);
 
 scene=new THREE.Scene();
 camera=new THREE.PerspectiveCamera(50,1,0.1,200);
@@ -164,7 +164,7 @@ gVerts.push(-gridSize/2,0,i, gridSize/2,0,i);
 }
 let gridGeo=new THREE.BufferGeometry();
 gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(gVerts,3));
-scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0x0a1838})));
+scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0xd0d0d8})));
 
 // World axes
 let axH=new THREE.AxesHelper(2);

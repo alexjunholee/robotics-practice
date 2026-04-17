@@ -347,7 +347,7 @@ function drawScene(ctxTarget, R, t, K, projPoints, isLeft) {
   ctxTarget.fillRect(0, 0, CW, CH);
 
   // Draw grid
-  ctxTarget.strokeStyle = '#1a1a3e';
+  ctxTarget.strokeStyle = 'rgba(0,0,0,0.08)';
   ctxTarget.lineWidth = 0.5;
   for (let x = 0; x <= CW; x += 40) {
     ctxTarget.beginPath(); ctxTarget.moveTo(x, 0); ctxTarget.lineTo(x, CH); ctxTarget.stroke();
@@ -388,7 +388,7 @@ function drawScene(ctxTarget, R, t, K, projPoints, isLeft) {
   }
 
   // Camera label
-  ctxTarget.fillStyle = 'rgba(0,0,0,0.16)';
+  ctxTarget.fillStyle = 'rgba(0,0,0,0.56)';
   ctxTarget.font = '11px monospace';
   ctxTarget.textAlign = 'left';
   ctxTarget.fillText(isLeft ? '좌측 뷰 (Left View)' : '우측 뷰 (Right View)', 10, CH - 10);

@@ -31,8 +31,11 @@ body {
   flex-direction: column;
   overflow-y: auto;
 }
-h1 { font-size: 17px; margin-bottom: 14px; color: #fff; }
-h2 { font-size: 14px; margin-bottom: 8px; color: #aab; }
+h1 { font-size: 17px; margin-bottom: 14px; color: #0071e3; }
+h2 { font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.56); background: transparent;
+     padding: 0 0 4px; margin: 14px 0 6px; border: none;
+     border-bottom: 1px solid rgba(0,0,0,0.08);
+     text-transform: uppercase; letter-spacing: 0.08em; display: block; }
 
 .btn-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 button {
@@ -46,10 +49,10 @@ button {
   transition: background 0.2s;
 }
 button:hover { background: #0077ed; }
-button.primary { background: #2a6a3a; border-color: #3a8a4a; }
-button.primary:hover { background: #3a8a4a; }
-button.danger { background: #6a2a2a; border-color: #8a3a3a; }
-button.danger:hover { background: #8a3a3a; }
+button.primary { background: #0071e3; border-color: transparent; color: #fff; }
+button.primary:hover { background: #0077ed; }
+button.danger { background: rgba(0,0,0,0.04); border-color: rgba(255,68,68,0.40); color: #c23030; }
+button.danger:hover { background: rgba(255,68,68,0.10); }
 
 .slider-group { margin-bottom: 14px; }
 .slider-group label {
@@ -59,12 +62,12 @@ button.danger:hover { background: #8a3a3a; }
 input[type="range"] { width: 100%; accent-color: #0071e3; cursor: pointer; }
 
 .metrics {
-  background: #12122a;
+  background: #f5f5f7;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 14px;
-  font-family: monospace;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', 'Monaco', 'JetBrains Mono', monospace;
   font-size: 13px;
   line-height: 1.8;
 }
@@ -361,12 +364,12 @@ function plotAll() {
 
   const layout = {
     paper_bgcolor: '#ffffff',
-    plot_bgcolor: '#12122a',
-    font: { color: 'rgba(0,0,0,0.56)', size: 11 },
+    plot_bgcolor: '#fafafc',
+    font: { color: 'rgba(0,0,0,0.80)', size: 11 },
     margin: { l: 50, r: 20, t: 40, b: 50 },
-    title: { text: `ICP Iteration ${iteration}`, font: { size: 15, color: '#ddd' } },
-    xaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: '#3a3a5a', title: 'X' },
-    yaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: '#3a3a5a', title: 'Y', scaleanchor: 'x' },
+    title: { text: `ICP Iteration ${iteration}`, font: { size: 15, color: '#1d1d1f' } },
+    xaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: 'rgba(0,0,0,0.16)', title: 'X' },
+    yaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: 'rgba(0,0,0,0.16)', title: 'Y', scaleanchor: 'x' },
     legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.72)' },
     dragmode: 'pan'
   };
@@ -385,10 +388,10 @@ function plotAll() {
     const convLayout = {
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: '#fafafc',
-      font: { color: 'rgba(0,0,0,0.48)', size: 10 },
+      font: { color: 'rgba(0,0,0,0.56)', size: 10 },
       margin: { l: 45, r: 10, t: 8, b: 30 },
-      xaxis: { gridcolor: '#222244', title: 'Iteration', dtick: Math.max(1, Math.floor(rmseHistory.length / 5)) },
-      yaxis: { gridcolor: '#222244', title: 'RMSE' },
+      xaxis: { gridcolor: 'rgba(0,0,0,0.08)', title: 'Iteration', dtick: Math.max(1, Math.floor(rmseHistory.length / 5)) },
+      yaxis: { gridcolor: 'rgba(0,0,0,0.08)', title: 'RMSE' },
       height: 170
     };
     Plotly.react('convergence-plot', [convTrace], convLayout, { responsive: true, displayModeBar: false });

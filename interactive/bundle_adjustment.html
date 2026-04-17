@@ -7,24 +7,24 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; padding: 15px; }
-h1 { text-align: center; color: #0071e3; font-size: 1.5em; margin-bottom: 3px; }
+h1 { text-align: center; color: #1d1d1f; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; font-size: 1.5em; font-weight: 700; margin-bottom: 3px; }
 .subtitle { text-align: center; color: rgba(0,0,0,0.56); font-size: 0.85em; margin-bottom: 12px; }
 .layout { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 .main-view { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .main-view canvas { border: 1px solid rgba(0,0,0,0.16); border-radius: 5px; }
 .side-panel { display: flex; flex-direction: column; gap: 10px; width: 320px; }
 .panel { background: #f5f5f7; padding: 12px; border-radius: 10px; }
-.panel h3 { color: #0071e3; font-size: 0.92em; margin-bottom: 8px; }
+.panel h3 { color: rgba(0,0,0,0.56); font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 4px; border-bottom: 1px solid rgba(0,0,0,0.08); }
 .ctrl { margin-bottom: 8px; }
-.ctrl label { font-size: 0.8em; color: rgba(0,0,0,0.48); display: flex; justify-content: space-between; }
+.ctrl label { font-size: 0.8em; color: rgba(0,0,0,0.56); display: flex; justify-content: space-between; }
 .ctrl label span { color: #0071e3; font-weight: bold; }
 input[type="range"] { width: 100%; accent-color: #0071e3; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 button { background: #0071e3; color: #ffffff; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.82em; }
-button:hover { background: #00b8d9; }
+button:hover { background: #0077ed; }
 button:disabled { background: rgba(0,0,0,0.16); color: rgba(0,0,0,0.48); cursor: not-allowed; }
 button.secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.16); }
-button.secondary:hover { background: #3a3a5e; }
+button.secondary:hover { background: #ebebf0; }
 .stats { font-size: 0.82em; }
 .stats .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .stats .row span:last-child { color: #0071e3; font-weight: bold; }
@@ -46,7 +46,7 @@ canvas#sceneCanvas { background: #f5f5f7; }
       <div class="legend-item"><div class="legend-color" style="background:rgba(0,0,0,0.56);border:1px dashed rgba(0,0,0,0.48)"></div> Ground Truth (정답)</div>
       <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div> 노이즈 (Noisy)</div>
       <div class="legend-item"><div class="legend-color" style="background:#44ff44"></div> 최적화 (Optimized)</div>
-      <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,0,0.3)"></div> 투영선 (Projection)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(0,113,227,0.3)"></div> 투영선 (Projection)</div>
     </div>
   </div>
 
@@ -337,7 +337,7 @@ function render() {
   sCtx.fillRect(0, 0, SW, SH);
 
   // Draw projection lines (optimized -> points)
-  sCtx.strokeStyle = 'rgba(255, 255, 0, 0.08)';
+  sCtx.strokeStyle = 'rgba(0, 113, 227, 0.10)';
   sCtx.lineWidth = 0.5;
   for (const obs of observations) {
     sCtx.beginPath();
@@ -406,7 +406,7 @@ function render() {
       pCtx.fill();
     }
   } else {
-    pCtx.fillStyle = 'rgba(0,0,0,0.16)';
+    pCtx.fillStyle = 'rgba(0,0,0,0.56)';
     pCtx.font = '12px sans-serif';
     pCtx.fillText('최적화를 시작하세요', PW / 2 - 60, PH / 2);
   }

@@ -12,14 +12,14 @@ h1 { text-align: center; color: #0071e3; padding-top: 10px; font-size: 1.4em; }
 .subtitle { text-align: center; color: rgba(0,0,0,0.56); font-size: 0.8em; margin-bottom: 5px; }
 #container { position: relative; width: 100vw; height: calc(100vh - 60px); }
 #threeCanvas { width: 100%; height: 100%; display: block; }
-#imageInset { position: absolute; bottom: 15px; right: 15px; border: 2px solid #0071e3; border-radius: 8px; background: #000; }
-#controls { position: absolute; top: 10px; left: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; width: 260px; max-height: calc(100vh - 100px); overflow-y: auto; }
-#controls h3 { color: #0071e3; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.16); padding-bottom: 4px; }
+#imageInset { position: absolute; bottom: 15px; right: 15px; border: 1px solid rgba(0,0,0,0.12); border-radius: 8px; background: #111111; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+#controls { position: absolute; top: 10px; left: 15px; background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 12px; border-radius: 10px; width: 260px; max-height: calc(100vh - 100px); overflow-y: auto; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+#controls h3 { color: #0071e3; font-size: 0.9em; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 4px; }
 .ctrl { margin-bottom: 6px; }
-.ctrl label { font-size: 0.78em; color: rgba(0,0,0,0.48); display: flex; justify-content: space-between; }
+.ctrl label { font-size: 0.78em; color: rgba(0,0,0,0.56); display: flex; justify-content: space-between; }
 .ctrl label span { color: #0071e3; font-weight: bold; }
 input[type="range"] { width: 100%; accent-color: #0071e3; }
-#matrixBox { position: absolute; top: 10px; right: 15px; background: rgba(22,33,62,0.92); padding: 12px; border-radius: 10px; font-family: 'Courier New', monospace; }
+#matrixBox { position: absolute; top: 10px; right: 15px; background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 12px; border-radius: 10px; font-family: 'SF Mono', ui-monospace, Menlo, Monaco, monospace; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
 #matrixBox h3 { color: #0071e3; font-size: 0.9em; margin-bottom: 6px; }
 .matrix { font-size: 0.82em; line-height: 1.6; }
 .matrix .row { display: flex; gap: 10px; }
@@ -113,7 +113,7 @@ const insetCtx = insetCanvas.getContext('2d');
 const IW = 260, IH = 200;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f0f23);
+scene.background = new THREE.Color(0xf5f5f7);
 const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight - 60);
 
@@ -123,7 +123,7 @@ const controls = new THREE.OrbitControls(viewCam, renderer.domElement);
 controls.enableDamping = true;
 
 // Grid
-const grid = new THREE.GridHelper(20, 20, 0x333355, 0x222244);
+const grid = new THREE.GridHelper(20, 20, 0xc7c7cc, 0xe5e5ea);
 scene.add(grid);
 
 // Objects in scene
@@ -164,7 +164,7 @@ scene.add(torus);
 objects.push({ mesh: torus, label: 'Torus', color: '#ff44ff' });
 
 // Lights
-scene.add(new THREE.AmbientLight(0x444466));
+scene.add(new THREE.AmbientLight(0xaaaaaa));
 const dlight = new THREE.DirectionalLight(0xffffff, 0.8);
 dlight.position.set(5, 10, 5);
 scene.add(dlight);
@@ -283,7 +283,7 @@ function renderInset(fx, fy, cx_val, cy_val) {
   insetCtx.drawImage(insetRenderer.domElement, 0, 0, IW, IH);
 
   // Draw crosshair at principal point
-  insetCtx.strokeStyle = 'rgba(0,113,227,0.08)';
+  insetCtx.strokeStyle = 'rgba(0,180,255,0.55)';
   insetCtx.setLineDash([3, 3]);
   insetCtx.beginPath();
   insetCtx.moveTo(cx_val, 0); insetCtx.lineTo(cx_val, IH);

@@ -27,7 +27,7 @@ body {
   max-height: calc(100vh - 32px);
   overflow-y: auto;
 }
-h1 { font-size: 18px; margin-bottom: 14px; color: #fff; }
+h1 { font-size: 18px; margin-bottom: 14px; color: #1d1d1f; }
 .slider-group { margin-bottom: 12px; }
 .slider-group label {
   display: flex; justify-content: space-between;
@@ -55,7 +55,7 @@ input[type="range"] {
   transition: all 0.2s;
 }
 .toggle-btn.active {
-  background: #4a3a8a;
+  background: #0071e3;
   border-color: #0071e3;
   color: #fff;
 }
@@ -155,7 +155,7 @@ const canvas = document.getElementById('three-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x1a1a2e);
+renderer.setClearColor(0xfafafc);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -170,7 +170,7 @@ dirLight.position.set(5, 5, 5);
 scene.add(dirLight);
 
 // Grid
-const gridHelper = new THREE.GridHelper(8, 16, 0x333355, 0x222244);
+const gridHelper = new THREE.GridHelper(8, 16, 0xcccccc, 0xe5e5e5);
 scene.add(gridHelper);
 
 // World axes (thin, faded)
