@@ -19,8 +19,8 @@ body {
 
 #controls {
   position: absolute; top: 16px; left: 16px;
-  background: rgba(16, 16, 40, 0.92);
-  border: 1px solid #333;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(0,0,0,0.16);
   border-radius: 10px;
   padding: 20px;
   width: 320px;
@@ -38,7 +38,7 @@ h1 { font-size: 18px; margin-bottom: 14px; color: #fff; }
 .slider-group label .axis-z { color: #4488ff; }
 input[type="range"] {
   width: 100%; cursor: pointer;
-  accent-color: #7b68ee;
+  accent-color: #0071e3;
 }
 .toggle-group {
   margin: 14px 0;
@@ -47,30 +47,30 @@ input[type="range"] {
 .toggle-btn {
   flex: 1; padding: 8px 6px;
   background: rgba(0,0,0,0.08);
-  border: 1px solid #444;
+  border: 1px solid rgba(0,0,0,0.16);
   border-radius: 6px;
-  color: #aaa;
+  color: rgba(0,0,0,0.48);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .toggle-btn.active {
   background: #4a3a8a;
-  border-color: #7b68ee;
+  border-color: #0071e3;
   color: #fff;
 }
 button.action {
   width: 100%; padding: 10px;
-  background: #3a2a7a;
-  border: 1px solid #5a4aaa;
-  border-radius: 6px;
-  color: #1d1d1f;
+  background: #0071e3;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #fff;
   font-size: 13px;
   cursor: pointer;
   margin-top: 8px;
   transition: background 0.2s;
 }
-button.action:hover { background: #4a3a9a; }
+button.action:hover { background: #0077ed; }
 button.action:disabled { opacity: 0.5; cursor: default; }
 
 #gimbal-warning {
@@ -93,17 +93,17 @@ button.action:disabled { opacity: 0.5; cursor: default; }
 
 #info {
   position: absolute; bottom: 16px; left: 16px;
-  background: rgba(16, 16, 40, 0.85);
-  border: 1px solid #333;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(0,0,0,0.16);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 12px;
-  color: #aaa;
+  color: rgba(0,0,0,0.48);
 }
-#info span { color: #ccc; }
+#info span { color: rgba(0,0,0,0.56); }
 
 .euler-vals {
-  font-size: 12px; color: #888;
+  font-size: 12px; color: rgba(0,0,0,0.56);
   margin-top: 6px;
   font-family: monospace;
 }

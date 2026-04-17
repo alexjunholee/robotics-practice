@@ -11,16 +11,16 @@ body{background:#ffffff;color:#1d1d1f;font-family: 'SF Pro Text', -apple-system,
 h1{text-align:center;color:#0071e3;margin-bottom:16px;font-size:1.6em}
 .container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
 .views{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
-.canvas-wrap{background:#f5f5f7;border-radius:12px;padding:16px;border:1px solid #333}
+.canvas-wrap{background:#f5f5f7;border-radius:12px;padding:16px;border:1px solid rgba(0,0,0,0.16)}
 .canvas-wrap h3{color:#0071e3;margin-bottom:8px;font-size:0.95em}
 canvas{display:block;border-radius:8px}
-.panel{background:#f5f5f7;border-radius:12px;padding:20px;border:1px solid #333;min-width:300px;max-width:340px}
+.panel{background:#f5f5f7;border-radius:12px;padding:20px;border:1px solid rgba(0,0,0,0.16);min-width:300px;max-width:340px}
 .panel h3{color:#0071e3;margin-bottom:12px;font-size:0.95em}
-.aug-btn{display:inline-block;background:#f5f5f7;color:#1d1d1f;border:1px solid #333;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.78em;margin:3px;transition:0.2s}
+.aug-btn{display:inline-block;background:#f5f5f7;color:#1d1d1f;border:1px solid rgba(0,0,0,0.16);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.78em;margin:3px;transition:0.2s}
 .aug-btn:hover{border-color:#0071e3;color:#0071e3}
 .aug-btn.active{border-color:#0071e3;background:#2a1a30;color:#0071e3}
 .slider-group{margin:8px 0}
-.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:#aaa;margin-bottom:2px}
+.slider-group label{display:flex;justify-content:space-between;font-size:0.8em;color:rgba(0,0,0,0.48);margin-bottom:2px}
 .slider-group input[type=range]{width:100%;accent-color:#0071e3}
 .btn-action{background:#0071e3;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.85em;width:100%;margin-top:10px}
 .btn-action:hover{background:#c73650}
@@ -99,7 +99,7 @@ function drawScene(ctx, variant=0){
   ctx.fillRect(0,S*0.5,S,S*0.5);
 
   // road
-  ctx.fillStyle='#333';
+  ctx.fillStyle='rgba(0,0,0,0.16)';
   ctx.beginPath();ctx.moveTo(100,S);ctx.lineTo(200,S);ctx.lineTo(170,S*0.5);ctx.lineTo(130,S*0.5);ctx.closePath();ctx.fill();
 
   // trees
@@ -194,7 +194,7 @@ function buildParams(){
 
   switch(currentAug){
     case 'crop': html = sl('crop_ratio','Crop 비율',0.5,1.0,0.01,augParams.crop.ratio); break;
-    case 'flip': html = `<div style="margin:10px 0"><label style="font-size:0.85em;color:#aaa;cursor:pointer"><input type="checkbox" id="cb_flip" ${augParams.flip.on?'checked':''} onchange="augParams.flip.on=this.checked;applyAug()"> Horizontal Flip 적용</label></div>`; break;
+    case 'flip': html = `<div style="margin:10px 0"><label style="font-size:0.85em;color:rgba(0,0,0,0.48);cursor:pointer"><input type="checkbox" id="cb_flip" ${augParams.flip.on?'checked':''} onchange="augParams.flip.on=this.checked;applyAug()"> Horizontal Flip 적용</label></div>`; break;
     case 'jitter':
       html = sl('brightness','Brightness',0,2.0,0.05,augParams.jitter.brightness);
       html += sl('contrast','Contrast',0,2.0,0.05,augParams.jitter.contrast);
@@ -203,7 +203,7 @@ function buildParams(){
     case 'noise': html = sl('sigma','Noise Sigma (σ)',0,50,1,augParams.noise.sigma); break;
     case 'cutmix': html = sl('cutmix_lambda','Lambda (λ)',0,1,0.01,augParams.cutmix.lambda); break;
     case 'mixup': html = sl('mixup_alpha','Alpha (α)',0,1,0.01,augParams.mixup.alpha); break;
-    case 'mosaic': html = '<p style="font-size:0.8em;color:#888;margin:8px 0">4개 이미지를 모자이크로 결합합니다.</p>'; break;
+    case 'mosaic': html = '<p style="font-size:0.8em;color:rgba(0,0,0,0.56);margin:8px 0">4개 이미지를 모자이크로 결합합니다.</p>'; break;
     case 'rotate': html = sl('rot_angle','회전 각도 (도)',-45,45,1,augParams.rotate.angle); break;
     case 'erase': html = sl('erase_ratio','Erasing 비율',0,0.5,0.01,augParams.erase.ratio); break;
   }

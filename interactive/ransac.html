@@ -23,7 +23,7 @@ h1 {
 .subtitle {
   text-align: center;
   font-size: 0.95em;
-  color: #888;
+  color: rgba(0,0,0,0.56);
   margin-bottom: 20px;
 }
 .container {
@@ -47,7 +47,7 @@ h1 {
   gap: 14px;
 }
 canvas {
-  border: 1px solid #333;
+  border: 1px solid rgba(0,0,0,0.16);
   border-radius: 6px;
   background: #0d0d1a;
   width: 100%;
@@ -71,7 +71,7 @@ canvas {
   display: flex;
   justify-content: space-between;
   font-size: 0.82em;
-  color: #aaa;
+  color: rgba(0,0,0,0.48);
   margin-bottom: 3px;
 }
 .control-group .value {
@@ -102,7 +102,7 @@ button {
   white-space: nowrap;
 }
 button:hover { background: #c73650; }
-button:disabled { background: #555; cursor: not-allowed; }
+button:disabled { background: rgba(0,0,0,0.16); cursor: not-allowed; }
 button.secondary {
   background: rgba(0,0,0,0.12);
 }
@@ -112,7 +112,7 @@ button.secondary:hover { background: #1a4a80; }
   font-size: 0.85em;
   line-height: 1.8;
 }
-.stats .label { color: #888; }
+.stats .label { color: rgba(0,0,0,0.56); }
 .stats .val { color: #4fc3f7; }
 .stats .best { color: #66bb6a; }
 .legend {
@@ -143,7 +143,7 @@ button.secondary:hover { background: #1a4a80; }
     <div class="left-panel">
       <canvas id="canvas" width="600" height="500"></canvas>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#888"></span> 미분류 점</div>
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(0,0,0,0.56)"></span> 미분류 점</div>
         <div class="legend-item"><span class="legend-dot" style="background:#66bb6a"></span> Inlier</div>
         <div class="legend-item"><span class="legend-dot" style="background:#ef5350"></span> Outlier</div>
         <div class="legend-item"><span class="legend-dot" style="background:#ffa726"></span> 현재 샘플</div>
@@ -294,7 +294,7 @@ function drawScene(currentSample, currentLine, currentInlierSet) {
 
   // Draw points
   for (const p of points) {
-    let color = '#888';
+    let color = 'rgba(0,0,0,0.56)';
     let r = 4;
     if (classified) {
       if (p.type === 'inlier') { color = '#66bb6a'; r = 5; }

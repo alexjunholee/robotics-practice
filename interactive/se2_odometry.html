@@ -27,14 +27,14 @@ body {
   border-right: 2px solid rgba(0,0,0,0.12);
 }
 h1 { font-size: 18px; color: #0071e3; margin-bottom: 4px; }
-h2 { font-size: 14px; color: rgba(0,0,0,0.12); background: #0071e3; padding: 4px 8px; border-radius: 4px; margin-top: 6px; }
+h2 { font-size: 11px; font-weight: 700; color: #fff; background: #0071e3; padding: 4px 10px; border-radius: 980px; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-block; align-self: flex-start; }
 .control-group { display: flex; flex-direction: column; gap: 6px; }
 .slider-row {
   display: flex; align-items: center; gap: 8px;
 }
 .slider-row label { width: 90px; font-size: 13px; }
 .slider-row input[type=range] { flex: 1; accent-color: #0071e3; }
-.slider-row .val { width: 40px; text-align: right; font-family: monospace; font-size: 13px; color: #53d8fb; }
+.slider-row .val { width: 40px; text-align: right; font-family: monospace; font-size: 13px; color: #0071e3; }
 button {
   padding: 7px 14px;
   border: none;
@@ -45,27 +45,27 @@ button {
   transition: background 0.2s;
 }
 .btn-primary { background: #0071e3; color: #fff; }
-.btn-primary:hover { background: #c73e55; }
+.btn-primary:hover { background: #0077ed; }
 .btn-secondary { background: rgba(0,0,0,0.12); color: #1d1d1f; }
-.btn-secondary:hover { background: #1a4a8a; }
+.btn-secondary:hover { background: rgba(0,113,227,0.12); }
 .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .state-display {
   font-family: monospace;
   font-size: 13px;
-  background: #0d1b38;
+  background: #f5f5f7;
   padding: 10px;
   border-radius: 4px;
   line-height: 1.7;
 }
-.state-display span { color: #53d8fb; }
+.state-display span { color: #0071e3; }
 .equations {
   font-family: monospace;
   font-size: 11px;
-  background: #0d1b38;
+  background: #f5f5f7;
   padding: 10px;
   border-radius: 4px;
   line-height: 1.8;
-  color: #a0d0a0;
+  color: #34c759;
   white-space: pre;
 }
 #canvas-container {
@@ -76,7 +76,7 @@ button {
   position: relative;
 }
 canvas {
-  background: #0d1b38;
+  background: #f5f5f7;
   border-radius: 8px;
 }
 .grid-label {
@@ -84,7 +84,7 @@ canvas {
   bottom: 10px;
   right: 14px;
   font-size: 11px;
-  color: #555;
+  color: rgba(0, 0, 0, 0.56);
 }
 </style>
 </head>
@@ -92,7 +92,7 @@ canvas {
 
 <div id="sidebar">
   <h1>SE(2) 차동 구동 오도메트리</h1>
-  <p style="font-size:12px;color:#888;">Differential Drive Odometry Simulation</p>
+  <p style="font-size:12px;color:rgba(0,0,0,0.56);">Differential Drive Odometry Simulation</p>
 
   <h2>바퀴 속도 제어</h2>
   <div class="control-group">
@@ -263,7 +263,7 @@ document.getElementById('btn-reset').addEventListener('click', reset);
 function drawGrid() {
   const w = canvas.width, h = canvas.height;
   const p = ppm();
-  ctx.strokeStyle = '#1a2744';
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)';
   ctx.lineWidth = 1;
   // Vertical
   for (let gx = -10; gx <= 10; gx++) {
@@ -276,7 +276,7 @@ function drawGrid() {
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
   }
   // Axes
-  ctx.strokeStyle = '#334466';
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, oy()); ctx.lineTo(w, oy()); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ox(), 0); ctx.lineTo(ox(), h); ctx.stroke();
@@ -291,7 +291,7 @@ function drawTrail() {
     const [px, py] = w2c(trail[i].x, trail[i].y);
     ctx.lineTo(px, py);
   }
-  ctx.strokeStyle = 'rgba(83, 216, 251, 0.5)';
+  ctx.strokeStyle = 'rgba(0,113,227,0.30)';
   ctx.lineWidth = 2;
   ctx.stroke();
 
@@ -301,7 +301,7 @@ function drawTrail() {
     const [px, py] = w2c(trail[i].x, trail[i].y);
     ctx.beginPath();
     ctx.arc(px, py, 2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(83, 216, 251, 0.4)';
+    ctx.fillStyle = 'rgba(0,113,227,0.30)';
     ctx.fill();
   }
 }

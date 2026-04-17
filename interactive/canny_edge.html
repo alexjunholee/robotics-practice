@@ -23,7 +23,7 @@ h1 {
 .subtitle {
   text-align: center;
   font-size: 0.95em;
-  color: #888;
+  color: rgba(0,0,0,0.56);
   margin-bottom: 20px;
 }
 .container {
@@ -49,7 +49,7 @@ h1 {
 }
 .control-group label {
   font-size: 0.85em;
-  color: #aaa;
+  color: rgba(0,0,0,0.48);
 }
 .control-group .value {
   font-size: 0.9em;
@@ -73,12 +73,12 @@ input[type="range"] {
 .canvas-box h3 {
   margin-bottom: 8px;
   font-size: 1em;
-  color: #ccc;
+  color: rgba(0,0,0,0.56);
 }
 canvas {
-  border: 1px solid #333;
+  border: 1px solid rgba(0,0,0,0.16);
   border-radius: 6px;
-  background: #111;
+  background: rgba(0,0,0,0.80);
 }
 </style>
 </head>
@@ -126,20 +126,20 @@ const blurKernels = [1, 3, 5, 7];
 // Draw a synthetic scene
 function drawScene() {
   const ctx = origCtx;
-  ctx.fillStyle = '#222';
+  ctx.fillStyle = 'rgba(0,0,0,0.80)';
   ctx.fillRect(0, 0, W, H);
 
   // Gradient background region
   const grad = ctx.createLinearGradient(0, 0, 200, 200);
-  grad.addColorStop(0, '#444');
-  grad.addColorStop(1, '#aaa');
+  grad.addColorStop(0, 'rgba(0,0,0,0.16)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.48)');
   ctx.fillStyle = grad;
   ctx.fillRect(20, 20, 180, 180);
 
   // Rectangles
   ctx.fillStyle = '#ddd';
   ctx.fillRect(240, 30, 120, 80);
-  ctx.fillStyle = '#888';
+  ctx.fillStyle = 'rgba(0,0,0,0.56)';
   ctx.fillRect(260, 140, 100, 100);
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
@@ -148,12 +148,12 @@ function drawScene() {
   // Circles
   ctx.beginPath();
   ctx.arc(320, 310, 60, 0, Math.PI * 2);
-  ctx.fillStyle = '#bbb';
+  ctx.fillStyle = 'rgba(0,0,0,0.56)';
   ctx.fill();
 
   ctx.beginPath();
   ctx.arc(150, 320, 40, 0, Math.PI * 2);
-  ctx.strokeStyle = '#ccc';
+  ctx.strokeStyle = 'rgba(0,0,0,0.56)';
   ctx.lineWidth = 3;
   ctx.stroke();
 
@@ -169,14 +169,14 @@ function drawScene() {
   // Radial gradient circle
   const rg = ctx.createRadialGradient(320, 100, 5, 320, 100, 50);
   rg.addColorStop(0, '#fff');
-  rg.addColorStop(1, '#333');
+  rg.addColorStop(1, 'rgba(0,0,0,0.16)');
   ctx.fillStyle = rg;
   ctx.beginPath();
   ctx.arc(320, 100, 50, 0, Math.PI * 2);
   ctx.fill();
 
   // Lines
-  ctx.strokeStyle = '#aaa';
+  ctx.strokeStyle = 'rgba(0,0,0,0.48)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(200, 250);

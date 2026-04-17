@@ -24,8 +24,8 @@ body {
 }
 #sidebar {
   width: 340px;
-  background: rgba(16, 16, 40, 0.95);
-  border-left: 1px solid #333;
+  background: rgba(255,255,255,0.72);
+  border-left: 1px solid rgba(0,0,0,0.16);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -37,15 +37,15 @@ h2 { font-size: 14px; margin-bottom: 8px; color: #aab; }
 .btn-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 button {
   padding: 8px 14px;
-  background: #3a2a7a;
-  border: 1px solid #5a4aaa;
-  border-radius: 6px;
-  color: #1d1d1f;
+  background: #0071e3;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #fff;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
 }
-button:hover { background: #4a3a9a; }
+button:hover { background: #0077ed; }
 button.primary { background: #2a6a3a; border-color: #3a8a4a; }
 button.primary:hover { background: #3a8a4a; }
 button.danger { background: #6a2a2a; border-color: #8a3a3a; }
@@ -54,9 +54,9 @@ button.danger:hover { background: #8a3a3a; }
 .slider-group { margin-bottom: 14px; }
 .slider-group label {
   display: flex; justify-content: space-between;
-  font-size: 13px; margin-bottom: 4px; color: #bbb;
+  font-size: 13px; margin-bottom: 4px; color: rgba(0,0,0,0.56);
 }
-input[type="range"] { width: 100%; accent-color: #7b68ee; cursor: pointer; }
+input[type="range"] { width: 100%; accent-color: #0071e3; cursor: pointer; }
 
 .metrics {
   background: #12122a;
@@ -68,8 +68,8 @@ input[type="range"] { width: 100%; accent-color: #7b68ee; cursor: pointer; }
   font-size: 13px;
   line-height: 1.8;
 }
-.metrics .label { color: #888; }
-.metrics .value { color: #7bf; }
+.metrics .label { color: rgba(0,0,0,0.56); }
+.metrics .value { color: #0071e3; }
 
 #convergence-plot {
   width: 100%;
@@ -362,12 +362,12 @@ function plotAll() {
   const layout = {
     paper_bgcolor: '#ffffff',
     plot_bgcolor: '#12122a',
-    font: { color: '#ccc', size: 11 },
+    font: { color: 'rgba(0,0,0,0.56)', size: 11 },
     margin: { l: 50, r: 20, t: 40, b: 50 },
     title: { text: `ICP Iteration ${iteration}`, font: { size: 15, color: '#ddd' } },
     xaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: '#3a3a5a', title: 'X' },
     yaxis: { gridcolor: 'rgba(0,0,0,0.08)', zerolinecolor: '#3a3a5a', title: 'Y', scaleanchor: 'x' },
-    legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(16,16,40,0.8)' },
+    legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.72)' },
     dragmode: 'pan'
   };
 
@@ -384,8 +384,8 @@ function plotAll() {
     };
     const convLayout = {
       paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: '#0d0d20',
-      font: { color: '#999', size: 10 },
+      plot_bgcolor: '#fafafc',
+      font: { color: 'rgba(0,0,0,0.48)', size: 10 },
       margin: { l: 45, r: 10, t: 8, b: 30 },
       xaxis: { gridcolor: '#222244', title: 'Iteration', dtick: Math.max(1, Math.floor(rmseHistory.length / 5)) },
       yaxis: { gridcolor: '#222244', title: 'RMSE' },

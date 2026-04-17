@@ -29,13 +29,13 @@ html, body {
   z-index: 10;
 }
 h1 { font-size: 17px; color: #0071e3; }
-h2 { font-size: 12px; color: rgba(0,0,0,0.12); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 2px; }
+h2 { font-size: 12px; color: rgba(0, 0, 0, 0.56); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 2px; }
 .slider-row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 .slider-row label { width: 50px; font-size: 11px; font-family: monospace; }
 .slider-row input[type=range] { flex: 1; accent-color: #0071e3; }
-.slider-row .val { width: 50px; text-align: right; font-family: monospace; font-size: 11px; color: #53d8fb; }
+.slider-row .val { width: 50px; text-align: right; font-family: monospace; font-size: 11px; color: #0071e3; }
 .transform-group {
-  background: #0d1b38; padding: 8px; border-radius: 4px;
+  background: #f5f5f7; padding: 8px; border-radius: 4px;
   border-left: 3px solid;
 }
 .t1-group { border-left-color: #ff6666; }
@@ -51,7 +51,7 @@ button {
 .toggle-row label { display: flex; align-items: center; gap: 3px; cursor: pointer; }
 .toggle-row input { accent-color: #0071e3; }
 .matrix-box {
-  font-family: monospace; font-size: 10px; background: #0d1b38;
+  font-family: monospace; font-size: 10px; background: #f5f5f7;
   padding: 6px; border-radius: 4px; line-height: 1.5; white-space: pre;
   border-left: 3px solid;
 }
@@ -70,7 +70,7 @@ button {
 .legend-3d {
   position: absolute; bottom: 10px; left: 14px; font-size: 11px; line-height: 1.6;
 }
-.legend-3d .lw { color: #aaa; } .legend-3d .lr { color: #ff6666; }
+.legend-3d .lw { color: rgba(0,0,0,0.48); } .legend-3d .lr { color: #ff6666; }
 .legend-3d .lb { color: #6688ff; } .legend-3d .lg { color: #66ff66; }
 </style>
 </head>
@@ -78,7 +78,7 @@ button {
 
 <div id="sidebar">
   <h1>SE(3) 포즈 합성 시각화</h1>
-  <p style="font-size:11px;color:#888;">3D Pose Composition &mdash; Non-commutativity of SE(3)</p>
+  <p style="font-size:11px;color:rgba(0,0,0,0.56);">3D Pose Composition &mdash; Non-commutativity of SE(3)</p>
 
   <h2>T1 변환 (빨간 프레임)</h2>
   <div class="transform-group t1-group" id="t1-controls"></div>

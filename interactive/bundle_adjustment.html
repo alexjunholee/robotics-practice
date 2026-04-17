@@ -8,22 +8,22 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #ffffff; color: #1d1d1f; font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif; padding: 15px; }
 h1 { text-align: center; color: #0071e3; font-size: 1.5em; margin-bottom: 3px; }
-.subtitle { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 12px; }
+.subtitle { text-align: center; color: rgba(0,0,0,0.56); font-size: 0.85em; margin-bottom: 12px; }
 .layout { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
 .main-view { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.main-view canvas { border: 1px solid #333; border-radius: 5px; }
+.main-view canvas { border: 1px solid rgba(0,0,0,0.16); border-radius: 5px; }
 .side-panel { display: flex; flex-direction: column; gap: 10px; width: 320px; }
 .panel { background: #f5f5f7; padding: 12px; border-radius: 10px; }
 .panel h3 { color: #0071e3; font-size: 0.92em; margin-bottom: 8px; }
 .ctrl { margin-bottom: 8px; }
-.ctrl label { font-size: 0.8em; color: #aaa; display: flex; justify-content: space-between; }
+.ctrl label { font-size: 0.8em; color: rgba(0,0,0,0.48); display: flex; justify-content: space-between; }
 .ctrl label span { color: #0071e3; font-weight: bold; }
 input[type="range"] { width: 100%; accent-color: #0071e3; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 button { background: #0071e3; color: #ffffff; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.82em; }
 button:hover { background: #00b8d9; }
-button:disabled { background: #555; color: #999; cursor: not-allowed; }
-button.secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid #444; }
+button:disabled { background: rgba(0,0,0,0.16); color: rgba(0,0,0,0.48); cursor: not-allowed; }
+button.secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.16); }
 button.secondary:hover { background: #3a3a5e; }
 .stats { font-size: 0.82em; }
 .stats .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
@@ -43,7 +43,7 @@ canvas#sceneCanvas { background: #f5f5f7; }
   <div class="main-view">
     <canvas id="sceneCanvas" width="550" height="450"></canvas>
     <div class="legend">
-      <div class="legend-item"><div class="legend-color" style="background:#888;border:1px dashed #aaa"></div> Ground Truth (정답)</div>
+      <div class="legend-item"><div class="legend-color" style="background:rgba(0,0,0,0.56);border:1px dashed rgba(0,0,0,0.48)"></div> Ground Truth (정답)</div>
       <div class="legend-item"><div class="legend-color" style="background:#ff4444"></div> 노이즈 (Noisy)</div>
       <div class="legend-item"><div class="legend-color" style="background:#44ff44"></div> 최적화 (Optimized)</div>
       <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,0,0.3)"></div> 투영선 (Projection)</div>
@@ -347,8 +347,8 @@ function render() {
   }
 
   // Ground truth (dashed gray)
-  for (const cam of gtCams) drawCamera(sCtx, cam, '#aaa', true);
-  for (const pt of gtPts) drawPoint(sCtx, pt, '#aaa', 4, true);
+  for (const cam of gtCams) drawCamera(sCtx, cam, 'rgba(0,0,0,0.48)', true);
+  for (const pt of gtPts) drawPoint(sCtx, pt, 'rgba(0,0,0,0.48)', 4, true);
 
   // Noisy (red, small)
   for (const cam of noisyCams) drawCamera(sCtx, cam, 'rgba(255,68,68,0.5)', false);
@@ -368,14 +368,14 @@ function render() {
     const range = maxE - minE || 1;
 
     // Axes
-    pCtx.strokeStyle = '#444';
+    pCtx.strokeStyle = 'rgba(0,0,0,0.16)';
     pCtx.lineWidth = 1;
     pCtx.beginPath();
     pCtx.moveTo(35, 5); pCtx.lineTo(35, PH - 20); pCtx.lineTo(PW - 5, PH - 20);
     pCtx.stroke();
 
     // Labels
-    pCtx.fillStyle = '#888';
+    pCtx.fillStyle = 'rgba(0,0,0,0.56)';
     pCtx.font = '9px sans-serif';
     pCtx.fillText('Error', 2, 12);
     pCtx.fillText('Iteration', PW - 50, PH - 5);
@@ -406,7 +406,7 @@ function render() {
       pCtx.fill();
     }
   } else {
-    pCtx.fillStyle = '#555';
+    pCtx.fillStyle = 'rgba(0,0,0,0.16)';
     pCtx.font = '12px sans-serif';
     pCtx.fillText('최적화를 시작하세요', PW / 2 - 60, PH / 2);
   }

@@ -27,25 +27,25 @@ body {
   border-right: 2px solid rgba(0,0,0,0.12);
 }
 h1 { font-size: 17px; color: #0071e3; }
-h2 { font-size: 13px; color: rgba(0,0,0,0.12); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
+h2 { font-size: 13px; color: rgba(0, 0, 0, 0.56); background: #0071e3; padding: 3px 8px; border-radius: 4px; margin-top: 4px; }
 .slider-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
 .slider-row label { width: 100px; font-size: 12px; }
 .slider-row input[type=range] { flex: 1; accent-color: #0071e3; }
-.slider-row .val { width: 42px; text-align: right; font-family: monospace; font-size: 12px; color: #53d8fb; }
+.slider-row .val { width: 42px; text-align: right; font-family: monospace; font-size: 12px; color: #0071e3; }
 button {
   padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;
   font-size: 12px; font-weight: 600; transition: background 0.2s;
 }
 .btn-primary { background: #0071e3; color: #fff; }
-.btn-primary:hover { background: #c73e55; }
+.btn-primary:hover { background: #0077ed; }
 .btn-secondary { background: rgba(0,0,0,0.12); color: #1d1d1f; }
-.btn-secondary:hover { background: #1a4a8a; }
+.btn-secondary:hover { background: rgba(0,113,227,0.12); }
 .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .state-box {
-  font-family: monospace; font-size: 12px; background: #0d1b38;
+  font-family: monospace; font-size: 12px; background: #f5f5f7;
   padding: 8px; border-radius: 4px; line-height: 1.6;
 }
-.state-box span { color: #53d8fb; }
+.state-box span { color: #0071e3; }
 .note {
   font-size: 11px; color: #f0c040; background: rgba(240,192,64,0.1);
   padding: 8px; border-radius: 4px; border-left: 3px solid #f0c040;
@@ -54,9 +54,9 @@ button {
 #canvas-container {
   flex: 1; display: flex; align-items: center; justify-content: center; position: relative;
 }
-canvas { background: #0d1b38; border-radius: 8px; }
+canvas { background: #f5f5f7; border-radius: 8px; }
 .legend {
-  position: absolute; bottom: 12px; left: 14px; font-size: 11px; color: #666;
+  position: absolute; bottom: 12px; left: 14px; font-size: 11px; color: rgba(0,0,0,0.64);
 }
 </style>
 </head>
@@ -64,7 +64,7 @@ canvas { background: #0d1b38; border-radius: 8px; }
 
 <div id="sidebar">
   <h1>오도메트리 불확실성 전파</h1>
-  <p style="font-size:11px;color:#888;">Odometry Uncertainty Propagation (EKF-style)</p>
+  <p style="font-size:11px;color:rgba(0,0,0,0.56);">Odometry Uncertainty Propagation (EKF-style)</p>
 
   <h2>바퀴 속도 Wheel Velocities</h2>
   <div class="slider-row">
@@ -324,7 +324,7 @@ function updateDisplays(v, omega) {
 
 function drawGrid() {
   const w = canvas.width, h = canvas.height, p = ppm();
-  ctx.strokeStyle = '#1a2744'; ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.lineWidth = 1;
   for (let gx = -10; gx <= 10; gx++) {
     const cx = ox() + gx * p;
     ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
@@ -333,7 +333,7 @@ function drawGrid() {
     const cy = oy() - gy * p;
     ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
   }
-  ctx.strokeStyle = '#334466'; ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, oy()); ctx.lineTo(w, oy()); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ox(), 0); ctx.lineTo(ox(), h); ctx.stroke();
 }
@@ -388,7 +388,7 @@ function drawTrail() {
     const [px, py] = w2c(trail[i].x, trail[i].y);
     ctx.lineTo(px, py);
   }
-  ctx.strokeStyle = 'rgba(83, 216, 251, 0.4)';
+  ctx.strokeStyle = 'rgba(0,113,227,0.30)';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
@@ -433,14 +433,14 @@ function draw() {
   droppedEllipses.forEach((e, i) => {
     drawEllipse(e.x, e.y, e.cov, '#888888', 0.6, 1.5);
     const [cx, cy] = w2c(e.x, e.y);
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = 'rgba(0,0,0,0.64)';
     ctx.font = '9px monospace';
     ctx.fillText(`#${e.step}`, cx + 5, cy - 5);
   });
 
   // Current covariance ellipse
   if (stepCount > 0) {
-    drawEllipse(pose.x, pose.y, cov, '#53d8fb', 0.9, 2);
+    drawEllipse(pose.x, pose.y, cov, '#0071e3', 0.9, 2);
   }
 
   drawRobot();

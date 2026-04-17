@@ -46,7 +46,7 @@ body {
 }
 #topbar .subtitle {
   font-size: 12px;
-  color: #777;
+  color: rgba(0,0,0,0.56);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -95,28 +95,32 @@ body {
   position: relative;
 }
 .nav-item:hover {
-  background: rgba(0,113,227,0.08);
-  color: #fff;
+  background: rgba(0,113,227,0.06);
+  color: #1d1d1f;
 }
 .nav-item.active {
   background: rgba(0,113,227,0.08);
-  color: #fff;
+  color: #0071e3;
+  font-weight: 600;
   border-left-color: #0071e3;
 }
 
-/* tooltip */
+/* tooltip — dark on light page */
 .nav-item[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute;
   left: 264px;
   top: 50%;
   transform: translateY(-50%);
-  background: #f5f5f7;
-  color: #ccc;
+  background: rgba(29, 29, 31, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #333;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   white-space: nowrap;
   z-index: 200;
   pointer-events: none;
@@ -145,7 +149,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  color: #555;
+  color: rgba(0, 0, 0, 0.56);
   text-align: center;
   padding: 40px;
 }

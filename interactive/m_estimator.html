@@ -24,7 +24,7 @@ h1 {
 .subtitle {
   text-align: center;
   font-size: 0.95em;
-  color: #888;
+  color: rgba(0,0,0,0.56);
   margin-bottom: 20px;
 }
 .container {
@@ -50,7 +50,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   font-size: 0.85em;
-  color: #aaa;
+  color: rgba(0,0,0,0.48);
   margin-bottom: 4px;
 }
 .control-group .value {
@@ -64,7 +64,7 @@ input[type="range"] {
   cursor: pointer;
 }
 .plot-container {
-  background: #111;
+  background: rgba(0,0,0,0.80);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -197,7 +197,7 @@ function weightGM(r, c) {
 const plotBg = '#0d0d1a';
 const paperBg = '#0d0d1a';
 const gridColor = 'rgba(0,0,0,0.04)';
-const axisColor = '#555';
+const axisColor = 'rgba(0,0,0,0.16)';
 
 function updatePlots() {
   const huberDelta = parseInt(document.getElementById('huberDelta').value) / 10;
@@ -242,8 +242,8 @@ function updatePlots() {
   const commonAxisLayout = {
     gridcolor: gridColor,
     zerolinecolor: axisColor,
-    tickfont: { color: '#888', size: 11 },
-    titlefont: { color: '#aaa', size: 13 },
+    tickfont: { color: 'rgba(0,0,0,0.56)', size: 11 },
+    titlefont: { color: 'rgba(0,0,0,0.48)', size: 13 },
   };
 
   // Compute a reasonable y-max for the cost plot
@@ -264,9 +264,9 @@ function updatePlots() {
     xaxis: { title: 'Residual r', ...commonAxisLayout },
     yaxis: { title: '\u03C1(r)', range: [0, costYMax], ...commonAxisLayout },
     legend: {
-      font: { color: '#ccc', size: 12 },
+      font: { color: 'rgba(0,0,0,0.56)', size: 12 },
       bgcolor: 'rgba(22,33,62,0.85)',
-      bordercolor: '#333',
+      bordercolor: 'rgba(0,0,0,0.16)',
       borderwidth: 1,
       x: 0.02, y: 0.98,
     },
@@ -285,7 +285,7 @@ function updatePlots() {
     xaxis: { title: 'Residual r', ...commonAxisLayout },
     yaxis: { title: 'w(r)', range: [0, weightYMax], ...commonAxisLayout },
     legend: {
-      font: { color: '#ccc', size: 12 },
+      font: { color: 'rgba(0,0,0,0.56)', size: 12 },
       bgcolor: 'rgba(22,33,62,0.85)',
     },
   };

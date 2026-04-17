@@ -24,27 +24,27 @@ canvas {
 }
 #sidebar {
   width: 330px;
-  background: rgba(16, 16, 40, 0.95);
-  border-left: 1px solid #333;
+  background: rgba(255,255,255,0.72);
+  border-left: 1px solid rgba(0,0,0,0.16);
   padding: 20px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
 h1 { font-size: 17px; margin-bottom: 14px; color: #fff; }
-h2 { font-size: 14px; margin-bottom: 8px; color: #aab; margin-top: 12px; }
+h2 { font-size: 11px; font-weight: 700; margin-bottom: 8px; color: rgba(0,0,0,0.56); margin-top: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
 
 button {
   padding: 8px 14px;
-  background: #3a2a7a;
-  border: 1px solid #5a4aaa;
-  border-radius: 6px;
-  color: #1d1d1f;
+  background: #0071e3;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #fff;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
 }
-button:hover { background: #4a3a9a; }
+button:hover { background: #0077ed; }
 button.primary { background: #2a6a3a; border-color: #3a8a4a; }
 button.primary:hover { background: #3a8a4a; }
 button.danger { background: #6a2a2a; border-color: #8a3a3a; }
@@ -61,8 +61,8 @@ button.danger:hover { background: #8a3a3a; }
   font-size: 13px;
   line-height: 1.8;
 }
-.metrics .label { color: #888; }
-.metrics .value { color: #7bf; }
+.metrics .label { color: rgba(0,0,0,0.56); }
+.metrics .value { color: #0071e3; }
 
 .legend {
   display: flex; gap: 12px; flex-wrap: wrap;
@@ -77,11 +77,11 @@ button.danger:hover { background: #8a3a3a; }
   border-radius: 8px;
   padding: 12px;
   font-size: 12px;
-  color: #999;
+  color: rgba(0,0,0,0.48);
   line-height: 1.6;
   margin-bottom: 14px;
 }
-.instructions strong { color: #bbb; }
+.instructions strong { color: rgba(0,0,0,0.56); }
 
 #status {
   padding: 8px 12px;
@@ -95,14 +95,14 @@ button.danger:hover { background: #8a3a3a; }
 }
 
 .loop-closure-list {
-  font-size: 12px; color: #aaa;
+  font-size: 12px; color: rgba(0,0,0,0.48);
   max-height: 120px;
   overflow-y: auto;
   margin-bottom: 10px;
 }
 .loop-closure-list div {
   padding: 3px 0;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid rgba(0,0,0,0.80);
 }
 </style>
 </head>
@@ -115,7 +115,7 @@ button.danger:hover { background: #8a3a3a; }
     <h1>Pose Graph Optimization 시각화</h1>
 
     <div class="legend">
-      <div class="legend-item"><div class="legend-line" style="background:#888;"></div> Ground Truth</div>
+      <div class="legend-item"><div class="legend-line" style="background:rgba(0,0,0,0.56);"></div> Ground Truth</div>
       <div class="legend-item"><div class="legend-line" style="background:#ff4444;"></div> Noisy Trajectory</div>
       <div class="legend-item"><div class="legend-line" style="background:#4488ff; height:4px;"></div> Loop Closure</div>
       <div class="legend-item"><div class="legend-line" style="background:#44dd66;"></div> Optimized</div>
@@ -268,7 +268,7 @@ function draw() {
   }
 
   // Ground truth (gray dashed)
-  ctx.strokeStyle = '#666';
+  ctx.strokeStyle = 'rgba(0,0,0,0.64)';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
@@ -282,7 +282,7 @@ function draw() {
 
   // Odometry edges (thin gray) on noisy
   const drawPoses = optimized ? optimizedPoses : noisyPoses;
-  ctx.strokeStyle = '#555';
+  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (const e of odometryEdges) {
@@ -366,7 +366,7 @@ function draw() {
     const s = toScreen(groundTruth[i]);
     ctx.beginPath();
     ctx.arc(s[0], s[1], 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = 'rgba(0,0,0,0.56)';
     ctx.fill();
   }
 }

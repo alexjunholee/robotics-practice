@@ -16,15 +16,21 @@ body {
   flex-direction: column;
 }
 #header {
-  padding: 16px 24px;
-  background: rgba(16, 16, 40, 0.95);
-  border-bottom: 1px solid #333;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
 }
-h1 { font-size: 17px; color: #fff; white-space: nowrap; }
+h1 {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  font-size: 17px; font-weight: 600; color: #1d1d1f;
+  letter-spacing: -0.014em; white-space: nowrap;
+}
 
 .control-group {
   display: flex;
@@ -33,40 +39,48 @@ h1 { font-size: 17px; color: #fff; white-space: nowrap; }
 }
 .control-group label {
   font-size: 13px;
-  color: #bbb;
+  color: rgba(0, 0, 0, 0.56);
+  letter-spacing: -0.012em;
   white-space: nowrap;
 }
 input[type="range"] {
   width: 200px;
-  accent-color: #7b68ee;
+  accent-color: #0071e3;
   cursor: pointer;
 }
 #ratio-val {
-  font-family: monospace;
-  font-size: 14px;
-  color: #7bf;
+  font-family: 'SF Mono', ui-monospace, Menlo, monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0071e3;
   min-width: 36px;
+  font-variant-numeric: tabular-nums;
 }
 
 .stats {
   display: flex;
   gap: 20px;
   font-size: 13px;
+  letter-spacing: -0.012em;
 }
 .stat-item { display: flex; gap: 5px; }
-.stat-label { color: #888; }
-.stat-value { color: #7bf; font-family: monospace; }
+.stat-label { color: rgba(0, 0, 0, 0.56); }
+.stat-value { color: #0071e3; font-family: 'SF Mono', ui-monospace, Menlo, monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 button {
+  font-family: inherit;
   padding: 7px 14px;
-  background: #3a2a7a;
-  border: 1px solid #5a4aaa;
-  border-radius: 6px;
-  color: #1d1d1f;
-  font-size: 12px;
+  background: #0071e3;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
   cursor: pointer;
+  transition: background 0.15s;
 }
-button:hover { background: #4a3a9a; }
+button:hover { background: #0077ed; }
 
 #canvas-container {
   flex: 1;
@@ -77,24 +91,29 @@ button:hover { background: #4a3a9a; }
   position: relative;
 }
 canvas {
-  border: 1px solid #333;
-  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
   max-width: 100%;
+  background: #ffffff;
 }
 
 #tooltip {
   position: fixed;
-  background: rgba(16, 16, 40, 0.95);
-  border: 1px solid #555;
-  border-radius: 8px;
+  background: rgba(29, 29, 31, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  border-radius: 10px;
   padding: 12px 16px;
   font-size: 12px;
-  color: #ccc;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: -0.012em;
   max-width: 320px;
   line-height: 1.6;
   pointer-events: none;
   display: none;
   z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .legend {
@@ -165,7 +184,7 @@ canvas.style.height = (CANVAS_H + PAD * 2) + 'px';
 
 // --- Generate synthetic images with geometric shapes ---
 const SHAPES = ['triangle', 'circle', 'star', 'rect', 'diamond'];
-const COLORS_PALETTE = ['#ff6666', '#66aaff', '#66ff88', '#ffaa44', '#cc66ff', '#44dddd', '#ffff66', '#ff66cc'];
+const COLORS_PALETTE = ['#ff3b30', '#0071e3', '#34c759', '#ff9500', '#af52de', '#00c7be', '#d4a72c', '#ff2d55'];
 
 let shapes1 = [], shapes2 = [];
 let features1 = [], features2 = [];
@@ -357,8 +376,8 @@ function drawAll() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Image backgrounds
-  ctx.fillStyle = '#0d0d20';
-  ctx.strokeStyle = '#333';
+  ctx.fillStyle = '#fafafc';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
   ctx.lineWidth = 1;
 
   // Image 1
@@ -370,8 +389,8 @@ function drawAll() {
   ctx.strokeRect(PAD + IMG_W + GAP, PAD, IMG_W, IMG_H);
 
   // Labels
-  ctx.fillStyle = '#888';
-  ctx.font = '12px monospace';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.56)';
+  ctx.font = '12px "SF Mono", ui-monospace, Menlo, monospace';
   ctx.textAlign = 'center';
   ctx.fillText('Image 1', PAD + IMG_W / 2, PAD + IMG_H + 18);
   ctx.fillText('Image 2', PAD + IMG_W + GAP + IMG_W / 2, PAD + IMG_H + 18);
@@ -405,7 +424,7 @@ function drawAll() {
     const x2 = PAD + IMG_W + GAP + features2[m.f2][0];
     const y2 = PAD + features2[m.f2][1];
 
-    ctx.strokeStyle = 'rgba(255, 80, 80, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 59, 48, 0.28)';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
@@ -441,7 +460,7 @@ function drawAll() {
     const y = PAD + features1[i][1];
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#4488ff';
+    ctx.fillStyle = '#0071e3';
     ctx.fill();
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 0.5;
