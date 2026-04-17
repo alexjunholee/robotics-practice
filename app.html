@@ -245,9 +245,14 @@ body {
     <a class="nav-item" data-id="rrt" data-tip="장애물을 피해 랜덤 트리를 뻗어 목표까지 경로 탐색 (RRT)">RRT — Rapidly-exploring Random Tree</a>
     <a class="nav-item" data-id="a_star" data-tip="그리드에서 heuristic 기반 최단 경로 (A* / Dijkstra)">A\* / Dijkstra 그리드 탐색</a>
 
-    <!-- 센서 모델링 (1) -->
+    <!-- 제어 (1) -->
+    <div class="cat-label">제어 / Control</div>
+    <a class="nav-item" data-id="pid_hover" data-tip="Kp·Ki·Kd 슬라이더로 1D 쿼드로터 호버 응답을 튜닝">PID 쿼드로터 호버</a>
+
+    <!-- 센서 모델링 (2) -->
     <div class="cat-label">센서 모델링</div>
     <a class="nav-item" data-id="imu_dead_reckoning" data-tip="IMU 노이즈·바이어스가 위치 추정에 누적되는 drift 관찰">IMU Dead-reckoning</a>
+    <a class="nav-item" data-id="lidar_sim" data-tip="방 안에서 2D LiDAR 스캔·노이즈·드롭아웃을 실시간으로">2D LiDAR 시뮬</a>
 
     <!-- 3D / SLAM (7) -->
     <div class="cat-label">3D / SLAM</div>
@@ -312,8 +317,11 @@ body {
     // 플래닝 (2)
     rrt:                 'rrt.html',
     a_star:              'a_star.html',
-    // 센서 모델링 (1)
+    // 제어 (1)
+    pid_hover:           'pid_hover.html',
+    // 센서 모델링 (2)
     imu_dead_reckoning:  'imu_dead_reckoning.html',
+    lidar_sim:           'lidar_sim.html',
     // 3D / SLAM (7)
     icp_steps:           'icp_steps.html',
     icp_3d:              'icp_3d.html',

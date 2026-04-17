@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>2D LiDAR 시뮬레이션</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px; min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 1280px; margin: 0 auto; }
+
+.canvas-col { display: flex; flex-direction: column; gap: 14px; }
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.canvas-wrap .label {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); }
+
+.panel {
+  width: 280px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+.slider-group label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px; }
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 8px; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 14px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.seg-row { display: flex; gap: 4px; }
+.seg {
+  flex: 1; padding: 6px 8px; font-size: 12px; font-weight: 500; letter-spacing: -0.012em;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md);
+  cursor: pointer; transition: all 0.15s;
+  font-family: inherit;
+}
+.seg:hover { background: var(--rp-bg-alt); }
+.seg.active { background: var(--rp-accent); color: #fff; border-color: var(--rp-accent); }
+
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 10px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-text-heading); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>2D LiDAR 시뮬레이션</h1>
+<p class="subtitle">방 안에서 로봇을 움직이며 LiDAR 스캔의 빔 분포·노이즈·드롭아웃 관찰</p>
+
+<div class="layout">
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">세계 — 맵 + LiDAR 레이</div>
+      <canvas id="world" width="500" height="500" tabindex="0"></canvas>
+      <p class="hint">방향키 / WASD로 로봇 이동 · 맵 클릭으로 포커스</p>
+    </div>
+  </div>
+
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">폴라 스캔 (거리 vs 각도)</div>
+      <canvas id="polar" width="340" height="340"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="label">거리 히스토그램</div>
+      <canvas id="hist" width="340" height="140"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>FOV</h3>
+    <div class="seg-row" id="fovSeg">
+      <button class="seg active" data-fov="360">360°</button>
+      <button class="seg" data-fov="270">270°</button>
+      <button class="seg" data-fov="180">180°</button>
+    </div>
+
+    <h3>LiDAR 파라미터</h3>
+    <div class="slider-group">
+      <label>최대 사거리 (m) <span id="rangeVal">8.0</span></label>
+      <input type="range" id="range" min="1" max="15" step="0.5" value="8.0">
+    </div>
+    <div class="slider-group">
+      <label>빔 수 <span id="nBeamsVal">180</span></label>
+      <input type="range" id="nBeams" min="16" max="720" step="4" value="180">
+    </div>
+    <div class="slider-group">
+      <label>노이즈 σ (m) <span id="noiseVal">0.03</span></label>
+      <input type="range" id="noise" min="0" max="0.3" step="0.005" value="0.03">
+    </div>
+    <div class="slider-group">
+      <label>드롭아웃 확률 <span id="dropVal">0.02</span></label>
+      <input type="range" id="drop" min="0" max="0.3" step="0.005" value="0.02">
+    </div>
+
+    <div class="btn-row">
+      <button id="resetBtn" class="secondary">로봇 초기화</button>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>유효 히트</span><span id="statHits">—</span></div>
+      <div class="row"><span>드롭된 빔</span><span id="statDrops">—</span></div>
+      <div class="row"><span>최소 거리</span><span id="statMin">—</span></div>
+      <div class="row"><span>평균 거리</span><span id="statMean">—</span></div>
+      <div class="row"><span>로봇 pose</span><span id="statPose">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const world = document.getElementById('world');
+  const polar = document.getElementById('polar');
+  const hist  = document.getElementById('hist');
+  const cw = world.getContext('2d');
+  const cp = polar.getContext('2d');
+  const ch = hist.getContext('2d');
+
+  // ── Map (20m × 20m world, 500px canvas → 25 px/m) ──
+  const WORLD_SIZE = 20;
+  const W = world.width;
+  const PX = W / WORLD_SIZE;
+
+  // Line segments: [x1,y1,x2,y2] in meters
+  const walls = [
+    // outer
+    [0,0, WORLD_SIZE,0],
+    [WORLD_SIZE,0, WORLD_SIZE,WORLD_SIZE],
+    [WORLD_SIZE,WORLD_SIZE, 0,WORLD_SIZE],
+    [0,WORLD_SIZE, 0,0],
+    // inner room
+    [4,3, 4,9], [4,3, 9,3], [9,3, 9,7],
+    // free-standing obstacle
+    [12,5, 16,5], [16,5, 16,8], [16,8, 12,8], [12,8, 12,5],
+    // diagonal wall with gap
+    [2,13, 8,13], [11,13, 18,13],
+    // pillar
+    [14,16, 15,16], [15,16, 15,17], [15,17, 14,17], [14,17, 14,16],
+    // partial wall
+    [6,15, 6,19]
+  ];
+
+  // ── Robot state (meters) ──
+  let robot = { x: 10, y: 10, theta: 0 };
+  let fov = 360; // degrees
+  let ranges = [];  // latest scan
+
+  function reset() {
+    robot = { x: 10, y: 10, theta: 0 };
+    scan();
+    draw();
+  }
+
+  // ── Ray-segment intersection ──
+  // Returns t (ray distance) or Infinity
+  function raySegment(ox, oy, dx, dy, x1, y1, x2, y2) {
+    const vx = x2 - x1, vy = y2 - y1;
+    const denom = dx * vy - dy * vx;
+    if (Math.abs(denom) < 1e-9) return Infinity;
+    const rx = x1 - ox, ry = y1 - oy;
+    const t = (rx * vy - ry * vx) / denom;
+    const s = (rx * dy - ry * dx) / denom;
+    if (t >= 0 && s >= 0 && s <= 1) return t;
+    return Infinity;
+  }
+
+  function castBeam(angle, maxR) {
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    let best = Infinity;
+    for (const w of walls) {
+      const t = raySegment(robot.x, robot.y, dx, dy, w[0], w[1], w[2], w[3]);
+      if (t < best) best = t;
+    }
+    if (best > maxR) return { hit: false, dist: maxR };
+    return { hit: true, dist: best };
+  }
+
+  function randn() {
+    const u1 = Math.random(), u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1 + 1e-12)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  function scan() {
+    const maxR = parseFloat(document.getElementById('range').value);
+    const nB   = parseInt(document.getElementById('nBeams').value);
+    const nstd = parseFloat(document.getElementById('noise').value);
+    const drop = parseFloat(document.getElementById('drop').value);
+    const halfFov = fov / 2 * Math.PI / 180;
+
+    ranges = [];
+    for (let i = 0; i < nB; i++) {
+      const a = -halfFov + (fov === 360 ? 2 * Math.PI : 2 * halfFov) * i / nB;
+      const abs = robot.theta + a;
+      const r = castBeam(abs, maxR);
+      if (Math.random() < drop) { ranges.push({ angle: a, dist: NaN, hit: false }); continue; }
+      const noisy = r.hit ? Math.max(0.05, r.dist + nstd * randn()) : maxR;
+      ranges.push({ angle: a, dist: noisy, hit: r.hit });
+    }
+  }
+
+  // ── Draw world ──
+  function m2p(x, y) { return [x * PX, y * PX]; }
+
+  function drawWorld() {
+    cw.clearRect(0, 0, W, W);
+
+    // grid
+    cw.strokeStyle = 'rgba(0,0,0,0.05)'; cw.lineWidth = 1;
+    for (let i = 0; i <= WORLD_SIZE; i++) {
+      cw.beginPath(); cw.moveTo(i * PX, 0); cw.lineTo(i * PX, W); cw.stroke();
+      cw.beginPath(); cw.moveTo(0, i * PX); cw.lineTo(W, i * PX); cw.stroke();
+    }
+
+    // walls
+    cw.strokeStyle = '#1d1d1f'; cw.lineWidth = 3; cw.lineCap = 'round';
+    for (const w of walls) {
+      const [x1, y1] = m2p(w[0], w[1]);
+      const [x2, y2] = m2p(w[2], w[3]);
+      cw.beginPath(); cw.moveTo(x1, y1); cw.lineTo(x2, y2); cw.stroke();
+    }
+
+    // ── LiDAR returns ──
+    const [rx, ry] = m2p(robot.x, robot.y);
+    // hit rays (filled wedges)
+    cw.fillStyle = 'rgba(0, 113, 227, 0.08)';
+    cw.beginPath();
+    cw.moveTo(rx, ry);
+    for (const r of ranges) {
+      if (!isFinite(r.dist)) continue;
+      const a = robot.theta + r.angle;
+      const [ex, ey] = m2p(robot.x + Math.cos(a) * r.dist, robot.y + Math.sin(a) * r.dist);
+      cw.lineTo(ex, ey);
+    }
+    cw.closePath();
+    cw.fill();
+
+    // individual ray lines (translucent)
+    cw.strokeStyle = 'rgba(0, 113, 227, 0.18)'; cw.lineWidth = 0.5;
+    cw.beginPath();
+    for (const r of ranges) {
+      if (!isFinite(r.dist)) continue;
+      const a = robot.theta + r.angle;
+      const [ex, ey] = m2p(robot.x + Math.cos(a) * r.dist, robot.y + Math.sin(a) * r.dist);
+      cw.moveTo(rx, ry); cw.lineTo(ex, ey);
+    }
+    cw.stroke();
+
+    // hit points
+    cw.fillStyle = '#ff3b30';
+    for (const r of ranges) {
+      if (!r.hit || !isFinite(r.dist)) continue;
+      const a = robot.theta + r.angle;
+      const [ex, ey] = m2p(robot.x + Math.cos(a) * r.dist, robot.y + Math.sin(a) * r.dist);
+      cw.fillRect(ex - 1.5, ey - 1.5, 3, 3);
+    }
+
+    // robot
+    cw.save();
+    cw.translate(rx, ry); cw.rotate(robot.theta);
+    cw.fillStyle = '#0071e3';
+    cw.beginPath();
+    cw.moveTo(10, 0); cw.lineTo(-7, -7); cw.lineTo(-3, 0); cw.lineTo(-7, 7); cw.closePath();
+    cw.fill();
+    cw.strokeStyle = '#fff'; cw.lineWidth = 1.5; cw.stroke();
+    cw.restore();
+  }
+
+  // ── Polar plot ──
+  function drawPolar() {
+    const C = polar.width, cx = C / 2, cy = C / 2;
+    const maxR = parseFloat(document.getElementById('range').value);
+    const R = C / 2 - 16;
+    cp.clearRect(0, 0, C, C);
+
+    // background rings
+    cp.strokeStyle = 'rgba(0,0,0,0.08)'; cp.lineWidth = 1;
+    cp.fillStyle = 'rgba(0,0,0,0.48)';
+    cp.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    cp.textAlign = 'center';
+    for (let i = 1; i <= 4; i++) {
+      const r = R * i / 4;
+      cp.beginPath(); cp.arc(cx, cy, r, 0, 2 * Math.PI); cp.stroke();
+      cp.fillText((maxR * i / 4).toFixed(1) + 'm', cx, cy - r - 3);
+    }
+    // cross
+    cp.beginPath(); cp.moveTo(cx - R, cy); cp.lineTo(cx + R, cy);
+    cp.moveTo(cx, cy - R); cp.lineTo(cx, cy + R); cp.stroke();
+
+    // forward direction
+    cp.strokeStyle = 'rgba(0,113,227,0.25)'; cp.setLineDash([4, 4]);
+    cp.beginPath(); cp.moveTo(cx, cy); cp.lineTo(cx + R, cy); cp.stroke();
+    cp.setLineDash([]);
+    cp.fillStyle = '#0071e3';
+    cp.fillText('fwd →', cx + R - 20, cy - 4);
+
+    // scan points (angle 0 = forward = +x in polar)
+    cp.fillStyle = '#0071e3';
+    for (const r of ranges) {
+      if (!isFinite(r.dist)) continue;
+      const rr = (r.dist / maxR) * R;
+      const x = cx + Math.cos(r.angle) * rr;
+      const y = cy + Math.sin(r.angle) * rr;
+      cp.fillRect(x - 1.2, y - 1.2, 2.4, 2.4);
+    }
+
+    // origin
+    cp.fillStyle = '#ff9500';
+    cp.beginPath(); cp.arc(cx, cy, 3, 0, 2 * Math.PI); cp.fill();
+  }
+
+  // ── Histogram ──
+  function drawHist() {
+    const H = hist.height, Wh = hist.width;
+    const maxR = parseFloat(document.getElementById('range').value);
+    ch.clearRect(0, 0, Wh, H);
+
+    const padL = 30, padR = 8, padT = 10, padB = 20;
+    const plotW = Wh - padL - padR, plotH = H - padT - padB;
+
+    // 20 bins
+    const nBins = 20;
+    const bins = new Array(nBins).fill(0);
+    let n = 0;
+    for (const r of ranges) {
+      if (!isFinite(r.dist)) continue;
+      const b = Math.min(nBins - 1, Math.floor(r.dist / maxR * nBins));
+      bins[b]++; n++;
+    }
+    const maxC = Math.max(1, ...bins);
+
+    // axes
+    ch.strokeStyle = 'rgba(0,0,0,0.08)'; ch.lineWidth = 1;
+    ch.strokeRect(padL, padT, plotW, plotH);
+
+    ch.fillStyle = 'rgba(0,0,0,0.48)';
+    ch.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ch.textAlign = 'right';
+    ch.fillText('0', padL - 4, H - padB + 3);
+    ch.fillText(maxC + '', padL - 4, padT + 8);
+
+    // bars
+    const bw = plotW / nBins;
+    for (let i = 0; i < nBins; i++) {
+      const h = plotH * bins[i] / maxC;
+      ch.fillStyle = '#0071e3';
+      ch.fillRect(padL + i * bw + 1, padT + plotH - h, bw - 2, h);
+    }
+
+    // x labels
+    ch.textAlign = 'center'; ch.fillStyle = 'rgba(0,0,0,0.48)';
+    ch.fillText('0', padL, H - 5);
+    ch.fillText(maxR.toFixed(0) + 'm', padL + plotW, H - 5);
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    const valid = ranges.filter(r => isFinite(r.dist));
+    const hits  = valid.filter(r => r.hit);
+    const drops = ranges.length - valid.length;
+    document.getElementById('statHits').textContent = hits.length + ' / ' + ranges.length;
+    document.getElementById('statDrops').textContent = drops.toString();
+    if (valid.length) {
+      const d = valid.map(r => r.dist);
+      document.getElementById('statMin').textContent = Math.min(...d).toFixed(2) + ' m';
+      document.getElementById('statMean').textContent = (d.reduce((a, b) => a + b, 0) / d.length).toFixed(2) + ' m';
+    } else {
+      document.getElementById('statMin').textContent = '—';
+      document.getElementById('statMean').textContent = '—';
+    }
+    document.getElementById('statPose').textContent =
+      `(${robot.x.toFixed(1)}, ${robot.y.toFixed(1)}) · ${(robot.theta * 180 / Math.PI).toFixed(0)}°`;
+  }
+
+  function draw() { drawWorld(); drawPolar(); drawHist(); updateStats(); }
+
+  // ── Input ──
+  const keys = new Set();
+  window.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)) {
+      e.preventDefault();
+      keys.add(k);
+    }
+  });
+  window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+
+  function tick() {
+    const v = 0.06, w = 0.04;
+    let moved = false;
+    if (keys.has('arrowup')   || keys.has('w')) { robot.x += Math.cos(robot.theta) * v; robot.y += Math.sin(robot.theta) * v; moved = true; }
+    if (keys.has('arrowdown') || keys.has('s')) { robot.x -= Math.cos(robot.theta) * v; robot.y -= Math.sin(robot.theta) * v; moved = true; }
+    if (keys.has('arrowleft') || keys.has('a')) { robot.theta -= w; moved = true; }
+    if (keys.has('arrowright')|| keys.has('d')) { robot.theta += w; moved = true; }
+    if (moved) {
+      // clamp to world
+      robot.x = Math.max(0.3, Math.min(WORLD_SIZE - 0.3, robot.x));
+      robot.y = Math.max(0.3, Math.min(WORLD_SIZE - 0.3, robot.y));
+    }
+    scan(); draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ── Wiring ──
+  ['range', 'nBeams', 'noise', 'drop'].forEach(id => {
+    const el = document.getElementById(id);
+    el.oninput = () => {
+      const v = parseFloat(el.value);
+      document.getElementById(id + 'Val').textContent =
+        id === 'nBeams' ? v.toFixed(0) : v.toFixed(id === 'range' ? 1 : 3);
+    };
+  });
+
+  document.getElementById('resetBtn').onclick = reset;
+
+  document.getElementById('fovSeg').addEventListener('click', e => {
+    if (!e.target.classList.contains('seg')) return;
+    document.querySelectorAll('#fovSeg .seg').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    fov = parseInt(e.target.dataset.fov, 10);
+  });
+
+  world.addEventListener('click', () => world.focus());
+  world.focus();
+
+  reset();
+  tick();
+})();
+</script>
+</body>
+</html>
