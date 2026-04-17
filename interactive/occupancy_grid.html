@@ -139,7 +139,8 @@ for (let i = 135; i <= 150; i++) { wallSet.delete(i * GRID + 120); }
 for (let i = 85; i <= 115; i++) { addWall(i, 97); addWall(i, 103); }
 for (let i = 97; i <= 103; i++) { addWall(85, i); addWall(115, i); }
 
-let robot = { x: GRID / 2, y: GRID / 2, angle: 0 };
+// Spawn in the free corridor just outside the central obstacle (avoid being boxed in)
+let robot = { x: 50, y: 100, angle: 0 };
 
 function castRay(ox, oy, angle, maxRange) {
   const dx = Math.cos(angle);
