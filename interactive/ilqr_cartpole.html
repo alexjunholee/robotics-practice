@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>iLQR 카트폴 스윙업</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px; min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout { display: grid; grid-template-columns: auto 1fr 280px; gap: 16px; max-width: 1280px; margin: 0 auto; }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+.canvas-col { display: flex; flex-direction: column; gap: 14px; }
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.canvas-wrap .label {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); }
+
+.panel {
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+.slider-group label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px; }
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 14px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+button:hover { background: #0077ed; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 10px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-text-heading); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+.stats .ok span:last-child { color: #34c759; }
+.stats .warn span:last-child { color: #ff9500; }
+
+.legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--rp-text-body); }
+.legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.5; }
+.status {
+  font-size: 12px;
+  color: var(--rp-text-muted);
+  font-family: var(--rp-font-mono);
+  min-height: 16px;
+}
+</style>
+</head>
+<body>
+<h1>iLQR 카트폴 스윙업</h1>
+<p class="subtitle">역진자를 아래에서 위로 올리는 최적 제어 — iLQR 수렴 과정</p>
+
+<div class="layout">
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">세계 — 카트폴</div>
+      <canvas id="world" width="450" height="350"></canvas>
+    </div>
+  </div>
+
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">제어 입력 u(t) — 힘 F</div>
+      <canvas id="uPlot" width="450" height="180"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="label">코스트 수렴 (log scale)</div>
+      <canvas id="costPlot" width="450" height="180"></canvas>
+    </div>
+    <div class="legend">
+      <div><span class="sw" style="background:#0071e3"></span>막대 / 코스트</div>
+      <div><span class="sw" style="background:#34c759"></span>제어 입력 F</div>
+      <div><span class="sw" style="background:#ff9500"></span>목표 θ = 0</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>파라미터</h3>
+    <div class="slider-group">
+      <label>Horizon N <span id="horizonVal">100</span></label>
+      <input type="range" id="horizon" min="50" max="200" step="10" value="100">
+    </div>
+    <div class="slider-group">
+      <label>Q<sub>f</sub> (종단 가중) <span id="qfVal">200</span></label>
+      <input type="range" id="qf" min="1" max="1000" step="1" value="200">
+    </div>
+    <div class="slider-group">
+      <label>R (제어 비용) <span id="rVal">0.010</span></label>
+      <input type="range" id="r" min="0.001" max="1" step="0.001" value="0.010">
+    </div>
+
+    <h3>실행</h3>
+    <div class="btn-row">
+      <button id="optBtn">Optimize</button>
+    </div>
+    <div class="btn-row">
+      <button id="playBtn" class="secondary">▶ Play</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+    <div class="status" id="status">준비됨 — Optimize 클릭</div>
+
+    <div class="stats">
+      <div class="row"><span>iteration</span><span id="statIter">—</span></div>
+      <div class="row"><span>final cost</span><span id="statCost">—</span></div>
+      <div class="row ok"><span>converged</span><span id="statConv">—</span></div>
+      <div class="row"><span>θ final (rad)</span><span id="statTheta">—</span></div>
+      <div class="row"><span>총 시간 (s)</span><span id="statTime">—</span></div>
+    </div>
+
+    <p class="hint">
+      x = [p, θ, ṗ, θ̇], u = F<br>
+      cost = Σ (xᵀQx + Ruᵀu) + x<sub>N</sub>ᵀQ<sub>f</sub>x<sub>N</sub><br>
+      iLQR: forward → backward → line search
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Physics (cartpole) ──
+  const MC = 1.0, MP = 0.1, L = 0.5, G = 9.81;
+  const DT = 0.02;           // 20 ms
+  const NX = 4, NU = 1;
+
+  // State x = [p, θ, ṗ, θ̇]
+  function dynamics(x, u) {
+    const p = x[0], th = x[1], pd = x[2], thd = x[3];
+    const F = u[0];
+    const s = Math.sin(th), c = Math.cos(th);
+    const temp = (F + MP * L * thd * thd * s) / (MC + MP);
+    const thdd = (G * s - c * temp) / (L * (4/3 - MP * c * c / (MC + MP)));
+    const pdd = temp - MP * L * thdd * c / (MC + MP);
+    return [pd, thd, pdd, thdd];
+  }
+
+  // RK4-ish single-step (Euler is adequate at dt=0.02 for this scale)
+  function step(x, u) {
+    const d = dynamics(x, u);
+    return [
+      x[0] + DT * d[0],
+      x[1] + DT * d[1],
+      x[2] + DT * d[2],
+      x[3] + DT * d[3],
+    ];
+  }
+
+  // ── Cost ──
+  // stage: x' Q x + u' R u ; terminal: x' Qf x
+  // θ wrapped so θ=0 is the goal
+  const Q = [0.1, 1.0, 0.05, 0.1];   // diag
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    return a;
+  }
+  function wrapState(x) {
+    return [x[0], wrapAngle(x[1]), x[2], x[3]];
+  }
+  function stageCost(x, u, R) {
+    const xw = wrapState(x);
+    let c = 0;
+    for (let i = 0; i < NX; i++) c += Q[i] * xw[i] * xw[i];
+    c += R * u[0] * u[0];
+    return c;
+  }
+  function terminalCost(x, Qf) {
+    const xw = wrapState(x);
+    const Qfv = [Qf * 0.5, Qf, Qf * 0.2, Qf * 0.2];   // weight θ heaviest
+    let c = 0;
+    for (let i = 0; i < NX; i++) c += Qfv[i] * xw[i] * xw[i];
+    return c;
+  }
+
+  function totalCost(X, U, R, Qf) {
+    let J = 0;
+    for (let k = 0; k < U.length; k++) J += stageCost(X[k], U[k], R);
+    J += terminalCost(X[X.length - 1], Qf);
+    return J;
+  }
+
+  // ── Rollout ──
+  function rollout(x0, U) {
+    const N = U.length;
+    const X = new Array(N + 1);
+    X[0] = x0.slice();
+    for (let k = 0; k < N; k++) X[k + 1] = step(X[k], U[k]);
+    return X;
+  }
+
+  // ── Finite-diff Jacobians ──
+  const EPS = 1e-5;
+  function jacobiansAB(x, u) {
+    const f0 = step(x, u);
+    const A = [[], [], [], []];      // 4x4
+    const B = [[], [], [], []];      // 4x1
+    for (let j = 0; j < NX; j++) {
+      const xp = x.slice(); xp[j] += EPS;
+      const fp = step(xp, u);
+      for (let i = 0; i < NX; i++) A[i][j] = (fp[i] - f0[i]) / EPS;
+    }
+    for (let j = 0; j < NU; j++) {
+      const up = u.slice(); up[j] += EPS;
+      const fp = step(x, up);
+      for (let i = 0; i < NX; i++) B[i][j] = (fp[i] - f0[i]) / EPS;
+    }
+    return { A, B };
+  }
+
+  // Stage cost gradients / Hessians (analytic, since quadratic-ish)
+  // l(x,u) = sum Q_i * xw_i^2 + R u^2 (xw = wrapped)
+  // l_x = 2 Q diag * xw ; l_xx = 2 diag(Q) ; l_u = 2 R u ; l_uu = 2R ; l_ux = 0
+  function stageQuadratic(x, u, R) {
+    const xw = wrapState(x);
+    const lx = xw.map((v, i) => 2 * Q[i] * v);
+    const lxx = [
+      [2*Q[0], 0, 0, 0],
+      [0, 2*Q[1], 0, 0],
+      [0, 0, 2*Q[2], 0],
+      [0, 0, 0, 2*Q[3]],
+    ];
+    const lu = [2 * R * u[0]];
+    const luu = [[2 * R]];
+    const lux = [[0, 0, 0, 0]];
+    return { lx, lxx, lu, luu, lux };
+  }
+  function terminalQuadratic(x, Qf) {
+    const xw = wrapState(x);
+    const Qfv = [Qf * 0.5, Qf, Qf * 0.2, Qf * 0.2];
+    const lx = xw.map((v, i) => 2 * Qfv[i] * v);
+    const lxx = [
+      [2*Qfv[0], 0, 0, 0],
+      [0, 2*Qfv[1], 0, 0],
+      [0, 0, 2*Qfv[2], 0],
+      [0, 0, 0, 2*Qfv[3]],
+    ];
+    return { lx, lxx };
+  }
+
+  // ── Matrix helpers ──
+  function matVec(M, v) {
+    const r = new Array(M.length).fill(0);
+    for (let i = 0; i < M.length; i++)
+      for (let j = 0; j < v.length; j++) r[i] += M[i][j] * v[j];
+    return r;
+  }
+  function matMul(A, B) {
+    const n = A.length, m = B[0].length, p = B.length;
+    const C = [];
+    for (let i = 0; i < n; i++) {
+      C.push(new Array(m).fill(0));
+      for (let k = 0; k < p; k++) {
+        const a = A[i][k];
+        for (let j = 0; j < m; j++) C[i][j] += a * B[k][j];
+      }
+    }
+    return C;
+  }
+  function matT(A) {
+    const n = A.length, m = A[0].length;
+    const T = [];
+    for (let i = 0; i < m; i++) { T.push([]); for (let j = 0; j < n; j++) T[i].push(A[j][i]); }
+    return T;
+  }
+  function matAdd(A, B) {
+    const n = A.length, m = A[0].length;
+    const C = [];
+    for (let i = 0; i < n; i++) { C.push([]); for (let j = 0; j < m; j++) C[i].push(A[i][j] + B[i][j]); }
+    return C;
+  }
+  function vecAdd(a, b) { return a.map((v, i) => v + b[i]); }
+  function vecSub(a, b) { return a.map((v, i) => v - b[i]); }
+
+  // Invert scalar (Quu is 1x1 in our case)
+  function invertPSD1(M, mu) {
+    const v = M[0][0] + mu;
+    if (v < 1e-9) return null;
+    return [[1 / v]];
+  }
+
+  // ── iLQR ──
+  async function ilqr(x0, U0, opts, onIter) {
+    const N = U0.length;
+    let U = U0.map(u => u.slice());
+    let X = rollout(x0, U);
+    let J = totalCost(X, U, opts.R, opts.Qf);
+    const costHist = [J];
+    let mu = 1.0;
+    const muMin = 1e-6, muMax = 1e6;
+    let converged = false;
+
+    const maxIter = opts.maxIter || 30;
+
+    for (let iter = 0; iter < maxIter; iter++) {
+      // ── Backward pass ──
+      // Terminal
+      const term = terminalQuadratic(X[N], opts.Qf);
+      let Vx = term.lx.slice();
+      let Vxx = term.lxx.map(r => r.slice());
+
+      const Ks = new Array(N);
+      const ds = new Array(N);
+      let backwardOk = true;
+
+      for (let k = N - 1; k >= 0; k--) {
+        const { A, B } = jacobiansAB(X[k], U[k]);
+        const { lx, lxx, lu, luu, lux } = stageQuadratic(X[k], U[k], opts.R);
+
+        const AT = matT(A), BT = matT(B);
+        const VxxA = matMul(Vxx, A);
+        const VxxB = matMul(Vxx, B);
+
+        // Qx = lx + A'Vx
+        const Qx = vecAdd(lx, matVec(AT, Vx));
+        // Qu = lu + B'Vx
+        const Qu = vecAdd(lu, matVec(BT, Vx));
+        // Qxx = lxx + A'Vxx A
+        const Qxx = matAdd(lxx, matMul(AT, VxxA));
+        // Quu = luu + B'Vxx B
+        const Quu = matAdd(luu, matMul(BT, VxxB));
+        // Qux = lux + B'Vxx A
+        const Qux = matAdd(lux, matMul(BT, VxxA));
+
+        const QuuInv = invertPSD1(Quu, mu);
+        if (!QuuInv) { backwardOk = false; break; }
+
+        // K = -Quu^-1 Qux (1x4), d = -Quu^-1 Qu (1x1)
+        const QuxMinus = Qux.map(r => r.map(v => -v));
+        const K = matMul(QuuInv, QuxMinus);   // 1x4
+        const d = [-QuuInv[0][0] * Qu[0]];
+
+        Ks[k] = K;
+        ds[k] = d;
+
+        // Vx = Qx + K'Quu d + K'Qu + Qux'd
+        const KT = matT(K);
+        const Quud = matVec(Quu, d);
+        Vx = Qx.slice();
+        Vx = vecAdd(Vx, matVec(KT, Quud));   // K' Quu d
+        Vx = vecAdd(Vx, matVec(KT, Qu));     // K' Qu
+        const QuxT = matT(Qux);
+        Vx = vecAdd(Vx, matVec(QuxT, d));    // Qux' d
+
+        // Vxx = Qxx + K'Quu K + K'Qux + Qux'K
+        let Vxx_new = matAdd(Qxx, matMul(matMul(KT, Quu), K));
+        Vxx_new = matAdd(Vxx_new, matMul(KT, Qux));
+        Vxx_new = matAdd(Vxx_new, matMul(QuxT, K));
+        // Symmetrize
+        for (let i = 0; i < NX; i++)
+          for (let j = i + 1; j < NX; j++) {
+            const avg = 0.5 * (Vxx_new[i][j] + Vxx_new[j][i]);
+            Vxx_new[i][j] = avg; Vxx_new[j][i] = avg;
+          }
+        Vxx = Vxx_new;
+      }
+
+      if (!backwardOk) {
+        mu = Math.min(muMax, mu * 10);
+        continue;
+      }
+
+      // ── Forward line search ──
+      let alpha = 1.0;
+      let accepted = false;
+      let Xnew = X, Unew = U, Jnew = J;
+      for (let ls = 0; ls < 10; ls++) {
+        const Utry = new Array(N);
+        const Xtry = new Array(N + 1);
+        Xtry[0] = x0.slice();
+        for (let k = 0; k < N; k++) {
+          const dx = vecSub(Xtry[k], X[k]);
+          const Kdx = matVec(Ks[k], dx);
+          Utry[k] = [U[k][0] + alpha * ds[k][0] + Kdx[0]];
+          // Clip control
+          const umax = 20;
+          if (Utry[k][0] > umax) Utry[k][0] = umax;
+          if (Utry[k][0] < -umax) Utry[k][0] = -umax;
+          Xtry[k + 1] = step(Xtry[k], Utry[k]);
+        }
+        const Jtry = totalCost(Xtry, Utry, opts.R, opts.Qf);
+        if (Jtry < J - 1e-6) {
+          Xnew = Xtry; Unew = Utry; Jnew = Jtry;
+          accepted = true;
+          break;
+        }
+        alpha *= 0.5;
+      }
+
+      if (accepted) {
+        mu = Math.max(muMin, mu * 0.7);
+        const improve = J - Jnew;
+        X = Xnew; U = Unew; J = Jnew;
+        costHist.push(J);
+        if (onIter) await onIter(iter + 1, J, X, U, costHist);
+        if (improve < 1e-4) { converged = true; break; }
+      } else {
+        mu = Math.min(muMax, mu * 2);
+        costHist.push(J);
+        if (onIter) await onIter(iter + 1, J, X, U, costHist);
+        if (mu >= muMax) break;
+      }
+    }
+
+    return { X, U, J, costHist, converged };
+  }
+
+  // ── UI / rendering ──
+  const worldC = document.getElementById('world');
+  const uC = document.getElementById('uPlot');
+  const costC = document.getElementById('costPlot');
+  const ctxW = worldC.getContext('2d');
+  const ctxU = uC.getContext('2d');
+  const ctxC = costC.getContext('2d');
+
+  let currentX = null, currentU = null, currentCostHist = [];
+  let playIdx = 0, playing = false, playTimer = null;
+  let N = 100;
+
+  function defaultInitialU(N) {
+    // small random perturbation so backward pass sees nonzero gradients
+    const U = [];
+    for (let k = 0; k < N; k++) U.push([0.1 * Math.sin(0.3 * k)]);
+    return U;
+  }
+
+  function resetAll() {
+    N = parseInt(document.getElementById('horizon').value);
+    const x0 = [0, Math.PI, 0, 0];
+    currentU = defaultInitialU(N);
+    currentX = rollout(x0, currentU);
+    currentCostHist = [];
+    playIdx = 0; playing = false;
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    document.getElementById('playBtn').textContent = '▶ Play';
+    document.getElementById('statIter').textContent = '—';
+    document.getElementById('statCost').textContent = '—';
+    document.getElementById('statConv').textContent = '—';
+    document.getElementById('statTheta').textContent = '—';
+    document.getElementById('statTime').textContent = (N * DT).toFixed(2);
+    document.getElementById('status').textContent = '준비됨 — Optimize 클릭';
+    draw();
+  }
+
+  function drawWorld() {
+    const W = worldC.width, H = worldC.height;
+    ctxW.clearRect(0, 0, W, H);
+
+    const cx0 = W / 2, cy = H / 2 + 40;
+    // gridlines on ground
+    ctxW.strokeStyle = 'rgba(0,0,0,0.06)'; ctxW.lineWidth = 1;
+    for (let x = 0; x <= W; x += 40) {
+      ctxW.beginPath(); ctxW.moveTo(x, 0); ctxW.lineTo(x, H); ctxW.stroke();
+    }
+    for (let y = 0; y <= H; y += 40) {
+      ctxW.beginPath(); ctxW.moveTo(0, y); ctxW.lineTo(W, y); ctxW.stroke();
+    }
+
+    // rail
+    ctxW.strokeStyle = 'rgba(0,0,0,0.25)'; ctxW.lineWidth = 2;
+    ctxW.beginPath(); ctxW.moveTo(20, cy + 22); ctxW.lineTo(W - 20, cy + 22); ctxW.stroke();
+
+    if (!currentX) return;
+    const idx = Math.max(0, Math.min(currentX.length - 1, playIdx));
+    const st = currentX[idx];
+    const p = st[0], th = st[1];
+    const PIX_PER_M = 80;
+    const cx = cx0 + p * PIX_PER_M;
+
+    // target marker (upright dashed)
+    ctxW.strokeStyle = '#ff9500'; ctxW.setLineDash([4, 3]); ctxW.lineWidth = 1.5;
+    ctxW.beginPath();
+    ctxW.moveTo(cx0, cy);
+    ctxW.lineTo(cx0, cy - L * PIX_PER_M);
+    ctxW.stroke();
+    ctxW.setLineDash([]);
+
+    // cart (black)
+    ctxW.fillStyle = '#1d1d1f';
+    ctxW.fillRect(cx - 28, cy - 10, 56, 20);
+    // wheels
+    ctxW.beginPath();
+    ctxW.arc(cx - 18, cy + 14, 6, 0, 2 * Math.PI); ctxW.fill();
+    ctxW.beginPath();
+    ctxW.arc(cx + 18, cy + 14, 6, 0, 2 * Math.PI); ctxW.fill();
+
+    // pole (apple blue). θ=0 is upright.  +θ tilts → pole down.
+    const endX = cx + L * PIX_PER_M * Math.sin(th);
+    const endY = cy - L * PIX_PER_M * Math.cos(th);
+    ctxW.strokeStyle = '#0071e3';
+    ctxW.lineWidth = 5; ctxW.lineCap = 'round';
+    ctxW.beginPath(); ctxW.moveTo(cx, cy); ctxW.lineTo(endX, endY); ctxW.stroke();
+    // bob
+    ctxW.fillStyle = '#0071e3';
+    ctxW.beginPath(); ctxW.arc(endX, endY, 8, 0, 2 * Math.PI); ctxW.fill();
+
+    // force arrow
+    if (currentU && idx < currentU.length) {
+      const F = currentU[idx][0];
+      const arrLen = Math.sign(F) * Math.min(60, Math.abs(F) * 4);
+      if (Math.abs(arrLen) > 2) {
+        ctxW.strokeStyle = '#34c759'; ctxW.lineWidth = 3; ctxW.lineCap = 'round';
+        const y0 = cy + 2;
+        ctxW.beginPath();
+        ctxW.moveTo(cx, y0);
+        ctxW.lineTo(cx + arrLen, y0);
+        ctxW.stroke();
+        // arrow head
+        const sgn = Math.sign(arrLen);
+        ctxW.beginPath();
+        ctxW.moveTo(cx + arrLen, y0);
+        ctxW.lineTo(cx + arrLen - 7 * sgn, y0 - 5);
+        ctxW.moveTo(cx + arrLen, y0);
+        ctxW.lineTo(cx + arrLen - 7 * sgn, y0 + 5);
+        ctxW.stroke();
+      }
+    }
+
+    // status text
+    ctxW.fillStyle = '#1d1d1f';
+    ctxW.font = '600 13px ' + getComputedStyle(document.body).fontFamily;
+    ctxW.textAlign = 'left';
+    ctxW.fillText(`t = ${(idx * DT).toFixed(2)} s`, 14, 22);
+    ctxW.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    ctxW.fillStyle = 'rgba(0,0,0,0.56)';
+    ctxW.fillText(`p = ${p.toFixed(2)} m, θ = ${wrapAngle(th).toFixed(2)} rad`, 14, 40);
+  }
+
+  function drawSeries(ctx, data, color, yMin, yMax, refY, xCursor) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    const padL = 40, padR = 10, padT = 10, padB = 22;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+    ctx.strokeRect(padL, padT, plotW, plotH);
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'right';
+
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (plotH * i / 4);
+      const v = yMax - (yMax - yMin) * i / 4;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+      ctx.fillText(v.toFixed(1), padL - 4, y + 3);
+    }
+
+    if (refY !== null && refY !== undefined) {
+      const ry = padT + plotH * (1 - (refY - yMin) / (yMax - yMin));
+      ctx.strokeStyle = '#ff9500'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(padL, ry); ctx.lineTo(W - padR, ry); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (!data || data.length < 2) return;
+
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = padL + plotW * (i / (data.length - 1));
+      const ynorm = (data[i] - yMin) / (yMax - yMin);
+      const y = padT + plotH * (1 - Math.max(0, Math.min(1, ynorm)));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    if (xCursor !== null && xCursor !== undefined && data.length > 1) {
+      const xc = padL + plotW * (xCursor / (data.length - 1));
+      ctx.strokeStyle = 'rgba(0,113,227,0.4)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xc, padT); ctx.lineTo(xc, padT + plotH); ctx.stroke();
+    }
+
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.fillText('step k', W / 2, H - 6);
+  }
+
+  function drawCost(hist) {
+    const W = costC.width, H = costC.height;
+    ctxC.clearRect(0, 0, W, H);
+    const padL = 50, padR = 10, padT = 10, padB = 22;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    ctxC.strokeStyle = 'rgba(0,0,0,0.08)'; ctxC.lineWidth = 1;
+    ctxC.strokeRect(padL, padT, plotW, plotH);
+
+    if (!hist || hist.length === 0) return;
+
+    // log-scale cost
+    const logs = hist.map(v => Math.log10(Math.max(v, 1e-6)));
+    const yMin = Math.min(...logs) - 0.1;
+    const yMax = Math.max(...logs) + 0.1;
+
+    ctxC.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctxC.fillStyle = 'rgba(0,0,0,0.48)';
+    ctxC.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctxC.textAlign = 'right';
+
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (plotH * i / 4);
+      const v = yMax - (yMax - yMin) * i / 4;
+      ctxC.beginPath(); ctxC.moveTo(padL, y); ctxC.lineTo(W - padR, y); ctxC.stroke();
+      ctxC.fillText('1e' + v.toFixed(1), padL - 4, y + 3);
+    }
+
+    if (logs.length < 2) {
+      // single point marker
+      const x = padL + plotW * 0.5;
+      const y = padT + plotH * 0.5;
+      ctxC.fillStyle = '#0071e3';
+      ctxC.beginPath(); ctxC.arc(x, y, 3, 0, 2 * Math.PI); ctxC.fill();
+      return;
+    }
+
+    ctxC.strokeStyle = '#0071e3'; ctxC.lineWidth = 2; ctxC.lineCap = 'round'; ctxC.lineJoin = 'round';
+    ctxC.beginPath();
+    for (let i = 0; i < logs.length; i++) {
+      const x = padL + plotW * (i / Math.max(1, logs.length - 1));
+      const y = padT + plotH * (1 - (logs[i] - yMin) / (yMax - yMin));
+      if (i === 0) ctxC.moveTo(x, y); else ctxC.lineTo(x, y);
+      // marker
+    }
+    ctxC.stroke();
+    // markers
+    ctxC.fillStyle = '#0071e3';
+    for (let i = 0; i < logs.length; i++) {
+      const x = padL + plotW * (i / Math.max(1, logs.length - 1));
+      const y = padT + plotH * (1 - (logs[i] - yMin) / (yMax - yMin));
+      ctxC.beginPath(); ctxC.arc(x, y, 2.5, 0, 2 * Math.PI); ctxC.fill();
+    }
+
+    ctxC.textAlign = 'center'; ctxC.fillStyle = 'rgba(0,0,0,0.48)';
+    ctxC.fillText('iteration', W / 2, H - 6);
+  }
+
+  function draw() {
+    drawWorld();
+    const uSeries = currentU ? currentU.map(u => u[0]) : [];
+    drawSeries(ctxU, uSeries, '#34c759', -12, 12, 0, playing ? playIdx : null);
+    drawCost(currentCostHist);
+  }
+
+  // ── Wire up ──
+  function setVal(id, v, digits) {
+    document.getElementById(id + 'Val').textContent = typeof digits === 'number' ? parseFloat(v).toFixed(digits) : v;
+  }
+  document.getElementById('horizon').oninput = (e) => { setVal('horizon', e.target.value, 0); resetAll(); };
+  document.getElementById('qf').oninput = (e) => setVal('qf', e.target.value, 0);
+  document.getElementById('r').oninput = (e) => setVal('r', e.target.value, 3);
+
+  async function runOptimize() {
+    const optBtn = document.getElementById('optBtn');
+    const playBtn = document.getElementById('playBtn');
+    optBtn.disabled = true; playBtn.disabled = true;
+
+    const x0 = [0, Math.PI, 0, 0];
+    N = parseInt(document.getElementById('horizon').value);
+    const Qf = parseFloat(document.getElementById('qf').value);
+    const R  = parseFloat(document.getElementById('r').value);
+
+    // start from zero (+ small perturbation) each optimize
+    currentU = defaultInitialU(N);
+    currentX = rollout(x0, currentU);
+    currentCostHist = [totalCost(currentX, currentU, R, Qf)];
+    playIdx = 0;
+    document.getElementById('status').textContent = 'iLQR 실행 중…';
+    draw();
+
+    const result = await ilqr(x0, currentU, { R, Qf, maxIter: 30 }, async (iter, J, X, U, hist) => {
+      currentX = X; currentU = U; currentCostHist = hist.slice();
+      document.getElementById('statIter').textContent = iter.toString();
+      document.getElementById('statCost').textContent = J.toFixed(3);
+      document.getElementById('statConv').textContent = '…';
+      const thf = wrapAngle(X[X.length - 1][1]);
+      document.getElementById('statTheta').textContent = thf.toFixed(3);
+      document.getElementById('status').textContent = `iter ${iter}: J = ${J.toFixed(2)}`;
+      draw();
+      // allow UI to paint
+      await new Promise(r => setTimeout(r, 15));
+    });
+
+    currentX = result.X; currentU = result.U; currentCostHist = result.costHist;
+    document.getElementById('statConv').textContent = result.converged ? 'yes' : 'maxIter';
+    const thf = wrapAngle(result.X[result.X.length - 1][1]);
+    document.getElementById('statTheta').textContent = thf.toFixed(3);
+    document.getElementById('statTime').textContent = (N * DT).toFixed(2);
+    document.getElementById('status').textContent = result.converged
+      ? `수렴 — iter ${result.costHist.length - 1}, cost ${result.J.toFixed(2)}`
+      : `maxIter 도달 — cost ${result.J.toFixed(2)}`;
+    optBtn.disabled = false; playBtn.disabled = false;
+    playIdx = 0;
+    draw();
+    // auto-play
+    startPlay();
+  }
+
+  function startPlay() {
+    if (!currentX) return;
+    if (playTimer) clearInterval(playTimer);
+    playing = true;
+    document.getElementById('playBtn').textContent = '■ Stop';
+    playIdx = 0;
+    playTimer = setInterval(() => {
+      playIdx++;
+      if (playIdx >= currentX.length) {
+        playIdx = currentX.length - 1;
+        stopPlay();
+      }
+      draw();
+    }, DT * 1000);
+  }
+  function stopPlay() {
+    playing = false;
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    document.getElementById('playBtn').textContent = '▶ Play';
+    draw();
+  }
+
+  document.getElementById('optBtn').onclick = runOptimize;
+  document.getElementById('playBtn').onclick = () => {
+    if (playing) stopPlay();
+    else startPlay();
+  };
+  document.getElementById('resetBtn').onclick = resetAll;
+
+  resetAll();
+})();
+</script>
+</body>
+</html>

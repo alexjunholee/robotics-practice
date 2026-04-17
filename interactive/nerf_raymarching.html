@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>NeRF 볼륨 렌더링 레이마칭</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px; min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 1280px; margin: 0 auto; }
+
+.canvas-col { display: flex; flex-direction: column; gap: 14px; }
+.side-col { display: flex; flex-direction: column; gap: 14px; }
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.canvas-wrap .label {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); }
+
+.panel {
+  width: 280px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px;
+}
+.slider-group label span {
+  color: var(--rp-accent); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.toggle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12.5px; color: var(--rp-text-body);
+}
+.toggle-row input[type=checkbox] { accent-color: var(--rp-accent); transform: scale(1.1); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 12px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+  font-size: 12px;
+}
+.stats .k { color: var(--rp-text-muted); }
+.stats .v {
+  color: var(--rp-text);
+  font-family: var(--rp-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.rgba-swatch {
+  display: inline-block; width: 14px; height: 14px;
+  border: 1px solid var(--rp-border-mid);
+  border-radius: 3px; vertical-align: middle;
+  margin-right: 6px;
+}
+.note {
+  font-size: 11.5px; color: var(--rp-text-muted); line-height: 1.5;
+  background: #fff; border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-sm);
+  padding: 8px 10px;
+}
+.note code {
+  font-family: var(--rp-font-mono); font-size: 11px;
+  background: var(--rp-accent-soft); color: var(--rp-accent);
+  padding: 1px 4px; border-radius: 3px;
+}
+</style>
+</head>
+<body>
+<h1>NeRF 볼륨 렌더링 레이마칭</h1>
+<p class="subtitle">하나의 픽셀 레이를 따라 밀도·색을 알파-컴포지트로 누적하는 과정</p>
+
+<div class="layout">
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">Volume scene + Ray (2D)</div>
+      <canvas id="scene" width="540" height="540"></canvas>
+    </div>
+  </div>
+
+  <div class="side-col">
+    <div class="canvas-wrap">
+      <div class="label">Alpha &amp; accumulated color along ray</div>
+      <canvas id="profile" width="340" height="140"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="label">Rendered 1D line (angle sweep)</div>
+      <canvas id="line" width="340" height="140"></canvas>
+    </div>
+    <div class="note">
+      <code>α_k = 1 − exp(−σ_k·dt)</code><br>
+      <code>T_k = Π_{j&lt;k}(1−α_j)</code><br>
+      <code>C = Σ T_k·α_k·c_k</code>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>컨트롤</h3>
+    <div class="slider-group">
+      <label>N samples <span id="vN">96</span></label>
+      <input type="range" id="sN" min="8" max="256" step="1" value="96">
+    </div>
+    <div class="slider-group">
+      <label>Step dt <span id="vDt">0.04</span></label>
+      <input type="range" id="sDt" min="0.01" max="0.2" step="0.005" value="0.04">
+    </div>
+    <div class="slider-group">
+      <label>Ray angle (°) <span id="vAng">0.0</span></label>
+      <input type="range" id="sAng" min="-45" max="45" step="0.5" value="0">
+    </div>
+
+    <div class="toggle-row">
+      <span>Animate sweep</span>
+      <input type="checkbox" id="tAnim">
+    </div>
+    <div class="toggle-row">
+      <span>Show transmittance</span>
+      <input type="checkbox" id="tTrans" checked>
+    </div>
+
+    <div class="btn-row">
+      <button id="bReset" class="secondary">Reset scene</button>
+      <button id="bPause">Pause</button>
+    </div>
+    <div class="btn-row">
+      <button id="bStep" class="secondary">Step ▸</button>
+      <button id="bStepReset" class="secondary">Step reset</button>
+    </div>
+
+    <h3>통계</h3>
+    <div class="stats">
+      <div class="k">Final RGBA</div>
+      <div class="v"><span id="swatch" class="rgba-swatch"></span><span id="vRgba">—</span></div>
+      <div class="k">Samples</div><div class="v" id="vSamples">—</div>
+      <div class="k">Max density</div><div class="v" id="vMaxD">—</div>
+      <div class="k">Effective (α·T &gt; 0.01)</div><div class="v" id="vEff">—</div>
+      <div class="k">Final T</div><div class="v" id="vFinalT">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+// ──────────────────────────────────────────────
+// Scene: analytical Gaussian blobs in 2D (world coords roughly [-1, 1])
+// ──────────────────────────────────────────────
+const scene = document.getElementById('scene');
+const sctx  = scene.getContext('2d');
+const prof  = document.getElementById('profile');
+const pctx  = prof.getContext('2d');
+const line  = document.getElementById('line');
+const lctx  = line.getContext('2d');
+
+const sN = document.getElementById('sN'),      vN = document.getElementById('vN');
+const sDt = document.getElementById('sDt'),    vDt = document.getElementById('vDt');
+const sAng = document.getElementById('sAng'),  vAng = document.getElementById('vAng');
+const tAnim  = document.getElementById('tAnim');
+const tTrans = document.getElementById('tTrans');
+const bReset = document.getElementById('bReset');
+const bPause = document.getElementById('bPause');
+const bStep  = document.getElementById('bStep');
+const bStepReset = document.getElementById('bStepReset');
+
+const vRgba = document.getElementById('vRgba');
+const vSamples = document.getElementById('vSamples');
+const vMaxD = document.getElementById('vMaxD');
+const vEff  = document.getElementById('vEff');
+const vFinalT = document.getElementById('vFinalT');
+const swatch = document.getElementById('swatch');
+
+// Apple-aligned data palette (rgb triplets, 0..1)
+const PALETTE = [
+  [0.00, 0.44, 0.89],  // blue   #0071e3
+  [0.20, 0.78, 0.35],  // green  #34c759
+  [1.00, 0.23, 0.19],  // red    #ff3b30
+  [1.00, 0.58, 0.00],  // orange #ff9500
+  [0.68, 0.32, 0.87]   // purple #af52de
+];
+
+// Camera origin (world). Place at right-edge mid-height; rays point left.
+const CAM = { x: 0.90, y: 0.00 };
+const RAY_DIR0 = { x: -1, y: 0 }; // base direction; angle slider rotates this
+const T_MIN = 0.0;
+const T_MAX = 1.9;   // how far a ray is traced
+
+let blobs = [];
+let paused = false;
+let animAngle = 0.0;
+let sweepDir = 1;
+let stepK = -1;      // -1 = show all; otherwise render only 0..stepK
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+function resetScene() {
+  const n = 3 + Math.floor(Math.random() * 3); // 3..5
+  blobs = [];
+  for (let i = 0; i < n; i++) {
+    const col = PALETTE[i % PALETTE.length];
+    blobs.push({
+      cx: rand(-0.75, 0.55),
+      cy: rand(-0.65, 0.65),
+      sigma: rand(0.14, 0.28),
+      density: rand(2.5, 5.5),         // per-blob peak density
+      color: col.slice()
+    });
+  }
+  stepK = -1;
+}
+
+// Field evaluation
+function evalField(x, y) {
+  let dens = 0.0;
+  let wr = 0, wg = 0, wb = 0, wsum = 0;
+  for (const b of blobs) {
+    const dx = x - b.cx, dy = y - b.cy;
+    const r2 = dx*dx + dy*dy;
+    const w = Math.exp(-r2 / (2 * b.sigma * b.sigma));
+    dens += b.density * w;
+    wr += w * b.color[0];
+    wg += w * b.color[1];
+    wb += w * b.color[2];
+    wsum += w;
+  }
+  if (wsum < 1e-9) return { density: 0, r: 0, g: 0, b: 0 };
+  return { density: dens, r: wr / wsum, g: wg / wsum, b: wb / wsum };
+}
+
+// ──────────────────────────────────────────────
+// Ray marching
+// ──────────────────────────────────────────────
+function march(angleRad, N, dt) {
+  // Ray dir: rotate base (-1, 0) by angleRad around camera.
+  const ca = Math.cos(angleRad), sa = Math.sin(angleRad);
+  const dx = RAY_DIR0.x * ca - RAY_DIR0.y * sa;
+  const dy = RAY_DIR0.x * sa + RAY_DIR0.y * ca;
+
+  const samples = [];
+  let T = 1.0;
+  let Cr = 0, Cg = 0, Cb = 0;
+  let maxD = 0, effCount = 0;
+  const tStart = T_MIN;
+  const tEnd   = Math.min(T_MAX, tStart + N * dt);
+
+  for (let k = 0; k < N; k++) {
+    const t = tStart + (k + 0.5) * dt;
+    if (t > tEnd) break;
+    const x = CAM.x + dx * t;
+    const y = CAM.y + dy * t;
+    const f = evalField(x, y);
+    const alpha = 1.0 - Math.exp(-f.density * dt);
+    const contrib = T * alpha;                   // weight of this sample
+    Cr += contrib * f.r;
+    Cg += contrib * f.g;
+    Cb += contrib * f.b;
+
+    samples.push({
+      k, t, x, y,
+      density: f.density,
+      r: f.r, g: f.g, b: f.b,
+      alpha, T_before: T, contrib
+    });
+
+    if (contrib > 0.01) effCount++;
+    if (f.density > maxD) maxD = f.density;
+    T *= (1.0 - alpha);
+    if (T < 1e-4) {
+      // early-out; pad remaining nulls for profile alignment
+      break;
+    }
+  }
+
+  return {
+    samples,
+    color: { r: Cr, g: Cg, b: Cb, a: 1.0 - T },
+    finalT: T,
+    maxDensity: maxD,
+    effective: effCount,
+    rayDir: { x: dx, y: dy },
+    dt, N
+  };
+}
+
+// ──────────────────────────────────────────────
+// World ↔ canvas mapping for main scene
+// World: x,y in [-1, 1]  →  canvas [0..W]
+// ──────────────────────────────────────────────
+const W = scene.width, H = scene.height;
+const PAD = 20;
+function w2c(x, y) {
+  const cx = PAD + (x + 1) * 0.5 * (W - 2 * PAD);
+  const cy = PAD + (1 - (y + 1) * 0.5) * (H - 2 * PAD);
+  return [cx, cy];
+}
+const WORLD_SCALE = (W - 2 * PAD) / 2; // world-unit → px
+
+// ──────────────────────────────────────────────
+// Rendering: main scene
+// ──────────────────────────────────────────────
+function drawScene(result) {
+  // background
+  sctx.fillStyle = '#ffffff';
+  sctx.fillRect(0, 0, W, H);
+
+  // grid
+  sctx.strokeStyle = 'rgba(0,0,0,0.05)';
+  sctx.lineWidth = 1;
+  for (let gx = -1; gx <= 1.0001; gx += 0.25) {
+    const [px] = w2c(gx, 0);
+    sctx.beginPath(); sctx.moveTo(px, PAD); sctx.lineTo(px, H - PAD); sctx.stroke();
+  }
+  for (let gy = -1; gy <= 1.0001; gy += 0.25) {
+    const [, py] = w2c(0, gy);
+    sctx.beginPath(); sctx.moveTo(PAD, py); sctx.lineTo(W - PAD, py); sctx.stroke();
+  }
+  // frame
+  sctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  sctx.strokeRect(PAD, PAD, W - 2 * PAD, H - 2 * PAD);
+
+  // blobs: filled soft halo + outline + center
+  for (const b of blobs) {
+    const [cx, cy] = w2c(b.cx, b.cy);
+    const rPx = b.sigma * WORLD_SCALE;
+
+    // soft radial fill
+    const grad = sctx.createRadialGradient(cx, cy, 0, cx, cy, rPx * 2.2);
+    const rgb = `${(b.color[0]*255)|0},${(b.color[1]*255)|0},${(b.color[2]*255)|0}`;
+    grad.addColorStop(0.0, `rgba(${rgb},0.40)`);
+    grad.addColorStop(0.5, `rgba(${rgb},0.12)`);
+    grad.addColorStop(1.0, `rgba(${rgb},0.00)`);
+    sctx.fillStyle = grad;
+    sctx.beginPath(); sctx.arc(cx, cy, rPx * 2.2, 0, Math.PI * 2); sctx.fill();
+
+    // 1-sigma outline
+    sctx.strokeStyle = `rgba(${rgb},0.80)`;
+    sctx.lineWidth = 1.2;
+    sctx.beginPath(); sctx.arc(cx, cy, rPx, 0, Math.PI * 2); sctx.stroke();
+
+    // center mark
+    sctx.fillStyle = `rgba(${rgb},1.0)`;
+    sctx.beginPath(); sctx.arc(cx, cy, 2.2, 0, Math.PI * 2); sctx.fill();
+  }
+
+  // camera
+  const [camPx, camPy] = w2c(CAM.x, CAM.y);
+  sctx.fillStyle = '#ff9500';
+  sctx.beginPath(); sctx.arc(camPx, camPy, 6, 0, Math.PI * 2); sctx.fill();
+  sctx.strokeStyle = '#fff';
+  sctx.lineWidth = 2;
+  sctx.beginPath(); sctx.arc(camPx, camPy, 6, 0, Math.PI * 2); sctx.stroke();
+  sctx.fillStyle = 'rgba(0,0,0,0.56)';
+  sctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--rp-font-mono');
+  sctx.fillText('camera', camPx - 22, camPy + 20);
+
+  // FoV cone (±45°) faint
+  const coneA = 45 * Math.PI / 180;
+  for (const sign of [-1, 1]) {
+    const ang = sign * coneA;
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    const dx = RAY_DIR0.x * ca - RAY_DIR0.y * sa;
+    const dy = RAY_DIR0.x * sa + RAY_DIR0.y * ca;
+    const [ex, ey] = w2c(CAM.x + dx * T_MAX, CAM.y + dy * T_MAX);
+    sctx.strokeStyle = 'rgba(0,113,227,0.15)';
+    sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(camPx, camPy); sctx.lineTo(ex, ey); sctx.stroke();
+  }
+
+  // ray line (Apple Blue) — dashed
+  const endWorldX = CAM.x + result.rayDir.x * T_MAX;
+  const endWorldY = CAM.y + result.rayDir.y * T_MAX;
+  const [ex, ey] = w2c(endWorldX, endWorldY);
+  sctx.strokeStyle = '#0071e3';
+  sctx.lineWidth = 1.2;
+  sctx.setLineDash([4, 4]);
+  sctx.beginPath(); sctx.moveTo(camPx, camPy); sctx.lineTo(ex, ey); sctx.stroke();
+  sctx.setLineDash([]);
+
+  // Transmittance-darkened ray segments (overlay solid)
+  const showT = tTrans.checked;
+  const visibleSamples = (stepK >= 0)
+    ? result.samples.slice(0, Math.min(stepK + 1, result.samples.length))
+    : result.samples;
+
+  if (showT && visibleSamples.length > 0) {
+    // piecewise segments shaded by T
+    for (let i = 0; i < visibleSamples.length - 1; i++) {
+      const s0 = visibleSamples[i], s1 = visibleSamples[i + 1];
+      const [x0, y0] = w2c(s0.x, s0.y);
+      const [x1, y1] = w2c(s1.x, s1.y);
+      const T = s0.T_before * (1 - s0.alpha);
+      const alpha = Math.max(0.05, Math.min(0.95, T));
+      sctx.strokeStyle = `rgba(0,113,227,${alpha.toFixed(3)})`;
+      sctx.lineWidth = 2.0;
+      sctx.beginPath(); sctx.moveTo(x0, y0); sctx.lineTo(x1, y1); sctx.stroke();
+    }
+  }
+
+  // sample points: radius ∝ density, fill = local color, stroke scaled by contribution
+  for (const s of visibleSamples) {
+    const [sx, sy] = w2c(s.x, s.y);
+    const normD = Math.min(1.0, s.density / 6.0);
+    const rr = 1.2 + normD * 4.5;
+    const rgb = `${(s.r*255)|0},${(s.g*255)|0},${(s.b*255)|0}`;
+    const contribAlpha = Math.min(1.0, 0.15 + s.contrib * 3.0);
+    sctx.fillStyle = `rgba(${rgb},${contribAlpha.toFixed(3)})`;
+    sctx.beginPath(); sctx.arc(sx, sy, rr, 0, Math.PI * 2); sctx.fill();
+    sctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    sctx.lineWidth = 0.5;
+    sctx.stroke();
+  }
+
+  // highlight current step sample (if stepK set)
+  if (stepK >= 0 && stepK < result.samples.length) {
+    const s = result.samples[stepK];
+    const [sx, sy] = w2c(s.x, s.y);
+    sctx.strokeStyle = '#ff3b30';
+    sctx.lineWidth = 1.8;
+    sctx.beginPath(); sctx.arc(sx, sy, 8, 0, Math.PI * 2); sctx.stroke();
+  }
+}
+
+// ──────────────────────────────────────────────
+// Profile panel: alpha (bar) + accumulated color (line)
+// ──────────────────────────────────────────────
+function drawProfile(result) {
+  const PW = prof.width, PH = prof.height;
+  pctx.fillStyle = '#ffffff'; pctx.fillRect(0, 0, PW, PH);
+
+  // axes area
+  const m = { l: 26, r: 8, t: 10, b: 18 };
+  const aw = PW - m.l - m.r, ah = PH - m.t - m.b;
+
+  // grid
+  pctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  pctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const yy = m.t + (i / 4) * ah;
+    pctx.beginPath(); pctx.moveTo(m.l, yy); pctx.lineTo(m.l + aw, yy); pctx.stroke();
+  }
+
+  // axis labels
+  pctx.fillStyle = 'rgba(0,0,0,0.56)';
+  pctx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--rp-font-mono');
+  pctx.fillText('1', 4, m.t + 8);
+  pctx.fillText('0', 4, m.t + ah + 2);
+  pctx.fillText('t (ray)', m.l + aw - 38, PH - 4);
+
+  const N = result.samples.length;
+  if (N === 0) return;
+
+  // Alpha as thin vertical bars (muted blue)
+  for (let i = 0; i < N; i++) {
+    const s = result.samples[i];
+    const xN = i / Math.max(1, result.N - 1);
+    const xx = m.l + xN * aw;
+    const bh = Math.max(0, Math.min(1, s.alpha)) * ah;
+    pctx.fillStyle = 'rgba(0,113,227,0.28)';
+    pctx.fillRect(xx - 0.8, m.t + ah - bh, 1.8, bh);
+  }
+
+  // Accumulated color: plot magnitude ||C|| as line, also each channel polyline
+  const accR = [], accG = [], accB = [];
+  let cr = 0, cg = 0, cb = 0, T = 1.0;
+  for (let i = 0; i < N; i++) {
+    const s = result.samples[i];
+    cr += T * s.alpha * s.r;
+    cg += T * s.alpha * s.g;
+    cb += T * s.alpha * s.b;
+    T  *= (1 - s.alpha);
+    accR.push(cr); accG.push(cg); accB.push(cb);
+  }
+
+  function plot(arr, color) {
+    pctx.strokeStyle = color;
+    pctx.lineWidth = 1.4;
+    pctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const xN = i / Math.max(1, result.N - 1);
+      const xx = m.l + xN * aw;
+      const v = Math.max(0, Math.min(1, arr[i]));
+      const yy = m.t + ah - v * ah;
+      if (i === 0) pctx.moveTo(xx, yy); else pctx.lineTo(xx, yy);
+    }
+    pctx.stroke();
+  }
+  plot(accR, '#ff3b30');
+  plot(accG, '#34c759');
+  plot(accB, '#0071e3');
+
+  // Transmittance T(t) as purple curve
+  pctx.strokeStyle = '#af52de';
+  pctx.lineWidth = 1.2;
+  pctx.setLineDash([3, 3]);
+  pctx.beginPath();
+  let TT = 1.0;
+  for (let i = 0; i < N; i++) {
+    const s = result.samples[i];
+    TT = s.T_before;
+    const xN = i / Math.max(1, result.N - 1);
+    const xx = m.l + xN * aw;
+    const yy = m.t + ah - TT * ah;
+    if (i === 0) pctx.moveTo(xx, yy); else pctx.lineTo(xx, yy);
+  }
+  pctx.stroke();
+  pctx.setLineDash([]);
+
+  // legend
+  pctx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--rp-font-mono');
+  const legY = m.t + 2;
+  const items = [['R','#ff3b30'], ['G','#34c759'], ['B','#0071e3'], ['T','#af52de'], ['α','rgba(0,113,227,0.55)']];
+  let lx = m.l + 6;
+  for (const [lbl, col] of items) {
+    pctx.fillStyle = col;
+    pctx.fillRect(lx, legY + 2, 6, 6);
+    pctx.fillStyle = 'rgba(0,0,0,0.65)';
+    pctx.fillText(lbl, lx + 9, legY + 8);
+    lx += 22;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Line image: sweep rays across angle range and render resulting 1D strip
+// ──────────────────────────────────────────────
+function drawLineImage() {
+  const LW = line.width, LH = line.height;
+  lctx.fillStyle = '#ffffff'; lctx.fillRect(0, 0, LW, LH);
+
+  const PIXELS = 180;
+  const N = +sN.value | 0;
+  const dt = +sDt.value;
+  const aMin = -45 * Math.PI / 180;
+  const aMax =  45 * Math.PI / 180;
+
+  // render strip (occupies middle band)
+  const stripTop = 24, stripH = 72;
+  const px = Math.max(1, Math.floor(LW / PIXELS));
+
+  for (let i = 0; i < PIXELS; i++) {
+    const ang = aMin + (i / (PIXELS - 1)) * (aMax - aMin);
+    const r = march(ang, N, dt);
+    const cr = Math.max(0, Math.min(1, r.color.r));
+    const cg = Math.max(0, Math.min(1, r.color.g));
+    const cb = Math.max(0, Math.min(1, r.color.b));
+    lctx.fillStyle = `rgb(${(cr*255)|0},${(cg*255)|0},${(cb*255)|0})`;
+    lctx.fillRect(Math.floor(i * LW / PIXELS), stripTop, px + 1, stripH);
+  }
+
+  // frame
+  lctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  lctx.strokeRect(0.5, stripTop + 0.5, LW - 1, stripH);
+
+  // current angle indicator
+  const angNow = (+sAng.value) * Math.PI / 180;
+  const iNow = (angNow - aMin) / (aMax - aMin);
+  const xNow = iNow * LW;
+  lctx.strokeStyle = '#0071e3';
+  lctx.lineWidth = 1.4;
+  lctx.beginPath();
+  lctx.moveTo(xNow, stripTop - 4);
+  lctx.lineTo(xNow, stripTop + stripH + 4);
+  lctx.stroke();
+
+  // labels
+  lctx.fillStyle = 'rgba(0,0,0,0.56)';
+  lctx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--rp-font-mono');
+  lctx.fillText('−45°', 2, 14);
+  lctx.fillText('0°', LW / 2 - 6, 14);
+  lctx.fillText('+45°', LW - 30, 14);
+  lctx.fillText('rendered row →', 4, stripTop + stripH + 16);
+}
+
+// ──────────────────────────────────────────────
+// Stats panel
+// ──────────────────────────────────────────────
+function updateStats(result) {
+  const c = result.color;
+  const r255 = Math.round(255 * Math.max(0, Math.min(1, c.r)));
+  const g255 = Math.round(255 * Math.max(0, Math.min(1, c.g)));
+  const b255 = Math.round(255 * Math.max(0, Math.min(1, c.b)));
+  vRgba.textContent = `(${r255}, ${g255}, ${b255}, ${c.a.toFixed(2)})`;
+  swatch.style.background = `rgb(${r255},${g255},${b255})`;
+  vSamples.textContent  = String(result.samples.length);
+  vMaxD.textContent     = result.maxDensity.toFixed(2);
+  vEff.textContent      = String(result.effective);
+  vFinalT.textContent   = result.finalT.toFixed(3);
+}
+
+// ──────────────────────────────────────────────
+// Main render pass
+// ──────────────────────────────────────────────
+function renderAll() {
+  const N  = +sN.value | 0;
+  const dt = +sDt.value;
+  const ang = (+sAng.value) * Math.PI / 180;
+  vN.textContent  = N.toString();
+  vDt.textContent = dt.toFixed(3);
+  vAng.textContent = (+sAng.value).toFixed(1);
+
+  const result = march(ang, N, dt);
+  drawScene(result);
+  drawProfile(result);
+  drawLineImage();
+  updateStats(result);
+}
+
+// ──────────────────────────────────────────────
+// Event wiring + animation loop
+// ──────────────────────────────────────────────
+[sN, sDt, sAng].forEach(el => el.addEventListener('input', () => {
+  stepK = -1;
+  renderAll();
+}));
+tTrans.addEventListener('change', renderAll);
+tAnim.addEventListener('change', () => { stepK = -1; });
+
+bReset.addEventListener('click', () => { resetScene(); stepK = -1; renderAll(); });
+bPause.addEventListener('click', () => {
+  paused = !paused;
+  bPause.textContent = paused ? 'Play' : 'Pause';
+});
+bStep.addEventListener('click', () => {
+  const N = +sN.value | 0;
+  stepK = Math.min((stepK < 0 ? 0 : stepK + 1), N - 1);
+  tAnim.checked = false;
+  renderAll();
+});
+bStepReset.addEventListener('click', () => { stepK = -1; renderAll(); });
+
+let last = performance.now();
+function tick(now) {
+  const dtMs = now - last; last = now;
+  if (!paused && tAnim.checked) {
+    // sweep angle
+    animAngle += sweepDir * (dtMs / 1000) * 20; // 20 deg/s
+    if (animAngle > 45)  { animAngle = 45;  sweepDir = -1; }
+    if (animAngle < -45) { animAngle = -45; sweepDir =  1; }
+    sAng.value = animAngle.toFixed(1);
+    stepK = -1;
+    renderAll();
+  }
+  requestAnimationFrame(tick);
+}
+
+resetScene();
+renderAll();
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

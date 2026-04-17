@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>UR5 6-DOF 로봇팔 (FK + IK)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
+  overflow: hidden;
+}
+#container { display: flex; height: 100vh; width: 100vw; }
+#sidebar {
+  width: 380px; min-width: 380px;
+  background: #f5f5f7;
+  padding: 18px 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  border-right: 1px solid rgba(0,0,0,0.12);
+}
+h1 {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  font-size: 18px; font-weight: 600; letter-spacing: -0.018em;
+  color: #1d1d1f; padding-bottom: 4px;
+}
+.subtitle {
+  font-size: 12.5px; color: rgba(0,0,0,0.56);
+  letter-spacing: -0.008em; line-height: 1.4;
+  padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+h2 {
+  font-size: 10.5px; font-weight: 700;
+  color: rgba(0,0,0,0.56);
+  background: transparent; padding: 0 0 4px;
+  margin: 10px 0 4px;
+  border: none; border-bottom: 1px solid rgba(0,0,0,0.08);
+  text-transform: uppercase; letter-spacing: 0.09em;
+  display: block;
+}
+.section {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 5px;
+  background: #fafafc;
+}
+.slider-group { display: flex; flex-direction: column; gap: 2px; }
+.slider-group label {
+  font-size: 12px; color: rgba(0,0,0,0.56);
+  display: flex; justify-content: space-between;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+}
+.slider-group label .name { color: #1d1d1f; font-weight: 500; }
+.slider-group input[type=range] {
+  width: 100%; accent-color: #0071e3;
+}
+.seg-row {
+  display: flex; gap: 0;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.seg-btn {
+  flex: 1; padding: 7px 10px;
+  background: transparent;
+  color: rgba(0,0,0,0.56);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12.5px; font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.seg-btn.active {
+  background: #fff;
+  color: #1d1d1f;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+button.btn {
+  flex: 1; min-width: 0;
+  background: #fff;
+  color: #1d1d1f;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+button.btn:hover { background: #f5f5f7; border-color: rgba(0,0,0,0.16); }
+button.btn.primary {
+  background: #0071e3; color: #fff; border-color: #0071e3;
+}
+button.btn.primary:hover { background: #0077ed; }
+
+.info-box {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+  font-size: 11px; line-height: 1.55;
+  white-space: pre;
+  color: #1d1d1f;
+  overflow-x: auto;
+}
+#canvas3d { flex: 1; display: block; cursor: grab; }
+#canvas3d.drag { cursor: grabbing; }
+#canvas3d.target-hover { cursor: move; }
+
+.tag-x { color: #ff3b30; }
+.tag-y { color: #34c759; }
+.tag-z { color: #0071e3; }
+.kv { display: flex; justify-content: space-between; font-family: 'SF Mono', ui-monospace, 'Menlo', monospace; font-size: 11.5px; }
+.kv .k { color: rgba(0,0,0,0.56); }
+.kv .v { color: #1d1d1f; font-weight: 500; }
+
+.badge {
+  display: inline-block;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 980px;
+  background: rgba(0,113,227,0.08);
+  color: #0066cc;
+  border: 1px solid rgba(0,113,227,0.20);
+}
+.badge.warn { background: rgba(255,59,48,0.08); color: #ff3b30; border-color: rgba(255,59,48,0.20); }
+.badge.ok { background: rgba(52,199,89,0.10); color: #1f9d50; border-color: rgba(52,199,89,0.24); }
+
+.foot {
+  font-size: 10.5px; color: rgba(0,0,0,0.40);
+  text-align: center; margin-top: 8px; line-height: 1.5;
+}
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="sidebar">
+    <h1>UR5 6-DOF 로봇팔 (FK + IK)</h1>
+    <div class="subtitle">6 조인트 슬라이더(FK) 또는 end-effector 타겟 드래그(IK)</div>
+
+    <h2>모드</h2>
+    <div class="seg-row" id="modeSeg">
+      <button class="seg-btn active" data-mode="fk">FK (순기구학)</button>
+      <button class="seg-btn" data-mode="ik">IK (역기구학)</button>
+    </div>
+
+    <h2>조인트 각도 (rad)</h2>
+    <div class="section">
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>1</sub> (shoulder pan)</span><span id="v0">+0.000</span></label>
+        <input type="range" class="j-slider" data-idx="0" min="-3.14159" max="3.14159" step="0.01" value="0">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>2</sub> (shoulder lift)</span><span id="v1">-1.571</span></label>
+        <input type="range" class="j-slider" data-idx="1" min="-3.14159" max="3.14159" step="0.01" value="-1.5708">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>3</sub> (elbow)</span><span id="v2">+1.571</span></label>
+        <input type="range" class="j-slider" data-idx="2" min="-3.14159" max="3.14159" step="0.01" value="1.5708">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>4</sub> (wrist 1)</span><span id="v3">-1.571</span></label>
+        <input type="range" class="j-slider" data-idx="3" min="-3.14159" max="3.14159" step="0.01" value="-1.5708">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>5</sub> (wrist 2)</span><span id="v4">-1.571</span></label>
+        <input type="range" class="j-slider" data-idx="4" min="-3.14159" max="3.14159" step="0.01" value="-1.5708">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">&theta;<sub>6</sub> (wrist 3)</span><span id="v5">+0.000</span></label>
+        <input type="range" class="j-slider" data-idx="5" min="-3.14159" max="3.14159" step="0.01" value="0">
+      </div>
+    </div>
+
+    <h2>IK 파라미터 (DLS)</h2>
+    <div class="section">
+      <div class="slider-group">
+        <label><span class="name">damping &lambda;</span><span id="lamVal">0.10</span></label>
+        <input type="range" id="lamSlider" min="0.01" max="1" step="0.01" value="0.1">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">max iter / step</span><span id="iterVal">20</span></label>
+        <input type="range" id="iterSlider" min="5" max="50" step="1" value="20">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">tolerance (m)</span><span id="tolVal">0.005</span></label>
+        <input type="range" id="tolSlider" min="0.001" max="0.05" step="0.001" value="0.005">
+      </div>
+    </div>
+
+    <h2>프리셋 & 컨트롤</h2>
+    <div class="btn-row">
+      <button class="btn" id="btnHome">Home</button>
+      <button class="btn" id="btnPickup">Pickup</button>
+      <button class="btn" id="btnRandom">Random &theta;</button>
+    </div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn" id="btnRandTgt">Random target</button>
+      <button class="btn primary" id="btnReset">Reset</button>
+    </div>
+
+    <h2>End-Effector Pose</h2>
+    <div class="info-box" id="infoPose">x=  0.000  y=  0.000  z=  0.000
+roll =   0.00°
+pitch=   0.00°
+yaw  =   0.00°</div>
+
+    <h2>Joint Angles</h2>
+    <div class="info-box" id="infoJ">&theta; = [  0.000,  -1.571,   1.571,  -1.571,  -1.571,   0.000]</div>
+
+    <h2>Jacobian / IK 통계</h2>
+    <div class="info-box" id="infoStats">cond(J) =    1.00
+||error|| = 0.000 m
+iter used = 0 / 20
+<span class="badge ok">converged</span></div>
+
+    <div class="foot">
+      좌클릭 회전 · 우클릭/Shift 팬 · 휠 줌<br>
+      IK 모드에서 파란 구를 드래그하면 팔이 따라옵니다
+    </div>
+  </div>
+  <canvas id="canvas3d"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================
+   Minimal OrbitControls (Apple Light scene)
+   ========================================================= */
+(function(){
+  const EPS=1e-6, ST={NONE:-1, ROT:0, PAN:2};
+  class OrbitControls{
+    constructor(cam, el){
+      this.camera=cam; this.domElement=el;
+      this.target=new THREE.Vector3();
+      this.rotateSpeed=1; this.zoomSpeed=1;
+      this.minDistance=0.3; this.maxDistance=20;
+      this.enabled=true;
+      let state=ST.NONE;
+      let sph=new THREE.Spherical(), sphD=new THREE.Spherical();
+      let panOff=new THREE.Vector3(), scale=1;
+      let rS=new THREE.Vector2(), rE=new THREE.Vector2(), rD=new THREE.Vector2();
+      let pS=new THREE.Vector2(), pE=new THREE.Vector2(), pD=new THREE.Vector2();
+      const zs=()=>Math.pow(0.95,this.zoomSpeed);
+      const pl=(d,m)=>{let v=new THREE.Vector3(); v.setFromMatrixColumn(m,0); v.multiplyScalar(-d); panOff.add(v);};
+      const pu=(d,m)=>{let v=new THREE.Vector3(); v.setFromMatrixColumn(m,1); v.multiplyScalar(d); panOff.add(v);};
+      const pan=(dx,dy)=>{
+        let p=cam.position.clone().sub(this.target);
+        let d=p.length()*Math.tan(cam.fov/2*Math.PI/180);
+        pl(2*dx*d/el.clientHeight, cam.matrix);
+        pu(2*dy*d/el.clientHeight, cam.matrix);
+      };
+      const md=e=>{
+        if(!this.enabled) return;
+        if(e.button===0 && !e.shiftKey){ state=ST.ROT; rS.set(e.clientX,e.clientY); }
+        else if(e.button===2 || e.shiftKey){ state=ST.PAN; pS.set(e.clientX,e.clientY); }
+        if(state!==ST.NONE){
+          document.addEventListener('mousemove',mm);
+          document.addEventListener('mouseup',mu);
+        }
+      };
+      const mm=e=>{
+        if(state===ST.ROT){
+          rE.set(e.clientX,e.clientY); rD.subVectors(rE,rS);
+          sphD.theta -= 2*Math.PI*rD.x/el.clientHeight*this.rotateSpeed;
+          sphD.phi   -= 2*Math.PI*rD.y/el.clientHeight*this.rotateSpeed;
+          rS.copy(rE);
+        } else if(state===ST.PAN){
+          pE.set(e.clientX,e.clientY); pD.subVectors(pE,pS);
+          pan(pD.x, pD.y);
+          pS.copy(pE);
+        }
+      };
+      const mu=()=>{
+        state=ST.NONE;
+        document.removeEventListener('mousemove',mm);
+        document.removeEventListener('mouseup',mu);
+      };
+      const wh=e=>{
+        if(!this.enabled) return;
+        e.preventDefault();
+        if(e.deltaY<0) scale/=zs(); else scale*=zs();
+      };
+      el.addEventListener('mousedown', md);
+      el.addEventListener('wheel', wh, {passive:false});
+      el.addEventListener('contextmenu', e=>e.preventDefault());
+      this.update=function(){
+        let off=new THREE.Vector3();
+        let q=new THREE.Quaternion().setFromUnitVectors(cam.up,new THREE.Vector3(0,1,0));
+        let qi=q.clone().invert();
+        off.copy(cam.position).sub(this.target);
+        off.applyQuaternion(q);
+        sph.setFromVector3(off);
+        sph.theta += sphD.theta; sph.phi += sphD.phi;
+        sph.phi = Math.max(EPS, Math.min(Math.PI-EPS, sph.phi));
+        sph.radius *= scale;
+        sph.radius = Math.max(this.minDistance, Math.min(this.maxDistance, sph.radius));
+        this.target.add(panOff);
+        off.setFromSpherical(sph);
+        off.applyQuaternion(qi);
+        cam.position.copy(this.target).add(off);
+        cam.lookAt(this.target);
+        sphD.set(0,0,0); panOff.set(0,0,0); scale=1;
+      };
+    }
+  }
+  THREE.OrbitControls = OrbitControls;
+})();
+
+/* =========================================================
+   UR5 DH parameters (Standard DH, meters)
+   Link :  a,       d,       alpha
+   1   :   0     , 0.1625,  +π/2
+   2   :  -0.425 , 0     ,   0
+   3   :  -0.3922, 0     ,   0
+   4   :   0     , 0.1333, +π/2
+   5   :   0     , 0.0997, -π/2
+   6   :   0     , 0.0996,   0
+   ========================================================= */
+const DH_a     = [0, -0.425, -0.3922, 0, 0, 0];
+const DH_d     = [0.1625, 0, 0, 0.1333, 0.0997, 0.0996];
+const DH_alpha = [Math.PI/2, 0, 0, Math.PI/2, -Math.PI/2, 0];
+
+// 6-joint state (radians) — default "home-ish" pose gives non-degenerate Jacobian
+const thetaHome = [0, -Math.PI/2, Math.PI/2, -Math.PI/2, -Math.PI/2, 0];
+const thetaPickup = [0.3, -1.2, 1.6, -1.9, -1.57, 0];
+let theta = thetaHome.slice();
+
+let mode = 'fk';       // 'fk' or 'ik'
+let targetPos = new THREE.Vector3(0.3, 0.3, 0.4);
+let targetRotMat = null; // optional orientation target; kept identity by default
+let draggingTarget = false;
+let dragPlane = new THREE.Plane();
+
+/* ----------------- 4x4 matrix utilities ----------------- */
+function mat4identity(){ return new Float64Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+function mat4multiply(A,B){
+  const R=new Float64Array(16);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    let s=0;
+    for(let k=0;k<4;k++) s += A[r*4+k]*B[k*4+c];
+    R[r*4+c]=s;
+  }
+  return R;
+}
+function dhMatrix(a, d, alpha, th){
+  const ct=Math.cos(th), st=Math.sin(th);
+  const ca=Math.cos(alpha), sa=Math.sin(alpha);
+  // Standard DH: T = Rz(th) · Tz(d) · Tx(a) · Rx(alpha)
+  return new Float64Array([
+    ct, -st*ca,  st*sa, a*ct,
+    st,  ct*ca, -ct*sa, a*st,
+     0,     sa,     ca,    d,
+     0,      0,      0,    1
+  ]);
+}
+function mat4getPos(T){ return new THREE.Vector3(T[3], T[7], T[11]); }
+function mat4getCol(T, c){ return new THREE.Vector3(T[c], T[4+c], T[8+c]); }
+
+/* =========================================================
+   Forward Kinematics
+   Returns array of 7 cumulative transforms (base=I, then 1..6)
+   ========================================================= */
+function computeFK(th){
+  const Ts = [mat4identity()];
+  for(let i=0;i<6;i++){
+    const Ai = dhMatrix(DH_a[i], DH_d[i], DH_alpha[i], th[i]);
+    Ts.push(mat4multiply(Ts[i], Ai));
+  }
+  return Ts;
+}
+
+/* =========================================================
+   Jacobian (6×6, base frame)
+   For revolute joint i:
+     J_v_i = z_{i-1} × (p_e - p_{i-1})
+     J_w_i = z_{i-1}
+   z_{i-1} = 3rd column of rotation of T_{i-1}
+   p_{i-1} = translation of T_{i-1}
+   ========================================================= */
+function computeJacobian(Ts){
+  const J = new Float64Array(36); // row-major 6×6
+  const pe = mat4getPos(Ts[6]);
+  for(let i=0;i<6;i++){
+    const T = Ts[i]; // frame before joint i (indices: Ts[0]=base, Ts[i] = after joint i)
+    const z = mat4getCol(T, 2);
+    const p = mat4getPos(T);
+    const d = new THREE.Vector3().subVectors(pe, p);
+    const Jv = new THREE.Vector3().crossVectors(z, d);
+    J[0*6+i] = Jv.x; J[1*6+i] = Jv.y; J[2*6+i] = Jv.z;
+    J[3*6+i] = z.x;  J[4*6+i] = z.y;  J[5*6+i] = z.z;
+  }
+  return J;
+}
+
+/* =========================================================
+   6×6 matrix helpers for DLS
+   ========================================================= */
+function matMul6(A,B){
+  const R=new Float64Array(36);
+  for(let i=0;i<6;i++) for(let j=0;j<6;j++){
+    let s=0;
+    for(let k=0;k<6;k++) s+=A[i*6+k]*B[k*6+j];
+    R[i*6+j]=s;
+  }
+  return R;
+}
+function matTrans6(A){
+  const R=new Float64Array(36);
+  for(let i=0;i<6;i++) for(let j=0;j<6;j++) R[j*6+i]=A[i*6+j];
+  return R;
+}
+function matVec6(A, v){
+  const r = new Float64Array(6);
+  for(let i=0;i<6;i++){ let s=0; for(let j=0;j<6;j++) s += A[i*6+j]*v[j]; r[i]=s; }
+  return r;
+}
+// Gauss–Jordan inverse of 6×6 (with partial pivoting). Good enough for an in-browser IK demo.
+function matInv6(A){
+  const n=6;
+  const M = new Float64Array(n*n*2);
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++) M[i*2*n+j] = A[i*n+j];
+    M[i*2*n + n + i] = 1;
+  }
+  for(let c=0;c<n;c++){
+    // pivot
+    let piv=c, best=Math.abs(M[c*2*n+c]);
+    for(let r=c+1;r<n;r++){
+      const v=Math.abs(M[r*2*n+c]);
+      if(v>best){ best=v; piv=r; }
+    }
+    if(best<1e-15) return null;
+    if(piv!==c){
+      for(let k=0;k<2*n;k++){
+        const tmp=M[c*2*n+k]; M[c*2*n+k]=M[piv*2*n+k]; M[piv*2*n+k]=tmp;
+      }
+    }
+    const pv=M[c*2*n+c];
+    for(let k=0;k<2*n;k++) M[c*2*n+k]/=pv;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=M[r*2*n+c];
+      if(f===0) continue;
+      for(let k=0;k<2*n;k++) M[r*2*n+k] -= f*M[c*2*n+k];
+    }
+  }
+  const inv=new Float64Array(n*n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) inv[i*n+j]=M[i*2*n+n+j];
+  return inv;
+}
+
+// Rough condition number via Frobenius norm ratio (cheap proxy).
+function condApprox(J){
+  let fn=0;
+  for(let k=0;k<36;k++) fn+=J[k]*J[k];
+  fn=Math.sqrt(fn);
+  const Jt=matTrans6(J);
+  const JJT=matMul6(J,Jt);
+  const inv=matInv6(JJT);
+  if(!inv) return Infinity;
+  let fn2=0;
+  for(let k=0;k<36;k++) fn2+=inv[k]*inv[k];
+  fn2=Math.sqrt(fn2);
+  return fn*fn2;
+}
+
+/* =========================================================
+   Orientation error via axis-angle (log map of R_err = R_target · R_curr^T)
+   ========================================================= */
+function rotAxisAngle(Rc, Rt){
+  // Rc, Rt: column-major 3×3 in our storage (row-major float64 3×3)
+  // Compute E = Rt * Rc^T, then axis-angle.
+  const E=new Float64Array(9);
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    let s=0;
+    for(let k=0;k<3;k++) s += Rt[i*3+k]*Rc[j*3+k]; // Rc^T => Rc[j*3+k]
+    E[i*3+j]=s;
+  }
+  const tr = E[0]+E[4]+E[8];
+  let c=(tr-1)/2;
+  c=Math.max(-1, Math.min(1, c));
+  const angle=Math.acos(c);
+  if(angle<1e-6) return [0,0,0];
+  const s=2*Math.sin(angle);
+  const ax=(E[7]-E[5])/s, ay=(E[2]-E[6])/s, az=(E[3]-E[1])/s;
+  return [ax*angle, ay*angle, az*angle];
+}
+function getRot3FromT(T){
+  // T is 4×4 row-major. Return 3×3 rotation row-major.
+  return new Float64Array([
+    T[0], T[1], T[2],
+    T[4], T[5], T[6],
+    T[8], T[9], T[10]
+  ]);
+}
+
+/* =========================================================
+   IK step — Damped Least Squares
+   Solves:  δq = J^T (J J^T + λ² I)^{-1} δx
+   δx = [pos_err(3); orient_err(3)]
+   ========================================================= */
+function ikStep(thIn, targetP, targetR, lam){
+  const Ts = computeFK(thIn);
+  const Tee = Ts[6];
+  const pe = mat4getPos(Tee);
+  const dp = new THREE.Vector3().subVectors(targetP, pe);
+
+  let dw=[0,0,0];
+  if(targetR){
+    const Rc = getRot3FromT(Tee);
+    dw = rotAxisAngle(Rc, targetR);
+  }
+  const dx = new Float64Array([dp.x, dp.y, dp.z, dw[0], dw[1], dw[2]]);
+  const err = Math.sqrt(dp.x*dp.x + dp.y*dp.y + dp.z*dp.z);
+
+  const J = computeJacobian(Ts);
+  const Jt = matTrans6(J);
+  const JJT = matMul6(J, Jt);
+  // add λ² I
+  const l2 = lam*lam;
+  for(let i=0;i<6;i++) JJT[i*6+i] += l2;
+  const inv = matInv6(JJT);
+  if(!inv) return {th: thIn, err, ok:false};
+
+  const tmp = matVec6(inv, dx);                // 6 vec
+  const dq  = new Float64Array(6);
+  for(let i=0;i<6;i++){ let s=0; for(let j=0;j<6;j++) s += Jt[i*6+j]*tmp[j]; dq[i]=s; }
+
+  // clamp step to stay within linearisation
+  const maxStep = 0.3;
+  let mag=0; for(let i=0;i<6;i++) mag += dq[i]*dq[i]; mag=Math.sqrt(mag);
+  if(mag>maxStep){ const k=maxStep/mag; for(let i=0;i<6;i++) dq[i]*=k; }
+
+  const thOut = new Array(6);
+  for(let i=0;i<6;i++){
+    let v = thIn[i] + dq[i];
+    // wrap to [-π, π] for display continuity
+    while(v> Math.PI) v -= 2*Math.PI;
+    while(v<-Math.PI) v += 2*Math.PI;
+    thOut[i] = v;
+  }
+  return {th: thOut, err, ok:true};
+}
+
+function ikSolve(thStart, targetP, lam, maxIter, tol){
+  let th = thStart.slice();
+  let lastErr=Infinity, iter=0, converged=false;
+  for(iter=0; iter<maxIter; iter++){
+    const r = ikStep(th, targetP, null, lam);
+    th = r.th; lastErr = r.err;
+    if(lastErr < tol){ converged=true; iter++; break; }
+  }
+  return {th, err:lastErr, iter, converged};
+}
+
+/* =========================================================
+   Three.js scene
+   ========================================================= */
+let scene, camera, renderer, controls;
+let gridHelper, armGroup;
+let jointSpheres=[], linkMeshes=[]; // per-joint visuals
+let eeFrame, eeGripperLines;
+let targetMesh, targetFrame;
+let baseCyl;
+
+function initScene(){
+  const canvas = document.getElementById('canvas3d');
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0xfafafc);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, 1, 0.01, 50);
+  camera.up.set(0,0,1); // Z-up (robotics convention)
+  camera.position.set(1.4, -1.6, 1.1);
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0, 0, 0.35);
+  controls.minDistance = 0.5;
+  controls.maxDistance = 6;
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.75);
+  dl.position.set(2.5, -2, 3);
+  scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.25);
+  dl2.position.set(-2, 2.5, 1);
+  scene.add(dl2);
+
+  // Grid on XY plane (Z-up) — draw as custom line segments
+  const gs = 2.5, gd = 20;
+  const gVerts = [];
+  const gStep = gs/gd;
+  for(let i=-gd/2; i<=gd/2; i++){
+    const x = i*gStep;
+    gVerts.push(x, -gs/2, 0,  x, gs/2, 0);
+    gVerts.push(-gs/2, x, 0,  gs/2, x, 0);
+  }
+  const gGeo = new THREE.BufferGeometry();
+  gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gVerts, 3));
+  const gMat = new THREE.LineBasicMaterial({color: 0xdcdce2});
+  scene.add(new THREE.LineSegments(gGeo, gMat));
+  // main axes (a bit darker)
+  const axVerts = [
+    -gs/2,0,0,  gs/2,0,0,
+    0,-gs/2,0,  0,gs/2,0
+  ];
+  const axGeo = new THREE.BufferGeometry();
+  axGeo.setAttribute('position', new THREE.Float32BufferAttribute(axVerts,3));
+  scene.add(new THREE.LineSegments(axGeo, new THREE.LineBasicMaterial({color: 0xbfbfc7})));
+
+  // World frame (small)
+  const wf = makeFrame(0.18);
+  scene.add(wf);
+
+  // Base cylinder (dark grey pedestal)
+  baseCyl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.075, 0.085, 0.05, 32),
+    new THREE.MeshLambertMaterial({color: 0x3a3a3c})
+  );
+  // Three.js cylinder axis is Y; rotate so axis is Z-up
+  baseCyl.rotation.x = Math.PI/2;
+  baseCyl.position.set(0,0,0.025);
+  scene.add(baseCyl);
+
+  // Arm group — joints and links will be added/updated
+  armGroup = new THREE.Group();
+  scene.add(armGroup);
+
+  buildArmVisuals();
+
+  // EE frame + gripper
+  eeFrame = makeFrame(0.06);
+  scene.add(eeFrame);
+  eeGripperLines = makeGripper();
+  scene.add(eeGripperLines);
+
+  // Target (Apple Blue semi-transparent)
+  targetMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.035, 20, 20),
+    new THREE.MeshBasicMaterial({color: 0x0071e3, transparent:true, opacity:0.35, depthWrite:false})
+  );
+  targetMesh.position.copy(targetPos);
+  scene.add(targetMesh);
+  // ring outline for visibility
+  const ringGeo = new THREE.RingGeometry(0.042, 0.05, 24);
+  const ringMat = new THREE.MeshBasicMaterial({color:0x0071e3, side:THREE.DoubleSide, transparent:true, opacity:0.65});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2;
+  targetMesh.add(ring);
+  targetFrame = makeFrame(0.1);
+  scene.add(targetFrame);
+  targetFrame.visible = (mode==='ik');
+  targetMesh.visible  = (mode==='ik');
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  canvas.addEventListener('mousedown', onCanvasDown, true);
+  canvas.addEventListener('mousemove', onCanvasMove, true);
+  canvas.addEventListener('mouseup',   onCanvasUp,   true);
+
+  animate();
+  update(); // initial draw
+}
+
+function makeFrame(len){
+  const g = new THREE.Group();
+  const addAxis = (dir, color)=>{
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0,0,0),
+      new THREE.Vector3().copy(dir).multiplyScalar(len)
+    ]);
+    g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({color, linewidth:2})));
+  };
+  addAxis(new THREE.Vector3(1,0,0), 0xff3b30);
+  addAxis(new THREE.Vector3(0,1,0), 0x34c759);
+  addAxis(new THREE.Vector3(0,0,1), 0x0071e3);
+  return g;
+}
+function makeGripper(){
+  const g = new THREE.Group();
+  const mat = new THREE.LineBasicMaterial({color: 0xff9500});
+  const pts = [
+    new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0.04),
+    new THREE.Vector3(-0.025,0,0.04), new THREE.Vector3(0.025,0,0.04),
+    new THREE.Vector3(-0.025,0,0.04), new THREE.Vector3(-0.025,0,0.08),
+    new THREE.Vector3(0.025,0,0.04),  new THREE.Vector3(0.025,0,0.08)
+  ];
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  g.add(new THREE.LineSegments(geo, mat));
+  return g;
+}
+
+function buildArmVisuals(){
+  // Clear existing
+  while(armGroup.children.length) armGroup.remove(armGroup.children[0]);
+  jointSpheres = [];
+  linkMeshes = [];
+
+  const linkColors = [0x0071e3, 0x2c8fe8, 0x4ea2ec, 0x6fb5f0, 0x91c8f4, 0xb3dbf8];
+
+  // 6 joint spheres (after each joint). We also include a "pre-joint-1" base sphere.
+  const jMat = new THREE.MeshLambertMaterial({color: 0x1d1d1f});
+  for(let i=0;i<7;i++){
+    const radius = (i===0) ? 0.045 : 0.038;
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 20, 16),
+      new THREE.MeshLambertMaterial({color: i===0 ? 0x2c2c2e : 0xb3b3b6})
+    );
+    armGroup.add(s);
+    jointSpheres.push(s);
+  }
+
+  // 6 link cylinders (between consecutive frames)
+  for(let i=0;i<6;i++){
+    const c = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.028, 1, 18),
+      new THREE.MeshLambertMaterial({color: linkColors[i]})
+    );
+    armGroup.add(c);
+    linkMeshes.push(c);
+  }
+}
+
+/* =========================================================
+   Render update (called after every theta change / IK step)
+   ========================================================= */
+function placeCylinderBetween(mesh, p1, p2){
+  const mid = new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);
+  const dir = new THREE.Vector3().subVectors(p2,p1);
+  const len = dir.length();
+  mesh.position.copy(mid);
+  mesh.scale.set(1, Math.max(len, 1e-4), 1);
+  const up = new THREE.Vector3(0,1,0);
+  const q = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize());
+  mesh.setRotationFromQuaternion(q);
+  mesh.visible = len > 1e-4;
+}
+
+function update(){
+  const Ts = computeFK(theta);
+
+  // Joint world positions
+  const P = Ts.map(T => mat4getPos(T));
+
+  // Place joint spheres — Ts[0]=base, Ts[i] = after joint i
+  for(let i=0;i<7;i++) jointSpheres[i].position.copy(P[i]);
+  // Place link cylinders between P[i] and P[i+1]
+  for(let i=0;i<6;i++) placeCylinderBetween(linkMeshes[i], P[i], P[i+1]);
+
+  // EE frame/gripper — orient via 4x4
+  const Tee = Ts[6];
+  const m = new THREE.Matrix4();
+  m.set(
+    Tee[0], Tee[1], Tee[2], Tee[3],
+    Tee[4], Tee[5], Tee[6], Tee[7],
+    Tee[8], Tee[9], Tee[10], Tee[11],
+    Tee[12], Tee[13], Tee[14], Tee[15]
+  );
+  const quat = new THREE.Quaternion();
+  const pos  = new THREE.Vector3();
+  const scl  = new THREE.Vector3();
+  m.decompose(pos, quat, scl);
+  eeFrame.position.copy(pos);
+  eeFrame.quaternion.copy(quat);
+  eeGripperLines.position.copy(pos);
+  eeGripperLines.quaternion.copy(quat);
+
+  // Info panels
+  // Slider values
+  for(let i=0;i<6;i++){
+    const sl = document.querySelector(`.j-slider[data-idx="${i}"]`);
+    if(Math.abs(parseFloat(sl.value) - theta[i]) > 1e-4) sl.value = theta[i];
+    const vTxt = (theta[i]>=0? '+':'') + theta[i].toFixed(3);
+    document.getElementById('v'+i).textContent = vTxt;
+  }
+
+  // Pose text
+  const rpy = matToRPY(Tee);
+  document.getElementById('infoPose').textContent =
+    `x= ${fmt(pos.x,3)}  y= ${fmt(pos.y,3)}  z= ${fmt(pos.z,3)}\n`+
+    `roll = ${fmt(rpy[0]*180/Math.PI,2)}°\n`+
+    `pitch= ${fmt(rpy[1]*180/Math.PI,2)}°\n`+
+    `yaw  = ${fmt(rpy[2]*180/Math.PI,2)}°`;
+
+  // Joint text
+  const thStr = theta.map(v => fmt(v,3)).join(', ');
+  document.getElementById('infoJ').textContent = `θ = [ ${thStr} ]`;
+
+  // Jacobian stats
+  const J = computeJacobian(Ts);
+  const cn = condApprox(J);
+  const err = (mode==='ik') ? Math.hypot(
+    targetPos.x - pos.x, targetPos.y - pos.y, targetPos.z - pos.z
+  ) : 0;
+  const tol = parseFloat(document.getElementById('tolSlider').value);
+  const iterMax = parseInt(document.getElementById('iterSlider').value);
+  const conv = (err < tol);
+  const cnTxt = isFinite(cn) ? cn.toFixed(2) : '∞';
+  const badge = (mode!=='ik') ? '<span class="badge">FK mode</span>'
+    : (conv ? '<span class="badge ok">converged</span>' : '<span class="badge warn">tracking…</span>');
+  document.getElementById('infoStats').innerHTML =
+    `cond(J) = ${cnTxt.padStart(7)}\n`+
+    `||error|| = ${err.toFixed(4)} m\n`+
+    `iter last = ${lastIterUsed} / ${iterMax}\n`+
+    badge;
+}
+let lastIterUsed = 0;
+
+function fmt(v, d){
+  const s = (v>=0 ? ' ' : '') + v.toFixed(d);
+  return s;
+}
+
+/* =========================================================
+   Rotation matrix → RPY (ZYX convention, standard robotics)
+   R = Rz(yaw) Ry(pitch) Rx(roll)
+   ========================================================= */
+function matToRPY(T){
+  const r11=T[0], r21=T[4], r31=T[8];
+  const r32=T[9], r33=T[10];
+  const pitch = Math.atan2(-r31, Math.sqrt(r11*r11 + r21*r21));
+  let roll, yaw;
+  if(Math.abs(Math.cos(pitch)) < 1e-6){
+    roll = 0;
+    yaw  = Math.atan2(-T[1], T[5]);
+  } else {
+    roll = Math.atan2(r32, r33);
+    yaw  = Math.atan2(r21, r11);
+  }
+  return [roll, pitch, yaw];
+}
+
+/* =========================================================
+   Mode toggle + sliders + buttons
+   ========================================================= */
+document.querySelectorAll('.seg-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mode = b.dataset.mode;
+    targetMesh.visible = (mode==='ik');
+    targetFrame.visible = (mode==='ik');
+    // Update target to current EE when entering IK
+    if(mode==='ik'){
+      const Ts = computeFK(theta);
+      const pe = mat4getPos(Ts[6]);
+      targetPos.copy(pe);
+      targetMesh.position.copy(targetPos);
+      targetFrame.position.copy(targetPos);
+    }
+    update();
+  });
+});
+
+document.querySelectorAll('.j-slider').forEach(sl=>{
+  sl.addEventListener('input', ()=>{
+    if(mode!=='fk') return;
+    const i = parseInt(sl.dataset.idx);
+    theta[i] = parseFloat(sl.value);
+    lastIterUsed = 0;
+    update();
+  });
+});
+
+document.getElementById('lamSlider').addEventListener('input', e=>{
+  document.getElementById('lamVal').textContent = parseFloat(e.target.value).toFixed(2);
+});
+document.getElementById('iterSlider').addEventListener('input', e=>{
+  document.getElementById('iterVal').textContent = e.target.value;
+  update();
+});
+document.getElementById('tolSlider').addEventListener('input', e=>{
+  document.getElementById('tolVal').textContent = parseFloat(e.target.value).toFixed(3);
+  update();
+});
+
+document.getElementById('btnHome').addEventListener('click', ()=>{
+  theta = thetaHome.slice();
+  if(mode==='ik'){
+    const Ts = computeFK(theta);
+    targetPos.copy(mat4getPos(Ts[6]));
+    targetMesh.position.copy(targetPos);
+  }
+  lastIterUsed = 0;
+  update();
+});
+document.getElementById('btnPickup').addEventListener('click', ()=>{
+  theta = thetaPickup.slice();
+  if(mode==='ik'){
+    const Ts = computeFK(theta);
+    targetPos.copy(mat4getPos(Ts[6]));
+    targetMesh.position.copy(targetPos);
+  }
+  lastIterUsed = 0;
+  update();
+});
+document.getElementById('btnRandom').addEventListener('click', ()=>{
+  // random joint angles — stay away from limits
+  for(let i=0;i<6;i++) theta[i] = (Math.random()*2-1) * 2.6;
+  // shoulder lift biased to keep arm above table
+  theta[1] = -0.5 + (Math.random()*2-1)*1.2;
+  if(mode==='ik'){
+    const Ts = computeFK(theta);
+    targetPos.copy(mat4getPos(Ts[6]));
+    targetMesh.position.copy(targetPos);
+  }
+  lastIterUsed = 0;
+  update();
+});
+document.getElementById('btnRandTgt').addEventListener('click', ()=>{
+  // Reachable-ish random target (UR5 reach ≈ 0.85 m)
+  const r = 0.35 + Math.random()*0.35;
+  const az = Math.random()*2*Math.PI;
+  const el = 0.1 + Math.random()*0.9;
+  targetPos.set(r*Math.cos(az), r*Math.sin(az), el);
+  targetMesh.position.copy(targetPos);
+  targetFrame.position.copy(targetPos);
+  if(mode!=='ik'){
+    // flip to IK automatically
+    document.querySelector('.seg-btn[data-mode="ik"]').click();
+  }
+  runIKBatch();
+});
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  theta = thetaHome.slice();
+  targetPos.set(0.3, 0.3, 0.4);
+  targetMesh.position.copy(targetPos);
+  targetFrame.position.copy(targetPos);
+  lastIterUsed = 0;
+  update();
+});
+
+function runIKBatch(){
+  const lam = parseFloat(document.getElementById('lamSlider').value);
+  const iterMax = parseInt(document.getElementById('iterSlider').value);
+  const tol = parseFloat(document.getElementById('tolSlider').value);
+  const r = ikSolve(theta, targetPos, lam, iterMax, tol);
+  theta = r.th;
+  lastIterUsed = r.iter;
+  update();
+}
+
+/* =========================================================
+   Target dragging in IK mode — raycast onto a plane that
+   contains the current target and faces the camera.
+   ========================================================= */
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function setNDCFromMouse(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.x =  ((e.clientX - rect.left) / rect.width ) * 2 - 1;
+  ndc.y = -((e.clientY - rect.top ) / rect.height) * 2 + 1;
+}
+function onCanvasDown(e){
+  if(mode!=='ik') return;
+  setNDCFromMouse(e);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObject(targetMesh, true);
+  if(hits.length){
+    draggingTarget = true;
+    controls.enabled = false;
+    renderer.domElement.classList.add('drag');
+    // build plane: passes through targetPos, normal = camera forward
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    dragPlane.setFromNormalAndCoplanarPoint(camDir, targetPos.clone());
+    e.stopPropagation();
+  }
+}
+function onCanvasMove(e){
+  if(mode!=='ik') return;
+  if(!draggingTarget){
+    // hover check for cursor feedback
+    setNDCFromMouse(e);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(targetMesh, true);
+    renderer.domElement.classList.toggle('target-hover', hits.length>0);
+    return;
+  }
+  setNDCFromMouse(e);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = new THREE.Vector3();
+  if(raycaster.ray.intersectPlane(dragPlane, hit)){
+    targetPos.copy(hit);
+    targetMesh.position.copy(targetPos);
+    targetFrame.position.copy(targetPos);
+    // Continuous IK while dragging
+    runIKBatch();
+  }
+}
+function onCanvasUp(e){
+  if(draggingTarget){
+    draggingTarget = false;
+    controls.enabled = true;
+    renderer.domElement.classList.remove('drag');
+    e.stopPropagation();
+  }
+}
+
+/* =========================================================
+   Render loop + resize
+   ========================================================= */
+function resize(){
+  const canvas = document.getElementById('canvas3d');
+  const w = window.innerWidth - 380;
+  const h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+initScene();
+</script>
+</body>
+</html>

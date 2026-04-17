@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>Diffusion Policy — 노이즈에서 궤적 생성</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px; min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout { display: grid; grid-template-columns: auto auto 280px; gap: 16px; max-width: 1280px; margin: 0 auto; justify-content: center; }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+.canvas-col { display: flex; flex-direction: column; gap: 14px; }
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.canvas-wrap .label {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); }
+
+.panel {
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+.slider-group label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px; }
+.slider-group label span { color: var(--rp-accent); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.toggle-row { display: flex; gap: 6px; }
+.toggle-row button {
+  flex: 1; padding: 6px 8px; font-size: 12px;
+  background: #fff; color: var(--rp-text); border: 1px solid var(--rp-border);
+}
+.toggle-row button.active { background: var(--rp-accent); color: #fff; border-color: transparent; }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 12px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 10px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child { color: var(--rp-text-heading); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--rp-font-mono); font-size: 12px; }
+
+.legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--rp-text-body); padding: 0 4px; }
+.legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.55; }
+</style>
+</head>
+<body>
+<h1>Diffusion Policy — 노이즈에서 궤적 생성</h1>
+<p class="subtitle">순전파 noising / 역전파 denoising으로 multimodal trajectory 샘플링</p>
+
+<div class="layout">
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">2D 작업공간 — 궤적 denoising</div>
+      <canvas id="main" width="600" height="500"></canvas>
+    </div>
+    <div class="legend">
+      <div><span class="dot" style="background:#34c759"></span>Start</div>
+      <div><span class="dot" style="background:#ff9500"></span>Goal</div>
+      <div><span class="sw" style="background:rgba(0,0,0,0.22)"></span>Training set (3 모드)</div>
+      <div><span class="sw" style="background:#0071e3"></span>Diffusion 샘플 (K)</div>
+      <div><span class="sw" style="background:#1d1d1f"></span>장애물</div>
+    </div>
+  </div>
+
+  <div class="canvas-col">
+    <div class="canvas-wrap">
+      <div class="label">Noise schedule — α<sub>t</sub> · β<sub>t</sub></div>
+      <canvas id="schedule" width="300" height="160"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="label">Diversity — 샘플 간 평균 거리</div>
+      <canvas id="diversity" width="300" height="160"></canvas>
+    </div>
+    <div class="canvas-wrap" style="padding: 10px 12px;">
+      <div class="label">현재 상태</div>
+      <div class="stats" style="border-top: none; padding-top: 4px;">
+        <div class="row"><span>step t</span><span id="statStep">—</span></div>
+        <div class="row"><span>α<sub>t</sub></span><span id="statAlpha">—</span></div>
+        <div class="row"><span>1−α<sub>t</sub></span><span id="statBeta">—</span></div>
+        <div class="row"><span>diversity</span><span id="statDiv">—</span></div>
+        <div class="row"><span>% goal-reach</span><span id="statGoal">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Diffusion</h3>
+    <div class="slider-group">
+      <label>T (total steps) <span id="TVal">80</span></label>
+      <input type="range" id="T" min="20" max="200" step="5" value="80">
+    </div>
+    <div class="slider-group">
+      <label>K (samples) <span id="KVal">8</span></label>
+      <input type="range" id="K" min="1" max="32" step="1" value="8">
+    </div>
+    <div class="slider-group">
+      <label>η (pull strength) <span id="etaVal">0.75</span></label>
+      <input type="range" id="eta" min="0.1" max="1.5" step="0.05" value="0.75">
+    </div>
+    <div class="slider-group">
+      <label>σ<sub>init</sub> (noise scale) <span id="sigVal">0.35</span></label>
+      <input type="range" id="sig" min="0.05" max="0.8" step="0.01" value="0.35">
+    </div>
+
+    <h3>Schedule</h3>
+    <div class="toggle-row">
+      <button class="active" data-sched="cosine">cosine</button>
+      <button data-sched="linear">linear</button>
+    </div>
+
+    <h3>제어</h3>
+    <div class="btn-row">
+      <button id="sampleBtn">▶ Sample</button>
+      <button id="stepBtn" class="secondary">Step</button>
+    </div>
+    <div class="btn-row">
+      <button id="resetBtn" class="secondary">Reset</button>
+      <button id="newModesBtn" class="secondary">New modes</button>
+    </div>
+
+    <p class="hint">x<sub>t-1</sub> = x<sub>t</sub> + η·(nearest_mode − x<sub>t</sub>) + σ<sub>t</sub>·ε<br>여러 K 샘플이 각자 다른 모드로 수렴 → multimodal.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Canvases ──
+  const mainC  = document.getElementById('main');
+  const schedC = document.getElementById('schedule');
+  const divC   = document.getElementById('diversity');
+  const cm = mainC.getContext('2d');
+  const cs = schedC.getContext('2d');
+  const cd = divC.getContext('2d');
+  const W = mainC.width, H = mainC.height;
+
+  // ── World ──
+  const WAYPOINTS = 30;
+  let start = { x: 70,  y: 250 };
+  let goal  = { x: 530, y: 250 };
+  let obstacles = [];
+  let modes = [];          // training trajectories: [N_modes][WAYPOINTS] of {x,y}
+  let samples = [];        // K diffusion samples: [K][WAYPOINTS] of {x,y}
+  let T = 80;              // current total steps
+  let tStep = T;           // current diffusion step (T→0)
+  let schedule = 'cosine';
+  let playing = false;
+  let diversityHist = [];  // per-step diversity values (stored left→right of plot)
+
+  // ── Obstacle sets ──
+  const OBSTACLE_SETS = [
+    // 가운데 장애물 한 개 — 위/아래 우회 + 직진(못 감) = 2-모드
+    [{ x: 280, y: 210, w: 40, h: 80 }],
+    // 위/아래 두 개 — 가운데 직진 + 위쪽 큰 우회 + 아래쪽 큰 우회 = 3-모드
+    [{ x: 260, y: 100, w: 80, h: 40 }, { x: 260, y: 360, w: 80, h: 40 }],
+    // 중앙에 두 벽 — 상/하 우회 강조
+    [{ x: 220, y: 180, w: 30, h: 140 }, { x: 360, y: 180, w: 30, h: 140 }],
+    // 대각 장애물
+    [{ x: 250, y: 140, w: 40, h: 60 }, { x: 310, y: 300, w: 50, h: 60 }]
+  ];
+  let obstacleIdx = 1;
+
+  // ── Noise schedule ──
+  function alphaBar(t, Tn) {
+    // t: 0 (fully clean) → Tn (fully noisy); return ᾱ_t (signal variance)
+    const u = t / Tn;
+    if (schedule === 'cosine') {
+      const s = 0.008;
+      const f = (x) => Math.cos(((x + s) / (1 + s)) * Math.PI / 2) ** 2;
+      return Math.max(1e-4, Math.min(0.9999, f(u) / f(0)));
+    }
+    // linear β schedule → cumulative
+    const b0 = 1e-4, bT = 0.02;
+    // ᾱ_t = prod (1 - β_i) approx via continuous: exp(-∫β)
+    // linear β(u) = b0 + (bT-b0)*u  → integral = b0*u + (bT-b0)*u^2/2 (scaled by Tn)
+    const integ = (b0 * u + (bT - b0) * u * u / 2) * Tn;
+    return Math.max(1e-4, Math.min(0.9999, Math.exp(-integ)));
+  }
+
+  // ── Training modes ──
+  function inObstacle(x, y) {
+    for (const o of obstacles) {
+      if (x >= o.x - 6 && x <= o.x + o.w + 6 && y >= o.y - 6 && y <= o.y + o.h + 6) return true;
+    }
+    return false;
+  }
+
+  function generateModes() {
+    modes = [];
+    const N = WAYPOINTS;
+    // candidate bump offsets (perpendicular "detour" amplitudes in px)
+    const candidates = [ -140, -80, 0, 80, 140 ];
+    for (const amp of candidates) {
+      const traj = [];
+      let ok = true;
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1);
+        const x = start.x + (goal.x - start.x) * u;
+        // bump shape: sin(pi*u)
+        const bump = amp * Math.sin(Math.PI * u);
+        const y = start.y + (goal.y - start.y) * u + bump;
+        if (inObstacle(x, y)) { ok = false; break; }
+        traj.push({ x, y });
+      }
+      if (ok) modes.push(traj);
+      if (modes.length >= 3) break;
+    }
+    // fallback straight line if nothing fit (rare)
+    if (modes.length === 0) {
+      const traj = [];
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1);
+        traj.push({ x: start.x + (goal.x - start.x) * u, y: start.y + (goal.y - start.y) * u });
+      }
+      modes.push(traj);
+    }
+  }
+
+  // ── Diffusion init ──
+  function initSamples() {
+    const K = parseInt(document.getElementById('K').value, 10);
+    const sig = parseFloat(document.getElementById('sig').value);
+    samples = [];
+    // x_T ~ sqrt(ᾱ_T)·x_0_mean + sqrt(1-ᾱ_T)·ε  but we just use pure gaussian around midpoint
+    const mid = { x: (start.x + goal.x) / 2, y: (start.y + goal.y) / 2 };
+    const scale = sig * Math.max(W, H);
+    for (let k = 0; k < K; k++) {
+      const traj = [];
+      for (let i = 0; i < WAYPOINTS; i++) {
+        traj.push({ x: mid.x + randn() * scale, y: mid.y + randn() * scale });
+      }
+      samples.push(traj);
+    }
+    tStep = T;
+    diversityHist = [];
+  }
+
+  function randn() {
+    const u1 = Math.max(1e-12, Math.random()), u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  // ── Denoise step ──
+  function trajDist(a, b) {
+    let s = 0;
+    for (let i = 0; i < WAYPOINTS; i++) {
+      const dx = a[i].x - b[i].x, dy = a[i].y - b[i].y;
+      s += dx * dx + dy * dy;
+    }
+    return s;
+  }
+
+  function nearestMode(traj) {
+    let best = 0, bestD = Infinity;
+    for (let m = 0; m < modes.length; m++) {
+      const d = trajDist(traj, modes[m]);
+      if (d < bestD) { bestD = d; best = m; }
+    }
+    return modes[best];
+  }
+
+  function denoiseStep() {
+    if (tStep <= 0) return;
+    const eta = parseFloat(document.getElementById('eta').value);
+    const sig = parseFloat(document.getElementById('sig').value);
+    const Tn = T;
+
+    const aCur  = alphaBar(tStep, Tn);
+    const aPrev = alphaBar(tStep - 1, Tn);
+    // noise injection scale (DDPM-ish): sqrt(1 - a_prev/a_cur) in normalized "noise" units
+    const ratio = Math.min(1, Math.max(0, 1 - aPrev / Math.max(1e-4, aCur)));
+    const noiseScale = Math.sqrt(ratio) * sig * 90;   // px; shrinks as t→0
+    const pull = eta * Math.pow(1 - aCur, 0.6);        // strong pull at high-noise, gentle at low-noise
+
+    for (let k = 0; k < samples.length; k++) {
+      const traj = samples[k];
+      const nm = nearestMode(traj);
+      // Endpoint anchoring strengthens near the end of denoising
+      const endPull = 0.35 + 0.5 * (1 - aCur);
+      for (let i = 0; i < WAYPOINTS; i++) {
+        let tx = nm[i].x, ty = nm[i].y;
+        if (i === 0)              { tx = start.x; ty = start.y; }
+        else if (i === WAYPOINTS - 1) { tx = goal.x;  ty = goal.y; }
+        const p = (i === 0 || i === WAYPOINTS - 1) ? endPull : pull;
+        traj[i].x += p * (tx - traj[i].x) + noiseScale * randn() * (tStep > 1 ? 1 : 0);
+        traj[i].y += p * (ty - traj[i].y) + noiseScale * randn() * (tStep > 1 ? 1 : 0);
+        // light collision nudge — push waypoint away from obstacle centers
+        for (const o of obstacles) {
+          const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+          const ddx = traj[i].x - cx, ddy = traj[i].y - cy;
+          const inside = traj[i].x >= o.x && traj[i].x <= o.x + o.w && traj[i].y >= o.y && traj[i].y <= o.y + o.h;
+          if (inside) {
+            const m = Math.hypot(ddx, ddy) + 1e-6;
+            traj[i].x += (ddx / m) * 4;
+            traj[i].y += (ddy / m) * 4;
+          }
+        }
+      }
+    }
+    tStep--;
+    diversityHist.push(currentDiversity());
+    if (diversityHist.length > 500) diversityHist.shift();
+  }
+
+  function currentDiversity() {
+    if (samples.length < 2) return 0;
+    // average pairwise mean-waypoint distance
+    let sum = 0, cnt = 0;
+    for (let i = 0; i < samples.length; i++) {
+      for (let j = i + 1; j < samples.length; j++) {
+        let s = 0;
+        for (let w = 0; w < WAYPOINTS; w++) {
+          s += Math.hypot(samples[i][w].x - samples[j][w].x, samples[i][w].y - samples[j][w].y);
+        }
+        sum += s / WAYPOINTS;
+        cnt++;
+      }
+    }
+    return cnt ? sum / cnt : 0;
+  }
+
+  function goalReachRatio() {
+    if (!samples.length) return 0;
+    let ok = 0;
+    for (const tr of samples) {
+      const last = tr[WAYPOINTS - 1];
+      if (Math.hypot(last.x - goal.x, last.y - goal.y) < 18) ok++;
+    }
+    return ok / samples.length;
+  }
+
+  // ── Drawing — main canvas ──
+  function drawMain() {
+    cm.clearRect(0, 0, W, H);
+
+    // grid
+    cm.strokeStyle = 'rgba(0,0,0,0.04)'; cm.lineWidth = 1;
+    for (let x = 0; x < W; x += 30) { cm.beginPath(); cm.moveTo(x, 0); cm.lineTo(x, H); cm.stroke(); }
+    for (let y = 0; y < H; y += 30) { cm.beginPath(); cm.moveTo(0, y); cm.lineTo(W, y); cm.stroke(); }
+
+    // obstacles
+    cm.fillStyle = '#1d1d1f';
+    for (const o of obstacles) cm.fillRect(o.x, o.y, o.w, o.h);
+
+    // training modes — faint grey lines
+    cm.strokeStyle = 'rgba(0,0,0,0.14)'; cm.lineWidth = 1.5;
+    for (const tr of modes) {
+      cm.beginPath();
+      cm.moveTo(tr[0].x, tr[0].y);
+      for (let i = 1; i < tr.length; i++) cm.lineTo(tr[i].x, tr[i].y);
+      cm.stroke();
+    }
+
+    // diffusion samples — apple blue with alpha
+    // alpha increases as denoising progresses (t → 0)
+    const progress = 1 - tStep / T;   // 0 → 1
+    const alphaLine = 0.22 + 0.45 * progress;
+    cm.strokeStyle = `rgba(0, 113, 227, ${alphaLine.toFixed(3)})`;
+    cm.lineWidth = 1.6; cm.lineCap = 'round'; cm.lineJoin = 'round';
+    for (const tr of samples) {
+      cm.beginPath();
+      cm.moveTo(tr[0].x, tr[0].y);
+      for (let i = 1; i < tr.length; i++) cm.lineTo(tr[i].x, tr[i].y);
+      cm.stroke();
+    }
+    // dots per waypoint
+    cm.fillStyle = `rgba(0, 113, 227, ${(alphaLine * 0.8).toFixed(3)})`;
+    for (const tr of samples) {
+      for (let i = 0; i < tr.length; i++) {
+        cm.beginPath(); cm.arc(tr[i].x, tr[i].y, 1.6, 0, Math.PI * 2); cm.fill();
+      }
+    }
+
+    // start / goal
+    drawPoint(start.x, start.y, '#34c759', 'Start');
+    drawPoint(goal.x,  goal.y,  '#ff9500', 'Goal');
+
+    // step text
+    cm.fillStyle = '#1d1d1f';
+    cm.font = '600 13px ' + getComputedStyle(document.body).fontFamily;
+    cm.textAlign = 'left';
+    cm.fillText(`t = ${tStep} / ${T}`, 12, 22);
+    cm.fillStyle = 'rgba(0,0,0,0.56)';
+    cm.font = '500 11px ' + getComputedStyle(document.body).fontFamily;
+    cm.fillText(schedule + ' schedule · modes: ' + modes.length, 12, 38);
+  }
+
+  function drawPoint(x, y, color, label) {
+    cm.fillStyle = color;
+    cm.beginPath(); cm.arc(x, y, 9, 0, Math.PI * 2); cm.fill();
+    cm.strokeStyle = '#fff'; cm.lineWidth = 2; cm.stroke();
+    cm.fillStyle = '#1d1d1f';
+    cm.font = '600 11px ' + getComputedStyle(document.body).fontFamily;
+    cm.textAlign = 'center';
+    cm.fillText(label, x, y - 14);
+  }
+
+  // ── Drawing — schedule ──
+  function drawSchedule() {
+    const w = schedC.width, h = schedC.height;
+    cs.clearRect(0, 0, w, h);
+    const padL = 34, padR = 10, padT = 12, padB = 22;
+    const pw = w - padL - padR, ph = h - padT - padB;
+
+    // frame + ticks
+    cs.strokeStyle = 'rgba(0,0,0,0.08)';
+    cs.strokeRect(padL, padT, pw, ph);
+    cs.fillStyle = 'rgba(0,0,0,0.48)';
+    cs.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    cs.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + ph * i / 4;
+      cs.strokeStyle = 'rgba(0,0,0,0.05)';
+      cs.beginPath(); cs.moveTo(padL, y); cs.lineTo(w - padR, y); cs.stroke();
+      const v = 1 - i / 4;
+      cs.fillText(v.toFixed(1), padL - 4, y + 3);
+    }
+
+    // α_t curve (blue) — signal
+    cs.strokeStyle = '#0071e3'; cs.lineWidth = 2;
+    cs.beginPath();
+    for (let i = 0; i <= pw; i++) {
+      const u = i / pw;          // 0 → 1 (t=0 → t=T)
+      const tReal = u * T;
+      const a = alphaBar(tReal, T);
+      const y = padT + ph * (1 - a);
+      if (i === 0) cs.moveTo(padL + i, y); else cs.lineTo(padL + i, y);
+    }
+    cs.stroke();
+
+    // 1 - α_t curve (red) — noise
+    cs.strokeStyle = '#ff3b30'; cs.lineWidth = 2;
+    cs.beginPath();
+    for (let i = 0; i <= pw; i++) {
+      const u = i / pw;
+      const a = alphaBar(u * T, T);
+      const y = padT + ph * a;   // 1-a plotted
+      if (i === 0) cs.moveTo(padL + i, y); else cs.lineTo(padL + i, y);
+    }
+    cs.stroke();
+
+    // current step marker
+    const cu = tStep / T;
+    const cx = padL + cu * pw;
+    cs.strokeStyle = 'rgba(0,0,0,0.35)'; cs.setLineDash([3, 3]); cs.lineWidth = 1;
+    cs.beginPath(); cs.moveTo(cx, padT); cs.lineTo(cx, padT + ph); cs.stroke();
+    cs.setLineDash([]);
+
+    // labels
+    cs.textAlign = 'left'; cs.fillStyle = '#0071e3';
+    cs.fillText('α̅ₜ', padL + 6, padT + 12);
+    cs.fillStyle = '#ff3b30';
+    cs.fillText('1−α̅ₜ', padL + 6, padT + 26);
+    cs.fillStyle = 'rgba(0,0,0,0.48)'; cs.textAlign = 'center';
+    cs.fillText('t = 0 (clean)', padL + 4, h - 6);
+    cs.textAlign = 'right';
+    cs.fillText('t = T (noise)', w - padR - 2, h - 6);
+  }
+
+  // ── Drawing — diversity ──
+  function drawDiversity() {
+    const w = divC.width, h = divC.height;
+    cd.clearRect(0, 0, w, h);
+    const padL = 34, padR = 10, padT = 12, padB = 22;
+    const pw = w - padL - padR, ph = h - padT - padB;
+
+    cd.strokeStyle = 'rgba(0,0,0,0.08)';
+    cd.strokeRect(padL, padT, pw, ph);
+
+    if (diversityHist.length < 2) {
+      cd.fillStyle = 'rgba(0,0,0,0.4)';
+      cd.font = '11px ' + getComputedStyle(document.body).fontFamily;
+      cd.textAlign = 'center';
+      cd.fillText('Sample을 실행하세요', w / 2, h / 2);
+      return;
+    }
+
+    const maxV = Math.max(...diversityHist, 10);
+    cd.fillStyle = 'rgba(0,0,0,0.48)';
+    cd.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    cd.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + ph * i / 4;
+      cd.strokeStyle = 'rgba(0,0,0,0.05)';
+      cd.beginPath(); cd.moveTo(padL, y); cd.lineTo(w - padR, y); cd.stroke();
+      cd.fillText((maxV * (1 - i / 4)).toFixed(0), padL - 4, y + 3);
+    }
+
+    cd.strokeStyle = '#af52de'; cd.lineWidth = 2; cd.lineCap = 'round';
+    cd.beginPath();
+    const n = diversityHist.length;
+    for (let i = 0; i < n; i++) {
+      const x = padL + (i / Math.max(1, n - 1)) * pw;
+      const y = padT + ph * (1 - diversityHist[i] / maxV);
+      if (i === 0) cd.moveTo(x, y); else cd.lineTo(x, y);
+    }
+    cd.stroke();
+
+    cd.fillStyle = 'rgba(0,0,0,0.48)'; cd.textAlign = 'center';
+    cd.fillText('denoising step →', w / 2, h - 6);
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    const a = alphaBar(tStep, T);
+    document.getElementById('statStep').textContent  = tStep + ' / ' + T;
+    document.getElementById('statAlpha').textContent = a.toFixed(3);
+    document.getElementById('statBeta').textContent  = (1 - a).toFixed(3);
+    document.getElementById('statDiv').textContent   = currentDiversity().toFixed(1) + ' px';
+    document.getElementById('statGoal').textContent  = (goalReachRatio() * 100).toFixed(0) + ' %';
+  }
+
+  function redrawAll() {
+    drawMain(); drawSchedule(); drawDiversity(); updateStats();
+  }
+
+  // ── Loop ──
+  let accum = 0;
+  function loop() {
+    if (playing) {
+      // pace: ~1 step per frame, slowdown for very large T optional
+      const perFrame = T > 120 ? 2 : 1;
+      for (let i = 0; i < perFrame; i++) {
+        if (tStep > 0) denoiseStep(); else { playing = false; document.getElementById('sampleBtn').textContent = '▶ Sample'; break; }
+      }
+      redrawAll();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ── Obstacles / modes reset ──
+  function resetWorld(regen) {
+    obstacles = OBSTACLE_SETS[obstacleIdx].map(o => ({ ...o }));
+    if (regen) generateModes();
+    T = parseInt(document.getElementById('T').value, 10);
+    initSamples();
+    redrawAll();
+  }
+
+  // ── UI wiring ──
+  function fmt(id, v, d) { document.getElementById(id + 'Val').textContent = d === undefined ? v : parseFloat(v).toFixed(d); }
+
+  document.getElementById('T').oninput = (e) => {
+    fmt('T', e.target.value);
+    T = parseInt(e.target.value, 10);
+    initSamples(); redrawAll();
+  };
+  document.getElementById('K').oninput = (e) => {
+    fmt('K', e.target.value);
+    initSamples(); redrawAll();
+  };
+  document.getElementById('eta').oninput = (e) => fmt('eta', e.target.value, 2);
+  document.getElementById('sig').oninput = (e) => {
+    fmt('sig', e.target.value, 2);
+    initSamples(); redrawAll();
+  };
+
+  document.querySelectorAll('[data-sched]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('[data-sched]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      schedule = b.dataset.sched;
+      redrawAll();
+    });
+  });
+
+  document.getElementById('sampleBtn').onclick = () => {
+    if (tStep <= 0) initSamples();
+    playing = !playing;
+    document.getElementById('sampleBtn').textContent = playing ? '⏸ Pause' : '▶ Sample';
+  };
+  document.getElementById('stepBtn').onclick = () => {
+    if (tStep <= 0) initSamples();
+    denoiseStep(); redrawAll();
+  };
+  document.getElementById('resetBtn').onclick = () => {
+    playing = false;
+    document.getElementById('sampleBtn').textContent = '▶ Sample';
+    initSamples(); redrawAll();
+  };
+  document.getElementById('newModesBtn').onclick = () => {
+    playing = false;
+    document.getElementById('sampleBtn').textContent = '▶ Sample';
+    obstacleIdx = (obstacleIdx + 1) % OBSTACLE_SETS.length;
+    resetWorld(true);
+  };
+
+  // ── Init ──
+  resetWorld(true);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

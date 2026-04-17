@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>6DoF 쿼드로터 3D 비행</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  overflow: hidden;
+}
+
+#container { display: grid; grid-template-columns: 1fr 320px; height: 100vh; width: 100vw; }
+@media (max-width: 1000px) { #container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } }
+
+#scene-wrap { position: relative; background: var(--rp-bg-elev); }
+#canvas3d { width: 100%; height: 100%; display: block; }
+
+#title-overlay {
+  position: absolute; top: 16px; left: 20px; right: 20px;
+  pointer-events: none;
+}
+#title-overlay h1 {
+  font-family: var(--rp-font-display);
+  font-size: 22px; font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--rp-text-heading);
+}
+#title-overlay .subtitle {
+  font-size: 13px; color: var(--rp-text-muted);
+  margin-top: 2px;
+}
+
+#hint {
+  position: absolute; bottom: 14px; left: 20px;
+  font-size: 11.5px; color: var(--rp-text-muted);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-sm);
+  padding: 6px 10px;
+  backdrop-filter: blur(6px);
+}
+
+#legend {
+  position: absolute; bottom: 14px; right: 14px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-sm);
+  padding: 8px 10px;
+  font-size: 11.5px; color: var(--rp-text-body);
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; gap: 3px;
+}
+#legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+#sidebar {
+  background: var(--rp-bg-panel);
+  border-left: 1px solid var(--rp-border);
+  padding: 18px 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+#sidebar h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+
+.slider-group { display: flex; flex-direction: column; gap: 4px; }
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--rp-text-body);
+}
+.slider-group label span:last-child {
+  color: var(--rp-accent); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-row button {
+  flex: 1;
+  background: var(--rp-accent); color: #fff;
+  border: 1px solid transparent;
+  padding: 8px 10px; border-radius: var(--rp-radius-md);
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  letter-spacing: -0.012em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-row button:hover { background: #0077ed; }
+.btn-row button.secondary {
+  background: #fff; color: var(--rp-text);
+  border-color: var(--rp-border);
+}
+.btn-row button.secondary:hover { background: var(--rp-bg-alt); border-color: var(--rp-border-mid); }
+
+.stats {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12.5px;
+  padding-top: 6px;
+}
+.stats .row { display: flex; justify-content: space-between; color: var(--rp-text-body); }
+.stats .row span:last-child {
+  color: var(--rp-text-heading); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+
+.hint-box {
+  font-size: 11.5px;
+  color: var(--rp-text-muted);
+  line-height: 1.5;
+  background: var(--rp-accent-soft);
+  border-radius: var(--rp-radius-sm);
+  padding: 8px 10px;
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <div id="scene-wrap">
+    <canvas id="canvas3d"></canvas>
+    <div id="title-overlay">
+      <h1>6DoF 쿼드로터 3D 비행</h1>
+      <p class="subtitle">완전한 6자유도 동역학 + cascade PID로 웨이포인트 추적</p>
+    </div>
+    <div id="legend">
+      <div><span class="sw" style="background:#0071e3"></span>실제 궤적</div>
+      <div><span class="sw" style="background:#34c759"></span>참조 궤적 (desired)</div>
+      <div><span class="sw" style="background:#ff9500"></span>웨이포인트</div>
+    </div>
+    <div id="hint">마우스 드래그: 회전 · 휠: 줌 · 우클릭 드래그: 이동</div>
+  </div>
+
+  <div id="sidebar">
+    <h3>위치 제어 (outer loop)</h3>
+    <div class="slider-group">
+      <label>Kp<sub>pos</sub> <span id="kpPosVal">4.0</span></label>
+      <input type="range" id="kpPos" min="0.5" max="10" step="0.1" value="4.0">
+    </div>
+    <div class="slider-group">
+      <label>Kd<sub>pos</sub> <span id="kdPosVal">3.5</span></label>
+      <input type="range" id="kdPos" min="0.5" max="8" step="0.1" value="3.5">
+    </div>
+    <div class="slider-group">
+      <label>최대 속도 (m/s) <span id="vMaxVal">4.0</span></label>
+      <input type="range" id="vMax" min="1" max="10" step="0.5" value="4.0">
+    </div>
+
+    <h3>자세 제어 (inner loop)</h3>
+    <div class="slider-group">
+      <label>Kp<sub>att</sub> <span id="kpAttVal">80</span></label>
+      <input type="range" id="kpAtt" min="10" max="200" step="5" value="80">
+    </div>
+    <div class="slider-group">
+      <label>Kd<sub>att</sub> <span id="kdAttVal">12</span></label>
+      <input type="range" id="kdAtt" min="1" max="40" step="1" value="12">
+    </div>
+
+    <h3>조작</h3>
+    <div class="btn-row">
+      <button id="btnPause">일시정지</button>
+      <button id="btnReset" class="secondary">리셋</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnSquare" class="secondary">사각 경로</button>
+      <button id="btnCircle" class="secondary">원 경로</button>
+      <button id="btnRandom" class="secondary">랜덤 5개</button>
+    </div>
+
+    <h3>상태</h3>
+    <div class="stats">
+      <div class="row"><span>위치 오차</span><span id="statErr">—</span></div>
+      <div class="row"><span>속도</span><span id="statVel">—</span></div>
+      <div class="row"><span>추력</span><span id="statThr">—</span></div>
+      <div class="row"><span>Roll</span><span id="statRoll">—</span></div>
+      <div class="row"><span>Pitch</span><span id="statPitch">—</span></div>
+      <div class="row"><span>Yaw</span><span id="statYaw">—</span></div>
+      <div class="row"><span>다음 웨이포인트</span><span id="statWp">—</span></div>
+    </div>
+
+    <div class="hint-box">
+      Cascade PID — 외부 루프는 위치 오차 → desired acceleration, 내부 루프는 자세 오차(쿼터니언) → torque. 추력 크기 F와 목표 tilt가 desired accel로부터 도출된다.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ================================================================
+   OrbitControls — minimal inline (Z-up)
+   ================================================================ */
+(function(){
+  const EPS = 1e-6, STATE = { NONE:-1, ROTATE:0, PAN:2 };
+  class OrbitControls {
+    constructor(cam, el) {
+      this.camera = cam; this.domElement = el;
+      this.target = new THREE.Vector3();
+      this.rotateSpeed = 1; this.zoomSpeed = 1; this.panSpeed = 1;
+      this.minDistance = 2; this.maxDistance = 80;
+      let state = STATE.NONE;
+      const sph = new THREE.Spherical(), sphD = new THREE.Spherical();
+      const panOff = new THREE.Vector3();
+      let scale = 1;
+      const rStart = new THREE.Vector2(), rEnd = new THREE.Vector2(), rDelta = new THREE.Vector2();
+      const pStart = new THREE.Vector2(), pEnd = new THREE.Vector2(), pDelta = new THREE.Vector2();
+      const zs = () => Math.pow(0.95, this.zoomSpeed);
+      const rl = a => { sphD.theta -= a; };
+      const ru = a => { sphD.phi -= a; };
+      const pl = (d, m) => { const v = new THREE.Vector3(); v.setFromMatrixColumn(m,0); v.multiplyScalar(-d); panOff.add(v); };
+      const pu = (d, m) => { const v = new THREE.Vector3(); v.setFromMatrixColumn(m,1); v.multiplyScalar(d); panOff.add(v); };
+      const pan = (dx, dy) => {
+        const p = cam.position.clone().sub(this.target);
+        const d = p.length() * Math.tan(cam.fov/2 * Math.PI/180);
+        pl(2*dx*d/el.clientHeight, cam.matrix);
+        pu(2*dy*d/el.clientHeight, cam.matrix);
+      };
+      const md = e => {
+        e.preventDefault();
+        if (e.button === 0) { state = STATE.ROTATE; rStart.set(e.clientX, e.clientY); }
+        else if (e.button === 2) { state = STATE.PAN; pStart.set(e.clientX, e.clientY); }
+        if (state !== STATE.NONE) {
+          document.addEventListener('mousemove', mm);
+          document.addEventListener('mouseup', mu);
+        }
+      };
+      const mm = e => {
+        e.preventDefault();
+        if (state === STATE.ROTATE) {
+          rEnd.set(e.clientX, e.clientY); rDelta.subVectors(rEnd, rStart);
+          rl(2*Math.PI*rDelta.x/el.clientHeight*this.rotateSpeed);
+          ru(2*Math.PI*rDelta.y/el.clientHeight*this.rotateSpeed);
+          rStart.copy(rEnd);
+        } else if (state === STATE.PAN) {
+          pEnd.set(e.clientX, e.clientY); pDelta.subVectors(pEnd, pStart);
+          pan(pDelta.x, pDelta.y); pStart.copy(pEnd);
+        }
+      };
+      const mu = () => {
+        state = STATE.NONE;
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', mu);
+      };
+      const wh = e => { e.preventDefault(); if (e.deltaY < 0) scale /= zs(); else scale *= zs(); };
+      el.addEventListener('mousedown', md);
+      el.addEventListener('wheel', wh, { passive: false });
+      el.addEventListener('contextmenu', e => e.preventDefault());
+      this.update = () => {
+        const off = new THREE.Vector3();
+        const q = new THREE.Quaternion().setFromUnitVectors(cam.up, new THREE.Vector3(0,1,0));
+        const qi = q.clone().invert();
+        off.copy(cam.position).sub(this.target);
+        off.applyQuaternion(q);
+        sph.setFromVector3(off);
+        sph.theta += sphD.theta; sph.phi += sphD.phi;
+        sph.phi = Math.max(EPS, Math.min(Math.PI-EPS, sph.phi));
+        sph.radius *= scale;
+        sph.radius = Math.max(this.minDistance, Math.min(this.maxDistance, sph.radius));
+        this.target.add(panOff);
+        off.setFromSpherical(sph); off.applyQuaternion(qi);
+        cam.position.copy(this.target).add(off);
+        cam.lookAt(this.target);
+        sphD.set(0,0,0); panOff.set(0,0,0); scale = 1;
+      };
+    }
+  }
+  THREE.OrbitControls = OrbitControls;
+})();
+
+/* ================================================================
+   Quaternion helpers (w, x, y, z)
+   ================================================================ */
+function qMul(a, b) {
+  return [
+    a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+    a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+    a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+    a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0],
+  ];
+}
+function qConj(q) { return [q[0], -q[1], -q[2], -q[3]]; }
+function qNorm(q) {
+  const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+  return [q[0]/n, q[1]/n, q[2]/n, q[3]/n];
+}
+function qToMat3(q) {
+  const [w, x, y, z] = q;
+  return [
+    [1-2*(y*y+z*z), 2*(x*y - z*w), 2*(x*z + y*w)],
+    [2*(x*y + z*w), 1-2*(x*x+z*z), 2*(y*z - x*w)],
+    [2*(x*z - y*w), 2*(y*z + x*w), 1-2*(x*x+y*y)],
+  ];
+}
+function matVec(M, v) {
+  return [
+    M[0][0]*v[0] + M[0][1]*v[1] + M[0][2]*v[2],
+    M[1][0]*v[0] + M[1][1]*v[1] + M[1][2]*v[2],
+    M[2][0]*v[0] + M[2][1]*v[1] + M[2][2]*v[2],
+  ];
+}
+function matTrans(M) { return [[M[0][0],M[1][0],M[2][0]],[M[0][1],M[1][1],M[2][1]],[M[0][2],M[1][2],M[2][2]]]; }
+function qFromAxisAngle(ax, ang) {
+  const h = ang * 0.5, s = Math.sin(h);
+  return [Math.cos(h), ax[0]*s, ax[1]*s, ax[2]*s];
+}
+function qFromRPY(r, p, y) {
+  // ZYX intrinsic
+  const cr = Math.cos(r*0.5), sr = Math.sin(r*0.5);
+  const cp = Math.cos(p*0.5), sp = Math.sin(p*0.5);
+  const cy = Math.cos(y*0.5), sy = Math.sin(y*0.5);
+  return [
+    cr*cp*cy + sr*sp*sy,
+    sr*cp*cy - cr*sp*sy,
+    cr*sp*cy + sr*cp*sy,
+    cr*cp*sy - sr*sp*cy,
+  ];
+}
+function qToRPY(q) {
+  const [w, x, y, z] = q;
+  const sinr = 2*(w*x + y*z), cosr = 1-2*(x*x+y*y);
+  const roll = Math.atan2(sinr, cosr);
+  const sinp = 2*(w*y - z*x);
+  const pitch = Math.abs(sinp) >= 1 ? Math.sign(sinp)*Math.PI/2 : Math.asin(sinp);
+  const siny = 2*(w*z + x*y), cosy = 1-2*(y*y+z*z);
+  const yaw = Math.atan2(siny, cosy);
+  return [roll, pitch, yaw];
+}
+
+/* ================================================================
+   Three.js scene
+   ================================================================ */
+const canvas = document.getElementById('canvas3d');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0xfafafc);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.up.set(0, 0, 1); // Z-up
+camera.position.set(10, -10, 8);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.target.set(0, 0, 2);
+
+scene.add(new THREE.AmbientLight(0x888888, 1.0));
+const dl = new THREE.DirectionalLight(0xffffff, 0.7);
+dl.position.set(8, -8, 14);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.25);
+dl2.position.set(-6, 6, 10);
+scene.add(dl2);
+
+// Grid on XY plane (Z-up world → rotate default Y-up grid)
+const grid = new THREE.GridHelper(20, 20, 0xcccccc, 0xe5e5e5);
+grid.rotation.x = Math.PI/2;
+scene.add(grid);
+
+// World axes (thin)
+function worldAxis(dir, color) {
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,0,0),
+    new THREE.Vector3(dir[0]*2, dir[1]*2, dir[2]*2),
+  ]);
+  scene.add(new THREE.Line(geo, mat));
+}
+worldAxis([1,0,0], 0xff3b30);
+worldAxis([0,1,0], 0x34c759);
+worldAxis([0,0,1], 0x0071e3);
+
+/* ---- Build quadrotor mesh ---- */
+const quad = new THREE.Group();
+scene.add(quad);
+
+const rotors = []; // will hold meshes for spinning animation
+function buildQuad() {
+  // central body: darker box
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1d1d1f });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.08), bodyMat);
+  quad.add(body);
+
+  const armMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+  const rotorMat = new THREE.MeshLambertMaterial({ color: 0x0071e3, transparent: true, opacity: 0.75 });
+  const rotorHubMat = new THREE.MeshLambertMaterial({ color: 0x1d1d1f });
+
+  const L = 0.2; // arm length
+  const armOffsets = [
+    [ L*0.707,  L*0.707, 0],
+    [-L*0.707,  L*0.707, 0],
+    [-L*0.707, -L*0.707, 0],
+    [ L*0.707, -L*0.707, 0],
+  ];
+
+  for (let i = 0; i < 4; i++) {
+    // arm: cylinder from origin to rotor
+    const off = armOffsets[i];
+    const armLen = Math.hypot(off[0], off[1]);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, armLen, 8), armMat);
+    // cylinder default axis is +Y. rotate to align with arm direction in XY plane
+    const angle = Math.atan2(off[1], off[0]);
+    arm.rotation.z = angle - Math.PI/2;
+    arm.position.set(off[0]/2, off[1]/2, 0);
+    quad.add(arm);
+
+    // rotor disk (thin cylinder, axis = Z of body)
+    const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.012, 20), rotorMat);
+    disk.rotation.x = Math.PI/2;
+    disk.position.set(off[0], off[1], 0.03);
+    quad.add(disk);
+    rotors.push(disk);
+
+    // rotor hub
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.04, 8), rotorHubMat);
+    hub.rotation.x = Math.PI/2;
+    hub.position.set(off[0], off[1], 0.035);
+    quad.add(hub);
+  }
+
+  // body-frame X arrow (forward) so we can see heading
+  const fwdMat = new THREE.MeshLambertMaterial({ color: 0xff3b30 });
+  const fwd = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.1, 10), fwdMat);
+  fwd.rotation.z = -Math.PI/2;
+  fwd.position.set(0.13, 0, 0);
+  quad.add(fwd);
+}
+buildQuad();
+
+/* ---- Waypoints ---- */
+let waypoints = [];
+let wpIdx = 0;
+const wpMeshes = [];
+const wpRingGroup = new THREE.Group();
+scene.add(wpRingGroup);
+
+function clearWaypointMeshes() {
+  for (const m of wpMeshes) scene.remove(m);
+  wpMeshes.length = 0;
+  while (wpRingGroup.children.length) wpRingGroup.remove(wpRingGroup.children[0]);
+}
+
+function buildWaypointMeshes() {
+  clearWaypointMeshes();
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i];
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 16, 12),
+      new THREE.MeshLambertMaterial({ color: 0xff9500 })
+    );
+    sphere.position.set(wp[0], wp[1], wp[2]);
+    scene.add(sphere);
+    wpMeshes.push(sphere);
+  }
+  // active waypoint ring (Apple Blue, semi-transparent)
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.35, 0.03, 10, 40),
+    new THREE.MeshBasicMaterial({ color: 0x0071e3, transparent: true, opacity: 0.55 })
+  );
+  wpRingGroup.add(ring);
+}
+
+function updateWaypointRing() {
+  if (!waypoints.length) return;
+  const wp = waypoints[wpIdx];
+  wpRingGroup.position.set(wp[0], wp[1], wp[2]);
+}
+
+/* ---- Trajectory lines ---- */
+const MAX_TRAIL = 500;
+const trailGeo = new THREE.BufferGeometry();
+const trailBuf = new Float32Array(MAX_TRAIL * 3);
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailBuf, 3));
+trailGeo.setDrawRange(0, 0);
+const trailLine = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x0071e3, linewidth: 2 }));
+scene.add(trailLine);
+let trailCount = 0;
+function pushTrail(p) {
+  if (trailCount < MAX_TRAIL) {
+    trailBuf[trailCount*3+0] = p[0];
+    trailBuf[trailCount*3+1] = p[1];
+    trailBuf[trailCount*3+2] = p[2];
+    trailCount++;
+  } else {
+    // shift
+    trailBuf.copyWithin(0, 3);
+    trailBuf[(MAX_TRAIL-1)*3+0] = p[0];
+    trailBuf[(MAX_TRAIL-1)*3+1] = p[1];
+    trailBuf[(MAX_TRAIL-1)*3+2] = p[2];
+  }
+  trailGeo.attributes.position.needsUpdate = true;
+  trailGeo.setDrawRange(0, Math.min(trailCount, MAX_TRAIL));
+}
+
+// desired/reference trajectory — straight segments between waypoints, dashed green
+let refLine = null;
+function buildRefLine() {
+  if (refLine) { scene.remove(refLine); refLine.geometry.dispose(); }
+  if (waypoints.length < 2) { refLine = null; return; }
+  const pts = waypoints.map(w => new THREE.Vector3(w[0], w[1], w[2]));
+  // close loop
+  pts.push(pts[0].clone());
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineDashedMaterial({
+    color: 0x34c759, dashSize: 0.2, gapSize: 0.15, transparent: true, opacity: 0.85,
+  });
+  refLine = new THREE.Line(geo, mat);
+  refLine.computeLineDistances();
+  scene.add(refLine);
+}
+
+/* ================================================================
+   Quadrotor dynamics + cascade PID
+   ================================================================ */
+const PARAMS = {
+  m: 1.0,
+  g: 9.81,
+  Ixx: 0.01, Iyy: 0.01, Izz: 0.02,
+  arm: 0.2,
+  F_max: 4 * 1.0 * 9.81,  // ~4mg total thrust capacity
+  F_min: 0,
+  tau_max: 2.0,
+};
+
+const state = {
+  p: [0, 0, 0],
+  v: [0, 0, 0],
+  q: [1, 0, 0, 0],
+  w: [0, 0, 0],
+  yaw_ref: 0,
+};
+
+let paused = false;
+let simTime = 0;
+
+function resetState(keepWaypoints) {
+  state.p = [0, 0, 0.1];
+  state.v = [0, 0, 0];
+  state.q = [1, 0, 0, 0];
+  state.w = [0, 0, 0];
+  state.yaw_ref = 0;
+  simTime = 0;
+  trailCount = 0;
+  trailGeo.setDrawRange(0, 0);
+  wpIdx = 0;
+  if (!keepWaypoints) setWaypointsCircle();
+}
+
+/* ---- Waypoint generators ---- */
+function setWaypointsSquare() {
+  waypoints = [
+    [ 3,  3, 2.5],
+    [-3,  3, 3.5],
+    [-3, -3, 2.5],
+    [ 3, -3, 3.5],
+  ];
+  wpIdx = 0;
+  buildWaypointMeshes();
+  buildRefLine();
+}
+function setWaypointsCircle() {
+  const N = 5, R = 3.2;
+  waypoints = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const z = 2.5 + 1.0 * Math.sin(2*a);
+    waypoints.push([R*Math.cos(a), R*Math.sin(a), z]);
+  }
+  wpIdx = 0;
+  buildWaypointMeshes();
+  buildRefLine();
+}
+function setWaypointsRandom() {
+  waypoints = [];
+  for (let i = 0; i < 5; i++) {
+    waypoints.push([
+      (Math.random()*2-1)*3.5,
+      (Math.random()*2-1)*3.5,
+      1.5 + Math.random()*3.0,
+    ]);
+  }
+  wpIdx = 0;
+  buildWaypointMeshes();
+  buildRefLine();
+}
+
+/* ---- Control law ---- */
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function vLen(v) { return Math.hypot(v[0], v[1], v[2]); }
+
+function computeControl(dt) {
+  const Kp_pos = parseFloat(document.getElementById('kpPos').value);
+  const Kd_pos = parseFloat(document.getElementById('kdPos').value);
+  const Kp_att = parseFloat(document.getElementById('kpAtt').value);
+  const Kd_att = parseFloat(document.getElementById('kdAtt').value);
+  const v_max  = parseFloat(document.getElementById('vMax').value);
+
+  // Current target
+  const wp = waypoints[wpIdx] || state.p;
+
+  // Position error
+  const e_p = [ wp[0]-state.p[0], wp[1]-state.p[1], wp[2]-state.p[2] ];
+  // Desired velocity: Kp on position, saturated
+  const v_des_raw = [ Kp_pos*e_p[0], Kp_pos*e_p[1], Kp_pos*e_p[2] ];
+  const vr = vLen(v_des_raw);
+  const scale = vr > v_max ? v_max / vr : 1;
+  const v_des = [ v_des_raw[0]*scale, v_des_raw[1]*scale, v_des_raw[2]*scale ];
+  // velocity error
+  const e_v = [ v_des[0]-state.v[0], v_des[1]-state.v[1], v_des[2]-state.v[2] ];
+
+  // Desired acceleration (world frame), + gravity compensation
+  const a_des = [
+    Kd_pos * e_v[0],
+    Kd_pos * e_v[1],
+    Kd_pos * e_v[2] + PARAMS.g,
+  ];
+
+  // Total thrust magnitude (along body z)
+  // body_z in world = R * [0,0,1]
+  const R = qToMat3(state.q);
+  const bz = [ R[0][2], R[1][2], R[2][2] ];
+  // F = m * (a_des · bz)
+  let F = PARAMS.m * (a_des[0]*bz[0] + a_des[1]*bz[1] + a_des[2]*bz[2]);
+  F = clamp(F, PARAMS.F_min, PARAMS.F_max);
+
+  // Desired body z-axis
+  let aLen = Math.hypot(a_des[0], a_des[1], a_des[2]);
+  if (aLen < 1e-6) aLen = 1e-6;
+  const bz_des = [ a_des[0]/aLen, a_des[1]/aLen, a_des[2]/aLen ];
+
+  // Yaw: face next waypoint direction (XY), low priority
+  const dx = wp[0]-state.p[0], dy = wp[1]-state.p[1];
+  const distXY = Math.hypot(dx, dy);
+  if (distXY > 0.4) {
+    const desiredYaw = Math.atan2(dy, dx);
+    // exponential smoothing
+    let dY = desiredYaw - state.yaw_ref;
+    while (dY >  Math.PI) dY -= 2*Math.PI;
+    while (dY < -Math.PI) dY += 2*Math.PI;
+    state.yaw_ref += clamp(dY, -1.5*dt, 1.5*dt);
+  }
+
+  // Build desired rotation: align body z with bz_des, yaw around world z = yaw_ref
+  // Construct body_x_des from yaw
+  const yaw = state.yaw_ref;
+  const x_c = [ Math.cos(yaw), Math.sin(yaw), 0 ];
+  // bx_des = (bz_des x x_c x bz_des) normalized → equivalent to projecting x_c onto plane ⊥ bz_des
+  // more stable: by_des = normalize(bz_des × x_c), bx_des = by_des × bz_des
+  const by_des_raw = [
+    bz_des[1]*x_c[2] - bz_des[2]*x_c[1],
+    bz_des[2]*x_c[0] - bz_des[0]*x_c[2],
+    bz_des[0]*x_c[1] - bz_des[1]*x_c[0],
+  ];
+  let byLen = Math.hypot(by_des_raw[0], by_des_raw[1], by_des_raw[2]);
+  if (byLen < 1e-6) byLen = 1e-6;
+  const by_des = [ by_des_raw[0]/byLen, by_des_raw[1]/byLen, by_des_raw[2]/byLen ];
+  const bx_des = [
+    by_des[1]*bz_des[2] - by_des[2]*bz_des[1],
+    by_des[2]*bz_des[0] - by_des[0]*bz_des[2],
+    by_des[0]*bz_des[1] - by_des[1]*bz_des[0],
+  ];
+  // R_des columns = [bx_des, by_des, bz_des]
+  const R_des = [
+    [bx_des[0], by_des[0], bz_des[0]],
+    [bx_des[1], by_des[1], bz_des[1]],
+    [bx_des[2], by_des[2], bz_des[2]],
+  ];
+
+  // Attitude error: e_R = 0.5 * (R_desᵀ R - Rᵀ R_des) vee
+  // R is current rotation, R_des desired
+  const Rt_Rdes = matMul(matTrans(R), R_des);
+  const Rdest_R = matMul(matTrans(R_des), R);
+  const e_R_skew = matSub(Rdest_R, Rt_Rdes);
+  // scale 0.5
+  const e_R = [
+    0.5 * e_R_skew[2][1],
+    0.5 * e_R_skew[0][2],
+    0.5 * e_R_skew[1][0],
+  ];
+
+  // Angular velocity error (assume desired ω = 0 for simplicity)
+  const e_w = [ -state.w[0], -state.w[1], -state.w[2] ];
+
+  // Torque in body frame
+  const tau = [
+    Kp_att * (-e_R[0]) + Kd_att * e_w[0],
+    Kp_att * (-e_R[1]) + Kd_att * e_w[1],
+    Kp_att * (-e_R[2]) + Kd_att * e_w[2],
+  ];
+  for (let i = 0; i < 3; i++) tau[i] = clamp(tau[i], -PARAMS.tau_max, PARAMS.tau_max);
+
+  return { F, tau };
+}
+
+function matMul(A, B) {
+  const C = [[0,0,0],[0,0,0],[0,0,0]];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      for (let k = 0; k < 3; k++)
+        C[i][j] += A[i][k] * B[k][j];
+  return C;
+}
+function matSub(A, B) {
+  const C = [[0,0,0],[0,0,0],[0,0,0]];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++)
+      C[i][j] = A[i][j] - B[i][j];
+  return C;
+}
+
+/* ---- Integrate dynamics ---- */
+function stepDynamics(dt) {
+  const { F, tau } = computeControl(dt);
+
+  // Translational: m p̈ = R·[0,0,F] - m g ẑ
+  const R = qToMat3(state.q);
+  const thrustBody = [0, 0, F];
+  const thrustWorld = matVec(R, thrustBody);
+  const a = [
+    thrustWorld[0] / PARAMS.m,
+    thrustWorld[1] / PARAMS.m,
+    thrustWorld[2] / PARAMS.m - PARAMS.g,
+  ];
+
+  // Update velocity + position (semi-implicit Euler)
+  state.v[0] += a[0] * dt; state.v[1] += a[1] * dt; state.v[2] += a[2] * dt;
+  state.p[0] += state.v[0] * dt; state.p[1] += state.v[1] * dt; state.p[2] += state.v[2] * dt;
+
+  // Ground constraint
+  if (state.p[2] < 0.05) {
+    state.p[2] = 0.05;
+    if (state.v[2] < 0) state.v[2] = 0;
+  }
+
+  // Rotational: I ω̇ = τ - ω × I ω
+  const Iw = [ PARAMS.Ixx*state.w[0], PARAMS.Iyy*state.w[1], PARAMS.Izz*state.w[2] ];
+  const wCrossIw = [
+    state.w[1]*Iw[2] - state.w[2]*Iw[1],
+    state.w[2]*Iw[0] - state.w[0]*Iw[2],
+    state.w[0]*Iw[1] - state.w[1]*Iw[0],
+  ];
+  const wd = [
+    (tau[0] - wCrossIw[0]) / PARAMS.Ixx,
+    (tau[1] - wCrossIw[1]) / PARAMS.Iyy,
+    (tau[2] - wCrossIw[2]) / PARAMS.Izz,
+  ];
+  state.w[0] += wd[0] * dt; state.w[1] += wd[1] * dt; state.w[2] += wd[2] * dt;
+
+  // Quaternion integration: q̇ = 0.5 q ⊗ [0, ωx, ωy, ωz]
+  const omegaQ = [0, state.w[0], state.w[1], state.w[2]];
+  const qd = qMul(state.q, omegaQ);
+  state.q = qNorm([
+    state.q[0] + 0.5 * qd[0] * dt,
+    state.q[1] + 0.5 * qd[1] * dt,
+    state.q[2] + 0.5 * qd[2] * dt,
+    state.q[3] + 0.5 * qd[3] * dt,
+  ]);
+
+  simTime += dt;
+
+  // Waypoint check
+  if (waypoints.length) {
+    const wp = waypoints[wpIdx];
+    const d = Math.hypot(wp[0]-state.p[0], wp[1]-state.p[1], wp[2]-state.p[2]);
+    if (d < 0.3) wpIdx = (wpIdx + 1) % waypoints.length;
+  }
+
+  return { F };
+}
+
+/* ================================================================
+   Rendering + UI sync
+   ================================================================ */
+function syncMesh() {
+  // Three.js uses (x,y,z,w) for quaternion; our convention is (w,x,y,z)
+  quad.position.set(state.p[0], state.p[1], state.p[2]);
+  quad.quaternion.set(state.q[1], state.q[2], state.q[3], state.q[0]);
+  updateWaypointRing();
+}
+
+let rotorPhase = 0;
+function spinRotors(dt, F) {
+  // rotor RPM ~ sqrt(thrust); visualize relative
+  const rpm = Math.sqrt(Math.max(F, 0) + 0.5) * 40;
+  rotorPhase += rpm * dt;
+  for (let i = 0; i < rotors.length; i++) {
+    const dir = (i % 2 === 0) ? 1 : -1;
+    rotors[i].rotation.y = rotorPhase * dir;
+  }
+}
+
+function updateStats(F) {
+  const wp = waypoints[wpIdx] || state.p;
+  const dErr = Math.hypot(wp[0]-state.p[0], wp[1]-state.p[1], wp[2]-state.p[2]);
+  const vMag = vLen(state.v);
+  const [r, p, y] = qToRPY(state.q);
+  document.getElementById('statErr').textContent = dErr.toFixed(2) + ' m';
+  document.getElementById('statVel').textContent = vMag.toFixed(2) + ' m/s';
+  document.getElementById('statThr').textContent = (F / (PARAMS.m * PARAMS.g)).toFixed(2) + ' mg';
+  document.getElementById('statRoll').textContent  = (r*180/Math.PI).toFixed(1) + '°';
+  document.getElementById('statPitch').textContent = (p*180/Math.PI).toFixed(1) + '°';
+  document.getElementById('statYaw').textContent   = (y*180/Math.PI).toFixed(1) + '°';
+  document.getElementById('statWp').textContent = (wpIdx + 1) + ' / ' + waypoints.length;
+}
+
+/* ---- Main loop ---- */
+let lastT = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt_real = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+
+  let F_latest = PARAMS.m * PARAMS.g;
+  if (!paused && dt_real > 0) {
+    // fixed-step substeps for stability
+    const h = 0.005;
+    const n = Math.max(1, Math.round(dt_real / h));
+    const h_actual = dt_real / n;
+    for (let i = 0; i < n; i++) {
+      const info = stepDynamics(h_actual);
+      F_latest = info.F;
+    }
+    pushTrail([state.p[0], state.p[1], state.p[2]]);
+  }
+
+  syncMesh();
+  spinRotors(dt_real, F_latest);
+  updateStats(F_latest);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+/* ---- Resize ---- */
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+/* ================================================================
+   UI binding
+   ================================================================ */
+function bindSlider(id, fmt) {
+  const el = document.getElementById(id);
+  const out = document.getElementById(id + 'Val');
+  const upd = () => { out.textContent = fmt(parseFloat(el.value)); };
+  el.addEventListener('input', upd); upd();
+}
+bindSlider('kpPos', v => v.toFixed(1));
+bindSlider('kdPos', v => v.toFixed(1));
+bindSlider('vMax',  v => v.toFixed(1));
+bindSlider('kpAtt', v => v.toFixed(0));
+bindSlider('kdAtt', v => v.toFixed(0));
+
+document.getElementById('btnPause').addEventListener('click', e => {
+  paused = !paused;
+  e.target.textContent = paused ? '재생' : '일시정지';
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  resetState(true);
+});
+document.getElementById('btnSquare').addEventListener('click', () => {
+  setWaypointsSquare(); resetState(true);
+});
+document.getElementById('btnCircle').addEventListener('click', () => {
+  setWaypointsCircle(); resetState(true);
+});
+document.getElementById('btnRandom').addEventListener('click', () => {
+  setWaypointsRandom(); resetState(true);
+});
+
+/* ---- Init ---- */
+resetState(false);
+resize();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

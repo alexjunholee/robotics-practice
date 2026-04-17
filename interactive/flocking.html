@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>Reynolds Flocking / Boids</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; max-width: 1240px; margin: 0 auto; }
+
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); cursor: crosshair; }
+
+.panel {
+  width: 300px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.panel h3 {
+  font-family: var(--rp-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rp-text-heading);
+  letter-spacing: -0.012em;
+}
+
+.slider-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--rp-text-body);
+  margin-bottom: 4px;
+}
+.slider-group label span {
+  color: var(--rp-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono);
+  font-size: 12px;
+}
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent);
+  color: #fff;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: var(--rp-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.seg-row { display: flex; gap: 4px; }
+.seg {
+  flex: 1; padding: 6px 8px; font-size: 12px; font-weight: 500; letter-spacing: -0.012em;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md);
+  cursor: pointer; transition: all 0.15s;
+  font-family: inherit;
+}
+.seg:hover { background: var(--rp-bg-alt); }
+.seg.active { background: var(--rp-accent); color: #fff; border-color: var(--rp-accent); }
+
+.stats {
+  font-size: 12.5px;
+  color: var(--rp-text-body);
+  line-height: 1.7;
+  border-top: 1px solid var(--rp-border);
+  padding-top: 12px;
+}
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child {
+  color: var(--rp-text-heading);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono);
+  font-size: 12px;
+}
+
+.hint { font-size: 12px; color: var(--rp-text-muted); line-height: 1.55; }
+.rule-group { border-top: 1px solid var(--rp-border); padding-top: 12px; }
+.section-label {
+  font-family: var(--rp-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rp-text-heading);
+  letter-spacing: -0.012em;
+  margin-bottom: 6px;
+}
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--rp-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rp-accent);
+  background: rgba(0, 113, 227, 0.1);
+}
+</style>
+</head>
+<body>
+<h1>Reynolds Flocking / Boids</h1>
+<p class="subtitle">분리·정렬·응집 3규칙으로 무리 행동 자발 생성</p>
+
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="c" width="800" height="600"></canvas>
+    <p class="hint">왼클릭: 장애물(빨강) 추가 · 우클릭: 먹이(녹색) 추가 · 마우스 hover: 이웃 반경 표시</p>
+  </div>
+
+  <div class="panel">
+    <h3>제어</h3>
+    <div class="btn-row">
+      <button id="playBtn">⏸ 일시정지</button>
+      <button id="resetBtn" class="secondary">리셋</button>
+    </div>
+    <div class="btn-row">
+      <button id="clearBtn" class="secondary">장애물 지우기</button>
+    </div>
+
+    <div class="rule-group">
+      <div class="section-label">경계</div>
+      <div class="seg-row" id="boundarySeg">
+        <button class="seg active" data-mode="wrap">Wrap</button>
+        <button class="seg" data-mode="bounce">Bounce</button>
+      </div>
+    </div>
+
+    <div class="rule-group">
+      <div class="section-label">규칙 가중치</div>
+      <div class="slider-group">
+        <label>Separation <span id="wSepVal">1.50</span></label>
+        <input type="range" id="wSep" min="0" max="5" step="0.05" value="1.5">
+      </div>
+      <div class="slider-group">
+        <label>Alignment <span id="wAlignVal">1.20</span></label>
+        <input type="range" id="wAlign" min="0" max="5" step="0.05" value="1.2">
+      </div>
+      <div class="slider-group">
+        <label>Cohesion <span id="wCohVal">1.00</span></label>
+        <input type="range" id="wCoh" min="0" max="5" step="0.05" value="1.0">
+      </div>
+    </div>
+
+    <div class="rule-group">
+      <div class="section-label">지각 반경</div>
+      <div class="slider-group">
+        <label>R_sep <span id="rSepVal">20</span></label>
+        <input type="range" id="rSep" min="5" max="50" step="1" value="20">
+      </div>
+      <div class="slider-group">
+        <label>R_align <span id="rAlignVal">40</span></label>
+        <input type="range" id="rAlign" min="10" max="100" step="1" value="40">
+      </div>
+      <div class="slider-group">
+        <label>R_coh <span id="rCohVal">60</span></label>
+        <input type="range" id="rCoh" min="10" max="150" step="1" value="60">
+      </div>
+    </div>
+
+    <div class="rule-group">
+      <div class="section-label">운동</div>
+      <div class="slider-group">
+        <label>Max speed <span id="maxSpeedVal">2.50</span></label>
+        <input type="range" id="maxSpeed" min="0.5" max="5" step="0.1" value="2.5">
+      </div>
+      <div class="slider-group">
+        <label>N boids <span id="nBoidsVal">150</span></label>
+        <input type="range" id="nBoids" min="50" max="500" step="10" value="150">
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>평균 이웃 수</span><span id="avgNeighbors">0.0</span></div>
+      <div class="row"><span>정렬도 (cos)</span><span id="alignment">0.00</span></div>
+      <div class="row"><span>평균 밀도</span><span id="density">0.00</span></div>
+      <div class="row"><span>상태</span><span id="status"><span class="chip">실행 중</span></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // ── State ──
+  let boids = [];
+  let obstacles = [];      // {x, y, radius}  repulsion points
+  let attractors = [];     // {x, y, radius}  food points
+  let playing = true;
+  let boundaryMode = 'wrap';
+  let mouse = { x: -1, y: -1, inside: false };
+  let hoveredIdx = -1;
+
+  // Parameters (read live from sliders)
+  const P = {
+    wSep: 1.5, wAlign: 1.2, wCoh: 1.0,
+    rSep: 20, rAlign: 40, rCoh: 60,
+    maxSpeed: 2.5, nBoids: 150,
+    maxForce: 0.08,
+    obstacleRadius: 60, obstacleStrength: 3.0,
+    attractorRadius: 120, attractorStrength: 0.6
+  };
+
+  // Spatial hash — use the largest radius to bucket neighbors.
+  const hash = { cell: 64, grid: new Map() };
+  function rebuildHash() {
+    hash.cell = Math.max(P.rSep, P.rAlign, P.rCoh);
+    hash.grid.clear();
+    for (let i = 0; i < boids.length; i++) {
+      const b = boids[i];
+      const key = ((b.x / hash.cell) | 0) + ',' + ((b.y / hash.cell) | 0);
+      let cell = hash.grid.get(key);
+      if (!cell) { cell = []; hash.grid.set(key, cell); }
+      cell.push(i);
+    }
+  }
+  function queryNeighbors(x, y, r) {
+    const out = [];
+    const c = hash.cell;
+    const x0 = ((x - r) / c) | 0, x1 = ((x + r) / c) | 0;
+    const y0 = ((y - r) / c) | 0, y1 = ((y + r) / c) | 0;
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cy = y0; cy <= y1; cy++) {
+        const cell = hash.grid.get(cx + ',' + cy);
+        if (!cell) continue;
+        for (let k = 0; k < cell.length; k++) out.push(cell[k]);
+      }
+    }
+    return out;
+  }
+
+  function spawnBoids(n) {
+    boids = [];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      boids.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: Math.cos(a) * P.maxSpeed * 0.6,
+        vy: Math.sin(a) * P.maxSpeed * 0.6
+      });
+    }
+  }
+
+  // ── Reynolds 3 rules ──
+  // Returns {ax, ay, neighborCount, alignCos}
+  function computeForces(i) {
+    const b = boids[i];
+    let sepX = 0, sepY = 0;
+    let alignX = 0, alignY = 0, alignN = 0;
+    let cohX = 0, cohY = 0, cohN = 0;
+    let neighborCount = 0;
+    let alignCos = 0, alignCosN = 0;
+
+    const rMax = Math.max(P.rSep, P.rAlign, P.rCoh);
+    const rSep2 = P.rSep * P.rSep;
+    const rAlign2 = P.rAlign * P.rAlign;
+    const rCoh2 = P.rCoh * P.rCoh;
+
+    const candidates = queryNeighbors(b.x, b.y, rMax);
+    const bSpeed = Math.hypot(b.vx, b.vy) + 1e-9;
+
+    for (let k = 0; k < candidates.length; k++) {
+      const j = candidates[k];
+      if (j === i) continue;
+      const o = boids[j];
+      const dx = o.x - b.x, dy = o.y - b.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > rMax * rMax || d2 < 1e-6) continue;
+
+      if (d2 < rSep2) {
+        const d = Math.sqrt(d2);
+        // push away, weighted by 1/dist
+        sepX -= dx / d2;
+        sepY -= dy / d2;
+        neighborCount++;
+      }
+      if (d2 < rAlign2) {
+        alignX += o.vx;
+        alignY += o.vy;
+        alignN++;
+        const oSpeed = Math.hypot(o.vx, o.vy) + 1e-9;
+        alignCos += (b.vx * o.vx + b.vy * o.vy) / (bSpeed * oSpeed);
+        alignCosN++;
+      }
+      if (d2 < rCoh2) {
+        cohX += o.x;
+        cohY += o.y;
+        cohN++;
+      }
+    }
+
+    // Normalize steering: desired - current, clamped
+    let ax = 0, ay = 0;
+    const ms = P.maxSpeed;
+
+    if (sepX !== 0 || sepY !== 0) {
+      const m = Math.hypot(sepX, sepY);
+      if (m > 0) {
+        sepX = (sepX / m) * ms - b.vx;
+        sepY = (sepY / m) * ms - b.vy;
+        const m2 = Math.hypot(sepX, sepY);
+        if (m2 > P.maxForce) { sepX = sepX / m2 * P.maxForce; sepY = sepY / m2 * P.maxForce; }
+        ax += sepX * P.wSep;
+        ay += sepY * P.wSep;
+      }
+    }
+    if (alignN > 0) {
+      let avx = alignX / alignN, avy = alignY / alignN;
+      const m = Math.hypot(avx, avy);
+      if (m > 0) {
+        avx = (avx / m) * ms - b.vx;
+        avy = (avy / m) * ms - b.vy;
+        const m2 = Math.hypot(avx, avy);
+        if (m2 > P.maxForce) { avx = avx / m2 * P.maxForce; avy = avy / m2 * P.maxForce; }
+        ax += avx * P.wAlign;
+        ay += avy * P.wAlign;
+      }
+    }
+    if (cohN > 0) {
+      const cx = cohX / cohN, cy = cohY / cohN;
+      let dx = cx - b.x, dy = cy - b.y;
+      const m = Math.hypot(dx, dy);
+      if (m > 0) {
+        dx = (dx / m) * ms - b.vx;
+        dy = (dy / m) * ms - b.vy;
+        const m2 = Math.hypot(dx, dy);
+        if (m2 > P.maxForce) { dx = dx / m2 * P.maxForce; dy = dy / m2 * P.maxForce; }
+        ax += dx * P.wCoh;
+        ay += dy * P.wCoh;
+      }
+    }
+
+    // Obstacles — strong repulsion
+    for (let k = 0; k < obstacles.length; k++) {
+      const o = obstacles[k];
+      const dx = b.x - o.x, dy = b.y - o.y;
+      const d2 = dx * dx + dy * dy;
+      const r = o.radius;
+      if (d2 < r * r && d2 > 1e-4) {
+        const d = Math.sqrt(d2);
+        const falloff = (1 - d / r);
+        ax += (dx / d) * P.obstacleStrength * falloff;
+        ay += (dy / d) * P.obstacleStrength * falloff;
+      }
+    }
+    // Attractors — gentle pull
+    for (let k = 0; k < attractors.length; k++) {
+      const o = attractors[k];
+      const dx = o.x - b.x, dy = o.y - b.y;
+      const d2 = dx * dx + dy * dy;
+      const r = o.radius;
+      if (d2 < r * r && d2 > 1e-4) {
+        const d = Math.sqrt(d2);
+        const falloff = (1 - d / r);
+        ax += (dx / d) * P.attractorStrength * falloff;
+        ay += (dy / d) * P.attractorStrength * falloff;
+      }
+    }
+
+    return { ax, ay, neighborCount, alignCos, alignCosN };
+  }
+
+  let lastStats = { avgN: 0, align: 0, density: 0 };
+
+  function stepSim() {
+    rebuildHash();
+
+    // Compute all forces first (so all boids see the same frame).
+    const forces = new Array(boids.length);
+    let totalN = 0, totalCos = 0, totalCosN = 0;
+    for (let i = 0; i < boids.length; i++) {
+      forces[i] = computeForces(i);
+      totalN += forces[i].neighborCount;
+      totalCos += forces[i].alignCos;
+      totalCosN += forces[i].alignCosN;
+    }
+
+    // Integrate
+    const ms = P.maxSpeed;
+    for (let i = 0; i < boids.length; i++) {
+      const b = boids[i];
+      const f = forces[i];
+      b.vx += f.ax;
+      b.vy += f.ay;
+      const s = Math.hypot(b.vx, b.vy);
+      if (s > ms) { b.vx = b.vx / s * ms; b.vy = b.vy / s * ms; }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      if (boundaryMode === 'wrap') {
+        if (b.x < 0) b.x += W; else if (b.x >= W) b.x -= W;
+        if (b.y < 0) b.y += H; else if (b.y >= H) b.y -= H;
+      } else {
+        // Bounce — soft boundary
+        const margin = 20, turn = 0.2;
+        if (b.x < margin) b.vx += turn;
+        else if (b.x > W - margin) b.vx -= turn;
+        if (b.y < margin) b.vy += turn;
+        else if (b.y > H - margin) b.vy -= turn;
+        if (b.x < 0) { b.x = 0; b.vx = Math.abs(b.vx); }
+        else if (b.x > W) { b.x = W; b.vx = -Math.abs(b.vx); }
+        if (b.y < 0) { b.y = 0; b.vy = Math.abs(b.vy); }
+        else if (b.y > H) { b.y = H; b.vy = -Math.abs(b.vy); }
+      }
+    }
+
+    // Stats
+    lastStats.avgN = boids.length > 0 ? totalN / boids.length : 0;
+    lastStats.align = totalCosN > 0 ? totalCos / totalCosN : 0;
+    // Density = avg neighbors within rCoh per unit area
+    const area = Math.PI * P.rCoh * P.rCoh;
+    lastStats.density = area > 0 ? lastStats.avgN / area * 1000 : 0;
+  }
+
+  // ── Hover detection ──
+  function updateHover() {
+    hoveredIdx = -1;
+    if (!mouse.inside) return;
+    let bestD = 400; // px^2 radius
+    for (let i = 0; i < boids.length; i++) {
+      const dx = boids[i].x - mouse.x, dy = boids[i].y - mouse.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD) { bestD = d2; hoveredIdx = i; }
+    }
+  }
+
+  // ── Draw ──
+  function drawBoid(b, highlighted) {
+    const s = Math.hypot(b.vx, b.vy);
+    const ang = Math.atan2(b.vy, b.vx);
+    const size = 4.5 + (s / P.maxSpeed) * 1.5;
+
+    // Colour interpolates from Apple Blue (slow) to Apple Green (fast)
+    const t = Math.min(1, s / P.maxSpeed);
+    const r = Math.round(0   * (1 - t) + 52  * t);
+    const g = Math.round(113 * (1 - t) + 199 * t);
+    const bl = Math.round(227 * (1 - t) + 89  * t);
+    const col = highlighted ? '#ff9500' : `rgb(${r},${g},${bl})`;
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(size * 1.4, 0);
+    ctx.lineTo(-size * 0.8, size * 0.7);
+    ctx.lineTo(-size * 0.4, 0);
+    ctx.lineTo(-size * 0.8, -size * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    if (highlighted) {
+      ctx.strokeStyle = '#1d1d1f';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.035)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    // Attractors (green)
+    for (const a of attractors) {
+      ctx.fillStyle = 'rgba(52, 199, 89, 0.12)';
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#34c759';
+      ctx.beginPath(); ctx.arc(a.x, a.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // Obstacles (red)
+    for (const o of obstacles) {
+      ctx.fillStyle = 'rgba(255, 59, 48, 0.12)';
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff3b30';
+      ctx.beginPath(); ctx.arc(o.x, o.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // Neighborhood rings when hovering a boid
+    if (hoveredIdx >= 0) {
+      const b = boids[hoveredIdx];
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = 'rgba(255, 59, 48, 0.55)';  // sep
+      ctx.beginPath(); ctx.arc(b.x, b.y, P.rSep, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0, 113, 227, 0.55)';  // align
+      ctx.beginPath(); ctx.arc(b.x, b.y, P.rAlign, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(175, 82, 222, 0.55)'; // coh
+      ctx.beginPath(); ctx.arc(b.x, b.y, P.rCoh, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Boids
+    for (let i = 0; i < boids.length; i++) {
+      if (i === hoveredIdx) continue;
+      drawBoid(boids[i], false);
+    }
+    if (hoveredIdx >= 0) drawBoid(boids[hoveredIdx], true);
+  }
+
+  // ── Stats panel ──
+  function updateStatsUI() {
+    document.getElementById('avgNeighbors').textContent = lastStats.avgN.toFixed(1);
+    document.getElementById('alignment').textContent = lastStats.align.toFixed(2);
+    document.getElementById('density').textContent = lastStats.density.toFixed(2);
+    document.getElementById('status').innerHTML = playing
+      ? '<span class="chip">실행 중</span>'
+      : '<span class="chip" style="background:rgba(0,0,0,0.06);color:rgba(0,0,0,0.56)">정지</span>';
+  }
+
+  // ── Loop ──
+  function loop() {
+    if (playing) stepSim();
+    updateHover();
+    draw();
+    updateStatsUI();
+    requestAnimationFrame(loop);
+  }
+
+  // ── UI wiring ──
+  function bindSlider(id, prop, valEl, parseFn) {
+    const el = document.getElementById(id);
+    const vEl = document.getElementById(valEl);
+    const fmt = (v) => (typeof v === 'number' && v % 1 !== 0) ? v.toFixed(2) : String(v);
+    const update = () => {
+      const v = parseFn(el.value);
+      P[prop] = v;
+      vEl.textContent = fmt(v);
+    };
+    el.addEventListener('input', update);
+    update();
+  }
+  bindSlider('wSep', 'wSep', 'wSepVal', parseFloat);
+  bindSlider('wAlign', 'wAlign', 'wAlignVal', parseFloat);
+  bindSlider('wCoh', 'wCoh', 'wCohVal', parseFloat);
+  bindSlider('rSep', 'rSep', 'rSepVal', parseFloat);
+  bindSlider('rAlign', 'rAlign', 'rAlignVal', parseFloat);
+  bindSlider('rCoh', 'rCoh', 'rCohVal', parseFloat);
+  bindSlider('maxSpeed', 'maxSpeed', 'maxSpeedVal', parseFloat);
+
+  // N boids — respawn when changed
+  const nSlider = document.getElementById('nBoids');
+  const nValEl = document.getElementById('nBoidsVal');
+  nSlider.addEventListener('input', () => {
+    const n = parseInt(nSlider.value, 10);
+    P.nBoids = n;
+    nValEl.textContent = n;
+  });
+  nSlider.addEventListener('change', () => {
+    spawnBoids(P.nBoids);
+  });
+
+  // Boundary segment
+  document.querySelectorAll('#boundarySeg .seg').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#boundarySeg .seg').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      boundaryMode = btn.dataset.mode;
+    });
+  });
+
+  // Buttons
+  const playBtn = document.getElementById('playBtn');
+  playBtn.addEventListener('click', () => {
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ 일시정지' : '▶ 재생';
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    spawnBoids(P.nBoids);
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    obstacles = [];
+    attractors = [];
+  });
+
+  // Canvas interactions
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('mousedown', e => {
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (canvas.width / r.width);
+    const y = (e.clientY - r.top) * (canvas.height / r.height);
+
+    if (e.shiftKey) {
+      // Shift+click removes the nearest obstacle / attractor
+      const all = [...obstacles.map((o, i) => ({ list: 'o', i, d: Math.hypot(o.x - x, o.y - y) })),
+                   ...attractors.map((a, i) => ({ list: 'a', i, d: Math.hypot(a.x - x, a.y - y) }))];
+      all.sort((u, v) => u.d - v.d);
+      if (all.length && all[0].d < 40) {
+        if (all[0].list === 'o') obstacles.splice(all[0].i, 1);
+        else attractors.splice(all[0].i, 1);
+      }
+      return;
+    }
+    if (e.button === 2) {
+      attractors.push({ x, y, radius: P.attractorRadius });
+    } else {
+      obstacles.push({ x, y, radius: P.obstacleRadius });
+    }
+  });
+  canvas.addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
+    mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
+    mouse.inside = true;
+  });
+  canvas.addEventListener('mouseleave', () => { mouse.inside = false; });
+
+  // ── Init ──
+  spawnBoids(P.nBoids);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -245,14 +245,41 @@ body {
     <a class="nav-item" data-id="rrt" data-tip="장애물을 피해 랜덤 트리를 뻗어 목표까지 경로 탐색 (RRT)">RRT — Rapidly-exploring Random Tree</a>
     <a class="nav-item" data-id="a_star" data-tip="그리드에서 heuristic 기반 최단 경로 (A* / Dijkstra)">A\* / Dijkstra 그리드 탐색</a>
 
-    <!-- 제어 (1) -->
+    <!-- 제어 (4) -->
     <div class="cat-label">제어 / Control</div>
     <a class="nav-item" data-id="pid_hover" data-tip="Kp·Ki·Kd 슬라이더로 1D 쿼드로터 호버 응답을 튜닝">PID 쿼드로터 호버</a>
+    <a class="nav-item" data-id="mpc_track" data-tip="MPC receding horizon + CEM으로 2D 자동차 트랙 추종">MPC 트랙 추종</a>
+    <a class="nav-item" data-id="ilqr_cartpole" data-tip="iLQR로 역진자 스윙업 — 반복 선형화 LQR 수렴 시각화">iLQR 카트폴 스윙업</a>
+    <a class="nav-item" data-id="quad_3d" data-tip="완전 6DoF 쿼드로터 동역학 + cascade PID 3D 웨이포인트 추적">6DoF 쿼드로터 3D</a>
+
+    <!-- 강화학습 (1) -->
+    <div class="cat-label">강화학습 / RL</div>
+    <a class="nav-item" data-id="q_learning" data-tip="ε-greedy Q-learning으로 GridWorld 최적 정책 학습 (Q-table 실시간)">Q-Learning GridWorld</a>
+
+    <!-- 학습된 정책 (1) -->
+    <div class="cat-label">생성 정책 / Generative Policy</div>
+    <a class="nav-item" data-id="diffusion_policy" data-tip="Forward noising / backward denoising으로 멀티모달 trajectory 샘플링">Diffusion Policy 궤적 생성</a>
+
+    <!-- 신경 렌더링 (1) -->
+    <div class="cat-label">신경 렌더링 / Neural Rendering</div>
+    <a class="nav-item" data-id="nerf_raymarching" data-tip="한 픽셀 레이를 따라 밀도·색을 알파-컴포지트 누적 (NeRF)">NeRF 볼륨 레이마칭</a>
+
+    <!-- 멀티에이전트 (1) -->
+    <div class="cat-label">멀티에이전트</div>
+    <a class="nav-item" data-id="flocking" data-tip="Reynolds 3규칙(분리·정렬·응집)으로 무리 행동 자발 생성">Reynolds Flocking / Boids</a>
+
+    <!-- 매니퓰레이션 (1) -->
+    <div class="cat-label">매니퓰레이션</div>
+    <a class="nav-item" data-id="ur5_arm" data-tip="UR5 DH 기반 6-DOF FK + DLS Jacobian IK, 타겟 드래그로 조작">UR5 6-DOF 로봇팔 (FK+IK)</a>
 
     <!-- 센서 모델링 (2) -->
     <div class="cat-label">센서 모델링</div>
     <a class="nav-item" data-id="imu_dead_reckoning" data-tip="IMU 노이즈·바이어스가 위치 추정에 누적되는 drift 관찰">IMU Dead-reckoning</a>
     <a class="nav-item" data-id="lidar_sim" data-tip="방 안에서 2D LiDAR 스캔·노이즈·드롭아웃을 실시간으로">2D LiDAR 시뮬</a>
+
+    <!-- SLAM 통합 (1) -->
+    <div class="cat-label">SLAM 통합</div>
+    <a class="nav-item" data-id="full_slam" data-tip="오도메트리 + pose graph + 루프 클로저 + Gauss-Newton 최적화 한 화면">완전 SLAM 파이프라인</a>
 
     <!-- 3D / SLAM (7) -->
     <div class="cat-label">3D / SLAM</div>
@@ -317,11 +344,26 @@ body {
     // 플래닝 (2)
     rrt:                 'rrt.html',
     a_star:              'a_star.html',
-    // 제어 (1)
+    // 제어 (4)
     pid_hover:           'pid_hover.html',
+    mpc_track:           'mpc_track.html',
+    ilqr_cartpole:       'ilqr_cartpole.html',
+    quad_3d:             'quad_3d.html',
+    // 강화학습 (1)
+    q_learning:          'q_learning.html',
+    // 생성 정책 (1)
+    diffusion_policy:    'diffusion_policy.html',
+    // 신경 렌더링 (1)
+    nerf_raymarching:    'nerf_raymarching.html',
+    // 멀티에이전트 (1)
+    flocking:            'flocking.html',
+    // 매니퓰레이션 (1)
+    ur5_arm:             'ur5_arm.html',
     // 센서 모델링 (2)
     imu_dead_reckoning:  'imu_dead_reckoning.html',
     lidar_sim:           'lidar_sim.html',
+    // SLAM 통합 (1)
+    full_slam:           'full_slam.html',
     // 3D / SLAM (7)
     icp_steps:           'icp_steps.html',
     icp_3d:              'icp_3d.html',

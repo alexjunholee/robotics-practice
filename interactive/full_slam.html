@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>완전 SLAM 파이프라인</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle {
+  text-align: center; color: var(--rp-text-muted);
+  font-size: 14px; margin-bottom: 18px;
+}
+
+.layout {
+  display: flex; gap: 16px; justify-content: center;
+  flex-wrap: wrap; max-width: 1500px; margin: 0 auto;
+}
+
+.canvas-col { display: flex; flex-direction: column; gap: 14px; }
+
+.views-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.canvas-wrap {
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.canvas-wrap .label {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.canvas-wrap .sublabel {
+  font-size: 11.5px; color: var(--rp-text-muted);
+  line-height: 1.45;
+}
+canvas {
+  display: block;
+  background: #fff;
+  border-radius: var(--rp-radius-sm);
+  width: 100%;
+}
+
+.panel {
+  width: 290px;
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  align-self: flex-start;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 700;
+  color: var(--rp-text-muted);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rp-border);
+}
+
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--rp-text-body);
+  margin-bottom: 4px;
+}
+.slider-group label span {
+  color: var(--rp-accent); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+.slider-group input[type=range] {
+  width: 100%; accent-color: var(--rp-accent);
+}
+.slider-group + .slider-group { margin-top: 8px; }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12.5px; color: var(--rp-text-body);
+}
+.toggle-row input[type=checkbox] { accent-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff;
+  border: 1px solid transparent;
+  padding: 8px 12px; border-radius: var(--rp-radius-md);
+  font-size: 12.5px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  flex: 1;
+}
+button:hover { background: #0077ed; }
+button.secondary {
+  background: #fff; color: var(--rp-text);
+  border-color: var(--rp-border);
+}
+button.secondary:hover {
+  background: var(--rp-bg-alt);
+  border-color: var(--rp-border-mid);
+}
+
+.stats {
+  font-size: 12.5px; color: var(--rp-text-body);
+  line-height: 1.65;
+  border-top: 1px solid var(--rp-border);
+  padding-top: 10px;
+}
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child {
+  color: var(--rp-text-heading); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 8px 12px;
+  font-size: 11.5px; color: var(--rp-text-muted);
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-line { width: 18px; height: 2px; border-radius: 1px; }
+.legend-dashed {
+  width: 18px; height: 0; border-top: 2px dashed;
+}
+</style>
+</head>
+<body>
+<h1>완전 SLAM 파이프라인</h1>
+<p class="subtitle">오도메트리 → pose graph → 루프 클로저 → 백엔드 최적화 한 화면에</p>
+
+<div class="layout">
+  <div class="canvas-col" style="flex: 1; min-width: 900px;">
+    <div class="views-grid">
+      <div class="canvas-wrap">
+        <div class="label">뷰 1 — 프론트엔드 (Prior)</div>
+        <canvas id="view1" width="420" height="420"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dashed" style="border-color:#34c759"></div>실제 경로</div>
+          <div class="legend-item"><div class="legend-line" style="background:#ff3b30"></div>오도메트리</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#af52de"></div>랜드마크</div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="label">뷰 2 — Pose Graph</div>
+        <canvas id="view2" width="420" height="420"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="background:rgba(0,0,0,0.35)"></div>odom edge</div>
+          <div class="legend-item"><div class="legend-line" style="background:#ff9500"></div>obs edge</div>
+          <div class="legend-item"><div class="legend-line" style="background:#af52de;height:3px"></div>loop closure</div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="label">뷰 3 — 백엔드 (Optimized)</div>
+        <canvas id="view3" width="420" height="420"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="background:#0071e3"></div>최적 경로</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#34c759"></div>랜드마크 (opt)</div>
+          <div class="legend-item"><div class="legend-dashed" style="border-color:rgba(0,0,0,0.3)"></div>오차</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>노이즈</h3>
+    <div class="slider-group">
+      <label>오도메트리 σ <span id="odomNoiseVal">0.06</span></label>
+      <input type="range" id="odomNoise" min="0" max="0.3" step="0.005" value="0.06">
+    </div>
+    <div class="slider-group">
+      <label>관찰 σ <span id="obsNoiseVal">0.08</span></label>
+      <input type="range" id="obsNoise" min="0" max="0.4" step="0.01" value="0.08">
+    </div>
+    <div class="slider-group">
+      <label>루프 임계값 (m) <span id="loopThVal">1.20</span></label>
+      <input type="range" id="loopTh" min="0.3" max="3.0" step="0.1" value="1.2">
+    </div>
+
+    <h3>토글</h3>
+    <div class="toggle-row">
+      <label for="autoLoop">자동 루프 클로저</label>
+      <input type="checkbox" id="autoLoop" checked>
+    </div>
+    <div class="toggle-row">
+      <label for="showObs">관찰 엣지 표시</label>
+      <input type="checkbox" id="showObs" checked>
+    </div>
+    <div class="toggle-row">
+      <label for="autoOpt">수렴 시 자동 최적화</label>
+      <input type="checkbox" id="autoOpt" checked>
+    </div>
+
+    <h3>컨트롤</h3>
+    <div class="btn-row">
+      <button id="btnPause">일시정지</button>
+      <button id="btnReset" class="secondary">리셋</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnOptimize">지금 최적화</button>
+      <button id="btnAddLC" class="secondary">LC 수동 추가</button>
+    </div>
+
+    <h3>통계</h3>
+    <div class="stats">
+      <div class="row"><span>poses</span><span id="sPoses">0</span></div>
+      <div class="row"><span>landmarks</span><span id="sLm">0</span></div>
+      <div class="row"><span>odom edges</span><span id="sOdom">0</span></div>
+      <div class="row"><span>obs edges</span><span id="sObs">0</span></div>
+      <div class="row"><span>loop closures</span><span id="sLC">0</span></div>
+      <div class="row"><span>pre-opt 오차</span><span id="sErrPre">—</span></div>
+      <div class="row"><span>post-opt 오차</span><span id="sErrPost">—</span></div>
+      <div class="row"><span>GN iter</span><span id="sIter">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// 완전 SLAM 파이프라인
+// 프론트엔드: VO 모사 (odom + observation with noise)
+// 백엔드: pose graph + landmark 2D SLAM, Gauss-Newton
+// ================================================================
+
+// ---------- 환경 ----------
+const WORLD = { w: 20, h: 20 };  // 20m x 20m
+const WALLS = [
+  // outer
+  [[-10, -10], [10, -10]], [[10, -10], [10, 10]],
+  [[10, 10], [-10, 10]], [[-10, 10], [-10, -10]],
+  // inner obstacles
+  [[-4, -4], [-4, 2]], [[-4, 2], [0, 2]],
+  [[3, -2], [6, -2]], [[6, -2], [6, 4]],
+  [[-2, 6], [4, 6]]
+];
+
+// 로봇 경로 (pre-defined closed loop through environment)
+function makePath() {
+  const pts = [];
+  const loop = [
+    [-7, -7], [-7, 6], [-2, 8], [5, 7], [8, 4],
+    [8, -5], [3, -7], [-2, -4], [-5, -7], [-7, -7]
+  ];
+  // interpolate between waypoints
+  const stepDist = 0.35;
+  for (let i = 0; i < loop.length - 1; i++) {
+    const [x1, y1] = loop[i];
+    const [x2, y2] = loop[i + 1];
+    const dx = x2 - x1, dy = y2 - y1;
+    const L = Math.hypot(dx, dy);
+    const n = Math.max(1, Math.floor(L / stepDist));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      const x = x1 + t * dx;
+      const y = y1 + t * dy;
+      const th = Math.atan2(dy, dx);
+      pts.push([x, y, th]);
+    }
+  }
+  // close loop (append last waypoint)
+  pts.push([...loop[loop.length - 1], pts[pts.length - 1][2]]);
+  return pts;
+}
+
+function makeLandmarks() {
+  const lms = [];
+  // seeded-ish random placement, rejection in walls
+  const rng = mulberry32(42);
+  let tries = 0;
+  while (lms.length < 42 && tries < 1000) {
+    tries++;
+    const x = (rng() - 0.5) * 18;
+    const y = (rng() - 0.5) * 18;
+    // keep away from path a little
+    let ok = true;
+    for (const w of WALLS) {
+      if (pointSegDist(x, y, w[0][0], w[0][1], w[1][0], w[1][1]) < 0.4) { ok = false; break; }
+    }
+    if (ok) lms.push([x, y]);
+  }
+  return lms;
+}
+
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function pointSegDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const L2 = dx * dx + dy * dy;
+  if (L2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / L2;
+  t = Math.max(0, Math.min(1, t));
+  const qx = x1 + t * dx, qy = y1 + t * dy;
+  return Math.hypot(px - qx, py - qy);
+}
+
+// ---------- 상태 ----------
+let truePath, landmarks;
+let pathIdx;
+let poses;        // [x,y,th] — odometry estimate
+let truePoses;    // [x,y,th] — actual visited
+let odomEdges;    // {from,to, dx,dy,dth}  — in prev-frame
+let obsEdges;     // {pose, lm, range, bearing}
+let loopEdges;    // {from,to, dx,dy,dth}
+let landmarkEst;  // [x,y]
+let landmarkSeen; // bool[]
+let lastErrPre = null, lastErrPost = null, lastIter = null;
+let running = true;
+let addLCMode = false;
+let manualLCFirst = -1;
+let stepAcc = 0;
+
+// ---------- Canvas setup ----------
+const views = ['view1', 'view2', 'view3'].map(id => {
+  const c = document.getElementById(id);
+  return { canvas: c, ctx: c.getContext('2d') };
+});
+
+function resizeCanvas(v) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = v.canvas.getBoundingClientRect();
+  v.canvas.width = rect.width * dpr;
+  v.canvas.height = rect.height * dpr;
+  v.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  v.W = rect.width; v.H = rect.height;
+}
+
+function worldToScreen(v, x, y) {
+  const pad = 20;
+  const scale = Math.min((v.W - 2 * pad) / WORLD.w, (v.H - 2 * pad) / WORLD.h);
+  const sx = v.W / 2 + x * scale;
+  const sy = v.H / 2 - y * scale;
+  return [sx, sy, scale];
+}
+
+// ---------- 초기화 ----------
+function reset() {
+  truePath = makePath();
+  landmarks = makeLandmarks();
+  pathIdx = 0;
+  poses = [];
+  truePoses = [];
+  odomEdges = [];
+  obsEdges = [];
+  loopEdges = [];
+  landmarkEst = landmarks.map(() => null);
+  landmarkSeen = landmarks.map(() => false);
+  lastErrPre = null; lastErrPost = null; lastIter = null;
+  addLCMode = false;
+  manualLCFirst = -1;
+  stepAcc = 0;
+
+  // anchor at origin of path
+  const [x0, y0, th0] = truePath[0];
+  truePoses.push([x0, y0, th0]);
+  poses.push([x0, y0, th0]);  // assume known initial
+  pathIdx = 1;
+  updateStats();
+}
+
+// ---------- 프론트엔드: 한 스텝 진행 ----------
+function normalizeAngle(a) {
+  while (a > Math.PI) a -= 2 * Math.PI;
+  while (a < -Math.PI) a += 2 * Math.PI;
+  return a;
+}
+
+function gauss() {
+  // Box-Muller
+  const u = Math.max(1e-9, Math.random());
+  const v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function stepSim() {
+  if (pathIdx >= truePath.length) return false;
+
+  const odomSigma = parseFloat(document.getElementById('odomNoise').value);
+  const obsSigma = parseFloat(document.getElementById('obsNoise').value);
+  const loopTh = parseFloat(document.getElementById('loopTh').value);
+  const autoLC = document.getElementById('autoLoop').checked;
+
+  const prev = truePoses[truePoses.length - 1];
+  const cur = truePath[pathIdx];
+  truePoses.push([...cur]);
+
+  // --- odometry in prev frame ---
+  const dx_w = cur[0] - prev[0];
+  const dy_w = cur[1] - prev[1];
+  const c = Math.cos(-prev[2]), s = Math.sin(-prev[2]);
+  const dx_b = c * dx_w - s * dy_w;
+  const dy_b = s * dx_w + c * dy_w;
+  const dth = normalizeAngle(cur[2] - prev[2]);
+
+  // noisy odom measurement (body frame)
+  const ndx = dx_b + gauss() * odomSigma;
+  const ndy = dy_b + gauss() * odomSigma * 0.5;
+  const ndth = dth + gauss() * odomSigma * 0.3;
+
+  // integrate noisy odom from last estimated pose
+  const last = poses[poses.length - 1];
+  const cL = Math.cos(last[2]), sL = Math.sin(last[2]);
+  const nx = last[0] + cL * ndx - sL * ndy;
+  const ny = last[1] + sL * ndx + cL * ndy;
+  const nth = normalizeAngle(last[2] + ndth);
+  poses.push([nx, ny, nth]);
+
+  odomEdges.push({
+    from: poses.length - 2,
+    to: poses.length - 1,
+    dx: ndx, dy: ndy, dth: ndth
+  });
+
+  // --- observations (landmarks in FOV) ---
+  const FOV = 4.5;  // radius of perception
+  const curPoseIdx = poses.length - 1;
+  for (let li = 0; li < landmarks.length; li++) {
+    const lm = landmarks[li];
+    const dxl = lm[0] - cur[0];
+    const dyl = lm[1] - cur[1];
+    const r = Math.hypot(dxl, dyl);
+    if (r > FOV) continue;
+    // is it occluded by wall?
+    if (isOccluded(cur[0], cur[1], lm[0], lm[1])) continue;
+    const bearing = normalizeAngle(Math.atan2(dyl, dxl) - cur[2]);
+
+    const nR = r + gauss() * obsSigma;
+    const nB = bearing + gauss() * obsSigma * 0.1;
+
+    obsEdges.push({
+      pose: curPoseIdx, lm: li,
+      range: nR, bearing: nB
+    });
+
+    // init landmark estimate if first time
+    if (!landmarkSeen[li]) {
+      const pose = poses[curPoseIdx];
+      const absB = pose[2] + nB;
+      landmarkEst[li] = [
+        pose[0] + nR * Math.cos(absB),
+        pose[1] + nR * Math.sin(absB)
+      ];
+      landmarkSeen[li] = true;
+    }
+  }
+
+  // --- loop closure detection ---
+  if (autoLC && poses.length > 25) {
+    const cp = poses[curPoseIdx];
+    let best = -1, bestD = loopTh;
+    for (let j = 0; j < curPoseIdx - 20; j++) {
+      const q = poses[j];
+      const d = Math.hypot(cp[0] - q[0], cp[1] - q[1]);
+      if (d < bestD) { bestD = d; best = j; }
+    }
+    if (best >= 0) {
+      // also verify via ground truth proximity (closure "appears plausible")
+      const tCur = truePoses[curPoseIdx], tQ = truePoses[best];
+      const tD = Math.hypot(tCur[0] - tQ[0], tCur[1] - tQ[1]);
+      if (tD < loopTh * 1.5) {
+        // avoid duplicates
+        const exists = loopEdges.some(l => l.from === best && l.to === curPoseIdx);
+        if (!exists) {
+          // measurement = true relative transform + small noise
+          addLoopEdge(best, curPoseIdx);
+          // auto-optimize soon
+          if (document.getElementById('autoOpt').checked) {
+            scheduledOpt = true;
+          }
+        }
+      }
+    }
+  }
+
+  pathIdx++;
+  return true;
+}
+
+function addLoopEdge(from, to) {
+  const tf = truePoses[from], tt = truePoses[to];
+  // relative in from frame
+  const dxw = tt[0] - tf[0], dyw = tt[1] - tf[1];
+  const c = Math.cos(-tf[2]), s = Math.sin(-tf[2]);
+  const dxb = c * dxw - s * dyw;
+  const dyb = s * dxw + c * dyw;
+  const dth = normalizeAngle(tt[2] - tf[2]);
+  const lcNoise = 0.05;
+  loopEdges.push({
+    from, to,
+    dx: dxb + gauss() * lcNoise,
+    dy: dyb + gauss() * lcNoise,
+    dth: dth + gauss() * lcNoise * 0.2
+  });
+}
+
+function isOccluded(x1, y1, x2, y2) {
+  for (const w of WALLS) {
+    if (segSegIntersect(x1, y1, x2, y2, w[0][0], w[0][1], w[1][0], w[1][1])) return true;
+  }
+  return false;
+}
+
+function segSegIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(d) < 1e-9) return false;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
+  const u = ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) / d;
+  return t > 0 && t < 1 && u > 0 && u < 1;
+}
+
+// ---------- 백엔드: Gauss-Newton ----------
+// Variables: poses (x,y,th) [3 dof each] + landmarks (x,y) [2 dof each]
+// Pose 0 anchored.
+let scheduledOpt = false;
+
+function runOptimization() {
+  const N = poses.length;
+  const M = landmarks.length;
+  if (N < 3) return;
+
+  // state vector layout:
+  //   poses[i]: indices 3*i .. 3*i+2  (for i=1..N-1; pose 0 fixed)
+  //   landmarks[k]: indices 3*(N-1) + 2*k .. +1
+  // We still include pose 0 conceptually but fix it (skip its rows in normal eqn)
+
+  const dim = 3 * (N - 1) + 2 * M;
+  function poseIdx(i, j) { return 3 * (i - 1) + j; }  // only valid for i>=1
+  function lmIdx(k, j) { return 3 * (N - 1) + 2 * k + j; }
+
+  // copy state
+  let P = poses.map(p => [...p]);
+  let L = landmarkEst.map(l => l ? [...l] : null);
+
+  // weights
+  const wOdom = 1.0;
+  const wObs = 0.5;
+  const wLC = 5.0;
+
+  const preErr = totalError(P, L, wOdom, wObs, wLC);
+
+  const MAX_ITER = 10;
+  let iter = 0;
+  for (; iter < MAX_ITER; iter++) {
+    // H (dim x dim), b (dim)
+    const H = Array.from({ length: dim }, () => new Float64Array(dim));
+    const b = new Float64Array(dim);
+
+    // --- Odometry factors ---
+    for (const e of odomEdges) {
+      const pi = P[e.from], pj = P[e.to];
+      const c = Math.cos(pi[2]), s = Math.sin(pi[2]);
+      // predicted in i-frame
+      const dxw = pj[0] - pi[0], dyw = pj[1] - pi[1];
+      const dx_pred = c * dxw + s * dyw;
+      const dy_pred = -s * dxw + c * dyw;
+      const dth_pred = normalizeAngle(pj[2] - pi[2]);
+      const rx = dx_pred - e.dx;
+      const ry = dy_pred - e.dy;
+      const rth = normalizeAngle(dth_pred - e.dth);
+
+      // Jacobians wrt pi (xi,yi,thi) and pj (xj,yj,thj)
+      // d(dx_pred)/d(xi) = -c, d/d(yi)=-s, d/d(thi)=-s*dxw + c*dyw
+      // d(dx_pred)/d(xj) =  c, d/d(yj)= s, d/d(thj)= 0
+      // d(dy_pred)/d(xi) =  s, d/d(yi)=-c, d/d(thi)=-c*dxw - s*dyw
+      // d(dy_pred)/d(xj) = -s, d/d(yj)= c, d/d(thj)= 0
+      // d(dth_pred)/d(thi) = -1, d/d(thj)=1
+      const Ji = [
+        [-c, -s, -s * dxw + c * dyw],
+        [s, -c, -c * dxw - s * dyw],
+        [0, 0, -1]
+      ];
+      const Jj = [
+        [c, s, 0],
+        [-s, c, 0],
+        [0, 0, 1]
+      ];
+      const r = [rx, ry, rth];
+      addFactor(H, b, e.from, e.to, Ji, Jj, r, wOdom, poseIdx, poseIdx, 3);
+    }
+
+    // --- Observation factors (range/bearing) ---
+    for (const o of obsEdges) {
+      const p = P[o.pose];
+      const lm = L[o.lm];
+      if (!lm) continue;
+      const dx = lm[0] - p[0], dy = lm[1] - p[1];
+      const q = dx * dx + dy * dy;
+      const r_pred = Math.sqrt(q);
+      if (r_pred < 1e-6) continue;
+      const b_pred = normalizeAngle(Math.atan2(dy, dx) - p[2]);
+      const rr = r_pred - o.range;
+      const rb = normalizeAngle(b_pred - o.bearing);
+
+      // d(r)/d(px) = -dx/r, d(r)/d(py)=-dy/r, d(r)/d(th)=0
+      // d(r)/d(lx) = dx/r,  d(r)/d(ly)= dy/r
+      // d(b)/d(px) = dy/q, d(b)/d(py)=-dx/q, d(b)/d(th)=-1
+      // d(b)/d(lx) = -dy/q, d(b)/d(ly)= dx/q
+      const Jp = [
+        [-dx / r_pred, -dy / r_pred, 0],
+        [dy / q, -dx / q, -1]
+      ];
+      const Jl = [
+        [dx / r_pred, dy / r_pred],
+        [-dy / q, dx / q]
+      ];
+      const rV = [rr, rb];
+      addFactor2(H, b, o.pose, o.lm, Jp, Jl, rV, wObs, poseIdx, lmIdx, 3, 2);
+    }
+
+    // --- Loop closure factors (same form as odom) ---
+    for (const e of loopEdges) {
+      const pi = P[e.from], pj = P[e.to];
+      const c = Math.cos(pi[2]), s = Math.sin(pi[2]);
+      const dxw = pj[0] - pi[0], dyw = pj[1] - pi[1];
+      const dx_pred = c * dxw + s * dyw;
+      const dy_pred = -s * dxw + c * dyw;
+      const dth_pred = normalizeAngle(pj[2] - pi[2]);
+      const rx = dx_pred - e.dx;
+      const ry = dy_pred - e.dy;
+      const rth = normalizeAngle(dth_pred - e.dth);
+      const Ji = [
+        [-c, -s, -s * dxw + c * dyw],
+        [s, -c, -c * dxw - s * dyw],
+        [0, 0, -1]
+      ];
+      const Jj = [
+        [c, s, 0],
+        [-s, c, 0],
+        [0, 0, 1]
+      ];
+      const r = [rx, ry, rth];
+      addFactor(H, b, e.from, e.to, Ji, Jj, r, wLC, poseIdx, poseIdx, 3);
+    }
+
+    // damping (Levenberg-like)
+    for (let i = 0; i < dim; i++) H[i][i] += 0.5;
+
+    // solve H * dx = -b
+    const neg_b = new Float64Array(dim);
+    for (let i = 0; i < dim; i++) neg_b[i] = -b[i];
+    const dx = solveLinearSystem(H, neg_b);
+
+    // update
+    let maxStep = 0;
+    for (let i = 1; i < N; i++) {
+      const ix = poseIdx(i, 0);
+      P[i][0] += dx[ix];
+      P[i][1] += dx[ix + 1];
+      P[i][2] = normalizeAngle(P[i][2] + dx[ix + 2]);
+      maxStep = Math.max(maxStep, Math.abs(dx[ix]), Math.abs(dx[ix + 1]));
+    }
+    for (let k = 0; k < M; k++) {
+      if (!L[k]) continue;
+      const ix = lmIdx(k, 0);
+      L[k][0] += dx[ix];
+      L[k][1] += dx[ix + 1];
+      maxStep = Math.max(maxStep, Math.abs(dx[ix]), Math.abs(dx[ix + 1]));
+    }
+
+    if (maxStep < 1e-4) { iter++; break; }
+  }
+
+  const postErr = totalError(P, L, wOdom, wObs, wLC);
+  poses = P;
+  landmarkEst = L;
+  lastErrPre = preErr;
+  lastErrPost = postErr;
+  lastIter = iter;
+  updateStats();
+}
+
+function totalError(P, L, wOdom, wObs, wLC) {
+  let err = 0;
+  for (const e of odomEdges) {
+    const pi = P[e.from], pj = P[e.to];
+    const c = Math.cos(pi[2]), s = Math.sin(pi[2]);
+    const dxw = pj[0] - pi[0], dyw = pj[1] - pi[1];
+    const rx = c * dxw + s * dyw - e.dx;
+    const ry = -s * dxw + c * dyw - e.dy;
+    const rth = normalizeAngle(pj[2] - pi[2] - e.dth);
+    err += wOdom * (rx * rx + ry * ry + rth * rth);
+  }
+  for (const o of obsEdges) {
+    const p = P[o.pose], lm = L[o.lm];
+    if (!lm) continue;
+    const dx = lm[0] - p[0], dy = lm[1] - p[1];
+    const r_pred = Math.hypot(dx, dy);
+    const b_pred = normalizeAngle(Math.atan2(dy, dx) - p[2]);
+    const rr = r_pred - o.range;
+    const rb = normalizeAngle(b_pred - o.bearing);
+    err += wObs * (rr * rr + rb * rb);
+  }
+  for (const e of loopEdges) {
+    const pi = P[e.from], pj = P[e.to];
+    const c = Math.cos(pi[2]), s = Math.sin(pi[2]);
+    const dxw = pj[0] - pi[0], dyw = pj[1] - pi[1];
+    const rx = c * dxw + s * dyw - e.dx;
+    const ry = -s * dxw + c * dyw - e.dy;
+    const rth = normalizeAngle(pj[2] - pi[2] - e.dth);
+    err += wLC * (rx * rx + ry * ry + rth * rth);
+  }
+  return err;
+}
+
+// Add pose-pose style factor: contributes to i (if i>0) and j blocks
+function addFactor(H, b, i, j, Ji, Jj, r, w, idxI, idxJ, sz) {
+  // For i==0, the pose is fixed: drop Ji rows (no contribution to H/b via i)
+  const includeI = i > 0;
+  const includeJ = j > 0;
+  const rLen = r.length;
+
+  // H_ii += Ji^T Ji * w
+  if (includeI) {
+    for (let a = 0; a < sz; a++) {
+      for (let b2 = 0; b2 < sz; b2++) {
+        let v = 0;
+        for (let k = 0; k < rLen; k++) v += Ji[k][a] * Ji[k][b2];
+        H[idxI(i, a)][idxI(i, b2)] += w * v;
+      }
+      let v = 0;
+      for (let k = 0; k < rLen; k++) v += Ji[k][a] * r[k];
+      b[idxI(i, a)] += w * v;
+    }
+  }
+  if (includeJ) {
+    for (let a = 0; a < sz; a++) {
+      for (let b2 = 0; b2 < sz; b2++) {
+        let v = 0;
+        for (let k = 0; k < rLen; k++) v += Jj[k][a] * Jj[k][b2];
+        H[idxJ(j, a)][idxJ(j, b2)] += w * v;
+      }
+      let v = 0;
+      for (let k = 0; k < rLen; k++) v += Jj[k][a] * r[k];
+      b[idxJ(j, a)] += w * v;
+    }
+  }
+  if (includeI && includeJ) {
+    for (let a = 0; a < sz; a++) {
+      for (let b2 = 0; b2 < sz; b2++) {
+        let v = 0;
+        for (let k = 0; k < rLen; k++) v += Ji[k][a] * Jj[k][b2];
+        H[idxI(i, a)][idxJ(j, b2)] += w * v;
+        H[idxJ(j, b2)][idxI(i, a)] += w * v;
+      }
+    }
+  }
+}
+
+// Pose-landmark factor: Jp (rx2, 3), Jl (rx2, 2)
+function addFactor2(H, b, i, k, Jp, Jl, r, w, idxI, idxK, szP, szL) {
+  const includeI = i > 0;
+  const rLen = r.length;
+  if (includeI) {
+    for (let a = 0; a < szP; a++) {
+      for (let b2 = 0; b2 < szP; b2++) {
+        let v = 0;
+        for (let m = 0; m < rLen; m++) v += Jp[m][a] * Jp[m][b2];
+        H[idxI(i, a)][idxI(i, b2)] += w * v;
+      }
+      let v = 0;
+      for (let m = 0; m < rLen; m++) v += Jp[m][a] * r[m];
+      b[idxI(i, a)] += w * v;
+    }
+  }
+  // landmark block
+  for (let a = 0; a < szL; a++) {
+    for (let b2 = 0; b2 < szL; b2++) {
+      let v = 0;
+      for (let m = 0; m < rLen; m++) v += Jl[m][a] * Jl[m][b2];
+      H[idxK(k, a)][idxK(k, b2)] += w * v;
+    }
+    let v = 0;
+    for (let m = 0; m < rLen; m++) v += Jl[m][a] * r[m];
+    b[idxK(k, a)] += w * v;
+  }
+  // cross
+  if (includeI) {
+    for (let a = 0; a < szP; a++) {
+      for (let b2 = 0; b2 < szL; b2++) {
+        let v = 0;
+        for (let m = 0; m < rLen; m++) v += Jp[m][a] * Jl[m][b2];
+        H[idxI(i, a)][idxK(k, b2)] += w * v;
+        H[idxK(k, b2)][idxI(i, a)] += w * v;
+      }
+    }
+  }
+}
+
+function solveLinearSystem(A, b) {
+  const n = b.length;
+  // copy
+  const M = A.map(r => Array.from(r));
+  const rhs = Array.from(b);
+
+  for (let col = 0; col < n; col++) {
+    // pivot
+    let mv = Math.abs(M[col][col]), mr = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > mv) { mv = Math.abs(M[r][col]); mr = r; }
+    }
+    if (mr !== col) {
+      [M[col], M[mr]] = [M[mr], M[col]];
+      [rhs[col], rhs[mr]] = [rhs[mr], rhs[col]];
+    }
+    if (Math.abs(M[col][col]) < 1e-12) continue;
+    for (let r = col + 1; r < n; r++) {
+      const f = M[r][col] / M[col][col];
+      if (f === 0) continue;
+      for (let j = col; j < n; j++) M[r][j] -= f * M[col][j];
+      rhs[r] -= f * rhs[col];
+    }
+  }
+  const x = new Float64Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = rhs[i];
+    for (let j = i + 1; j < n; j++) s -= M[i][j] * x[j];
+    x[i] = Math.abs(M[i][i]) > 1e-12 ? s / M[i][i] : 0;
+  }
+  return x;
+}
+
+// ---------- 렌더링 ----------
+function drawWalls(v) {
+  const ctx = v.ctx;
+  ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+  ctx.lineWidth = 2;
+  for (const w of WALLS) {
+    const [a] = worldToScreen(v, w[0][0], w[0][1]);
+    const s1 = worldToScreen(v, w[0][0], w[0][1]);
+    const s2 = worldToScreen(v, w[1][0], w[1][1]);
+    ctx.beginPath();
+    ctx.moveTo(s1[0], s1[1]);
+    ctx.lineTo(s2[0], s2[1]);
+    ctx.stroke();
+  }
+}
+
+function drawGrid(v) {
+  const ctx = v.ctx;
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  for (let g = -10; g <= 10; g += 2) {
+    const a = worldToScreen(v, g, -10);
+    const b = worldToScreen(v, g, 10);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    const c = worldToScreen(v, -10, g);
+    const d = worldToScreen(v, 10, g);
+    ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.stroke();
+  }
+}
+
+function drawView1() {
+  const v = views[0];
+  const ctx = v.ctx;
+  ctx.clearRect(0, 0, v.W, v.H);
+  drawGrid(v);
+  drawWalls(v);
+
+  // true path (green dashed)
+  ctx.strokeStyle = '#34c759';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  for (let i = 0; i < truePoses.length; i++) {
+    const s = worldToScreen(v, truePoses[i][0], truePoses[i][1]);
+    if (i === 0) ctx.moveTo(s[0], s[1]); else ctx.lineTo(s[0], s[1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // observation edges (light orange)
+  if (document.getElementById('showObs').checked) {
+    ctx.strokeStyle = 'rgba(255,149,0,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const o of obsEdges) {
+      const p = poses[o.pose];
+      const lm = landmarkEst[o.lm];
+      if (!p || !lm) continue;
+      const s1 = worldToScreen(v, p[0], p[1]);
+      const s2 = worldToScreen(v, lm[0], lm[1]);
+      ctx.moveTo(s1[0], s1[1]);
+      ctx.lineTo(s2[0], s2[1]);
+    }
+    ctx.stroke();
+  }
+
+  // odometry path (red)
+  ctx.strokeStyle = '#ff3b30';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < poses.length; i++) {
+    const s = worldToScreen(v, poses[i][0], poses[i][1]);
+    if (i === 0) ctx.moveTo(s[0], s[1]); else ctx.lineTo(s[0], s[1]);
+  }
+  ctx.stroke();
+
+  // landmarks (true vs est)
+  for (let i = 0; i < landmarks.length; i++) {
+    const s = worldToScreen(v, landmarks[i][0], landmarks[i][1]);
+    ctx.fillStyle = landmarkSeen[i] ? '#af52de' : 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], 2.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // robot
+  if (truePoses.length > 0) {
+    const r = truePoses[truePoses.length - 1];
+    const s = worldToScreen(v, r[0], r[1]);
+    ctx.fillStyle = '#34c759';
+    ctx.beginPath(); ctx.arc(s[0], s[1], 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
+function drawView2() {
+  const v = views[1];
+  const ctx = v.ctx;
+  ctx.clearRect(0, 0, v.W, v.H);
+  drawGrid(v);
+
+  // odometry edges (dark translucent)
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const e of odomEdges) {
+    const p1 = poses[e.from], p2 = poses[e.to];
+    if (!p1 || !p2) continue;
+    const s1 = worldToScreen(v, p1[0], p1[1]);
+    const s2 = worldToScreen(v, p2[0], p2[1]);
+    ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]);
+  }
+  ctx.stroke();
+
+  // observation edges (orange)
+  if (document.getElementById('showObs').checked) {
+    ctx.strokeStyle = '#ff9500';
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (const o of obsEdges) {
+      const p = poses[o.pose];
+      const lm = landmarkEst[o.lm];
+      if (!p || !lm) continue;
+      const s1 = worldToScreen(v, p[0], p[1]);
+      const s2 = worldToScreen(v, lm[0], lm[1]);
+      ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // loop closure (purple thick)
+  ctx.strokeStyle = '#af52de';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (const l of loopEdges) {
+    const p1 = poses[l.from], p2 = poses[l.to];
+    if (!p1 || !p2) continue;
+    const s1 = worldToScreen(v, p1[0], p1[1]);
+    const s2 = worldToScreen(v, p2[0], p2[1]);
+    ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]);
+  }
+  ctx.stroke();
+
+  // pose nodes
+  for (let i = 0; i < poses.length; i++) {
+    const p = poses[i];
+    const s = worldToScreen(v, p[0], p[1]);
+    ctx.beginPath();
+    let col = '#0071e3';
+    if (addLCMode && manualLCFirst === i) col = '#ff9500';
+    ctx.fillStyle = col;
+    ctx.arc(s[0], s[1], 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // landmark nodes (est)
+  for (let k = 0; k < landmarks.length; k++) {
+    if (!landmarkEst[k]) continue;
+    const s = worldToScreen(v, landmarkEst[k][0], landmarkEst[k][1]);
+    ctx.fillStyle = '#34c759';
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawView3() {
+  const v = views[2];
+  const ctx = v.ctx;
+  ctx.clearRect(0, 0, v.W, v.H);
+  drawGrid(v);
+  drawWalls(v);
+
+  // true path faint
+  ctx.strokeStyle = 'rgba(52,199,89,0.35)';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < truePoses.length; i++) {
+    const s = worldToScreen(v, truePoses[i][0], truePoses[i][1]);
+    if (i === 0) ctx.moveTo(s[0], s[1]); else ctx.lineTo(s[0], s[1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // error connectors (optimized vs truth)
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 0.6;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  for (let i = 0; i < Math.min(poses.length, truePoses.length); i += 2) {
+    const a = worldToScreen(v, poses[i][0], poses[i][1]);
+    const b = worldToScreen(v, truePoses[i][0], truePoses[i][1]);
+    ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // optimized path (Apple Blue)
+  ctx.strokeStyle = '#0071e3';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (let i = 0; i < poses.length; i++) {
+    const s = worldToScreen(v, poses[i][0], poses[i][1]);
+    if (i === 0) ctx.moveTo(s[0], s[1]); else ctx.lineTo(s[0], s[1]);
+  }
+  ctx.stroke();
+
+  // landmarks (green circles)
+  for (let k = 0; k < landmarks.length; k++) {
+    if (!landmarkEst[k]) continue;
+    const s = worldToScreen(v, landmarkEst[k][0], landmarkEst[k][1]);
+    ctx.strokeStyle = '#34c759';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(s[0], s[1], 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // truth dot
+    const st = worldToScreen(v, landmarks[k][0], landmarks[k][1]);
+    ctx.fillStyle = 'rgba(52,199,89,0.25)';
+    ctx.beginPath();
+    ctx.arc(st[0], st[1], 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // loop closures as faint purple
+  ctx.strokeStyle = 'rgba(175,82,222,0.55)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const l of loopEdges) {
+    const p1 = poses[l.from], p2 = poses[l.to];
+    if (!p1 || !p2) continue;
+    const s1 = worldToScreen(v, p1[0], p1[1]);
+    const s2 = worldToScreen(v, p2[0], p2[1]);
+    ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]);
+  }
+  ctx.stroke();
+}
+
+function drawAll() {
+  for (const v of views) resizeCanvas(v);
+  drawView1();
+  drawView2();
+  drawView3();
+}
+
+// ---------- 통계 ----------
+function updateStats() {
+  document.getElementById('sPoses').textContent = poses.length;
+  document.getElementById('sLm').textContent = landmarkEst.filter(l => l).length;
+  document.getElementById('sOdom').textContent = odomEdges.length;
+  document.getElementById('sObs').textContent = obsEdges.length;
+  document.getElementById('sLC').textContent = loopEdges.length;
+  document.getElementById('sErrPre').textContent = lastErrPre !== null ? lastErrPre.toFixed(2) : '—';
+  document.getElementById('sErrPost').textContent = lastErrPost !== null ? lastErrPost.toFixed(2) : '—';
+  document.getElementById('sIter').textContent = lastIter !== null ? lastIter : '—';
+}
+
+// ---------- 메인 루프 ----------
+let lastT = performance.now();
+function loop(t) {
+  const dt = t - lastT;
+  lastT = t;
+  if (running) {
+    stepAcc += dt;
+    // 30 Hz
+    while (stepAcc > 33) {
+      stepSim();
+      stepAcc -= 33;
+    }
+    if (scheduledOpt) {
+      runOptimization();
+      scheduledOpt = false;
+    }
+  }
+  updateStats();
+  drawAll();
+  requestAnimationFrame(loop);
+}
+
+// ---------- UI 이벤트 ----------
+function bindSlider(id, valId, fmt = v => v.toFixed(2)) {
+  const s = document.getElementById(id);
+  const l = document.getElementById(valId);
+  s.addEventListener('input', () => { l.textContent = fmt(parseFloat(s.value)); });
+}
+bindSlider('odomNoise', 'odomNoiseVal');
+bindSlider('obsNoise', 'obsNoiseVal');
+bindSlider('loopTh', 'loopThVal');
+
+document.getElementById('btnPause').addEventListener('click', () => {
+  running = !running;
+  document.getElementById('btnPause').textContent = running ? '일시정지' : '재생';
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  reset();
+  running = true;
+  document.getElementById('btnPause').textContent = '일시정지';
+});
+document.getElementById('btnOptimize').addEventListener('click', () => {
+  runOptimization();
+});
+document.getElementById('btnAddLC').addEventListener('click', () => {
+  addLCMode = true;
+  manualLCFirst = -1;
+});
+
+views[1].canvas.addEventListener('click', (e) => {
+  if (!addLCMode) return;
+  const v = views[1];
+  const rect = v.canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  // find nearest pose
+  let best = -1, bestD = Infinity;
+  for (let i = 0; i < poses.length; i++) {
+    const s = worldToScreen(v, poses[i][0], poses[i][1]);
+    const d = Math.hypot(s[0] - mx, s[1] - my);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  if (best < 0 || bestD > 20) return;
+  if (manualLCFirst < 0) {
+    manualLCFirst = best;
+  } else {
+    if (best !== manualLCFirst) {
+      const from = Math.min(best, manualLCFirst);
+      const to = Math.max(best, manualLCFirst);
+      const exists = loopEdges.some(l => l.from === from && l.to === to);
+      if (!exists) addLoopEdge(from, to);
+      scheduledOpt = true;
+    }
+    manualLCFirst = -1;
+    addLCMode = false;
+  }
+});
+
+window.addEventListener('resize', drawAll);
+
+// ---------- 시작 ----------
+reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

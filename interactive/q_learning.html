@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>Q-Learning GridWorld</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--rp-bg);
+  color: var(--rp-text);
+  font-family: var(--rp-font-body);
+  letter-spacing: -0.016em;
+  padding: 20px;
+  min-height: 100vh;
+}
+h1 {
+  font-family: var(--rp-font-display);
+  font-size: 26px; font-weight: 600; letter-spacing: -0.014em;
+  text-align: center; margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--rp-text-muted); font-size: 14px; margin-bottom: 18px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: auto 300px;
+  gap: 18px;
+  justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+.canvas-wrap {
+  background: var(--rp-bg-canvas);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 12px;
+}
+canvas { display: block; background: #fff; border-radius: var(--rp-radius-sm); cursor: crosshair; }
+
+.panel {
+  background: var(--rp-bg-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-md);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.panel h3 {
+  font-family: var(--rp-font-display);
+  font-size: 14px; font-weight: 600;
+  color: var(--rp-text-heading); letter-spacing: -0.012em;
+}
+.slider-group label {
+  display: flex; justify-content: space-between;
+  font-size: 12.5px; color: var(--rp-text-body); margin-bottom: 4px;
+}
+.slider-group label span {
+  color: var(--rp-accent); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+.slider-group input[type=range] { width: 100%; accent-color: var(--rp-accent); }
+
+.seg-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg {
+  flex: 1 1 auto;
+  padding: 7px 8px; font-size: 12px; font-weight: 500; letter-spacing: -0.012em;
+  background: #fff; color: var(--rp-text);
+  border: 1px solid var(--rp-border); border-radius: var(--rp-radius-md);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.seg:hover { background: var(--rp-bg-alt); }
+.seg.active { background: var(--rp-accent); color: #fff; border-color: var(--rp-accent); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font-family: inherit;
+  background: var(--rp-accent); color: #fff; border: 1px solid transparent;
+  padding: 8px 12px; border-radius: var(--rp-radius-md);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.012em;
+  cursor: pointer; transition: background 0.15s; flex: 1 1 auto;
+}
+button:hover { background: #0077ed; }
+button.secondary { background: #fff; color: var(--rp-text); border-color: var(--rp-border); }
+button.secondary:hover { background: var(--rp-bg-alt); }
+
+.toggle-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--rp-text-body); }
+.toggle-row input { accent-color: var(--rp-accent); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--rp-text-body); }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.08); }
+
+.stats { font-size: 12.5px; color: var(--rp-text-body); line-height: 1.7; border-top: 1px solid var(--rp-border); padding-top: 12px; }
+.stats .row { display: flex; justify-content: space-between; }
+.stats .row span:last-child {
+  color: var(--rp-text-heading); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rp-font-mono); font-size: 12px;
+}
+
+.hint { font-size: 11.5px; color: var(--rp-text-muted); line-height: 1.55; }
+</style>
+</head>
+<body>
+<h1>Q-Learning GridWorld</h1>
+<p class="subtitle">ε-greedy 탐색으로 GridWorld 최적 정책 학습 — Q-table 실시간 업데이트</p>
+
+<div class="layout">
+  <div class="canvas-wrap">
+    <canvas id="c" width="720" height="720"></canvas>
+  </div>
+
+  <div class="panel">
+    <h3>하이퍼파라미터</h3>
+    <div class="slider-group">
+      <label>학습률 α <span id="alphaVal">0.30</span></label>
+      <input type="range" id="alphaSlider" min="0.01" max="1" step="0.01" value="0.30">
+    </div>
+    <div class="slider-group">
+      <label>할인율 γ <span id="gammaVal">0.95</span></label>
+      <input type="range" id="gammaSlider" min="0" max="1" step="0.01" value="0.95">
+    </div>
+    <div class="slider-group">
+      <label>탐색률 ε <span id="epsVal">0.20</span></label>
+      <input type="range" id="epsSlider" min="0" max="1" step="0.01" value="0.20">
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="decayChk" checked>
+      <label for="decayChk">ε decay (0.995/ep, min 0.01)</label>
+    </div>
+    <div class="slider-group">
+      <label>속도 <span id="speedVal">120</span> steps/s</label>
+      <input type="range" id="speedSlider" min="1" max="1000" step="1" value="120">
+    </div>
+
+    <h3>편집 모드</h3>
+    <div class="seg-row" id="editSeg">
+      <button class="seg active" data-m="wall">Wall</button>
+      <button class="seg" data-m="trap">Trap</button>
+      <button class="seg" data-m="goal">Goal</button>
+      <button class="seg" data-m="start">Start</button>
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="policyChk" checked>
+      <label for="policyChk">greedy policy 화살표</label>
+    </div>
+
+    <div class="btn-row">
+      <button id="stepBtn" class="secondary">Step</button>
+      <button id="playBtn">▶ Play</button>
+    </div>
+    <div class="btn-row">
+      <button id="episodeBtn" class="secondary">New Episode</button>
+      <button id="resetQBtn" class="secondary">Reset Q</button>
+    </div>
+    <div class="btn-row">
+      <button id="clearBtn" class="secondary">Clear Map</button>
+    </div>
+
+    <p class="hint">클릭/드래그: 현재 편집 모드 토글 · W/T/G/S + 클릭: 해당 셀로. 시작 셀은 삭제 불가.</p>
+
+    <div class="legend">
+      <div><span class="sw" style="background:#1d1d1f"></span>Wall</div>
+      <div><span class="sw" style="background:#34c759"></span>Goal (+100)</div>
+      <div><span class="sw" style="background:#ff3b30"></span>Trap (-50)</div>
+      <div><span class="sw" style="background:#fff;border:2px solid #0071e3"></span>Start</div>
+    </div>
+
+    <div class="stats">
+      <div class="row"><span>에피소드</span><span id="epCount">0</span></div>
+      <div class="row"><span>스텝(이번)</span><span id="stepCount">0</span></div>
+      <div class="row"><span>보상(이번)</span><span id="retCur">0</span></div>
+      <div class="row"><span>평균 보상(최근10)</span><span id="retAvg">—</span></div>
+      <div class="row"><span>Q 업데이트</span><span id="qUpd">0</span></div>
+      <div class="row"><span>현재 ε</span><span id="epsCur">0.200</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Grid / World ──
+  const ROWS = 10, COLS = 10, NA = 4; // N=0, E=1, S=2, W=3
+  const DR = [-1, 0, 1, 0];
+  const DC = [ 0, 1, 0,-1];
+
+  const EMPTY = 0, WALL = 1, TRAP = 2, GOAL = 3;
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const CELL = canvas.width / COLS;
+
+  // ── State ──
+  let grid = new Uint8Array(ROWS * COLS);
+  let start = { r: 0, c: 0 };
+  let goal  = { r: 9, c: 9 };
+  let Q = new Float32Array(ROWS * COLS * NA);
+  let agent = { r: start.r, c: start.c };
+  let prevAgent = null;
+  let trail = [];
+
+  let episode = 0;
+  let stepCount = 0;
+  let curReturn = 0;
+  let returnHistory = [];
+  let qUpdateCount = 0;
+  let curEps;
+  let playing = false;
+
+  // Hyperparams (mutable)
+  let alpha = 0.30, gamma = 0.95, eps0 = 0.20, speed = 120;
+  let epsDecay = true;
+
+  let editMode = 'wall';
+  let showPolicy = true;
+
+  function sIdx(r, c) { return r * COLS + c; }
+  function qIdx(r, c, a) { return (r * COLS + c) * NA + a; }
+
+  // ── Map setup ──
+  function defaultMap() {
+    grid.fill(0);
+    // walls
+    const walls = [
+      [2,2],[2,3],[2,4],[3,4],[4,4],
+      [6,1],[6,2],[6,3],
+      [5,7],[6,7],[7,7],[4,7],
+      [8,4],[8,5],
+    ];
+    // traps
+    const traps = [[3,7],[7,2],[5,5]];
+    for (const [r,c] of walls) grid[sIdx(r,c)] = WALL;
+    for (const [r,c] of traps) grid[sIdx(r,c)] = TRAP;
+    start = { r: 0, c: 0 };
+    goal  = { r: 9, c: 9 };
+    grid[sIdx(goal.r, goal.c)] = GOAL;
+  }
+
+  function resetQ() {
+    Q.fill(0);
+    episode = 0;
+    returnHistory = [];
+    qUpdateCount = 0;
+    curEps = eps0;
+    newEpisode();
+    draw(); updateStats();
+  }
+
+  function newEpisode() {
+    agent = { r: start.r, c: start.c };
+    prevAgent = null;
+    trail = [{ r: agent.r, c: agent.c }];
+    stepCount = 0;
+    curReturn = 0;
+  }
+
+  function clearMap() {
+    grid.fill(0);
+    grid[sIdx(goal.r, goal.c)] = GOAL;
+    resetQ();
+  }
+
+  // ── RL step ──
+  function chooseAction(r, c) {
+    if (Math.random() < curEps) return Math.floor(Math.random() * NA);
+    // greedy (ties broken randomly)
+    let best = -Infinity, ties = [];
+    for (let a = 0; a < NA; a++) {
+      const q = Q[qIdx(r, c, a)];
+      if (q > best + 1e-9) { best = q; ties = [a]; }
+      else if (Math.abs(q - best) < 1e-9) { ties.push(a); }
+    }
+    return ties[Math.floor(Math.random() * ties.length)];
+  }
+
+  function maxQ(r, c) {
+    let best = -Infinity;
+    for (let a = 0; a < NA; a++) {
+      const q = Q[qIdx(r, c, a)];
+      if (q > best) best = q;
+    }
+    return best;
+  }
+
+  function transition(r, c, a) {
+    const nr = r + DR[a], nc = c + DC[a];
+    // bump into wall / out of bounds
+    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || grid[sIdx(nr, nc)] === WALL) {
+      return { r, c, reward: -5, done: false, bumped: true };
+    }
+    const cell = grid[sIdx(nr, nc)];
+    if (cell === GOAL) return { r: nr, c: nc, reward: 100, done: true, bumped: false };
+    if (cell === TRAP) return { r: nr, c: nc, reward: -50, done: true, bumped: false };
+    return { r: nr, c: nc, reward: -1, done: false, bumped: false };
+  }
+
+  function stepOnce() {
+    if (agent.r === goal.r && agent.c === goal.c) { finishEpisode(); return; }
+
+    const r = agent.r, c = agent.c;
+    const a = chooseAction(r, c);
+    const { r: nr, c: nc, reward, done } = transition(r, c, a);
+
+    // Q-learning update: Q(s,a) ← Q(s,a) + α·(r + γ·max_a' Q(s',a') − Q(s,a))
+    const target = done ? reward : (reward + gamma * maxQ(nr, nc));
+    const idx = qIdx(r, c, a);
+    Q[idx] += alpha * (target - Q[idx]);
+    qUpdateCount++;
+
+    prevAgent = { r, c };
+    agent = { r: nr, c: nc };
+    trail.push({ r: nr, c: nc });
+    if (trail.length > 40) trail.shift();
+
+    stepCount++;
+    curReturn += reward;
+
+    if (done) finishEpisode();
+    // safety: prevent runaway episodes
+    if (stepCount > 500) finishEpisode();
+  }
+
+  function finishEpisode() {
+    episode++;
+    returnHistory.push(curReturn);
+    if (returnHistory.length > 200) returnHistory.shift();
+    if (epsDecay) curEps = Math.max(0.01, curEps * 0.995);
+    newEpisode();
+  }
+
+  // ── Drawing ──
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function cellFillByType(type) {
+    if (type === WALL) return '#1d1d1f';
+    if (type === GOAL) return '#34c759';
+    if (type === TRAP) return '#ff3b30';
+    return '#ffffff';
+  }
+
+  // Triangle pointing in direction a (N/E/S/W), centered at (cx, cy), inside cell of size sz
+  function drawActionTri(cx, cy, a, sz, fill, stroke) {
+    const half = sz * 0.40;
+    const back = sz * 0.06;
+    let p0, p1, p2;
+    if (a === 0) { // N
+      p0 = [cx, cy - half];
+      p1 = [cx - sz*0.22, cy - back];
+      p2 = [cx + sz*0.22, cy - back];
+    } else if (a === 1) { // E
+      p0 = [cx + half, cy];
+      p1 = [cx + back, cy - sz*0.22];
+      p2 = [cx + back, cy + sz*0.22];
+    } else if (a === 2) { // S
+      p0 = [cx, cy + half];
+      p1 = [cx - sz*0.22, cy + back];
+      p2 = [cx + sz*0.22, cy + back];
+    } else { // W
+      p0 = [cx - half, cy];
+      p1 = [cx - back, cy - sz*0.22];
+      p2 = [cx - back, cy + sz*0.22];
+    }
+    ctx.beginPath();
+    ctx.moveTo(p0[0], p0[1]);
+    ctx.lineTo(p1[0], p1[1]);
+    ctx.lineTo(p2[0], p2[1]);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+    }
+  }
+
+  function qScale() {
+    // global max absolute Q for scaling triangle intensity
+    let m = 1e-6;
+    for (let i = 0; i < Q.length; i++) {
+      const v = Math.abs(Q[i]);
+      if (v > m) m = v;
+    }
+    return m;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const qm = qScale();
+
+    // cells
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const x = c * CELL, y = r * CELL;
+        const t = grid[sIdx(r, c)];
+
+        // base cell
+        ctx.fillStyle = cellFillByType(t);
+        ctx.fillRect(x, y, CELL, CELL);
+
+        // start outline (if not overridden)
+        if (r === start.r && c === start.c && t !== GOAL) {
+          ctx.strokeStyle = '#0071e3';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+        }
+
+        // grid line
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, CELL, CELL);
+
+        // action triangles — only for free-ish cells
+        if (t === EMPTY || (r === start.r && c === start.c)) {
+          // find best action
+          let bestA = 0, bestQ = -Infinity;
+          for (let a = 0; a < NA; a++) {
+            const v = Q[qIdx(r, c, a)];
+            if (v > bestQ) { bestQ = v; bestA = a; }
+          }
+          const cx = x + CELL / 2, cy = y + CELL / 2;
+
+          for (let a = 0; a < NA; a++) {
+            const q = Q[qIdx(r, c, a)];
+            const mag = Math.min(1, Math.abs(q) / qm);
+            let fill, stroke = null;
+            if (q >= 0) {
+              // Apple Blue, intensity by magnitude
+              const alpha01 = 0.10 + 0.75 * mag;
+              fill = `rgba(0,113,227,${alpha01.toFixed(3)})`;
+            } else {
+              const alpha01 = 0.10 + 0.75 * mag;
+              fill = `rgba(255,59,48,${alpha01.toFixed(3)})`;
+            }
+            if (a === bestA && qm > 0.5) {
+              fill = 'rgba(0,113,227,0.95)';
+              stroke = 'rgba(0,62,140,0.9)';
+            }
+            drawActionTri(cx, cy, a, CELL, fill, stroke);
+          }
+
+          // greedy policy big arrow
+          if (showPolicy && qm > 0.5) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            const ang = [-Math.PI/2, 0, Math.PI/2, Math.PI][bestA];
+            ctx.rotate(ang);
+            ctx.strokeStyle = 'rgba(255,149,0,0.85)';
+            ctx.fillStyle = 'rgba(255,149,0,0.85)';
+            ctx.lineWidth = 2.5;
+            const L = CELL * 0.28;
+            ctx.beginPath();
+            ctx.moveTo(-L*0.2, 0);
+            ctx.lineTo(L*0.55, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(L*0.7, 0);
+            ctx.lineTo(L*0.35, -L*0.22);
+            ctx.lineTo(L*0.35,  L*0.22);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // goal label
+        if (t === GOAL) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `700 ${Math.round(CELL*0.28)}px ` + getComputedStyle(document.body).fontFamily;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('G', x + CELL/2, y + CELL/2 + 1);
+        }
+        if (t === TRAP) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `700 ${Math.round(CELL*0.28)}px ` + getComputedStyle(document.body).fontFamily;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('T', x + CELL/2, y + CELL/2 + 1);
+        }
+        if (r === start.r && c === start.c && t !== GOAL) {
+          ctx.fillStyle = '#0071e3';
+          ctx.font = `700 ${Math.round(CELL*0.22)}px ` + getComputedStyle(document.body).fontFamily;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('S', x + CELL/2, y + CELL - 8);
+        }
+      }
+    }
+
+    // agent trail
+    for (let i = 0; i < trail.length; i++) {
+      const p = trail[i];
+      const a = (i + 1) / trail.length;
+      ctx.fillStyle = `rgba(0,113,227,${(0.05 + 0.25*a).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(p.c * CELL + CELL/2, p.r * CELL + CELL/2, CELL*0.12, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // agent current
+    ctx.fillStyle = '#0071e3';
+    ctx.beginPath();
+    ctx.arc(agent.c * CELL + CELL/2, agent.r * CELL + CELL/2, CELL*0.22, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function updateStats() {
+    document.getElementById('epCount').textContent = episode;
+    document.getElementById('stepCount').textContent = stepCount;
+    document.getElementById('retCur').textContent = curReturn.toFixed(1);
+    if (returnHistory.length === 0) {
+      document.getElementById('retAvg').textContent = '—';
+    } else {
+      const last = returnHistory.slice(-10);
+      const avg = last.reduce((s,v)=>s+v, 0) / last.length;
+      document.getElementById('retAvg').textContent = avg.toFixed(1);
+    }
+    document.getElementById('qUpd').textContent = qUpdateCount;
+    document.getElementById('epsCur').textContent = curEps.toFixed(3);
+  }
+
+  // ── Main loop (time-based stepping) ──
+  let lastFrame = 0;
+  let stepAccumulator = 0;
+  function loop(now) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000 || 0);
+    lastFrame = now;
+    if (playing) {
+      stepAccumulator += dt * speed;
+      let budget = Math.min(2000, Math.floor(stepAccumulator));
+      stepAccumulator -= budget;
+      while (budget-- > 0) stepOnce();
+      draw();
+      updateStats();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ── UI wiring ──
+  const alphaSlider = document.getElementById('alphaSlider');
+  const gammaSlider = document.getElementById('gammaSlider');
+  const epsSlider   = document.getElementById('epsSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const decayChk    = document.getElementById('decayChk');
+  const policyChk   = document.getElementById('policyChk');
+
+  alphaSlider.oninput = e => {
+    alpha = parseFloat(e.target.value);
+    document.getElementById('alphaVal').textContent = alpha.toFixed(2);
+  };
+  gammaSlider.oninput = e => {
+    gamma = parseFloat(e.target.value);
+    document.getElementById('gammaVal').textContent = gamma.toFixed(2);
+  };
+  epsSlider.oninput = e => {
+    eps0 = parseFloat(e.target.value);
+    curEps = eps0;
+    document.getElementById('epsVal').textContent = eps0.toFixed(2);
+  };
+  speedSlider.oninput = e => {
+    speed = parseInt(e.target.value, 10);
+    document.getElementById('speedVal').textContent = speed;
+  };
+  decayChk.onchange = e => { epsDecay = e.target.checked; };
+  policyChk.onchange = e => { showPolicy = e.target.checked; draw(); };
+
+  const playBtn = document.getElementById('playBtn');
+  playBtn.onclick = () => {
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  };
+  document.getElementById('stepBtn').onclick = () => {
+    stepOnce(); draw(); updateStats();
+  };
+  document.getElementById('episodeBtn').onclick = () => {
+    if (stepCount > 0) {
+      returnHistory.push(curReturn);
+      if (returnHistory.length > 200) returnHistory.shift();
+      episode++;
+      if (epsDecay) curEps = Math.max(0.01, curEps * 0.995);
+    }
+    newEpisode(); draw(); updateStats();
+  };
+  document.getElementById('resetQBtn').onclick = () => resetQ();
+  document.getElementById('clearBtn').onclick  = () => clearMap();
+
+  document.getElementById('editSeg').addEventListener('click', e => {
+    if (!e.target.classList.contains('seg')) return;
+    document.querySelectorAll('#editSeg .seg').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    editMode = e.target.dataset.m;
+  });
+
+  // ── Canvas interactions ──
+  const keysDown = new Set();
+  window.addEventListener('keydown', e => keysDown.add(e.key.toLowerCase()));
+  window.addEventListener('keyup',   e => keysDown.delete(e.key.toLowerCase()));
+
+  function cellAt(e) {
+    const r0 = canvas.getBoundingClientRect();
+    const sx = canvas.width  / r0.width;
+    const sy = canvas.height / r0.height;
+    const x = (e.clientX - r0.left) * sx;
+    const y = (e.clientY - r0.top ) * sy;
+    return { r: Math.floor(y / CELL), c: Math.floor(x / CELL) };
+  }
+
+  function applyEdit(cell, modeOverride) {
+    const { r, c } = cell;
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+    const mode = modeOverride || editMode;
+
+    // key overrides via keyboard
+    let effective = mode;
+    if (keysDown.has('w')) effective = 'wall';
+    else if (keysDown.has('t')) effective = 'trap';
+    else if (keysDown.has('g')) effective = 'goal';
+    else if (keysDown.has('s')) effective = 'start';
+
+    if (effective === 'goal') {
+      if (r === start.r && c === start.c) return false;
+      // clear previous goal
+      for (let i = 0; i < grid.length; i++) if (grid[i] === GOAL) grid[i] = 0;
+      grid[sIdx(r, c)] = GOAL;
+      goal = { r, c };
+      resetQ();
+      return true;
+    }
+    if (effective === 'start') {
+      if (grid[sIdx(r, c)] === WALL || grid[sIdx(r, c)] === GOAL) return false;
+      start = { r, c };
+      newEpisode();
+      return true;
+    }
+    if (effective === 'wall') {
+      if (r === start.r && c === start.c) return false;
+      if (r === goal.r && c === goal.c) return false;
+      grid[sIdx(r, c)] = grid[sIdx(r, c)] === WALL ? 0 : WALL;
+      return true;
+    }
+    if (effective === 'trap') {
+      if (r === start.r && c === start.c) return false;
+      if (r === goal.r && c === goal.c) return false;
+      grid[sIdx(r, c)] = grid[sIdx(r, c)] === TRAP ? 0 : TRAP;
+      return true;
+    }
+    return false;
+  }
+
+  let dragging = false;
+  let lastEdited = null;
+  canvas.addEventListener('mousedown', e => {
+    dragging = true;
+    const cell = cellAt(e);
+    lastEdited = cell;
+    if (applyEdit(cell)) { draw(); updateStats(); }
+  });
+  canvas.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const cell = cellAt(e);
+    if (lastEdited && cell.r === lastEdited.r && cell.c === lastEdited.c) return;
+    lastEdited = cell;
+    if (applyEdit(cell)) { draw(); updateStats(); }
+  });
+  window.addEventListener('mouseup', () => { dragging = false; lastEdited = null; });
+
+  // ── Init ──
+  defaultMap();
+  resetQ();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
