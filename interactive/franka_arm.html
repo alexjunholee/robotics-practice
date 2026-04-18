@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>Franka Panda 7-DOF 로봇팔 (FK + IK + Null-space)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
+  overflow: hidden;
+}
+#container { display: flex; height: 100vh; width: 100vw; }
+#sidebar {
+  width: 380px; min-width: 380px;
+  background: #f5f5f7;
+  padding: 18px 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  border-right: 1px solid rgba(0,0,0,0.12);
+}
+h1 {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  font-size: 18px; font-weight: 600; letter-spacing: -0.018em;
+  color: #1d1d1f; padding-bottom: 4px;
+}
+.subtitle {
+  font-size: 12.5px; color: rgba(0,0,0,0.56);
+  letter-spacing: -0.008em; line-height: 1.4;
+  padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+h2 {
+  font-size: 10.5px; font-weight: 700;
+  color: rgba(0,0,0,0.56);
+  background: transparent; padding: 0 0 4px;
+  margin: 10px 0 4px;
+  border: none; border-bottom: 1px solid rgba(0,0,0,0.08);
+  text-transform: uppercase; letter-spacing: 0.09em;
+  display: block;
+}
+.section {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 5px;
+  background: #fafafc;
+}
+.slider-group { display: flex; flex-direction: column; gap: 2px; }
+.slider-group label {
+  font-size: 12px; color: rgba(0,0,0,0.56);
+  display: flex; justify-content: space-between;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+}
+.slider-group label .name { color: #1d1d1f; font-weight: 500; }
+.slider-group input[type=range] {
+  width: 100%; accent-color: #0071e3;
+}
+.seg-row {
+  display: flex; gap: 0;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.seg-btn {
+  flex: 1; padding: 7px 10px;
+  background: transparent;
+  color: rgba(0,0,0,0.56);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12.5px; font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.seg-btn.active {
+  background: #fff;
+  color: #1d1d1f;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+button.btn {
+  flex: 1; min-width: 0;
+  background: #fff;
+  color: #1d1d1f;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+button.btn:hover { background: #f5f5f7; border-color: rgba(0,0,0,0.16); }
+button.btn.primary {
+  background: #0071e3; color: #fff; border-color: #0071e3;
+}
+button.btn.primary:hover { background: #0077ed; }
+
+.info-box {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+  font-size: 11px; line-height: 1.55;
+  white-space: pre;
+  color: #1d1d1f;
+  overflow-x: auto;
+}
+#canvas3d { flex: 1; display: block; cursor: grab; }
+#canvas3d.drag { cursor: grabbing; }
+#canvas3d.target-hover { cursor: move; }
+
+.tag-x { color: #ff3b30; }
+.tag-y { color: #34c759; }
+.tag-z { color: #0071e3; }
+
+.badge {
+  display: inline-block;
+  font-family: 'SF Mono', ui-monospace, 'Menlo', monospace;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 980px;
+  background: rgba(0,113,227,0.08);
+  color: #0066cc;
+  border: 1px solid rgba(0,113,227,0.20);
+}
+.badge.warn { background: rgba(255,59,48,0.08); color: #ff3b30; border-color: rgba(255,59,48,0.20); }
+.badge.ok { background: rgba(52,199,89,0.10); color: #1f9d50; border-color: rgba(52,199,89,0.24); }
+
+.foot {
+  font-size: 10.5px; color: rgba(0,0,0,0.40);
+  text-align: center; margin-top: 8px; line-height: 1.5;
+}
+.limit-bar {
+  position: relative; height: 4px; background: rgba(0,0,0,0.06);
+  border-radius: 2px; margin-top: 2px; overflow: hidden;
+}
+.limit-bar .fill {
+  position: absolute; top: 0; height: 100%;
+  background: linear-gradient(90deg, #34c759, #0071e3);
+  border-radius: 2px;
+}
+.limit-bar .tick {
+  position: absolute; top: -1px; width: 2px; height: 6px;
+  background: #1d1d1f;
+}
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="sidebar">
+    <h1>Franka Panda 7-DOF (FK + IK)</h1>
+    <div class="subtitle">7 조인트 슬라이더(FK) 또는 타겟 드래그(IK) · 7-DOF redundancy로 null-space 탐색 가능</div>
+
+    <h2>모드</h2>
+    <div class="seg-row" id="modeSeg">
+      <button class="seg-btn active" data-mode="fk">FK (순기구학)</button>
+      <button class="seg-btn" data-mode="ik">IK (역기구학)</button>
+    </div>
+
+    <h2>조인트 각도 (rad)</h2>
+    <div class="section" id="jointPanel">
+      <div class="slider-group">
+        <label><span class="name">q<sub>1</sub></span><span id="v0">+0.000</span></label>
+        <input type="range" class="j-slider" data-idx="0" min="-2.8973" max="2.8973" step="0.005" value="0">
+        <div class="limit-bar"><div class="fill" id="bar0"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>2</sub></span><span id="v1">-0.785</span></label>
+        <input type="range" class="j-slider" data-idx="1" min="-1.7628" max="1.7628" step="0.005" value="-0.7854">
+        <div class="limit-bar"><div class="fill" id="bar1"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>3</sub></span><span id="v2">+0.000</span></label>
+        <input type="range" class="j-slider" data-idx="2" min="-2.8973" max="2.8973" step="0.005" value="0">
+        <div class="limit-bar"><div class="fill" id="bar2"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>4</sub></span><span id="v3">-2.356</span></label>
+        <input type="range" class="j-slider" data-idx="3" min="-3.0718" max="-0.0698" step="0.005" value="-2.3562">
+        <div class="limit-bar"><div class="fill" id="bar3"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>5</sub></span><span id="v4">+0.000</span></label>
+        <input type="range" class="j-slider" data-idx="4" min="-2.8973" max="2.8973" step="0.005" value="0">
+        <div class="limit-bar"><div class="fill" id="bar4"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>6</sub></span><span id="v5">+1.571</span></label>
+        <input type="range" class="j-slider" data-idx="5" min="-0.0175" max="3.7525" step="0.005" value="1.5708">
+        <div class="limit-bar"><div class="fill" id="bar5"></div></div>
+      </div>
+      <div class="slider-group">
+        <label><span class="name">q<sub>7</sub></span><span id="v6">+0.785</span></label>
+        <input type="range" class="j-slider" data-idx="6" min="-2.8973" max="2.8973" step="0.005" value="0.7854">
+        <div class="limit-bar"><div class="fill" id="bar6"></div></div>
+      </div>
+    </div>
+
+    <h2>IK 파라미터 (DLS)</h2>
+    <div class="section">
+      <div class="slider-group">
+        <label><span class="name">damping &lambda;</span><span id="lamVal">0.10</span></label>
+        <input type="range" id="lamSlider" min="0.01" max="1" step="0.01" value="0.1">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">max iter / step</span><span id="iterVal">30</span></label>
+        <input type="range" id="iterSlider" min="5" max="60" step="1" value="30">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">tolerance (m)</span><span id="tolVal">0.003</span></label>
+        <input type="range" id="tolSlider" min="0.001" max="0.05" step="0.001" value="0.003">
+      </div>
+    </div>
+
+    <h2>Null-space 탐색 (redundancy)</h2>
+    <div class="section">
+      <div class="slider-group">
+        <label><span class="name">q<sub>7</sub>* 선호각 (rad)</span><span id="nullRefVal">+0.785</span></label>
+        <input type="range" id="nullRef" min="-2.8973" max="2.8973" step="0.01" value="0.7854">
+      </div>
+      <div class="slider-group">
+        <label><span class="name">null-space gain k</span><span id="nullGainVal">0.30</span></label>
+        <input type="range" id="nullGain" min="0" max="2" step="0.01" value="0.3">
+      </div>
+      <div style="font-size:11px;color:rgba(0,0,0,0.56);line-height:1.4;margin-top:2px">
+        IK 모드에서 EE pose는 고정한 채 q<sub>7</sub>이 선호각으로 당겨짐 → 팔꿈치가 돌아감(null-space motion)
+      </div>
+    </div>
+
+    <h2>궤적 이동 (Trajectory)</h2>
+    <div class="section">
+      <div class="slider-group">
+        <label><span class="name">duration (s)</span><span id="durVal">2.0</span></label>
+        <input type="range" id="durSlider" min="0.3" max="5" step="0.1" value="2">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnGo">▶ 타겟으로 이동</button>
+        <button class="btn" id="btnClearTrail">trail 지우기</button>
+      </div>
+      <div style="font-size:11px;color:rgba(0,0,0,0.56);line-height:1.4;margin-top:2px">
+        IK 모드에서 타겟을 배치한 뒤 ▶ 누르면 현재 EE → 타겟을 카테시안 직선 보간하며 매 프레임 IK 추적.<br>
+        주황색 선이 실제 EE가 그린 궤적.
+      </div>
+    </div>
+
+    <h2>프리셋 & 컨트롤</h2>
+    <div class="btn-row">
+      <button class="btn" id="btnReady">Ready</button>
+      <button class="btn" id="btnStretch">Stretch</button>
+      <button class="btn" id="btnRandom">Random q</button>
+    </div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn" id="btnRandTgt">Random target</button>
+      <button class="btn primary" id="btnReset">Reset</button>
+    </div>
+
+    <h2>End-Effector Pose</h2>
+    <div class="info-box" id="infoPose">x=  0.000  y=  0.000  z=  0.000
+roll =   0.00°
+pitch=   0.00°
+yaw  =   0.00°</div>
+
+    <h2>Joint Angles (q)</h2>
+    <div class="info-box" id="infoJ">q = [ 0.000, -0.785, 0.000, -2.356, 0.000, 1.571, 0.785 ]</div>
+
+    <h2>Jacobian / IK 통계</h2>
+    <div class="info-box" id="infoStats">cond(J) =    1.00
+manipulability w = 0.000
+||error||        = 0.000 m
+iter used        = 0 / 30
+<span class="badge ok">ready</span></div>
+
+    <div class="foot">
+      좌클릭 회전 · 우클릭/Shift 팬 · 휠 줌<br>
+      IK 모드에서 파란 구를 드래그 → 팔이 따라옴
+    </div>
+  </div>
+  <canvas id="canvas3d"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================
+   Minimal OrbitControls (Apple Light scene)
+   ========================================================= */
+(function(){
+  const EPS=1e-6, ST={NONE:-1, ROT:0, PAN:2};
+  class OrbitControls{
+    constructor(cam, el){
+      this.camera=cam; this.domElement=el;
+      this.target=new THREE.Vector3();
+      this.rotateSpeed=1; this.zoomSpeed=1;
+      this.minDistance=0.3; this.maxDistance=20;
+      this.enabled=true;
+      let state=ST.NONE;
+      let sph=new THREE.Spherical(), sphD=new THREE.Spherical();
+      let panOff=new THREE.Vector3(), scale=1;
+      let rS=new THREE.Vector2(), rE=new THREE.Vector2(), rD=new THREE.Vector2();
+      let pS=new THREE.Vector2(), pE=new THREE.Vector2(), pD=new THREE.Vector2();
+      const zs=()=>Math.pow(0.95,this.zoomSpeed);
+      const pl=(d,m)=>{let v=new THREE.Vector3(); v.setFromMatrixColumn(m,0); v.multiplyScalar(-d); panOff.add(v);};
+      const pu=(d,m)=>{let v=new THREE.Vector3(); v.setFromMatrixColumn(m,1); v.multiplyScalar(d); panOff.add(v);};
+      const pan=(dx,dy)=>{
+        let p=cam.position.clone().sub(this.target);
+        let d=p.length()*Math.tan(cam.fov/2*Math.PI/180);
+        pl(2*dx*d/el.clientHeight, cam.matrix);
+        pu(2*dy*d/el.clientHeight, cam.matrix);
+      };
+      const md=e=>{
+        if(!this.enabled) return;
+        if(e.button===0 && !e.shiftKey){ state=ST.ROT; rS.set(e.clientX,e.clientY); }
+        else if(e.button===2 || e.shiftKey){ state=ST.PAN; pS.set(e.clientX,e.clientY); }
+        if(state!==ST.NONE){
+          document.addEventListener('mousemove',mm);
+          document.addEventListener('mouseup',mu);
+        }
+      };
+      const mm=e=>{
+        if(state===ST.ROT){
+          rE.set(e.clientX,e.clientY); rD.subVectors(rE,rS);
+          sphD.theta -= 2*Math.PI*rD.x/el.clientHeight*this.rotateSpeed;
+          sphD.phi   -= 2*Math.PI*rD.y/el.clientHeight*this.rotateSpeed;
+          rS.copy(rE);
+        } else if(state===ST.PAN){
+          pE.set(e.clientX,e.clientY); pD.subVectors(pE,pS);
+          pan(pD.x, pD.y);
+          pS.copy(pE);
+        }
+      };
+      const mu=()=>{
+        state=ST.NONE;
+        document.removeEventListener('mousemove',mm);
+        document.removeEventListener('mouseup',mu);
+      };
+      const wh=e=>{
+        if(!this.enabled) return;
+        e.preventDefault();
+        if(e.deltaY<0) scale/=zs(); else scale*=zs();
+      };
+      el.addEventListener('mousedown', md);
+      el.addEventListener('wheel', wh, {passive:false});
+      el.addEventListener('contextmenu', e=>e.preventDefault());
+      this.update=function(){
+        let off=new THREE.Vector3();
+        let q=new THREE.Quaternion().setFromUnitVectors(cam.up,new THREE.Vector3(0,1,0));
+        let qi=q.clone().invert();
+        off.copy(cam.position).sub(this.target);
+        off.applyQuaternion(q);
+        sph.setFromVector3(off);
+        sph.theta += sphD.theta; sph.phi += sphD.phi;
+        sph.phi = Math.max(EPS, Math.min(Math.PI-EPS, sph.phi));
+        sph.radius *= scale;
+        sph.radius = Math.max(this.minDistance, Math.min(this.maxDistance, sph.radius));
+        this.target.add(panOff);
+        off.setFromSpherical(sph);
+        off.applyQuaternion(qi);
+        cam.position.copy(this.target).add(off);
+        cam.lookAt(this.target);
+        sphD.set(0,0,0); panOff.set(0,0,0); scale=1;
+      };
+    }
+  }
+  THREE.OrbitControls = OrbitControls;
+})();
+
+/* =========================================================
+   Franka Panda — Modified DH (Craig convention)
+
+   i    a_{i-1}   α_{i-1}   d_i      θ_i
+   1    0         0         0.333    q1
+   2    0         -π/2      0        q2
+   3    0         +π/2      0.316    q3
+   4    0.0825    +π/2      0        q4
+   5    -0.0825   -π/2      0.384    q5
+   6    0         +π/2      0        q6
+   7    0.088     +π/2      0        q7
+   F    0         0         0.107    0    (flange, fixed)
+
+   Transform (mDH):
+     T_i = Rx(α_{i-1}) · Tx(a_{i-1}) · Rz(θ_i) · Tz(d_i)
+   ========================================================= */
+const PI2 = Math.PI/2;
+const DH_a_prev     = [0,    0,   0,    0.0825, -0.0825, 0,    0.088];
+const DH_alpha_prev = [0,   -PI2, PI2,  PI2,    -PI2,    PI2,  PI2 ];
+const DH_d          = [0.333, 0,  0.316, 0,      0.384,  0,    0   ];
+const FLANGE_d = 0.107;
+
+const JOINT_LIMITS = [
+  [-2.8973,  2.8973],
+  [-1.7628,  1.7628],
+  [-2.8973,  2.8973],
+  [-3.0718, -0.0698],
+  [-2.8973,  2.8973],
+  [-0.0175,  3.7525],
+  [-2.8973,  2.8973]
+];
+
+// Franka "ready" pose (Franka Desk default) and a stretched pose
+const qReady    = [0, -Math.PI/4, 0, -3*Math.PI/4, 0, Math.PI/2, Math.PI/4];
+const qStretch  = [0, -0.3, 0, -1.8, 0, 1.5, Math.PI/4];
+let q = qReady.slice();
+
+let mode = 'fk';
+let targetPos = new THREE.Vector3();
+let targetRotMat = null;
+let draggingTarget = false;
+let dragPlane = new THREE.Plane();
+let lastIterUsed = 0;
+let lastErr = 0;
+let lastCond = 1;
+let lastManip = 0;
+
+// Trajectory animation state — "move current EE → target" with per-frame IK
+let animState = {
+  running: false,
+  t0: 0,
+  dur: 2.0,
+  pStart: new THREE.Vector3(),
+  pEnd: new THREE.Vector3(),
+  trail: [],
+  trailMax: 240
+};
+let trailLine = null;
+
+/* ----------------- 4x4 matrix utilities ----------------- */
+function mat4identity(){ return new Float64Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+function mat4multiply(A,B){
+  const R=new Float64Array(16);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    let s=0;
+    for(let k=0;k<4;k++) s += A[r*4+k]*B[k*4+c];
+    R[r*4+c]=s;
+  }
+  return R;
+}
+function mdhMatrix(a_prev, alpha_prev, d, theta){
+  const ct=Math.cos(theta), st=Math.sin(theta);
+  const ca=Math.cos(alpha_prev), sa=Math.sin(alpha_prev);
+  return new Float64Array([
+    ct,       -st,       0,    a_prev,
+    st*ca,    ct*ca,    -sa,  -sa*d,
+    st*sa,    ct*sa,     ca,   ca*d,
+    0,        0,         0,    1
+  ]);
+}
+function mat4getPos(T){ return new THREE.Vector3(T[3], T[7], T[11]); }
+function mat4getCol(T, c){ return new THREE.Vector3(T[c], T[4+c], T[8+c]); }
+
+/* =========================================================
+   Forward Kinematics — returns 9 transforms:
+     Ts[0] = base (I)
+     Ts[1..7] = after joint i (world frames of each link)
+     Ts[8] = flange (end-effector)
+   ========================================================= */
+function computeFK(qq){
+  const Ts = [mat4identity()];
+  for(let i=0;i<7;i++){
+    const Ai = mdhMatrix(DH_a_prev[i], DH_alpha_prev[i], DH_d[i], qq[i]);
+    Ts.push(mat4multiply(Ts[i], Ai));
+  }
+  // flange offset along Z of frame 7
+  const Af = mdhMatrix(0, 0, FLANGE_d, 0);
+  Ts.push(mat4multiply(Ts[7], Af));
+  return Ts;
+}
+
+/* =========================================================
+   Geometric Jacobian (6×7) in the base frame
+   For revolute joint i:
+     J_v_i = z_i × (p_e - p_i),   J_w_i = z_i
+   where z_i is the rotation axis of joint i, p_i its origin,
+   all expressed in the base frame.
+
+   With modified DH, joint i rotates about Z of frame (i-1).
+   We already store Ts[i-1] = frame after the mDH transform
+   from i-1 to i at current q_i, so the axis z_i in world is the
+   Z column of Ts[i-1] before the θ_i rotation — equivalently the
+   Z column of Ts[i-1] for mDH (rotation about Z of frame i).
+
+   Implementation: we use Ts[i-1] (stored as Ts[i-1] in our array,
+   0-indexed) — which is the base-frame pose of frame i-1 after
+   modified-DH transform. The joint i's axis is its Z.
+   ========================================================= */
+function computeJacobian(Ts){
+  const J = new Float64Array(42); // 6×7 row-major
+  const pe = mat4getPos(Ts[8]);
+  // For Modified DH (Craig), joint i's rotation axis is Z of frame i (after θ_i applied),
+  // because T_i = Rx(α_{i-1})·Tx(a_{i-1})·Rz(θ_i)·Tz(d_i) — the Rx/Tx happen BEFORE θ_i.
+  // So joint i (1-indexed) axis = 3rd column of Ts[i] in our 0-indexed array.
+  for(let i=0;i<7;i++){
+    const T = Ts[i+1]; // frame of joint (i+1) in 1-indexing
+    const zi = mat4getCol(T, 2);
+    const pi = mat4getPos(T);
+    const d = new THREE.Vector3().subVectors(pe, pi);
+    const Jv = new THREE.Vector3().crossVectors(zi, d);
+    J[0*7+i] = Jv.x; J[1*7+i] = Jv.y; J[2*7+i] = Jv.z;
+    J[3*7+i] = zi.x; J[4*7+i] = zi.y; J[5*7+i] = zi.z;
+  }
+  return J;
+}
+
+/* =========================================================
+   Matrix helpers — N×M in Float64Array row-major.
+   We need: J (6×7), J^T (7×6), J J^T (6×6) inverse, etc.
+   ========================================================= */
+function matTrans(A, rows, cols){
+  const R = new Float64Array(rows*cols);
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++) R[j*rows+i] = A[i*cols+j];
+  return R;
+}
+function matMul(A, B, r1, c1, c2){
+  // A (r1×c1) * B (c1×c2) = R (r1×c2)
+  const R = new Float64Array(r1*c2);
+  for(let i=0;i<r1;i++) for(let j=0;j<c2;j++){
+    let s=0;
+    for(let k=0;k<c1;k++) s += A[i*c1+k]*B[k*c2+j];
+    R[i*c2+j] = s;
+  }
+  return R;
+}
+function matVec(A, v, rows, cols){
+  const r = new Float64Array(rows);
+  for(let i=0;i<rows;i++){
+    let s=0;
+    for(let j=0;j<cols;j++) s += A[i*cols+j]*v[j];
+    r[i]=s;
+  }
+  return r;
+}
+// Gauss–Jordan inverse of N×N (partial pivoting).
+function matInv(A, n){
+  const M = new Float64Array(n*n*2);
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++) M[i*2*n+j] = A[i*n+j];
+    M[i*2*n + n + i] = 1;
+  }
+  for(let c=0;c<n;c++){
+    let piv=c, best=Math.abs(M[c*2*n+c]);
+    for(let r=c+1;r<n;r++){
+      const v=Math.abs(M[r*2*n+c]);
+      if(v>best){ best=v; piv=r; }
+    }
+    if(best<1e-15) return null;
+    if(piv!==c){
+      for(let k=0;k<2*n;k++){
+        const tmp=M[c*2*n+k]; M[c*2*n+k]=M[piv*2*n+k]; M[piv*2*n+k]=tmp;
+      }
+    }
+    const pv=M[c*2*n+c];
+    for(let k=0;k<2*n;k++) M[c*2*n+k]/=pv;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=M[r*2*n+c];
+      if(f===0) continue;
+      for(let k=0;k<2*n;k++) M[r*2*n+k] -= f*M[c*2*n+k];
+    }
+  }
+  const inv=new Float64Array(n*n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) inv[i*n+j]=M[i*2*n+n+j];
+  return inv;
+}
+
+// Manipulability w = sqrt(det(J J^T)) — via JJT already computed (6×6).
+// We approximate through the product of LU pivots from a small Cholesky-like pass.
+// Here: expand determinant of JJT after it's formed (Bareiss/Gauss eliminating).
+function detSymPos(A, n){
+  // Gaussian elimination determinant; since JJT is symmetric PSD this is OK.
+  const M = new Float64Array(A);
+  let det = 1;
+  for(let c=0;c<n;c++){
+    let piv=c, best=Math.abs(M[c*n+c]);
+    for(let r=c+1;r<n;r++){
+      const v=Math.abs(M[r*n+c]);
+      if(v>best){ best=v; piv=r; }
+    }
+    if(best<1e-20) return 0;
+    if(piv!==c){
+      for(let k=0;k<n;k++){ const t=M[c*n+k]; M[c*n+k]=M[piv*n+k]; M[piv*n+k]=t; }
+      det = -det;
+    }
+    det *= M[c*n+c];
+    for(let r=c+1;r<n;r++){
+      const f = M[r*n+c]/M[c*n+c];
+      for(let k=c;k<n;k++) M[r*n+k] -= f*M[c*n+k];
+    }
+  }
+  return det;
+}
+
+function condApprox(JJT){
+  // condition# proxy via max/min diagonal after elimination; rough only.
+  const M = new Float64Array(JJT);
+  const n = 6;
+  for(let c=0;c<n;c++){
+    for(let r=c+1;r<n;r++){
+      const f = M[r*n+c]/M[c*n+c];
+      for(let k=c;k<n;k++) M[r*n+k] -= f*M[c*n+k];
+    }
+  }
+  let mx=-Infinity, mn=Infinity;
+  for(let i=0;i<n;i++){
+    const d = Math.abs(M[i*n+i]);
+    if(d>mx) mx=d;
+    if(d<mn) mn=d;
+  }
+  if(mn<1e-15) return Infinity;
+  return Math.sqrt(mx/mn);
+}
+
+/* =========================================================
+   Orientation error via axis-angle (log map of R_target · R_curr^T)
+   ========================================================= */
+function rotAxisAngle(Rc, Rt){
+  const E=new Float64Array(9);
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    let s=0;
+    for(let k=0;k<3;k++) s += Rt[i*3+k]*Rc[j*3+k];
+    E[i*3+j]=s;
+  }
+  const tr = E[0]+E[4]+E[8];
+  let c=(tr-1)/2;
+  c=Math.max(-1, Math.min(1, c));
+  const angle=Math.acos(c);
+  if(angle<1e-6) return [0,0,0];
+  const s=2*Math.sin(angle);
+  const ax=(E[7]-E[5])/s, ay=(E[2]-E[6])/s, az=(E[3]-E[1])/s;
+  return [ax*angle, ay*angle, az*angle];
+}
+function getRot3FromT(T){
+  return new Float64Array([
+    T[0], T[1], T[2],
+    T[4], T[5], T[6],
+    T[8], T[9], T[10]
+  ]);
+}
+function matToRPY(T){
+  // ZYX Euler (roll about X, pitch about Y, yaw about Z)
+  const sy = Math.sqrt(T[0]*T[0] + T[4]*T[4]);
+  const singular = sy < 1e-6;
+  let roll, pitch, yaw;
+  if(!singular){
+    roll  = Math.atan2(T[9], T[10]);
+    pitch = Math.atan2(-T[8], sy);
+    yaw   = Math.atan2(T[4], T[0]);
+  } else {
+    roll  = Math.atan2(-T[6], T[5]);
+    pitch = Math.atan2(-T[8], sy);
+    yaw   = 0;
+  }
+  return [roll, pitch, yaw];
+}
+
+/* =========================================================
+   Joint-limit clamp
+   ========================================================= */
+function clampLimits(qq){
+  for(let i=0;i<7;i++){
+    const [lo, hi] = JOINT_LIMITS[i];
+    if(qq[i] < lo) qq[i] = lo;
+    else if(qq[i] > hi) qq[i] = hi;
+  }
+  return qq;
+}
+
+/* =========================================================
+   IK step — DLS + null-space projection
+     δq = J^T (J J^T + λ² I)⁻¹ δx  +  (I − J⁺ J) · k · (q* − q)_7th
+   Primary task: 6D twist error (pos + orient).
+   Secondary task: pull q_7 toward user-chosen q_7* (and softly pull
+   all joints toward joint-range centers as a gentle regularizer).
+   ========================================================= */
+function ikStep(qIn, targetP, targetR, lam, nullRef, nullGain){
+  const Ts = computeFK(qIn);
+  const Tee = Ts[8];
+  const pe = mat4getPos(Tee);
+  const dp = new THREE.Vector3().subVectors(targetP, pe);
+
+  let dw = [0,0,0];
+  if(targetR){
+    const Rc = getRot3FromT(Tee);
+    dw = rotAxisAngle(Rc, targetR);
+  }
+  const dx = new Float64Array([dp.x, dp.y, dp.z, dw[0], dw[1], dw[2]]);
+  const err = Math.sqrt(dp.x*dp.x + dp.y*dp.y + dp.z*dp.z);
+
+  const J = computeJacobian(Ts);           // 6×7
+  const Jt = matTrans(J, 6, 7);            // 7×6
+  const JJT = matMul(J, Jt, 6, 7, 6);      // 6×6
+  const l2 = lam*lam;
+  for(let i=0;i<6;i++) JJT[i*6+i] += l2;
+
+  const cond = condApprox(JJT);
+  const det  = detSymPos(JJT, 6);
+  const manip = det > 0 ? Math.sqrt(det) : 0;
+
+  const inv = matInv(JJT, 6);
+  if(!inv) return {q: qIn, err, cond, manip, ok:false};
+
+  // Primary: δq_p = Jt · inv · dx
+  const tmp = matVec(inv, dx, 6, 6);
+  const dq  = matVec(Jt, tmp, 7, 6);
+
+  // Null-space: N = I − Jt · inv · J
+  // secondary gradient: pull q7 → nullRef; mild pull of all q toward limit centers.
+  const grad = new Float64Array(7);
+  for(let i=0;i<7;i++){
+    const [lo, hi] = JOINT_LIMITS[i];
+    const center = 0.5*(lo + hi);
+    grad[i] = 0.05 * (center - qIn[i]);
+  }
+  grad[6] += nullGain * (nullRef - qIn[6]);
+
+  // N·grad = grad − Jt·inv·(J·grad)
+  const Jg = matVec(J, grad, 6, 7);
+  const invJg = matVec(inv, Jg, 6, 6);
+  const JtInvJg = matVec(Jt, invJg, 7, 6);
+  for(let i=0;i<7;i++) dq[i] += grad[i] - JtInvJg[i];
+
+  // Clamp step
+  const maxStep = 0.4;
+  let mag=0; for(let i=0;i<7;i++) mag += dq[i]*dq[i]; mag=Math.sqrt(mag);
+  if(mag>maxStep){ const k=maxStep/mag; for(let i=0;i<7;i++) dq[i]*=k; }
+
+  const qOut = new Array(7);
+  for(let i=0;i<7;i++) qOut[i] = qIn[i] + dq[i];
+  clampLimits(qOut);
+  return {q: qOut, err, cond, manip, ok:true};
+}
+
+function ikSolve(qIn, targetP, lam, iterMax, tol, nullRef, nullGain){
+  let qq = qIn.slice();
+  let r = {err: Infinity, cond:1, manip:0};
+  let i;
+  for(i=0;i<iterMax;i++){
+    r = ikStep(qq, targetP, targetRotMat, lam, nullRef, nullGain);
+    qq = r.q;
+    if(r.err < tol) { i++; break; }
+  }
+  return {q: qq, iter: i, err: r.err, cond: r.cond, manip: r.manip};
+}
+
+/* =========================================================
+   Three.js scene setup
+   ========================================================= */
+let renderer, scene, camera, controls;
+let baseCyl, armGroup, jointSpheres, linkMeshes, eeFrame, eeGripper;
+let targetMesh, targetFrame;
+
+function initScene(){
+  const canvas = document.getElementById('canvas3d');
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.setClearColor(0xffffff, 1);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, 1, 0.05, 50);
+  camera.up.set(0,0,1);
+  camera.position.set(1.3, -1.3, 1.0);
+  camera.lookAt(0,0,0.35);
+
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0,0,0.35);
+
+  // lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.7);
+  dl.position.set(1.5, -1.5, 2.5);
+  scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.25);
+  dl2.position.set(-1.5, 1.5, 1.0);
+  scene.add(dl2);
+
+  // Grid on XY plane (Z-up)
+  const gs = 2.5, gd = 20;
+  const gVerts = [];
+  const gStep = gs/gd;
+  for(let i=-gd/2; i<=gd/2; i++){
+    const x = i*gStep;
+    gVerts.push(x, -gs/2, 0,  x, gs/2, 0);
+    gVerts.push(-gs/2, x, 0,  gs/2, x, 0);
+  }
+  const gGeo = new THREE.BufferGeometry();
+  gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gVerts, 3));
+  scene.add(new THREE.LineSegments(gGeo, new THREE.LineBasicMaterial({color: 0xdcdce2})));
+  // main axes on floor
+  const axGeo = new THREE.BufferGeometry();
+  axGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+    -gs/2,0,0,  gs/2,0,0,
+    0,-gs/2,0,  0,gs/2,0
+  ],3));
+  scene.add(new THREE.LineSegments(axGeo, new THREE.LineBasicMaterial({color: 0xbfbfc7})));
+
+  // World frame at origin
+  scene.add(makeFrame(0.18));
+
+  // Base pedestal
+  baseCyl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.085, 0.095, 0.06, 32),
+    new THREE.MeshLambertMaterial({color: 0x2c2c2e})
+  );
+  baseCyl.rotation.x = Math.PI/2;
+  baseCyl.position.set(0,0,0.03);
+  scene.add(baseCyl);
+
+  armGroup = new THREE.Group();
+  scene.add(armGroup);
+  buildArmVisuals();
+
+  eeFrame = makeFrame(0.10);
+  scene.add(eeFrame);
+  eeGripper = makeGripper();
+  scene.add(eeGripper);
+
+  // Target
+  targetMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.035, 20, 20),
+    new THREE.MeshBasicMaterial({color: 0x0071e3, transparent:true, opacity:0.35, depthWrite:false})
+  );
+  const ringGeo = new THREE.RingGeometry(0.042, 0.05, 24);
+  const ringMat = new THREE.MeshBasicMaterial({color:0x0071e3, side:THREE.DoubleSide, transparent:true, opacity:0.65});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2;
+  targetMesh.add(ring);
+  scene.add(targetMesh);
+
+  targetFrame = makeFrame(0.09);
+  scene.add(targetFrame);
+
+  // Initial target = current EE
+  const Ts = computeFK(q);
+  targetPos.copy(mat4getPos(Ts[8]));
+  targetMesh.position.copy(targetPos);
+  targetFrame.position.copy(targetPos);
+  targetMesh.visible = (mode==='ik');
+  targetFrame.visible = (mode==='ik');
+
+  initTrailLine();
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  canvas.addEventListener('mousedown', onCanvasDown, true);
+  canvas.addEventListener('mousemove', onCanvasMove, true);
+  canvas.addEventListener('mouseup',   onCanvasUp,   true);
+
+  animate();
+  update();
+}
+
+function makeFrame(len){
+  const g = new THREE.Group();
+  const addAxis = (dir, color)=>{
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0,0,0),
+      new THREE.Vector3().copy(dir).multiplyScalar(len)
+    ]);
+    g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({color, linewidth:2})));
+  };
+  addAxis(new THREE.Vector3(1,0,0), 0xff3b30);
+  addAxis(new THREE.Vector3(0,1,0), 0x34c759);
+  addAxis(new THREE.Vector3(0,0,1), 0x0071e3);
+  return g;
+}
+function makeGripper(){
+  const g = new THREE.Group();
+  const matPalm   = new THREE.MeshLambertMaterial({color: 0x2c2c2e});
+  const matFinger = new THREE.MeshLambertMaterial({color: 0xff9500});
+  const matTip    = new THREE.MeshBasicMaterial({color: 0xff3b30});
+
+  const palm = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.05, 0.028),
+    matPalm
+  );
+  palm.position.set(0, 0, 0.014);
+  g.add(palm);
+
+  for(const x of [-0.030, 0.030]){
+    const finger = new THREE.Mesh(
+      new THREE.BoxGeometry(0.013, 0.028, 0.06),
+      matFinger
+    );
+    finger.position.set(x, 0, 0.058);
+    g.add(finger);
+  }
+
+  const tip = new THREE.Mesh(
+    new THREE.SphereGeometry(0.018, 20, 16),
+    matTip
+  );
+  tip.position.set(0, 0, 0.095);
+  g.add(tip);
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.022, 0.028, 24),
+    new THREE.MeshBasicMaterial({color:0xff3b30, side:THREE.DoubleSide, transparent:true, opacity:0.55})
+  );
+  ring.rotation.x = Math.PI/2;
+  ring.position.set(0, 0, 0.095);
+  g.add(ring);
+
+  return g;
+}
+
+function buildArmVisuals(){
+  while(armGroup.children.length) armGroup.remove(armGroup.children[0]);
+  jointSpheres = [];
+  linkMeshes = [];
+
+  // 7 link colors (gradient blue → slightly warmer near wrist)
+  const linkColors = [
+    0x0071e3, 0x2688e6, 0x4c9fe9, 0x72b6ec,
+    0x98cdf0, 0xbee4f3, 0xe2dfe8
+  ];
+
+  // 8 joint spheres: 0 = before joint 1 (base), 1..7 = after joints, 8 = flange
+  for(let i=0;i<9;i++){
+    const radius = (i===0) ? 0.05 : (i===8 ? 0.028 : 0.032);
+    const color  = (i===0) ? 0x2c2c2e : (i===8 ? 0xff9500 : 0xb3b3b6);
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 20, 16),
+      new THREE.MeshLambertMaterial({color})
+    );
+    armGroup.add(s);
+    jointSpheres.push(s);
+  }
+
+  // 8 cylinders: 7 between Ts[0..7] consecutive, plus flange Ts[7]→Ts[8]
+  for(let i=0;i<8;i++){
+    const c = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 1, 18),
+      new THREE.MeshLambertMaterial({color: i<7 ? linkColors[i] : 0xff9f40})
+    );
+    armGroup.add(c);
+    linkMeshes.push(c);
+  }
+}
+
+function placeCylinderBetween(mesh, p1, p2){
+  const mid = new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);
+  const dir = new THREE.Vector3().subVectors(p2,p1);
+  const len = dir.length();
+  mesh.position.copy(mid);
+  mesh.scale.set(1, Math.max(len, 1e-4), 1);
+  const up = new THREE.Vector3(0,1,0);
+  const qq = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize());
+  mesh.setRotationFromQuaternion(qq);
+  mesh.visible = len > 1e-4;
+}
+
+/* =========================================================
+   Render update
+   ========================================================= */
+function update(){
+  const Ts = computeFK(q);
+  const P = Ts.map(T => mat4getPos(T));
+
+  for(let i=0;i<9;i++) jointSpheres[i].position.copy(P[i]);
+  for(let i=0;i<8;i++) placeCylinderBetween(linkMeshes[i], P[i], P[i+1]);
+
+  // EE frame + gripper
+  const Tee = Ts[8];
+  const m = new THREE.Matrix4();
+  m.set(
+    Tee[0], Tee[1], Tee[2], Tee[3],
+    Tee[4], Tee[5], Tee[6], Tee[7],
+    Tee[8], Tee[9], Tee[10], Tee[11],
+    Tee[12], Tee[13], Tee[14], Tee[15]
+  );
+  const quat = new THREE.Quaternion();
+  const pos  = new THREE.Vector3();
+  const scl  = new THREE.Vector3();
+  m.decompose(pos, quat, scl);
+  eeFrame.position.copy(pos);   eeFrame.quaternion.copy(quat);
+  eeGripper.position.copy(pos); eeGripper.quaternion.copy(quat);
+
+  // Slider sync + readouts
+  for(let i=0;i<7;i++){
+    const sl = document.querySelector(`.j-slider[data-idx="${i}"]`);
+    if(Math.abs(parseFloat(sl.value) - q[i]) > 1e-4) sl.value = q[i];
+    document.getElementById('v'+i).textContent = fmt(q[i], 3, true);
+    const [lo, hi] = JOINT_LIMITS[i];
+    const pct = ((q[i]-lo)/(hi-lo))*100;
+    document.getElementById('bar'+i).style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+
+  const rpy = matToRPY(Tee);
+  document.getElementById('infoPose').textContent =
+    `x= ${fmt(pos.x,3)}  y= ${fmt(pos.y,3)}  z= ${fmt(pos.z,3)}\n`+
+    `roll = ${fmt(rpy[0]*180/Math.PI,2)}°\n`+
+    `pitch= ${fmt(rpy[1]*180/Math.PI,2)}°\n`+
+    `yaw  = ${fmt(rpy[2]*180/Math.PI,2)}°`;
+
+  document.getElementById('infoJ').textContent =
+    `q = [ ${q.map(v=>fmt(v,3)).join(', ')} ]`;
+
+  // Compute stats live (even in FK mode) so user sees how current pose is posed wrt singularity
+  const J = computeJacobian(Ts);
+  const Jt = matTrans(J, 6, 7);
+  const JJT = matMul(J, Jt, 6, 7, 6);
+  lastCond = condApprox(JJT);
+  const det = detSymPos(JJT, 6);
+  lastManip = det > 0 ? Math.sqrt(det) : 0;
+
+  const badge = (lastErr < parseFloat(document.getElementById('tolSlider').value))
+    ? '<span class="badge ok">converged</span>'
+    : (lastIterUsed>0 ? '<span class="badge warn">no-conv</span>' : '<span class="badge">ready</span>');
+  document.getElementById('infoStats').innerHTML =
+    `cond(J) = ${fmt(lastCond, 2)}
+manipulability w = ${fmt(lastManip, 4)}
+||error||        = ${fmt(lastErr, 4)} m
+iter used        = ${lastIterUsed} / ${document.getElementById('iterSlider').value}
+${badge}`;
+
+  if(mode==='ik' && !animState.running){
+    targetMesh.position.copy(targetPos);
+    targetFrame.position.copy(targetPos);
+  }
+}
+
+function fmt(v, d, signed){
+  if(!isFinite(v)) return '  inf';
+  const s = v.toFixed(d);
+  return signed ? ((v>=0?'+':'') + s) : s;
+}
+
+/* =========================================================
+   Trajectory animation: Cartesian straight-line EE motion
+   with per-frame IK tracking. Orientation kept at final
+   target orient throughout (simple but effective).
+   ========================================================= */
+function initTrailLine(){
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(animState.trailMax*3), 3));
+  geo.setDrawRange(0, 0);
+  trailLine = new THREE.Line(geo, new THREE.LineBasicMaterial({
+    color: 0xff9500, transparent:true, opacity:0.85, linewidth:2
+  }));
+  scene.add(trailLine);
+}
+function pushTrail(p){
+  animState.trail.push(p.clone());
+  if(animState.trail.length > animState.trailMax) animState.trail.shift();
+  const arr = trailLine.geometry.attributes.position.array;
+  for(let i=0;i<animState.trail.length;i++){
+    arr[i*3  ] = animState.trail[i].x;
+    arr[i*3+1] = animState.trail[i].y;
+    arr[i*3+2] = animState.trail[i].z;
+  }
+  trailLine.geometry.attributes.position.needsUpdate = true;
+  trailLine.geometry.setDrawRange(0, animState.trail.length);
+}
+function clearTrail(){
+  animState.trail.length = 0;
+  if(trailLine) trailLine.geometry.setDrawRange(0, 0);
+}
+function smoothstep(t){ return t<0?0:(t>1?1:t*t*(3-2*t)); }
+
+function startAnimateToTarget(){
+  if(mode!=='ik'){
+    document.querySelector('.seg-btn[data-mode="ik"]').click();
+  }
+  const Ts = computeFK(q);
+  animState.pStart.copy(mat4getPos(Ts[8]));
+  animState.pEnd.copy(targetPos);
+  animState.t0 = performance.now()/1000;
+  animState.dur = parseFloat(document.getElementById('durSlider').value);
+  animState.running = true;
+  clearTrail();
+  pushTrail(animState.pStart);
+}
+function cancelAnimation(){ animState.running = false; }
+
+function tickAnimation(){
+  if(!animState.running) return;
+  const now = performance.now()/1000;
+  let t = (now - animState.t0)/animState.dur;
+  const done = t >= 1;
+  if(done) t = 1;
+  const s = smoothstep(t);
+  const pInterp = new THREE.Vector3().lerpVectors(animState.pStart, animState.pEnd, s);
+  targetPos.copy(pInterp);
+  const lam  = parseFloat(document.getElementById('lamSlider').value);
+  const nRef = parseFloat(document.getElementById('nullRef').value);
+  const nG   = parseFloat(document.getElementById('nullGain').value);
+  const tol  = parseFloat(document.getElementById('tolSlider').value);
+  // Iterate until converged — target moves each frame, so we must re-converge per frame.
+  const iMax = 20;
+  let iter = 0;
+  for(; iter < iMax; iter++){
+    const r = ikStep(q, targetPos, targetRotMat, lam, nRef, nG);
+    q = r.q; lastErr = r.err;
+    if(r.err < tol){ iter++; break; }
+  }
+  lastIterUsed = iter;
+  const eeP = mat4getPos(computeFK(q)[8]);
+  pushTrail(eeP);
+  // During animation: keep the visible goal marker fixed at pEnd — user's placed target.
+  // `targetPos` is the intermediate IK goal (interpolated) but the sphere stays put.
+  update();
+  if(done) animState.running = false;
+}
+
+/* =========================================================
+   UI wiring
+   ========================================================= */
+document.querySelectorAll('#modeSeg .seg-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#modeSeg .seg-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+    targetMesh.visible = (mode==='ik');
+    targetFrame.visible = (mode==='ik');
+    if(mode==='ik'){
+      const Ts = computeFK(q);
+      targetPos.copy(mat4getPos(Ts[8]));
+      targetRotMat = getRot3FromT(Ts[8]); // lock current orientation as IK target
+      targetMesh.position.copy(targetPos);
+      targetFrame.position.copy(targetPos);
+    } else {
+      targetRotMat = null;
+    }
+    update();
+  });
+});
+
+document.querySelectorAll('.j-slider').forEach(sl=>{
+  sl.addEventListener('input', ()=>{
+    if(mode!=='fk') return;
+    const i = parseInt(sl.dataset.idx);
+    q[i] = parseFloat(sl.value);
+    lastIterUsed = 0; lastErr = 0;
+    update();
+  });
+});
+
+document.getElementById('lamSlider').addEventListener('input', e=>{
+  document.getElementById('lamVal').textContent = parseFloat(e.target.value).toFixed(2);
+});
+document.getElementById('iterSlider').addEventListener('input', e=>{
+  document.getElementById('iterVal').textContent = e.target.value;
+  update();
+});
+document.getElementById('tolSlider').addEventListener('input', e=>{
+  document.getElementById('tolVal').textContent = parseFloat(e.target.value).toFixed(3);
+  update();
+});
+document.getElementById('nullRef').addEventListener('input', e=>{
+  const v = parseFloat(e.target.value);
+  document.getElementById('nullRefVal').textContent = (v>=0?'+':'') + v.toFixed(3);
+  if(mode==='ik') runIKBatch();
+});
+document.getElementById('nullGain').addEventListener('input', e=>{
+  document.getElementById('nullGainVal').textContent = parseFloat(e.target.value).toFixed(2);
+  if(mode==='ik') runIKBatch();
+});
+document.getElementById('durSlider').addEventListener('input', e=>{
+  document.getElementById('durVal').textContent = parseFloat(e.target.value).toFixed(1);
+});
+document.getElementById('btnGo').addEventListener('click', startAnimateToTarget);
+document.getElementById('btnClearTrail').addEventListener('click', clearTrail);
+
+document.getElementById('btnReady').addEventListener('click', ()=>{
+  q = qReady.slice();
+  syncTargetFromCurrent();
+  update();
+});
+document.getElementById('btnStretch').addEventListener('click', ()=>{
+  q = qStretch.slice();
+  syncTargetFromCurrent();
+  update();
+});
+document.getElementById('btnRandom').addEventListener('click', ()=>{
+  for(let i=0;i<7;i++){
+    const [lo, hi] = JOINT_LIMITS[i];
+    q[i] = lo + Math.random()*(hi-lo);
+  }
+  // shrink q2 range so arm doesn't dive into base
+  q[1] = -0.9 + Math.random()*1.2;
+  syncTargetFromCurrent();
+  update();
+});
+document.getElementById('btnRandTgt').addEventListener('click', ()=>{
+  // Franka reach ≈ 0.85 m from base
+  const r = 0.35 + Math.random()*0.35;
+  const az = Math.random()*2*Math.PI;
+  const el = 0.15 + Math.random()*0.75;
+  targetPos.set(r*Math.cos(az), r*Math.sin(az), el);
+  targetMesh.position.copy(targetPos);
+  targetFrame.position.copy(targetPos);
+  if(mode!=='ik'){
+    document.querySelector('.seg-btn[data-mode="ik"]').click();
+  }
+  runIKBatch();
+});
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  q = qReady.slice();
+  syncTargetFromCurrent();
+  lastIterUsed = 0; lastErr = 0;
+  update();
+});
+
+function syncTargetFromCurrent(){
+  cancelAnimation();
+  clearTrail();
+  const Ts = computeFK(q);
+  targetPos.copy(mat4getPos(Ts[8]));
+  targetRotMat = (mode==='ik') ? getRot3FromT(Ts[8]) : null;
+  targetMesh.position.copy(targetPos);
+  targetFrame.position.copy(targetPos);
+  lastIterUsed = 0; lastErr = 0;
+}
+
+function runIKBatch(){
+  const lam  = parseFloat(document.getElementById('lamSlider').value);
+  const iMax = parseInt(document.getElementById('iterSlider').value);
+  const tol  = parseFloat(document.getElementById('tolSlider').value);
+  const nRef = parseFloat(document.getElementById('nullRef').value);
+  const nG   = parseFloat(document.getElementById('nullGain').value);
+  const r = ikSolve(q, targetPos, lam, iMax, tol, nRef, nG);
+  q = r.q;
+  lastIterUsed = r.iter;
+  lastErr = r.err;
+  update();
+}
+
+/* =========================================================
+   Target dragging — raycast onto camera-facing plane through target
+   ========================================================= */
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function setNDCFromMouse(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.x =  ((e.clientX - rect.left) / rect.width ) * 2 - 1;
+  ndc.y = -((e.clientY - rect.top ) / rect.height) * 2 + 1;
+}
+function onCanvasDown(e){
+  if(mode!=='ik') return;
+  setNDCFromMouse(e);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObject(targetMesh, true);
+  if(hits.length){
+    cancelAnimation();
+    draggingTarget = true;
+    controls.enabled = false;
+    renderer.domElement.classList.add('drag');
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    dragPlane.setFromNormalAndCoplanarPoint(camDir, targetPos.clone());
+    e.stopPropagation();
+  }
+}
+function onCanvasMove(e){
+  if(mode!=='ik') return;
+  if(!draggingTarget){
+    setNDCFromMouse(e);
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(targetMesh, true);
+    renderer.domElement.classList.toggle('target-hover', hits.length>0);
+    return;
+  }
+  setNDCFromMouse(e);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = new THREE.Vector3();
+  if(raycaster.ray.intersectPlane(dragPlane, hit)){
+    targetPos.copy(hit);
+    targetMesh.position.copy(targetPos);
+    targetFrame.position.copy(targetPos);
+    runIKBatch();
+  }
+}
+function onCanvasUp(e){
+  if(draggingTarget){
+    draggingTarget = false;
+    controls.enabled = true;
+    renderer.domElement.classList.remove('drag');
+    e.stopPropagation();
+  }
+}
+
+/* =========================================================
+   Resize + render loop
+   ========================================================= */
+function resize(){
+  const w = window.innerWidth - 380;
+  const h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+function animate(){
+  requestAnimationFrame(animate);
+  tickAnimation();
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+initScene();
+</script>
+</body>
+</html>
