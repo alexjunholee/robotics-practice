@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="shared/theme.css">
 <title>Guide on Becoming a Roboticist</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -34,7 +37,7 @@
   --shadow-elev: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
 }
 
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -45,6 +48,8 @@ body {
   background: var(--bg);
   overflow-x: hidden;
   font-feature-settings: "kern", "liga", "calt";
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 #progress-bar {
@@ -157,6 +162,7 @@ body {
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
   color: var(--text-heading);
   font-feature-settings: "ss01", "kern";
+  scroll-margin-top: 72px;
 }
 #content h1 { font-size: 48px; font-weight: 600; line-height: 1.08; letter-spacing: -0.018em; margin: 0 0 28px 0; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 #content h1 + blockquote { border-left: none; background: transparent; text-align: center; font-size: 18px; color: var(--text-muted); padding: 8px 0 24px; letter-spacing: -0.018em; }
@@ -175,10 +181,10 @@ body {
 #content strong { color: var(--text); font-weight: 600; }
 #content img { max-width: 100%; height: auto; border-radius: 12px; margin: 12px 0; }
 
-#content code { font-family: 'SF Mono', ui-monospace, 'Menlo', 'Monaco', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9em; letter-spacing: 0; }
+#content code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-size: 0.82em; letter-spacing: 0; }
 #content :not(pre) > code { background: var(--bg-code); padding: 2px 6px; border-radius: 5px; color: var(--text); }
-#content pre { background: var(--bg-code); border: none; border-radius: 12px; padding: 18px 20px; overflow-x: auto; margin: 0 0 20px 0; line-height: 1.5; }
-#content pre code { background: none; padding: 0; color: inherit; font-size: 0.92em; }
+#content pre { background: var(--bg-code); border: none; border-radius: 12px; padding: 18px 20px; overflow-x: auto; margin: 0 0 20px 0; font-size: 13px; line-height: 1.55; }
+#content pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
 #content table { width: 100%; border-collapse: collapse; margin: 0 0 20px 0; font-size: 15px; display: block; overflow-x: auto; }
 #content thead { background: var(--bg-surface); }
@@ -12638,13 +12644,6 @@ sudo apt-get install libeigen3-dev
       link.dataset.headingId = id;
 
       link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const target = document.getElementById(id);
-        if (target) {
-          const offset = 60;
-          const top = target.getBoundingClientRect().top + window.scrollY - offset;
-          window.scrollTo({ top: top, behavior: 'smooth' });
-        }
         // Close mobile sidebar
         closeMobileSidebar();
       });
@@ -12695,7 +12694,7 @@ sudo apt-get install libeigen3-dev
           const itemRect = item.getBoundingClientRect();
           const containerRect = tocContainer.getBoundingClientRect();
           if (itemRect.top < containerRect.top || itemRect.bottom > containerRect.bottom) {
-            item.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            item.scrollIntoView({ block: 'center', behavior: 'auto' });
           }
         }
       }

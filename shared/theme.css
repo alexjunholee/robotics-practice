@@ -43,7 +43,7 @@
   /* Typography */
   --rp-font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
   --rp-font-body:    'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', system-ui, sans-serif;
-  --rp-font-mono:    'SF Mono', ui-monospace, 'Menlo', 'Monaco', 'JetBrains Mono', 'Fira Code', monospace;
+  --rp-font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* Radii */
   --rp-radius-sm:    5px;
