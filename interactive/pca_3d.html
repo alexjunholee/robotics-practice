@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../shared/theme.css">
+<title>PCA 3D — 주성분 분석과 차원 축소</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#ffffff;color:#1d1d1f;font-family:'SF Pro Text',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard',system-ui,sans-serif;overflow:hidden}
+#container{display:flex;height:100vh;width:100vw}
+#sidebar{width:340px;min-width:340px;background:#f5f5f7;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;border-right:1px solid rgba(0,0,0,0.12)}
+h1{font-size:18px;color:#0071e3;text-align:center;border-bottom:1px solid rgba(0,0,0,0.12);padding-bottom:10px}
+h2{font-size:11px;font-weight:700;color:rgba(0,0,0,0.56);padding:0 0 4px;margin:10px 0 4px;border-bottom:1px solid rgba(0,0,0,0.08);text-transform:uppercase;letter-spacing:0.08em}
+.slider-group{display:flex;flex-direction:column;gap:2px}
+.slider-group label{font-size:12px;color:rgba(0,0,0,0.56);display:flex;justify-content:space-between}
+.slider-group input[type=range]{width:100%;accent-color:#0071e3}
+.toggle-row{display:flex;gap:6px;flex-wrap:wrap}
+.toggle-row label{font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;color:rgba(0,0,0,0.80)}
+.info-box{background:#ffffff;border:1px solid rgba(0,0,0,0.12);border-radius:4px;padding:8px;font-family:'Courier New',monospace;font-size:11px;line-height:1.5;white-space:pre;overflow-x:auto}
+.legend{display:flex;gap:10px;font-size:11px;align-items:center;flex-wrap:wrap;color:rgba(0,0,0,0.80)}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+#canvas3d{flex:1;display:block}
+.inset{position:absolute;background:#ffffff;border:1px solid rgba(0,0,0,0.12);border-radius:6px}
+.inset-label{position:absolute;font-size:11px;color:rgba(0,0,0,0.72);background:#f5f5f7;padding:2px 8px;border-radius:3px;border:1px solid rgba(0,0,0,0.08)}
+#canvas2d{right:10px;bottom:110px;width:220px;height:180px}
+#label2d{right:10px;bottom:295px}
+#canvas1d{right:10px;bottom:10px;width:220px;height:90px}
+#label1d{right:10px;bottom:105px}
+.foot{font-size:11px;color:rgba(0,0,0,0.56);text-align:center;margin-top:auto;line-height:1.5}
+button{background:#ffffff;color:#1d1d1f;border:1px solid rgba(0,0,0,0.12);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px}
+button:hover{background:#0071e3;color:#fff}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="sidebar">
+<h1>PCA 3D — 차원 축소</h1>
+<div class="legend">
+<span><span class="legend-dot" style="background:#3a7bd5"></span>샘플</span>
+<span><span class="legend-dot" style="background:#e74c3c"></span>PC1</span>
+<span><span class="legend-dot" style="background:#2ecc71"></span>PC2</span>
+<span><span class="legend-dot" style="background:#9b59b6"></span>PC3</span>
+</div>
+
+<h2>분산 (λ: 주성분별 분산)</h2>
+<div class="slider-group">
+<label>λ₁ <span id="l1Val">4.00</span></label>
+<input type="range" id="l1" min="0.1" max="6" step="0.05" value="4.0">
+</div>
+<div class="slider-group">
+<label>λ₂ <span id="l2Val">1.50</span></label>
+<input type="range" id="l2" min="0.1" max="6" step="0.05" value="1.5">
+</div>
+<div class="slider-group">
+<label>λ₃ <span id="l3Val">0.30</span></label>
+<input type="range" id="l3" min="0.01" max="6" step="0.01" value="0.3">
+</div>
+
+<h2>회전 (공분산 축 방향)</h2>
+<div class="slider-group">
+<label>Rx <span id="rxVal">20°</span></label>
+<input type="range" id="rx" min="-90" max="90" step="1" value="20">
+</div>
+<div class="slider-group">
+<label>Ry <span id="ryVal">30°</span></label>
+<input type="range" id="ry" min="-90" max="90" step="1" value="30">
+</div>
+<div class="slider-group">
+<label>Rz <span id="rzVal">15°</span></label>
+<input type="range" id="rz" min="-90" max="90" step="1" value="15">
+</div>
+
+<h2>샘플</h2>
+<div class="slider-group">
+<label>샘플 수 N <span id="nVal">400</span></label>
+<input type="range" id="n" min="50" max="1500" step="10" value="400">
+</div>
+<button id="btnResample">새로 샘플링 (Resample)</button>
+
+<h2>표시</h2>
+<div class="toggle-row">
+<label><input type="checkbox" id="tAxes" checked>PC축</label>
+<label><input type="checkbox" id="tEllip" checked>공분산 타원체</label>
+</div>
+<div class="toggle-row">
+<label><input type="checkbox" id="tPlane" checked>PC1-PC2 평면</label>
+<label><input type="checkbox" id="tProj" checked>투영선</label>
+</div>
+<div class="toggle-row">
+<label><input type="checkbox" id="tColor" checked>PC1 점수 색상</label>
+</div>
+
+<h2>공분산 Σ</h2>
+<div class="info-box" id="covBox">-</div>
+
+<h2>고유값 · 설명 분산</h2>
+<div class="info-box" id="eigBox">-</div>
+
+<div class="foot">
+마우스: 회전 · 스크롤: 줌 · 우클릭: 이동<br>
+3D → PC1·PC2 평면 → PC1 축으로 차원 축소
+</div>
+</div>
+<canvas id="canvas3d"></canvas>
+</div>
+
+<div id="label2d" class="inset-label">3D → 2D: PC1·PC2 투영</div>
+<canvas id="canvas2d" class="inset" width="220" height="180"></canvas>
+<div id="label1d" class="inset-label">2D → 1D: PC1 점수</div>
+<canvas id="canvas1d" class="inset" width="220" height="90"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- Minimal OrbitControls ----
+!function(){
+const EPS=1e-6,ST={N:-1,R:0,D:1,P:2};
+class OC{
+constructor(cam,dom){
+this.camera=cam;this.domElement=dom;this.target=new THREE.Vector3();
+this.rotateSpeed=1;this.zoomSpeed=1;
+let state=ST.N,sph=new THREE.Spherical(),dSph=new THREE.Spherical();
+let panOff=new THREE.Vector3(),scale=1;
+let rS=new THREE.Vector2(),rE=new THREE.Vector2(),rD=new THREE.Vector2();
+let pS=new THREE.Vector2(),pE=new THREE.Vector2(),pD=new THREE.Vector2();
+const zs=()=>Math.pow(0.95,this.zoomSpeed);
+const rL=a=>{dSph.theta-=a};
+const rU=a=>{dSph.phi-=a};
+const pL=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,0);v.multiplyScalar(-d);panOff.add(v)};
+const pU=(d,m)=>{let v=new THREE.Vector3();v.setFromMatrixColumn(m,1);v.multiplyScalar(d);panOff.add(v)};
+const pan=(dx,dy)=>{let el=this.domElement,pos=this.camera.position,off=pos.clone().sub(this.target),td=off.length()*Math.tan(this.camera.fov/2*Math.PI/180);pL(2*dx*td/el.clientHeight,this.camera.matrix);pU(2*dy*td/el.clientHeight,this.camera.matrix)};
+const md=e=>{e.preventDefault();if(e.button===0)state=ST.R,rS.set(e.clientX,e.clientY);else if(e.button===2)state=ST.P,pS.set(e.clientX,e.clientY);if(state!==ST.N){document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu)}};
+const mm=e=>{e.preventDefault();if(state===ST.R){rE.set(e.clientX,e.clientY);rD.subVectors(rE,rS);rL(2*Math.PI*rD.x/dom.clientHeight*this.rotateSpeed);rU(2*Math.PI*rD.y/dom.clientHeight*this.rotateSpeed);rS.copy(rE)}else if(state===ST.P){pE.set(e.clientX,e.clientY);pD.subVectors(pE,pS);pan(pD.x,pD.y);pS.copy(pE)}};
+const mu=()=>{state=ST.N;document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu)};
+const wh=e=>{e.preventDefault();if(e.deltaY<0)scale/=zs();else scale*=zs()};
+dom.addEventListener('mousedown',md);dom.addEventListener('wheel',wh,{passive:false});dom.addEventListener('contextmenu',e=>e.preventDefault());
+this.update=function(){let off=new THREE.Vector3(),q=new THREE.Quaternion().setFromUnitVectors(cam.up,new THREE.Vector3(0,1,0)),qi=q.clone().invert();off.copy(cam.position).sub(this.target);off.applyQuaternion(q);sph.setFromVector3(off);sph.theta+=dSph.theta;sph.phi+=dSph.phi;sph.phi=Math.max(EPS,Math.min(Math.PI-EPS,sph.phi));sph.radius*=scale;this.target.add(panOff);off.setFromSpherical(sph);off.applyQuaternion(qi);cam.position.copy(this.target).add(off);cam.lookAt(this.target);dSph.set(0,0,0);panOff.set(0,0,0);scale=1};
+}}
+THREE.OrbitControls=OC;
+}();
+
+// ---- Math utilities ----
+function rotMat(rx,ry,rz){
+  const cx=Math.cos(rx),sx=Math.sin(rx),cy=Math.cos(ry),sy=Math.sin(ry),cz=Math.cos(rz),sz=Math.sin(rz);
+  // R = Rz * Ry * Rx
+  return [
+    [cy*cz, sx*sy*cz-cx*sz, cx*sy*cz+sx*sz],
+    [cy*sz, sx*sy*sz+cx*cz, cx*sy*sz-sx*cz],
+    [-sy,   sx*cy,          cx*cy]
+  ];
+}
+function matMul(A,B){
+  const C=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)C[i][j]+=A[i][k]*B[k][j];
+  return C;
+}
+function matVec(A,v){
+  return [A[0][0]*v[0]+A[0][1]*v[1]+A[0][2]*v[2],
+          A[1][0]*v[0]+A[1][1]*v[1]+A[1][2]*v[2],
+          A[2][0]*v[0]+A[2][1]*v[1]+A[2][2]*v[2]];
+}
+function transpose(A){
+  return [[A[0][0],A[1][0],A[2][0]],[A[0][1],A[1][1],A[2][1]],[A[0][2],A[1][2],A[2][2]]];
+}
+// Box-Muller
+function randn(){
+  let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+// Jacobi eigendecomposition for symmetric 3x3. Returns {vals:[], vecs:[[],[],[]]} with cols as eigenvectors, sorted desc.
+function eigSym3(M){
+  let A=[[M[0][0],M[0][1],M[0][2]],[M[1][0],M[1][1],M[1][2]],[M[2][0],M[2][1],M[2][2]]];
+  let V=[[1,0,0],[0,1,0],[0,0,1]];
+  for(let it=0;it<60;it++){
+    // find largest off-diagonal
+    let p=0,q=1,maxv=Math.abs(A[0][1]);
+    if(Math.abs(A[0][2])>maxv){p=0;q=2;maxv=Math.abs(A[0][2]);}
+    if(Math.abs(A[1][2])>maxv){p=1;q=2;maxv=Math.abs(A[1][2]);}
+    if(maxv<1e-12)break;
+    let apq=A[p][q],app=A[p][p],aqq=A[q][q];
+    let theta=(aqq-app)/(2*apq);
+    let t=Math.sign(theta)/(Math.abs(theta)+Math.sqrt(1+theta*theta));
+    if(!isFinite(t))t=1;
+    let c=1/Math.sqrt(1+t*t),s=t*c;
+    // rotate A
+    let Ap=[[A[0][0],A[0][1],A[0][2]],[A[1][0],A[1][1],A[1][2]],[A[2][0],A[2][1],A[2][2]]];
+    Ap[p][p]=c*c*app-2*s*c*apq+s*s*aqq;
+    Ap[q][q]=s*s*app+2*s*c*apq+c*c*aqq;
+    Ap[p][q]=0;Ap[q][p]=0;
+    for(let i=0;i<3;i++)if(i!==p&&i!==q){
+      Ap[i][p]=c*A[i][p]-s*A[i][q];Ap[p][i]=Ap[i][p];
+      Ap[i][q]=s*A[i][p]+c*A[i][q];Ap[q][i]=Ap[i][q];
+    }
+    A=Ap;
+    // rotate V
+    for(let i=0;i<3;i++){
+      let vip=V[i][p],viq=V[i][q];
+      V[i][p]=c*vip-s*viq;V[i][q]=s*vip+c*viq;
+    }
+  }
+  let vals=[A[0][0],A[1][1],A[2][2]];
+  let idx=[0,1,2].sort((a,b)=>vals[b]-vals[a]);
+  let svals=[vals[idx[0]],vals[idx[1]],vals[idx[2]]];
+  let vecs=[[V[0][idx[0]],V[1][idx[0]],V[2][idx[0]]],
+            [V[0][idx[1]],V[1][idx[1]],V[2][idx[1]]],
+            [V[0][idx[2]],V[1][idx[2]],V[2][idx[2]]]];
+  // ensure right-handed
+  let cx=vecs[0][1]*vecs[1][2]-vecs[0][2]*vecs[1][1];
+  let cy=vecs[0][2]*vecs[1][0]-vecs[0][0]*vecs[1][2];
+  let cz=vecs[0][0]*vecs[1][1]-vecs[0][1]*vecs[1][0];
+  if(cx*vecs[2][0]+cy*vecs[2][1]+cz*vecs[2][2]<0){
+    vecs[2]=[-vecs[2][0],-vecs[2][1],-vecs[2][2]];
+  }
+  return {vals:svals,vecs:vecs};
+}
+
+// ---- Scene setup ----
+const canvas=document.getElementById('canvas3d');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xfafafa);
+const camera=new THREE.PerspectiveCamera(40,1,0.1,1000);
+camera.position.set(12,10,18);
+camera.lookAt(0,0,0);
+const controls=new THREE.OrbitControls(camera,canvas);
+
+const SIDEBAR_W=340;
+function resize(){
+  const w=Math.max(0,window.innerWidth-SIDEBAR_W);
+  const h=window.innerHeight;
+  if(!w||!h)return;
+  renderer.setSize(w,h,false);
+  canvas.style.width=w+'px';
+  canvas.style.height=h+'px';
+  camera.aspect=w/h;
+  camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+if(window.ResizeObserver){
+  new ResizeObserver(resize).observe(document.body);
+}
+
+// Axes helper (faint world axes)
+const axesHelper=new THREE.AxesHelper(4);
+axesHelper.material.opacity=0.3;axesHelper.material.transparent=true;
+scene.add(axesHelper);
+// Grid
+const grid=new THREE.GridHelper(16,16,0xcccccc,0xececec);
+scene.add(grid);
+
+// ---- State ----
+let samples=[];       // raw samples in world coords (3D)
+let zSamples=[];      // standard-normal draws (to resample deterministically on slider change)
+function regenerateZ(N){
+  zSamples=[];
+  for(let i=0;i<N;i++)zSamples.push([randn(),randn(),randn()]);
+}
+
+// Groups
+const ptsGroup=new THREE.Group();scene.add(ptsGroup);
+const axisGroup=new THREE.Group();scene.add(axisGroup);
+const ellipGroup=new THREE.Group();scene.add(ellipGroup);
+const planeGroup=new THREE.Group();scene.add(planeGroup);
+const projGroup=new THREE.Group();scene.add(projGroup);
+
+// ---- Build / update ----
+const COLORS={pc1:0xe74c3c,pc2:0x2ecc71,pc3:0x9b59b6,pt:0x3a7bd5,proj:0xff9f43};
+
+function clearGroup(g){while(g.children.length){const c=g.children.pop();if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(m=>m.dispose());else c.material.dispose();}}}
+
+function makeArrow(origin,dir,len,color){
+  const d=new THREE.Vector3(dir[0],dir[1],dir[2]).normalize();
+  const arr=new THREE.ArrowHelper(d,new THREE.Vector3(origin[0],origin[1],origin[2]),len,color,len*0.18,len*0.1);
+  return arr;
+}
+
+function hsl(v){
+  // v in [0,1] → color from blue to red through gray
+  const h=(1-v)*240/360;
+  const c=new THREE.Color().setHSL(h,0.72,0.52);
+  return c;
+}
+
+function rebuildAll(){
+  const l1=+document.getElementById('l1').value;
+  const l2=+document.getElementById('l2').value;
+  const l3=+document.getElementById('l3').value;
+  const rx=+document.getElementById('rx').value*Math.PI/180;
+  const ry=+document.getElementById('ry').value*Math.PI/180;
+  const rz=+document.getElementById('rz').value*Math.PI/180;
+  const N=+document.getElementById('n').value;
+
+  document.getElementById('l1Val').textContent=l1.toFixed(2);
+  document.getElementById('l2Val').textContent=l2.toFixed(2);
+  document.getElementById('l3Val').textContent=l3.toFixed(2);
+  document.getElementById('rxVal').textContent=(rx*180/Math.PI).toFixed(0)+'°';
+  document.getElementById('ryVal').textContent=(ry*180/Math.PI).toFixed(0)+'°';
+  document.getElementById('rzVal').textContent=(rz*180/Math.PI).toFixed(0)+'°';
+  document.getElementById('nVal').textContent=N;
+
+  if(zSamples.length!==N)regenerateZ(N);
+
+  // Target principal variances (user-specified). Order them descending so PC1≥PC2≥PC3.
+  const lamSorted=[l1,l2,l3].sort((a,b)=>b-a);
+  const R=rotMat(rx,ry,rz);
+  const sigmas=[Math.sqrt(lamSorted[0]),Math.sqrt(lamSorted[1]),Math.sqrt(lamSorted[2])];
+
+  // Generate samples: x = R * diag(sigma) * z
+  samples=zSamples.map(z=>{
+    const s=[sigmas[0]*z[0],sigmas[1]*z[1],sigmas[2]*z[2]];
+    return matVec(R,s);
+  });
+
+  // Empirical mean & covariance
+  const mean=[0,0,0];
+  samples.forEach(x=>{mean[0]+=x[0];mean[1]+=x[1];mean[2]+=x[2];});
+  mean[0]/=N;mean[1]/=N;mean[2]/=N;
+  const Cov=[[0,0,0],[0,0,0],[0,0,0]];
+  samples.forEach(x=>{
+    const d=[x[0]-mean[0],x[1]-mean[1],x[2]-mean[2]];
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)Cov[i][j]+=d[i]*d[j];
+  });
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)Cov[i][j]/=(N-1);
+
+  // Eigendecomposition of empirical covariance
+  const {vals,vecs}=eigSym3(Cov);
+  // PC scores
+  const scores=samples.map(x=>{
+    const d=[x[0]-mean[0],x[1]-mean[1],x[2]-mean[2]];
+    return [d[0]*vecs[0][0]+d[1]*vecs[0][1]+d[2]*vecs[0][2],
+            d[0]*vecs[1][0]+d[1]*vecs[1][1]+d[2]*vecs[1][2],
+            d[0]*vecs[2][0]+d[1]*vecs[2][1]+d[2]*vecs[2][2]];
+  });
+  const pc1Min=Math.min(...scores.map(s=>s[0])),pc1Max=Math.max(...scores.map(s=>s[0]));
+  const pc1Range=Math.max(1e-6,pc1Max-pc1Min);
+
+  // ---- Render points ----
+  clearGroup(ptsGroup);
+  const tColor=document.getElementById('tColor').checked;
+  const geomPt=new THREE.SphereGeometry(0.055,8,6);
+  samples.forEach((x,i)=>{
+    let col=new THREE.Color(COLORS.pt);
+    if(tColor){
+      const v=(scores[i][0]-pc1Min)/pc1Range;
+      col=hsl(v);
+    }
+    const mat=new THREE.MeshBasicMaterial({color:col});
+    const m=new THREE.Mesh(geomPt,mat);
+    m.position.set(x[0],x[1],x[2]);
+    ptsGroup.add(m);
+  });
+
+  // ---- PC axes ----
+  clearGroup(axisGroup);
+  if(document.getElementById('tAxes').checked){
+    const axColors=[COLORS.pc1,COLORS.pc2,COLORS.pc3];
+    for(let k=0;k<3;k++){
+      const len=Math.max(0.4,2*Math.sqrt(Math.max(0,vals[k])));
+      axisGroup.add(makeArrow(mean,vecs[k],len,axColors[k]));
+      // negative side
+      axisGroup.add(makeArrow(mean,[-vecs[k][0],-vecs[k][1],-vecs[k][2]],len,axColors[k]));
+    }
+  }
+
+  // ---- Covariance ellipsoid (2σ) ----
+  clearGroup(ellipGroup);
+  if(document.getElementById('tEllip').checked){
+    const geo=new THREE.SphereGeometry(1,24,16);
+    const mat=new THREE.MeshBasicMaterial({color:0x0071e3,wireframe:true,transparent:true,opacity:0.25});
+    const sph=new THREE.Mesh(geo,mat);
+    // Transform: scale by 2*sqrt(eigenvalue) along each eigenvector, then place at mean.
+    const m=new THREE.Matrix4();
+    const sx=2*Math.sqrt(Math.max(1e-6,vals[0]));
+    const sy=2*Math.sqrt(Math.max(1e-6,vals[1]));
+    const sz=2*Math.sqrt(Math.max(1e-6,vals[2]));
+    // Column-major basis from vecs (each vecs[k] is eigenvector k)
+    m.set(
+      vecs[0][0]*sx, vecs[1][0]*sy, vecs[2][0]*sz, mean[0],
+      vecs[0][1]*sx, vecs[1][1]*sy, vecs[2][1]*sz, mean[1],
+      vecs[0][2]*sx, vecs[1][2]*sy, vecs[2][2]*sz, mean[2],
+      0,0,0,1
+    );
+    sph.applyMatrix4(m);
+    ellipGroup.add(sph);
+  }
+
+  // ---- Projection plane (PC1-PC2) ----
+  clearGroup(planeGroup);
+  if(document.getElementById('tPlane').checked){
+    const halfU=2.2*Math.sqrt(Math.max(1e-6,vals[0]));
+    const halfV=2.2*Math.sqrt(Math.max(1e-6,vals[1]));
+    // corners in PC frame, then map back
+    const corners=[[ halfU, halfV,0],[-halfU, halfV,0],[-halfU,-halfV,0],[ halfU,-halfV,0]];
+    const V=[vecs[0],vecs[1],vecs[2]]; // rows are eigenvectors
+    const world=corners.map(c=>{
+      // world = mean + c[0]*e1 + c[1]*e2
+      return [mean[0]+c[0]*V[0][0]+c[1]*V[1][0],
+              mean[1]+c[0]*V[0][1]+c[1]*V[1][1],
+              mean[2]+c[0]*V[0][2]+c[1]*V[1][2]];
+    });
+    const geo=new THREE.BufferGeometry();
+    const verts=new Float32Array([
+      ...world[0],...world[1],...world[2],
+      ...world[0],...world[2],...world[3]
+    ]);
+    geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+    geo.computeVertexNormals();
+    const mat=new THREE.MeshBasicMaterial({color:0x34c759,transparent:true,opacity:0.12,side:THREE.DoubleSide});
+    planeGroup.add(new THREE.Mesh(geo,mat));
+    // plane border
+    const bg=new THREE.BufferGeometry();
+    const bv=new Float32Array([...world[0],...world[1],...world[1],...world[2],...world[2],...world[3],...world[3],...world[0]]);
+    bg.setAttribute('position',new THREE.BufferAttribute(bv,3));
+    planeGroup.add(new THREE.LineSegments(bg,new THREE.LineBasicMaterial({color:0x34c759,transparent:true,opacity:0.55})));
+  }
+
+  // ---- Projection lines + projected points ----
+  clearGroup(projGroup);
+  if(document.getElementById('tProj').checked){
+    const segV=[];
+    const projPts=[];
+    // downsample projection lines for visual clarity
+    const stride=Math.max(1,Math.floor(N/160));
+    for(let i=0;i<N;i+=stride){
+      // projected point = mean + s1*e1 + s2*e2
+      const s1=scores[i][0],s2=scores[i][1];
+      const e1=vecs[0],e2=vecs[1];
+      const p=[mean[0]+s1*e1[0]+s2*e2[0],
+               mean[1]+s1*e1[1]+s2*e2[1],
+               mean[2]+s1*e1[2]+s2*e2[2]];
+      segV.push(samples[i][0],samples[i][1],samples[i][2],p[0],p[1],p[2]);
+      projPts.push(p);
+    }
+    if(segV.length){
+      const lg=new THREE.BufferGeometry();
+      lg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(segV),3));
+      projGroup.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:COLORS.proj,transparent:true,opacity:0.35})));
+    }
+    // projected points (smaller, orange)
+    const pg=new THREE.SphereGeometry(0.04,6,5);
+    const pm=new THREE.MeshBasicMaterial({color:COLORS.proj});
+    projPts.forEach(p=>{
+      const mesh=new THREE.Mesh(pg,pm);
+      mesh.position.set(p[0],p[1],p[2]);
+      projGroup.add(mesh);
+    });
+  }
+
+  // ---- Info boxes ----
+  const fmt=v=>(v>=0?' ':'')+v.toFixed(2);
+  document.getElementById('covBox').textContent=
+    `[${fmt(Cov[0][0])} ${fmt(Cov[0][1])} ${fmt(Cov[0][2])}]\n`+
+    `[${fmt(Cov[1][0])} ${fmt(Cov[1][1])} ${fmt(Cov[1][2])}]\n`+
+    `[${fmt(Cov[2][0])} ${fmt(Cov[2][1])} ${fmt(Cov[2][2])}]`;
+  const total=vals[0]+vals[1]+vals[2];
+  const ev=vals.map(v=>v/total*100);
+  const cum=[ev[0],ev[0]+ev[1],100];
+  document.getElementById('eigBox').textContent=
+    `λ₁=${vals[0].toFixed(3)}  설명 ${ev[0].toFixed(1)}%  누적 ${cum[0].toFixed(1)}%\n`+
+    `λ₂=${vals[1].toFixed(3)}  설명 ${ev[1].toFixed(1)}%  누적 ${cum[1].toFixed(1)}%\n`+
+    `λ₃=${vals[2].toFixed(3)}  설명 ${ev[2].toFixed(1)}%  누적 ${cum[2].toFixed(1)}%`;
+
+  // ---- 2D inset: PC1 vs PC2 ----
+  draw2D(scores,vals,pc1Min,pc1Max,tColor);
+  // ---- 1D inset: PC1 scores ----
+  draw1D(scores,vals,pc1Min,pc1Max,tColor);
+}
+
+function draw2D(scores,vals,pc1Min,pc1Max,tColor){
+  const cv=document.getElementById('canvas2d');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  // extents: use 2.5σ along each PC
+  const ex1=2.5*Math.sqrt(Math.max(1e-6,vals[0]));
+  const ex2=2.5*Math.sqrt(Math.max(1e-6,vals[1]));
+  const pad=18;
+  const sx=(W-2*pad)/(2*ex1),sy=(H-2*pad)/(2*ex2);
+  const cx=W/2,cy=H/2;
+  // axes
+  ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,cy);ctx.lineTo(W-pad,cy);ctx.moveTo(cx,pad);ctx.lineTo(cx,H-pad);ctx.stroke();
+  // axis labels
+  ctx.fillStyle='rgba(0,0,0,0.48)';ctx.font='10px -apple-system,sans-serif';
+  ctx.fillText('PC1',W-pad-22,cy-4);
+  ctx.fillText('PC2',cx+4,pad+10);
+  // points
+  const range=Math.max(1e-6,pc1Max-pc1Min);
+  for(let i=0;i<scores.length;i++){
+    const s=scores[i];
+    const px=cx+s[0]*sx;
+    const py=cy-s[1]*sy;
+    if(tColor){
+      const v=(s[0]-pc1Min)/range;
+      const c=new THREE.Color().setHSL((1-v)*240/360,0.72,0.52);
+      ctx.fillStyle=`rgb(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0})`;
+    }else{
+      ctx.fillStyle='#3a7bd5';
+    }
+    ctx.beginPath();ctx.arc(px,py,1.8,0,Math.PI*2);ctx.fill();
+  }
+  // 2σ ellipse (PC1·PC2)
+  ctx.strokeStyle='rgba(0,113,227,0.6)';ctx.lineWidth=1;
+  ctx.beginPath();
+  const a=2*Math.sqrt(Math.max(1e-6,vals[0]))*sx;
+  const b=2*Math.sqrt(Math.max(1e-6,vals[1]))*sy;
+  ctx.ellipse(cx,cy,a,b,0,0,Math.PI*2);ctx.stroke();
+}
+
+function draw1D(scores,vals,pc1Min,pc1Max,tColor){
+  const cv=document.getElementById('canvas1d');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  const pad=12;
+  const ex=2.8*Math.sqrt(Math.max(1e-6,vals[0]));
+  const sx=(W-2*pad)/(2*ex);
+  const cx=W/2;
+  const lineY=H-26;
+  // axis
+  ctx.strokeStyle='#c8c8c8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,lineY);ctx.lineTo(W-pad,lineY);ctx.stroke();
+  // tick marks
+  ctx.fillStyle='rgba(0,0,0,0.48)';ctx.font='10px -apple-system,sans-serif';
+  ctx.fillText('PC1',W-pad-22,lineY+14);
+  ctx.fillText('0',cx-3,lineY+14);
+  // histogram
+  const nb=26;
+  const bins=new Array(nb).fill(0);
+  scores.forEach(s=>{
+    let t=(s[0]+ex)/(2*ex);
+    if(t>=0&&t<1){bins[Math.floor(t*nb)]++;}
+  });
+  const maxB=Math.max(1,...bins);
+  const barW=(W-2*pad)/nb;
+  const topY=6,histH=lineY-topY-2;
+  for(let i=0;i<nb;i++){
+    const h=bins[i]/maxB*histH;
+    const v=i/(nb-1);
+    if(tColor){
+      const c=new THREE.Color().setHSL((1-v)*240/360,0.72,0.52);
+      ctx.fillStyle=`rgba(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0},0.85)`;
+    }else{
+      ctx.fillStyle='rgba(58,123,213,0.75)';
+    }
+    ctx.fillRect(pad+i*barW+0.5,lineY-h,barW-1,h);
+  }
+  // points on strip
+  const range=Math.max(1e-6,pc1Max-pc1Min);
+  for(let i=0;i<scores.length;i++){
+    const s=scores[i];
+    const px=cx+s[0]*sx;
+    if(tColor){
+      const v=(s[0]-pc1Min)/range;
+      const c=new THREE.Color().setHSL((1-v)*240/360,0.72,0.52);
+      ctx.fillStyle=`rgb(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0})`;
+    }else{
+      ctx.fillStyle='#3a7bd5';
+    }
+    ctx.beginPath();ctx.arc(px,lineY,1.6,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ---- Wire up ----
+['l1','l2','l3','rx','ry','rz','n'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',rebuildAll);
+});
+['tAxes','tEllip','tPlane','tProj','tColor'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',rebuildAll);
+});
+document.getElementById('btnResample').addEventListener('click',()=>{
+  regenerateZ(+document.getElementById('n').value);
+  rebuildAll();
+});
+
+// Init
+regenerateZ(+document.getElementById('n').value);
+rebuildAll();
+resize();
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
