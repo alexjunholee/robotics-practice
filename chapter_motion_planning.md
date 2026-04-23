@@ -395,9 +395,9 @@ Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
 
 #### 실시간 Re-planning과 MPC의 연결
 
-정적 환경에서 한 번 계획하면 끝이지만, 동적 환경에서는 실시간으로 재계획(re-plan)해야 한다. 이것이 궤적 최적화와 MPC의 연결점이다.
+정적 환경에서 한 번 계획하면 끝이지만, 동적 환경에서는 실시간으로 재계획(re-plan)해야 한다. 여기서 궤적 최적화와 MPC가 만난다.
 
-MPC를 짧은 horizon의 trajectory optimization으로 볼 수 있다. 매 제어 주기마다 짧은 구간의 궤적을 최적화하고, 첫 입력만 적용한 뒤 다시 최적화한다. 이전 장의 MPC가 정확히 이것이다.
+MPC는 짧은 horizon의 trajectory optimization이다. 매 제어 주기마다 짧은 구간의 궤적을 최적화하고, 첫 입력만 적용한 뒤 다시 최적화한다. 이전 장의 MPC가 정확히 이것이다.
 
 차이점: 모션 플래닝의 trajectory optimization은 보통 오프라인으로 전체 궤적을 한 번에 계산하고, MPC는 온라인으로 짧은 구간을 반복 계산한다.
 
