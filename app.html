@@ -51,6 +51,23 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+#topbar .back-link {
+  margin-left: auto;
+  color: #0071e3;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 980px;
+  border: 1px solid rgba(0,0,0,0.12);
+  letter-spacing: -0.010em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+#topbar .back-link:hover {
+  background: rgba(0,113,227,0.06);
+  border-color: #0071e3;
+}
 
 /* ── Layout ── */
 #layout {
@@ -194,6 +211,7 @@ body {
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">&#9776;</button>
   <h1>Robotics Practice &mdash; Interactive Demos</h1>
   <span class="subtitle">Spatial AI 실습 자료 &nbsp;|&nbsp; alexjunholee.github.io/robotics-practice</span>
+  <a href="../" class="back-link">← repos</a>
 </div>
 
 <!-- Overlay (mobile) -->
