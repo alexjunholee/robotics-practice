@@ -1,0 +1,7 @@
+.git.nosync
+
+# Internal workflow files (local only per workspace rule)
+writing-status.json
+outlines/
+CLAUDE.md
+STYLE*.md

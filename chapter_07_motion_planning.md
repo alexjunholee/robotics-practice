@@ -1,10 +1,10 @@
-## 8. 모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)
+# Ch.7 — 모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)
 
-로봇이 A에서 B로 가려면 경로가 필요하다. 단순히 직선으로 가면 되지 않냐고 생각할 수 있지만, 장애물이 있고, 관절 한계가 있고, 동역학 제약이 있다. 이 모든 조건을 만족하는 경로를 찾는 것이 모션 플래닝이고, 그 경로를 시간에 따라 최적으로 추종하는 것이 궤적 최적화다.
+로봇이 A에서 B로 가려면 경로가 필요하다. 단순히 직선으로 가면 되지 않냐고 생각할 수 있지만, 장애물·관절 한계·동역학 제약이 동시에 걸려 있다. 이 조건들을 모두 만족하는 경로를 찾는 것이 모션 플래닝이고, 그 경로를 시간에 따라 최적으로 추종하는 것이 궤적 최적화다.
 
 ---
 
-### 8.1 왜 모션 플래닝을 배우는가
+## 7.1 왜 모션 플래닝을 배우는가
 
 6축 로봇 팔에게 "저 컵을 집어라"라고 명령했다고 하자. IK로 목표 관절 각도를 구했다. 그런데 현재 자세에서 목표 자세로 관절을 직선으로 보간(interpolation)하면, 팔이 테이블을 관통하거나 자기 몸체에 충돌할 수 있다. 관절 공간에서의 직선이 작업 공간에서의 직선이 아니기 때문이다.
 
@@ -15,9 +15,9 @@
 
 ---
 
-### 8.2 Configuration Space (C-space)
+## 7.2 Configuration Space (C-space)
 
-모션 플래닝의 핵심 개념이다. 로봇의 모든 가능한 상태를 하나의 공간으로 표현한다.
+로봇의 모든 가능한 상태를 하나의 공간으로 표현한다.
 
 **Joint space = Configuration space**: n-DOF 로봇의 configuration은 q = (q1, q2, ..., qn)이다. 이 q가 살고 있는 n차원 공간이 C-space이다.
 
@@ -25,19 +25,19 @@
 
 왜 C-space에서 생각해야 하는가: 로봇은 점이 아니다. 3D 공간에서 로봇의 모든 링크가 장애물과 충돌하지 않는지 확인하려면, 각 configuration에서 FK를 계산하고 충돌 검사를 해야 한다. C-space에서는 로봇을 "점"으로 취급할 수 있고, 장애물을 피하는 문제가 점의 경로 찾기 문제로 환원된다.
 
-문제는 C-space obstacle의 정확한 형태를 계산하는 것이 일반적으로 어렵다는 것이다. 그래서 실무에서는 C-space obstacle을 명시적으로 구하지 않고, 특정 configuration에서의 충돌 여부를 검사하는 collision checker를 사용한다.
+문제는 C-space obstacle의 정확한 형태를 계산하기가 어렵다는 데 있다. 실무에서는 C-space obstacle을 명시적으로 구하지 않고, 특정 configuration에서의 충돌 여부를 검사하는 collision checker를 사용한다.
 
 ---
 
-### 8.3 그래프 탐색 기반 플래닝
+## 7.3 그래프 탐색 기반 플래닝
 
-가장 고전적인 접근이다. C-space를 이산화(discretize)하고 그래프 탐색 알고리즘으로 경로를 찾는다.
+C-space를 이산화(discretize)하고 그래프 탐색 알고리즘으로 경로를 찾는, 가장 고전적인 접근이다.
 
-#### Dijkstra 알고리즘
+### Dijkstra 알고리즘
 
 가중 그래프에서 최단 경로를 찾는다. 모든 간선을 탐색하므로 최적해를 보장한다. 시간 복잡도 O((V + E) log V).
 
-#### A* 알고리즘
+### A* 알고리즘
 
 Dijkstra에 휴리스틱을 추가한 것이다. 목표까지의 추정 거리(heuristic)를 이용하여 탐색 방향을 유도한다. 휴리스틱이 admissible(실제 거리 이하)이면 최적해를 보장하면서 Dijkstra보다 빠르다.
 
@@ -55,7 +55,7 @@ def astar_2d(grid, start, goal):
     g_score = {start: 0}
 
     def heuristic(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])  # Manhattan distance
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])  # 맨해튼 거리
 
     neighbors = [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]
 
@@ -84,7 +84,7 @@ def astar_2d(grid, start, goal):
     return None  # 경로 없음
 ```
 
-#### 장단점
+### 장단점
 
 격자 기반 플래닝은 **완전성(completeness)**을 보장한다 — 해가 존재하면 반드시 찾는다. 하지만 **차원의 저주(curse of dimensionality)**에 시달린다. 6-DOF 로봇 팔의 C-space를 각 축 100개로 이산화하면 100^6 = 10^12개의 셀이 된다. 사실상 불가능하다.
 
@@ -92,13 +92,13 @@ def astar_2d(grid, start, goal):
 
 ---
 
-### 8.4 샘플링 기반 플래너
+## 7.4 샘플링 기반 플래너
 
 C-space를 이산화하지 않고, 무작위로 샘플링하여 경로를 탐색한다. 고차원 C-space에서 실용적인 유일한 방법이다.
 
-#### RRT (Rapidly-exploring Random Tree)
+### RRT (Rapidly-exploring Random Tree)
 
-LaValle (1998)이 제안한 알고리즘이다. 핵심 아이디어는 단순하다:
+LaValle (1998)이 제안한 알고리즘이다. 아이디어는 단순하다:
 
 ```
 1. 시작점에서 트리를 초기화한다.
@@ -116,7 +116,7 @@ class RRT:
     def __init__(self, start, goal, obstacle_fn, bounds, step_size=0.3, max_iter=5000):
         self.start = np.array(start)
         self.goal = np.array(goal)
-        self.obstacle_fn = obstacle_fn  # config -> bool (True if collision)
+        self.obstacle_fn = obstacle_fn  # config → bool (충돌이면 True)
         self.bounds = np.array(bounds)  # [[min_q1, max_q1], ...]
         self.step_size = step_size
         self.max_iter = max_iter
@@ -171,26 +171,26 @@ class RRT:
         return None  # 실패
 ```
 
-#### RRT* (Optimal RRT)
+### RRT* (Optimal RRT)
 
-Karaman & Frazzoli (2011)이 제안. RRT는 해를 찾지만 최적이 아니다. RRT*는 새 노드 추가 시 근처 노드들과의 re-wiring을 수행하여 점근적 최적성(asymptotic optimality)을 보장한다. 샘플 수가 무한대로 가면 최적 경로에 수렴한다.
+Karaman & Frazzoli (2011). RRT는 해를 찾지만 최적이 아니다. RRT*는 새 노드 추가 시 근처 노드들과 re-wiring을 수행하여 점근적 최적성(asymptotic optimality)을 보장한다. 샘플 수가 무한대로 가면 최적 경로에 수렴한다.
 
 실무적으로 RRT*는 RRT보다 좋은 경로를 찾지만, 수렴이 느리다. 시간 제한이 있는 실시간 상황에서는 RRT-Connect가 더 실용적인 경우가 많다.
 
-#### PRM (Probabilistic Roadmap)
+### PRM (Probabilistic Roadmap)
 
-Kavraki et al. (1996)이 제안. RRT가 single-query(한 번에 하나의 start-goal 쌍)인 반면, PRM은 multi-query에 적합하다.
+Kavraki et al. (1996). RRT가 single-query(한 번에 하나의 start-goal 쌍)인 반면, PRM은 multi-query에 적합하다.
 
 1단계 (offline): C-space에 많은 점을 샘플링하고, 가까운 점들을 충돌 없는 간선으로 연결하여 로드맵(graph)을 구축한다.
 2단계 (online): start와 goal을 로드맵에 연결하고, 그래프 탐색(A* 등)으로 경로를 찾는다.
 
 같은 환경에서 여러 경로 쿼리가 필요한 경우(예: 산업용 로봇 셀) PRM이 효율적이다.
 
-#### RRT-Connect
+### RRT-Connect
 
-Kuffner & LaValle (2000)이 제안. 시작점과 목표점에서 동시에 트리를 성장시키고, 두 트리가 만나면 경로를 연결한다. 실무에서 가장 많이 쓰이는 변종이다. MoveIt2의 기본 플래너도 RRT-Connect(OMPL 내장)이다.
+Kuffner & LaValle (2000). 시작점과 목표점에서 동시에 트리를 성장시키고, 두 트리가 만나면 경로를 연결한다. 실무에서 가장 많이 쓰이는 변종으로, MoveIt2의 기본 플래너도 RRT-Connect(OMPL 내장)다.
 
-#### OMPL 라이브러리
+### OMPL 라이브러리
 
 Open Motion Planning Library (https://ompl.kavrakilab.org/). Kavraki Lab (Rice University)에서 개발한 C++ 라이브러리로, RRT, RRT*, RRT-Connect, PRM, EST, KPIECE 등 수십 가지 샘플링 기반 플래너를 제공한다.
 
@@ -215,13 +215,13 @@ if plan_result:
 ```
 
 > **추천 자료**
-> - [LaValle, "Planning Algorithms"](http://lavalle.pl/planning/) — 무료 온라인 교재. 모션 플래닝의 바이블
+> - [LaValle, "Planning Algorithms"](http://lavalle.pl/planning/) — 무료 온라인 교재. 모션 플래닝의 표준 교재
 > - [OMPL](https://ompl.kavrakilab.org/) — 오픈소스 모션 플래닝 라이브러리
 > - [MoveIt2 Tutorials](https://moveit.picknik.ai/) — ROS2 기반 실전 모션 플래닝 가이드
 
 ---
 
-### 8.5 궤적 최적화 (Trajectory Optimization)
+## 7.5 궤적 최적화 (Trajectory Optimization)
 
 샘플링 기반 플래너는 "충돌 없는 경로"를 찾아준다. 하지만 그 경로는:
 - 울퉁불퉁하다 (random sampling이므로)
@@ -230,7 +230,7 @@ if plan_result:
 
 궤적 최적화는 이 한계를 보완한다. 비용 함수(시간, 에너지, 부드러움)를 최소화하면서, 동역학 제약, 충돌 회피, 관절 한계를 모두 만족하는 궤적을 찾는다.
 
-#### Direct Collocation
+### Direct Collocation
 
 궤적을 시간 구간으로 나누고, 각 구간의 상태와 입력을 결정 변수(decision variable)로 둔다. 동역학 방정식은 등식 제약(equality constraint)으로 처리한다.
 
@@ -247,24 +247,24 @@ subject to  x_{k+1} = f(x_k, u_k)   for all k       (동역학)
 장점: 동역학과 제약을 동시에 처리, 부드러운 궤적
 단점: 초기 추측(initial guess)에 민감, 비볼록이므로 지역 최적해에 빠질 수 있음
 
-#### Direct Shooting
+### Direct Shooting
 
 상태를 결정 변수에서 제거하고, 입력 시퀀스 {u_0, u_1, ..., u_{N-1}}만을 결정 변수로 둔다. 상태는 동역학 시뮬레이션으로 계산한다.
 
 collocation보다 결정 변수가 적지만, 시뮬레이션이 불안정하면 (예: 도립진자) 최적화도 불안정해진다.
 
-#### CHOMP (Covariant Hamiltonian Optimization for Motion Planning)
+### CHOMP (Covariant Hamiltonian Optimization for Motion Planning)
 
-Ratliff et al. (2009)이 제안. 초기 궤적(보통 직선 보간)에서 시작하여, 충돌 비용 + 부드러움 비용의 gradient를 따라 궤적을 반복적으로 개선한다. 공변 gradient(covariant gradient)를 사용하여 업데이트가 부드럽다.
+Ratliff et al. (2009). 초기 궤적(보통 직선 보간)에서 시작하여, 충돌 비용 + 부드러움 비용의 gradient를 따라 궤적을 반복적으로 개선한다. 공변 gradient(covariant gradient)를 사용하여 업데이트가 부드럽다.
 
 장점: 직관적, 기존 궤적을 점진적으로 개선
 단점: 좁은 통로(narrow passage)를 통과하기 어려움, 지역 최적해
 
-#### TrajOpt
+### TrajOpt
 
-Schulman et al. (2014)이 제안. Sequential convex optimization 기반이다. 매 반복에서 비선형 문제를 선형/이차 근사로 바꿔서 QP로 풀고, trust region으로 수렴을 보장한다. 충돌 회피를 signed distance function으로 처리하여 연속적인 gradient를 제공한다.
+Schulman et al. (2014). Sequential convex optimization 기반으로, 매 반복에서 비선형 문제를 선형/이차 근사로 바꿔서 QP로 풀고, trust region으로 수렴을 보장한다. 충돌 회피를 signed distance function으로 처리하여 연속적인 gradient를 얻는다.
 
-#### CasADi를 이용한 Trajectory Optimization
+### CasADi를 이용한 Trajectory Optimization
 
 CasADi는 symbolic computation + automatic differentiation + NLP solver 연결을 제공하는 프레임워크다. Trajectory optimization의 사실상 표준 도구이다.
 
@@ -318,13 +318,13 @@ print(f"최대 힘: {np.max(np.abs(u_opt)):.4f} N")
 ```
 
 > **추천 자료**
-> - [Matthew Kelly, "An Introduction to Trajectory Optimization" (SIAM Review 2017)](https://www.matthewpeterkelly.com/research/MatthewKelly_IntroTrajectoryOptimization_SIAM_Review_2017.pdf) — collocation과 shooting을 비교하는 최고의 튜토리얼
+> - [Matthew Kelly, "An Introduction to Trajectory Optimization" (SIAM Review 2017)](https://www.matthewpeterkelly.com/research/MatthewKelly_IntroTrajectoryOptimization_SIAM_Review_2017.pdf) — collocation과 shooting을 비교하는 좋은 튜토리얼
 > - [CasADi](https://web.casadi.org/) — NLP 구현 표준 도구
 > - [Drake Trajectory Optimization](https://drake.mit.edu/) — direct collocation 예제 포함
 
 ---
 
-### 8.6 MoveIt2: 실전 모션 플래닝
+## 7.6 MoveIt2: 실전 모션 플래닝
 
 MoveIt2는 ROS2 기반의 모션 플래닝 프레임워크이다. 산업/연구 양쪽에서 가장 널리 쓰이는 로봇 팔 플래닝 도구다.
 
@@ -360,11 +360,11 @@ manipulator:
 
 ---
 
-### 8.7 심화: Optimization-Based Planning
+## 7.7 심화: Optimization-Based Planning
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-#### Constrained Nonlinear Optimization
+### Constrained Nonlinear Optimization
 
 실제 로봇의 궤적 최적화는 대부분 constrained NLP이다:
 
@@ -377,7 +377,7 @@ subject to  x_{k+1} = f(x_k, u_k)           (동역학)
 
 IPOPT(Interior Point Optimizer)가 이 문제를 푸는 표준 솔버다. CasADi에서 IPOPT를 기본으로 사용한다.
 
-#### Contact-Implicit Trajectory Optimization
+### Contact-Implicit Trajectory Optimization
 
 접촉 모드(어디가 닿아 있고 어디가 떨어져 있는지)를 미리 지정하지 않고, 최적화가 자동으로 결정하게 하는 방법이다. 걷기, 잡기 같은 접촉 전환이 필요한 태스크에서 유용하다.
 
@@ -393,17 +393,17 @@ F_n * d = 0                (떨어져 있으면 힘 0, 닿아 있으면 거리 0
 
 Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
 
-#### 실시간 Re-planning과 MPC의 연결
+### 실시간 Re-planning과 MPC의 연결
 
-정적 환경에서 한 번 계획하면 끝이지만, 동적 환경에서는 실시간으로 재계획(re-plan)해야 한다. 여기서 궤적 최적화와 MPC가 만난다.
+정적 환경에서 한 번 계획하면 끝이지만, 동적 환경에서는 실시간으로 재계획(re-plan)해야 한다. 궤적 최적화와 MPC가 여기서 만난다.
 
-MPC는 짧은 horizon의 trajectory optimization이다. 매 제어 주기마다 짧은 구간의 궤적을 최적화하고, 첫 입력만 적용한 뒤 다시 최적화한다. 이전 장의 MPC가 정확히 이것이다.
+MPC를 짧은 horizon의 trajectory optimization으로 볼 수 있다. 매 제어 주기마다 짧은 구간의 궤적을 최적화하고, 첫 입력만 적용한 뒤 다시 최적화한다. 이전 장의 MPC가 정확히 이것이다.
 
 차이점: 모션 플래닝의 trajectory optimization은 보통 오프라인으로 전체 궤적을 한 번에 계산하고, MPC는 온라인으로 짧은 구간을 반복 계산한다.
 
 ---
 
-### 8.8 심화: Task and Motion Planning (TAMP)
+## 7.8 심화: Task and Motion Planning (TAMP)
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
@@ -416,11 +416,11 @@ MPC는 짧은 horizon의 trajectory optimization이다. 매 제어 주기마다 
 
 1-3은 **symbolic planning** (어떤 순서로 어떤 action을 할지), 4는 **motion planning** (구체적으로 어떤 궤적으로 움직일지). TAMP는 이 둘을 결합한다.
 
-#### PDDLStream
+### PDDLStream
 
 MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Language)로 symbolic action을 정의하고, stream을 통해 연속적 파라미터(grasp pose, placement pose)를 생성한다.
 
-#### LLM 기반 Task Planning
+### LLM 기반 Task Planning
 
 최근에는 LLM이 symbolic planner를 대체하는 시도가 활발하다:
 
@@ -432,7 +432,7 @@ MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Langua
 
 ---
 
-### 8.9 추천 자료
+## 7.9 추천 자료
 
 > **LaValle, "Planning Algorithms"**
 > http://lavalle.pl/planning/
@@ -444,7 +444,7 @@ MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Langua
 
 > **Matthew Kelly, "An Introduction to Trajectory Optimization" (SIAM Review 2017)**
 > https://www.matthewpeterkelly.com/research/MatthewKelly_IntroTrajectoryOptimization_SIAM_Review_2017.pdf
-> Direct collocation과 shooting을 비교하는 최고의 튜토리얼. 예제 코드도 제공.
+> Direct collocation과 shooting을 비교하는 좋은 튜토리얼. 예제 코드도 제공.
 
 > **OMPL**
 > https://ompl.kavrakilab.org/
@@ -462,9 +462,13 @@ MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Langua
 > https://web.casadi.org/
 > Nonlinear trajectory optimization 구현 표준 도구.
 
+> **추가 논문**
+> - [Garrett et al., "Integrated Task and Motion Planning" (2021, arXiv:2010.01083)](https://arxiv.org/abs/2010.01083) — TAMP의 표준 서베이 논문
+> - [Janner et al., "Planning with Diffusion for Flexible Behavior Synthesis" (ICML 2022, arXiv:2205.09991)](https://arxiv.org/abs/2205.09991) — trajectory-level diffusion 기반 planning의 시작
+
 ---
 
-### 기술 흐름
+## 기술 흐름
 
 ```
 1979 ── Visibility graph 기반 path planning
