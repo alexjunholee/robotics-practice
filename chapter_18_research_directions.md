@@ -60,13 +60,13 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 ### 18.2.3 기술 스택
 
 **Classical 방법**:
-- ORB-SLAM3: Feature-based Visual SLAM — 카메라 하나로 위치 추정 (→ 4장, 9장 참고)
-- VINS-Mono: Visual-Inertial Odometry — 카메라+IMU 융합 (→ 9장 참고)
-- FAST-LIO2: LiDAR-Inertial Odometry — LiDAR+IMU 융합 (→ 2장, 9장 참고)
+- ORB-SLAM3: Feature-based Visual SLAM — 카메라 하나로 위치 추정 (→ 9장, 14장 참고)
+- VINS-Mono: Visual-Inertial Odometry — 카메라+IMU 융합 (→ 14장 참고)
+- FAST-LIO2: LiDAR-Inertial Odometry — LiDAR+IMU 융합 (→ 2장, 14장 참고)
 
 **경량 학습 모델**:
-- 경량 depth estimation — MobileNet 기반으로 압축 (→ 5장 참고)
-- 압축된 segmentation 모델 — knowledge distillation 적용 (→ 5장, 6장 참고)
+- 경량 depth estimation — MobileNet 기반으로 압축 (→ 10장 참고)
+- 압축된 segmentation 모델 — knowledge distillation 적용 (→ 10장, 11장 참고)
 - TensorRT 최적화 — NVIDIA GPU에서 2-5배 속도 향상
 
 **Edge 배포**:
@@ -123,17 +123,17 @@ class LocalModule:
 
 ### 18.3.3 기술 스택
 
-**Vision Foundation Models** (→ 6장 참고):
+**Vision Foundation Models** (→ 11장 참고):
 - DINOv2: Dense feature extraction — 이미지의 모든 픽셀에 대해 의미 있는 feature 벡터 생성
 - SAM2: Open-vocabulary segmentation — "아무 물체나" 지정하면 정확하게 분리
 - GroundingDINO: Text-guided detection — "빨간 컵"이라고 말하면 찾아줌
 
-**3D Understanding** (→ 6장, 8장 참고):
+**3D Understanding** (→ 11장, 13장 참고):
 - Gaussian Splatting with semantic features — 예쁘고 빠른 3D 재구성 + 의미 정보
 - 3D Scene Graph 구축 — 객체들의 관계를 그래프로 표현
 - VFM features의 3D lifting — 2D 이미지에서 뽑은 feature를 3D 공간에 올리기
 
-**Language Integration** (→ 6장, 7장 참고):
+**Language Integration** (→ 11장, 12장 참고):
 - CLIP features for open-vocabulary — "본 적 없는 물체"도 텍스트로 검색 가능
 - LLM for scene reasoning — "이 방은 어떤 용도일까?" 추론
 - VLA for action planning — "컵을 집으려면 어떻게 팔을 움직여야 할까?"
@@ -237,16 +237,16 @@ class GlobalModule:
     - 신경망 기반 경량 VO — 기존 VO를 neural network로 대체하되, Jetson에서 돌아가게
     - 이벤트 카메라 활용 — 초고속, 저전력 카메라로 극한 환경에서 SLAM
     - 하드웨어 가속 (FPGA) — SLAM의 핵심 연산을 하드웨어로 구현
-    - **선행 학습**: 4장(카메라 모델), 9장(Visual Odometry, SLAM) 필수. 3장(최적화)도 권장
+    - **선행 학습**: 9장(카메라 모델), 14장(Visual Odometry, SLAM) 필수. 3장(최적화)도 권장
 2. **효율적 장애물 인식**
     - Depth-only obstacle detection — RGB 없이 depth 정보만으로 장애물 감지
     - Temporal consistency — 프레임 간 일관성 유지 (한 프레임에서 보였다 안 보였다 하면 안 됨)
     - Uncertainty-aware — "이게 장애물인지 확실하지 않다"는 정보도 활용
-    - **선행 학습**: 5장(Depth Estimation, Object Detection) 필수. 3장(좌표 변환)도 중요
+    - **선행 학습**: 10장(Depth Estimation, Object Detection) 필수. 3장(좌표 변환)도 중요
 3. **센서 융합 최적화**
     - Tight coupling 경량화 — IMU+Camera+LiDAR를 촘촘하게 결합하되 가볍게
     - 센서 드롭아웃 대응 — 센서 하나가 고장나도 계속 동작
-    - **선행 학습**: 2장(센서), 9장(Visual Odometry), 3장(최적화) 필수
+    - **선행 학습**: 2장(센서), 14장(Visual Odometry), 3장(최적화) 필수
 
 ### Global Module 연구
 
@@ -254,29 +254,29 @@ class GlobalModule:
     - DINOv2 features in 3D — 2D feature를 3D 공간에 올려서 활용
     - Semantic Gaussian Splatting — 3D 재구성에 의미 정보를 같이 넣기
     - 3D scene understanding — "이 공간은 어떤 구조인가" 이해
-    - **선행 학습**: 5장(Depth), 8장(3D 표현), 6장(VFM) 필수. 4장(카메라 모델)은 기본
+    - **선행 학습**: 10장(Depth), 13장(3D 표현), 11장(VFM) 필수. 9장(카메라 모델)은 기본
 2. **VLA 통합**
     - Open-vocabulary manipulation — "저 빨간 거 집어" 같은 명령으로 로봇팔 제어
     - Language-guided navigation — 자연어 명령으로 이동
     - 상황 인식 행동 — "아이가 있으니 천천히 움직여라"
-    - **선행 학습**: 6장(VFM 활용), 7장(VLA) 필수. 5장(Detection)도 알면 좋다
+    - **선행 학습**: 11장(VFM 활용), 12장(VLA) 필수. 10장(Detection)도 알면 좋다
 3. **Scalability**
     - 대규모 환경 표현 — 아파트 단지 전체, 캠퍼스 전체를 하나의 지도로
     - 지도 압축 및 업데이트 — 수 GB짜리 지도를 효율적으로 관리
     - Multi-robot 협업 — 여러 로봇이 함께 지도를 만들고 공유
-    - **선행 학습**: 9장(SLAM), 3장(최적화), 6장(VFM) 필수
+    - **선행 학습**: 14장(SLAM), 3장(최적화), 11장(VFM) 필수
 
 ### Integration 연구
 
 1. **효율적 통신**
     - 무엇을 언제 전송할 것인가? — 모든 걸 보내면 대역폭 낭비, 안 보내면 Global이 무용지물
     - 대역폭 제한 하 최적 전략 — 5G가 끊기면? WiFi가 느리면?
-    - **선행 학습**: 9장(SLAM, 키프레임 선택), 위 Local/Global 모듈 이해
+    - **선행 학습**: 14장(SLAM, 키프레임 선택), 위 Local/Global 모듈 이해
 2. **Fallback 전략**
     - 통신 끊김 시 Local-only 동작 — 서버 연결 없이도 기본 임무 수행
     - Graceful degradation — 기능이 점진적으로 줄어들되, 갑자기 멈추지는 않기
-    - **선행 학습**: 전체적인 시스템 이해 필요. 최소 3-9장은 읽고 오자
+    - **선행 학습**: 전체적인 시스템 이해 필요. 최소 3~14장은 읽고 오자
 3. **일관성 유지**
     - Local/Global 지도 동기화 — 두 모듈의 지도가 다르면 로봇이 혼란
     - Semantic 정보 일관성 — "저건 의자"라고 했는데 나중에 "테이블"로 바뀌면 안 됨
-    - **선행 학습**: 3장(최적화), 9장(SLAM, 맵 관리) 필수
+    - **선행 학습**: 3장(최적화), 14장(SLAM, 맵 관리) 필수
