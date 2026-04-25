@@ -4,7 +4,7 @@ Spatial AI를 제대로 이해하려면 수학적 기초가 필요하다. 여기
 
 수학 파트를 건너뛰고 싶은 마음은 이해한다. 하지만 논문을 읽다 보면 결국 수식에서 막힌다. SLAM 논문에서 "SE(3) 위의 최적화"라는 말이 나오는데 SE(3)이 뭔지 모르면 논문의 핵심 아이디어를 놓치게 되고, "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 한 줄이 이해가 안 되면 그 논문의 방법론 전체를 이해할 수 없다. 여기서 다루는 수학은 "수학 시험을 위한 수학"이 아니라, "로봇 논문을 읽고 구현하기 위한 수학"이다. 공대 3학년이면 선형대수를 들었을 테니, 여기서는 학부 때 배운 것이 로보틱스에서 어떻게 쓰이는지 연결하는 데 집중한다.
 
-고전적인 수학 도구가 여전히 핵심이지만, Differentiable Programming과 Auto-Differentiation(자동 미분)이 최적화 문제 접근 방식을 바꾸고 있다. 예전에는 Jacobian을 손으로 유도해야 했지만, 이제는 PyTorch나 JAX의 자동 미분으로 복잡한 파이프라인의 gradient를 자동으로 계산할 수 있다. End-to-End 학습 기반 SLAM, Differentiable Rendering(NeRF, 3D Gaussian Splatting) 등이 가능해진 배경이다. 자동 미분이 내부적으로 무엇을 하는지 이해하려면 결국 여기서 다루는 기초가 필요하다.
+고전적인 수학 도구가 여전히 핵심이지만, Differentiable Programming과 Auto-Differentiation(자동 미분)이 최적화 문제 접근 방식을 바꾸고 있다. 예전에는 Jacobian을 손으로 유도해야 했지만, 이제는 PyTorch나 JAX의 자동 미분으로 복잡한 파이프라인의 gradient를 계산할 수 있다. End-to-End 학습 기반 SLAM, Differentiable Rendering(NeRF, 3D Gaussian Splatting) 등이 가능해진 배경이다. 자동 미분이 내부적으로 무엇을 하는지 이해하려면 결국 여기서 다루는 기초가 필요하다.
 
 ## 3.1 선형대수 (Linear Algebra)
 
@@ -159,7 +159,7 @@ p(x) = N(μ, Σ)
 - μ: 평균 벡터
 - Σ: 공분산 행렬
 
-센서 노이즈, 위치 불확실성 모델링에 널리 사용
+센서 노이즈, 위치 불확실성 모델링에 널리 쓰인다.
 
 정규분포가 이렇게까지 많이 쓰이는 이유는 수학적 편의성이다. 중심극한정리 덕분에 많은 자연현상이 정규분포를 따르고, 정규분포끼리의 연산(곱, 합)이 닫혀 있어 분석이 쉽다. 칼만 필터가 정규분포를 가정하는 것도 같은 이유다.
 
@@ -192,7 +192,7 @@ SLAM에서의 활용: 데이터 연관(data association) 시 "이 관측이 이 
 P(A|B) = P(B|A) × P(A) / P(B)
 ```
 
-베이즈 정리는 상태 추정의 수학적 기반이다. "센서 측정값이 주어졌을 때, 로봇의 실제 상태는 무엇인가?"라는 질문에 답하는 공식이다. 이걸 모르면 칼만 필터, 파티클 필터, Factor Graph 기반 SLAM 전부 이해할 수 없다.
+베이즈 정리는 상태 추정의 수학적 기반이다. "센서 측정값이 주어졌을 때, 로봇의 실제 상태는 무엇인가?"라는 질문에 답하는 공식이다. 베이즈 정리를 모르면 칼만 필터, 파티클 필터, Factor Graph 기반 SLAM 전부 이해할 수 없다.
 
 **재귀적 상태 추정**:
 
@@ -238,7 +238,7 @@ SLAM에서 "관측 데이터만 보고 최적 위치를 구하는 것(MLE)"과 "
 
 둘 다 "가장 그럴듯한 파라미터를 찾는다"는 목표는 같지만, 접근이 다르다.
 
-MLE(Maximum Likelihood)는 "이 데이터가 관측될 확률을 가장 높이는 파라미터는?"을 묻는다. 데이터만 본다. MAP(Maximum A Posteriori)는 여기에 prior를 더한다. "이 데이터가 관측되었을 때, 사전 지식까지 합쳐서 파라미터의 사후 확률을 가장 높이는 값은?" 이다.
+MLE(Maximum Likelihood)는 "이 데이터가 관측될 확률을 가장 높이는 파라미터는?"을 묻는다. 데이터만 본다. MAP(Maximum A Posteriori)는 여기에 prior를 더한다. "이 데이터가 관측되었을 때, 사전 지식까지 합쳐서 파라미터의 사후 확률을 가장 높이는 값은?"이 그 질문이다.
 
 수식으로: MAP = MLE + prior. 가우시안 prior를 쓰면 MAP는 MLE에 L2 정규화를 추가한 것과 같다. 딥러닝에서 weight decay가 MAP의 구현이라고 볼 수 있다.
 
@@ -334,7 +334,7 @@ Gauss-Newton과 Gradient Descent의 결합:
 - λ 작음 → Gauss-Newton (빠른 수렴)
 - λ 큼 → Gradient Descent (안정적)
 
-SLAM의 Bundle Adjustment, Pose Graph Optimization에서 핵심 알고리즘
+SLAM의 Bundle Adjustment, Pose Graph Optimization에서 핵심 알고리즘으로 쓰인다.
 
 LM이 실전에서 가장 많이 쓰이는 이유: Gauss-Newton은 초기값이 좋으면 매우 빠르게 수렴하지만, 초기값이 나쁘면 발산할 수 있다. LM은 λ를 자동으로 조절하여, 초기에는 Gradient Descent처럼 안정적으로 시작하고, 해에 가까워지면 Gauss-Newton처럼 빠르게 수렴한다. Ceres Solver, g2o, GTSAM 같은 로보틱스 최적화 라이브러리에서 기본 알고리즘으로 채택하고 있다.
 
@@ -466,7 +466,7 @@ SE(3) = { T = [ R  t ] | R in SO(3), t in R^3 }
               [ 0  1 ]
 ```
 
-T는 4x4 homogeneous transformation matrix이다. SE(3)도 group이다. 군 연산은 행렬 곱 T_1 T_2, 항등원은 4x4 단위 행렬, 역원은 T^{-1} = [ R^T  -R^T t ; 0  1 ]이다.
+T는 4x4 homogeneous transformation matrix이다. SE(3)도 group이다. 군 연산은 행렬 곱(T_1 T_2)이며, 항등원은 4x4 단위 행렬, 역원은 T^{-1} = [ R^T  -R^T t ; 0  1 ]이다.
 
 **Lie algebra se(3):**
 

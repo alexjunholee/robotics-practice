@@ -85,7 +85,7 @@ features = outputs.last_hidden_state  # (1, num_patches+1, 768): CLS + 패치 fe
 
 **SAM2**: 비디오 지원, 더 빠른 속도
 
-SAM2는 단일 이미지 뿐 아니라 비디오에서도 동작한다. 첫 프레임에서 포인트/박스로 물체를 지정하면, 이후 프레임에서 자동으로 추적하며 분할한다. 이는 로봇이 실시간으로 물체를 추적하며 조작하는 시나리오에 직접 적용할 수 있다.
+SAM2는 단일 이미지뿐 아니라 비디오에서도 동작한다. 첫 프레임에서 포인트/박스로 물체를 지정하면, 이후 프레임에서 자동으로 추적하며 분할한다. 이 기능은 로봇이 실시간으로 물체를 추적하며 조작하는 시나리오에 직접 활용할 수 있다.
 
 ```python
 from segment_anything import sam_model_registry, SamPredictor
@@ -117,7 +117,7 @@ masks, scores, logits = predictor.predict(
 
 **Vision-Language Model**: 이미지와 텍스트를 공유 임베딩 공간에 매핑한다.
 
-CLIP 이전에는 이미지를 분류하려면 미리 정한 클래스 목록이 필요했다. CLIP은 이미지와 텍스트를 같은 공간에 놓으므로, 임의의 텍스트로 이미지를 검색하거나 분류할 수 있다. "red mug on a wooden table" 같은 자연어로 로봇에게 목표 물체를 지시할 수 있게 된 것이다. open-vocabulary의 시작이고, 로봇이 자연어를 이해하는 기반이 된다.
+CLIP 이전에는 이미지를 분류하려면 미리 정한 클래스 목록이 필요했다. CLIP은 이미지와 텍스트를 같은 공간에 놓으므로, 임의의 텍스트로 이미지를 검색하거나 분류할 수 있다. "red mug on a wooden table" 같은 자연어로 로봇에게 목표 물체를 지시할 수 있게 된 것이다. CLIP은 open-vocabulary의 시작이고, 로봇이 자연어를 이해하는 기반이 된다.
 
 **학습**: 4억 쌍의 이미지-텍스트 데이터로 contrastive learning
 
@@ -218,7 +218,7 @@ Grounded-SAM은 로보틱스에서 실용적인 조합이다. "red cup"이라고
 - 텍스처 없는 영역에서도 매칭 가능
 - 최근 연구: DROID-SLAM + DINOv2
 
-현장에서 겪는 문제와 직결된다. 고전 SLAM은 ORB, SIFT 같은 특징점에 의존하는데, 텍스처가 없는 벽면이나 바닥에서는 특징점이 잘 잡히지 않는다. DINOv2의 dense feature는 시맨틱 정보를 포함하고 있어서 하얀 벽이라도 이 부분과 저 부분을 구분할 수 있다. SLAM의 robustness가 높아지는 이유다.
+현장에서 겪는 문제와 직결된다. 고전 SLAM은 ORB, SIFT 같은 특징점에 의존하는데, 텍스처가 없는 벽면이나 바닥에서는 특징점이 잘 잡히지 않는다. DINOv2의 dense feature는 시맨틱 정보를 포함하고 있어서 하얀 벽이라도 이 부분과 저 부분을 구분할 수 있다. 이것이 SLAM의 robustness를 높이는 이유다.
 
 **3D Scene Understanding**:
 - 2D VFM features를 3D로 리프팅

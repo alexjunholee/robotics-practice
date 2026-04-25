@@ -7,7 +7,7 @@
 
 ## 9.1 이미지 처리 기초 (Image Processing)
 
-카메라에서 들어오는 raw 이미지는 노이즈가 많고 정보가 정리되지 않은 상태다. 어떤 알고리즘이든 그 위에서 동작하려면 먼저 이미지를 정제해야 한다. 필터링, 에지 검출, 형태학적 연산 — 이것들이 전처리의 기본 도구이고, 이걸 모르면 후속 파이프라인에서 왜 결과가 이상한지 원인을 잡을 수 없다.
+카메라에서 들어오는 raw 이미지는 노이즈가 많고 정보가 정리되지 않은 상태다. 어떤 알고리즘이든 그 위에서 동작하려면 먼저 이미지를 정제해야 한다. 필터링, 에지 검출, 형태학적 연산 — 이것들이 전처리의 기본 도구이고, 이걸 모르면 후속 파이프라인에서 결과가 왜 이상한지 잡을 수 없다.
 
 ## 9.1.1 OpenCV 소개
 
@@ -155,7 +155,7 @@ K는 카메라의 렌즈 특성을, [R|t]는 카메라가 세상 어디에 어�
 
 ## 9.2.2 Distortion Models
 
-실제 렌즈는 왜곡이 발생한다.
+실제 렌즈에서는 왜곡이 발생한다.
 
 실제 카메라로 찍은 이미지는 Pinhole Model이 가정하는 것처럼 깔끔하지 않다. 특히 광각 렌즈나 fisheye 렌즈를 쓰면 직선이 곡선으로 보이는 왜곡이 심하다. 왜곡 보정을 빠뜨리면 SLAM 정확도가 뚝 떨어지고 3D reconstruction 결과가 찌그러진다.
 
@@ -432,7 +432,7 @@ p1, status, err = cv2.calcOpticalFlowPyrLK(
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-최근에는 RAFT(Recurrent All-Pairs Field Transforms)가 dense optical flow의 사실상 표준이 됐다. 딥러닝 기반이지만 정확도가 크게 높아서 정확성이 중요한 경우에는 RAFT가 일반적인 선택이다.
+최근에는 RAFT(Recurrent All-Pairs Field Transforms)가 dense optical flow의 사실상 표준이 됐다. 딥러닝 기반이지만 정확도가 크게 높아서 품질이 중요한 경우에는 RAFT가 일반적인 선택이다.
 
 > **추천 자료**
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — 광류의 수학적 원리

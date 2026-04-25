@@ -485,7 +485,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 | XM540 | 10.0 | RS-485 | 중형 로봇 팔 |
 | PH54  | 44.7 | RS-485 | 대형 매니퓰레이터, 모바일 로봇 |
 
-Dynamixel의 장점: 데이지 체인 연결, 위치/속도/토크 제어 모드, PID 게인 조절 가능, 가격 대비 성능이 좋다. 단점: 통신 속도 한계, 고급 제어를 하려면 커스텀 펌웨어가 필요한 경우가 있다.
+Dynamixel의 장점은 데이지 체인 연결, 위치/속도/토크 제어 모드, PID 게인 조절, 가격 대비 성능이다. 단점은 통신 속도 한계이고, 고급 제어를 하려면 커스텀 펌웨어가 필요한 경우가 있다.
 
 **Quasi-Direct Drive (QDD):**
 

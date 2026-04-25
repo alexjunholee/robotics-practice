@@ -265,7 +265,7 @@ WORKDIR /workspace
 
 ## 16.3.3 NVIDIA Container Toolkit
 
-일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 거의 100% 필요하다.
+일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 사실상 필수다.
 
 참고: 과거에 쓰던 `nvidia-docker2`는 deprecated됐다. 현재는 `nvidia-container-toolkit`이 표준이고, `--runtime=nvidia` 대신 `--gpus all`을 쓴다.
 
@@ -647,7 +647,7 @@ clang-format -i src/*.cpp
 
 ## 16.6.2 Testing
 
-코드에 테스트를 작성하는 것은 연구 코드에서도 중요하다. "모델 forward pass가 제대로 되는지", "데이터 전처리 결과가 예상과 같은지" 같은 기본적인 테스트만 있어도 리팩토링할 때 훨씬 안심이 된다.
+테스트를 작성하는 습관은 연구 코드에서도 중요하다. "모델 forward pass가 제대로 되는지", "데이터 전처리 결과가 예상과 같은지" 같은 기본적인 테스트만 있어도 리팩토링할 때 훨씬 안심이 된다.
 
 **Python (pytest)**:
 

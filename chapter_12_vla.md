@@ -17,7 +17,7 @@
 - 단순 인식을 넘어 행동까지 포함
 - 시뮬레이션과 실제 환경의 간극 (Sim-to-Real)
 
-Embodied AI가 기존 AI와 다른 점은, 모델이 단순히 "이것은 컵이다"라고 분류하는 데 그치지 않고, 실제로 컵을 집어 올리는 물리적 행동을 수행해야 한다는 것이다. 이 과정에서 중력, 마찰, 충돌 같은 물리 법칙을 모두 고려해야 하기 때문에, 단순 이미지 분류보다 훨씬 어렵다.
+Embodied AI가 기존 AI와 다른 점은, 모델이 단순히 "이것은 컵이다"라고 분류하는 데 그치지 않고, 실제로 컵을 집어 올리는 물리적 행동을 수행해야 한다는 것이다. 이 과정에서 중력, 마찰, 충돌 같은 물리 법칙을 모두 고려해야 하므로, 단순 이미지 분류보다 훨씬 어렵다.
 
 > **추천 자료**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — RT-1, RT-2, PaLM-E 등의 공식 블로그 포스트
@@ -39,7 +39,7 @@ RT-1과 RT-2는 "대규모 데이터로 학습한 범용 로봇 정책"이라는
 - Web-scale 데이터의 지식을 로봇에 전이
 - "chain of thought" 추론 가능
 
-RT-2의 아이디어는 단순하다. 인터넷에서 학습한 거대 언어/비전 모델이 이미 "세상에 대한 지식"을 갖고 있으니, 이걸 로봇 행동으로 파인튜닝하면 제로샷(zero-shot)으로 새로운 물체나 상황에도 대응할 수 있다. 예를 들어, RT-2는 학습 데이터에 없던 물체도 언어 지식을 활용해 집어 올릴 수 있다.
+RT-2의 아이디어는 단순하다. 인터넷에서 학습한 거대 언어/비전 모델이 이미 "세상에 대한 지식"을 갖고 있으니, 그 지식을 로봇 행동으로 파인튜닝하면 제로샷(zero-shot)으로 새로운 물체나 상황에도 대응할 수 있다. 예를 들어, RT-2는 학습 데이터에 없던 물체도 언어 지식을 활용해 집어 올릴 수 있다.
 
 > **추천 자료**
 > - [Google DeepMind — RT-2 Demo Video](https://deepmind.google/discover/blog/rt-2-new-model-translates-vision-and-language-into-action/) — RT-2의 실제 동작 영상과 설명
@@ -53,7 +53,7 @@ RT-2의 아이디어는 단순하다. 인터넷에서 학습한 거대 언어/�
 - 562B 파라미터
 - "다목적" 로봇 태스크 수행
 
-PaLM-E가 흥미로운 이유는 "positive transfer"를 보여줬기 때문이다. 로봇 데이터, 웹 이미지, 텍스트를 함께 학습하면 오히려 각각을 따로 학습할 때보다 로봇 태스크 성능이 올라간다. 범용 지식이 로봇 행동에도 도움이 된다는 것을 실증했다.
+PaLM-E가 흥미로운 이유는 "positive transfer"를 보여줬기 때문이다. 로봇 데이터, 웹 이미지, 텍스트를 함께 학습하면 오히려 각각을 따로 학습할 때보다 로봇 태스크 성능이 올라간다. 범용 지식이 로봇 행동에도 도움이 된다는 점을 실증한 것이다.
 
 > **추천 자료**
 > - [Driess et al., "PaLM-E: An Embodied Multimodal Language Model" (2023)](https://arxiv.org/abs/2303.03378) — PaLM-E 원 논문
@@ -94,6 +94,7 @@ action = model.predict(
 로봇이 물체를 조작(manipulation)하는 것뿐 아니라, 환경 내에서 이동(navigation)하는 것도 Embodied AI의 핵심 과제이다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용하는 접근이다.
 
 **LINGO**: Language-guided Indoor Navigation
+
 **SayCan**: LLM이 "할 수 있는 것"과 "해야 하는 것"을 분리
 - Affordance function: 로봇이 현재 할 수 있는 행동
 - LLM: 목표 달성을 위해 해야 하는 행동
@@ -127,7 +128,7 @@ o_t = g(z_t)              # Observation model (잠재 상태 → 관측)
 r_t = h(z_t, a_t)         # Reward model (보상 예측)
 ```
 
-선형대수 시간에 배운 상태 공간 모델(state-space model)과 비슷한 구조라는 걸 눈치챘을 것이다. x_{t+1} = Ax_t + Bu_t 가 비선형 신경망 버전으로 확장된 것이라고 보면 된다.
+선형대수 시간에 배운 상태 공간 모델(state-space model)과 비슷한 구조다. x_{t+1} = Ax_t + Bu_t 가 비선형 신경망 버전으로 확장된 것이라고 보면 된다.
 
 > **추천 자료**
 > - [Hu et al., "GAIA-1: A Generative World Model for Autonomous Driving" (2023)](https://arxiv.org/abs/2309.17080) — Wayve의 World Model 논문
@@ -181,7 +182,7 @@ r_t = h(z_t, a_t)         # Reward model (보상 예측)
 - **부분 업데이트**: perception 모듈만 개선하고 싶을 때, 모듈형이면 해당 모듈만 교체하면 된다. End-to-end는 전체를 재학습해야 한다.
 - **데이터 효율**: end-to-end 학습은 대규모 데이터가 필요하다. RT-2는 130k 에피소드, OpenVLA는 970k 에피소드를 사용했다. 대부분의 연구실은 이 규모의 데이터를 수집할 여력이 없다.
 
-현실적 방향: **하이브리드**. 인식은 VFM(foundation model)으로 범용화하고, 계획/제어는 모듈형으로 안전성을 확보하는 구조. 연구실의 Local/Global Module 설계(18장)가 이 방향이다.
+현실적 방향은 **하이브리드**다. 인식은 VFM(foundation model)으로 범용화하고, 계획/제어는 모듈형으로 안전성을 확보한다. 연구실의 Local/Global Module 설계(18장)가 이 방향이다.
 
 end-to-end가 모듈형을 완전히 대체하려면 두 가지가 선행되어야 한다: 디버깅 가능한 end-to-end 구조, 그리고 소규모 데이터로도 학습되는 few-shot 정책. safety guarantee 문제도 여전히 열려 있다.
 
@@ -343,7 +344,7 @@ DR의 한계: 랜덤화 범위를 너무 넓히면 학습 자체가 어려워지
 3. 보정된 시뮬레이터에서 정책 학습
 ```
 
-전통적이고 효과적이지만, 모든 파라미터를 정확히 추정하기는 어렵고, 시뮬레이터가 모델링하지 않는 현상(케이블의 유연함, 접촉면의 미세 변형 등)에 대해서는 무력하다.
+전통적이고 효과적이지만, 모든 파라미터를 정확히 추정하기는 어렵고, 시뮬레이터가 모델링하지 않는 현상(케이블의 유연함, 접촉면의 미세 변형 등)에는 무력하다.
 
 **3. Real-to-Sim-to-Real (R2S2R)**
 

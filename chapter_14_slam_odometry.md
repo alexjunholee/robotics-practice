@@ -133,7 +133,7 @@ Direct Method는 dense(모든 픽셀)하게 쓰이는 경우가 많고, Sparse�
 
 #### 14.3.3 VINS-Mono/Fusion
 
-직접 돌려보면 알겠지만, 카메라만으로는 빠른 움직임이나 텍스처 없는 환경에서 트래킹이 쉽게 실패한다. IMU를 결합하면 이런 상황에서도 안정적으로 동작한다. 실제 드론이나 모바일 로봇에서 가장 많이 쓰이는 Visual-Inertial SLAM 시스템이다.
+직접 돌려보면 알겠지만, 카메라만으로는 빠른 움직임이나 텍스처 없는 환경에서 트래킹이 쉽게 실패한다. IMU를 결합하면 이런 상황에서도 안정적으로 동작한다. VINS-Mono는 실제 드론이나 모바일 로봇에서 가장 많이 쓰이는 Visual-Inertial SLAM 시스템이다.
 
 **Visual-Inertial Navigation System**
 
@@ -178,7 +178,7 @@ LOAM은 LiDAR SLAM의 출발점이다. 이후 나온 LeGO-LOAM, LIO-SAM, FAST-LI
 
 #### 14.4.3 LIO-SAM
 
-Factor Graph 기반 최적화를 LiDAR-Inertial SLAM에 적용한 대표작이다. Factor Graph의 핵심은 확장성에 있다. 센서를 하나 더 추가하고 싶으면 factor 하나만 추가하면 된다.
+LIO-SAM은 Factor Graph 기반 최적화를 LiDAR-Inertial SLAM에 적용한 대표작이다. Factor Graph의 핵심은 확장성에 있다. 센서를 하나 더 추가하고 싶으면 factor 하나만 추가하면 된다.
 
 **LiDAR-Inertial Odometry via Smoothing and Mapping**:
 - Factor graph 기반
@@ -612,7 +612,7 @@ for feature in detected_features:
 
 **Distributed 접근**은 각 로봇이 독립적으로 로컬 SLAM을 수행하고, rendezvous 또는 inter-robot loop closure가 발생했을 때 상대 포즈를 추정하여 지도를 정렬한다. 원본 데이터 대신 compressed descriptor(NetVLAD vector, summary map 등)를 교환하므로 통신 효율이 높다. 각 로봇은 자신의 포즈만 최적화하면서도 이웃 로봇과의 제약을 통해 전체가 수렴하는 구조다.
 
-분산 시스템에서 반드시 해결해야 할 문제가 셋 있다. **inter-robot loop closure**는 로봇 A가 방문한 장소를 로봇 B가 나중에 방문했을 때 인식하는 것으로, 14.14절의 place recognition이 핵심이다. **좌표계 정렬**은 각 로봇이 독립 좌표계에서 시작하므로, 최소 3개의 inter-robot correspondence에서 상대 SE(3) 변환을 추정해야 한다. **outlier rejection**은 inter-robot loop closure의 false positive가 많을 수 있어 PCM(Pairwise Consistency Maximization)이나 GNC(Graduated Non-Convexity) 같은 robust 기법이 필요하다. 분산 최적화는 Distributed Gauss-Seidel, ADMM 등을 사용한다.
+분산 시스템에서 반드시 해결해야 할 문제가 셋 있다. **inter-robot loop closure**는 로봇 A가 방문한 장소를 로봇 B가 나중에 방문했을 때 인식하는 것으로, 14.14절의 place recognition이 핵심이다. **좌표계 정렬**은 각 로봇이 독립 좌표계에서 시작하기 때문에 필요하다. 최소 3개의 inter-robot correspondence에서 상대 SE(3) 변환을 추정해야 정렬이 가능하다. **outlier rejection**은 inter-robot loop closure의 false positive가 많을 수 있어 PCM(Pairwise Consistency Maximization)이나 GNC(Graduated Non-Convexity) 같은 robust 기법이 필요하다. 분산 최적화는 Distributed Gauss-Seidel, ADMM 등을 사용한다.
 
 **대표 시스템**:
 | 시스템 | 특징 |
@@ -692,11 +692,11 @@ iSAM2(Kaess et al., IJRR 2012)는 Bayes tree 구조를 도입하여 이 한계�
 
 지도에서 동적 물체를 제거하는 것은 long-term mapping의 필수 과제다.
 
-**Removert** (Kim et al., 2020): multi-resolution range image를 이용한 static/dynamic 분류. Point cloud를 range image로 투영한 뒤, 다른 시점에서 관측한 range와 비교하여 동적 여부를 판단한다. 보수적으로 static point를 확보한 후, false removed point를 복원하는 two-stage 방식을 사용한다. 핵심은 multiple confidence level로 trade-off를 조절할 수 있다는 점이다.
+**Removert** (Kim et al., 2020): multi-resolution range image를 이용해 static/dynamic을 분류한다. Point cloud를 range image로 투영한 뒤, 다른 시점에서 관측한 range와 비교하여 동적 여부를 판단한다. 보수적으로 static point를 확보한 후, false removed point를 복원하는 two-stage 방식을 사용한다. 핵심은 multiple confidence level로 trade-off를 조절할 수 있다는 점이다.
 
 기존 접근과 비교하면: voxel ray-casting은 정확하지만 연산이 비싸고, visibility-based는 뒤의 static point를 보존한다는 가정이 필요하며, segmentation-based는 unknown label에 약하고 scan-to-map 관계를 무시한다. Removert는 이 세 방법의 단점을 multi-resolution range image 비교로 보완한다.
 
-**SuMa++** (Chen et al., IROS 2019): surfel-based mapping에 semantic label을 추가. LiDAR point에 normal과 semantic 정보를 더해서, semantic과 motion 모두에서 dynamic으로 판정된 경우에만 surfel을 제거한다. 단순히 다 지우지 않는 이유는, motion degenerate한 환경에서 dynamic이지만 geometric으로 유용한 point가 있을 수 있기 때문이다.
+**SuMa++** (Chen et al., IROS 2019): surfel-based mapping에 semantic label을 추가한 시스템이다. LiDAR point에 normal과 semantic 정보를 더해서, semantic과 motion 모두에서 dynamic으로 판정된 경우에만 surfel을 제거한다. 단순히 다 지우지 않는 이유는, motion degenerate한 환경에서 dynamic이지만 geometric으로 유용한 point가 있을 수 있기 때문이다.
 
 #### 14.15.3 Multi-Session SLAM
 

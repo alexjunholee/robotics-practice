@@ -16,7 +16,7 @@
 - 연구 커뮤니티에서 표준
 - 풍부한 사전학습 모델 (torchvision, timm)
 
-현실적인 이유가 있다. 2024년 기준 NeurIPS, CVPR, ICLR 등 주요 학회에서 발표되는 논문의 코드 공개 중 약 80% 이상이 PyTorch이다. 최신 논문을 읽고 코드를 돌려보고 수정하려면, PyTorch를 모르면 사실상 진행이 안 된다.
+현실적인 이유가 있다. 2024년 기준 NeurIPS, CVPR, ICLR 등 주요 학회에서 발표되는 논문의 코드 공개 중 80% 이상이 PyTorch이다. 최신 논문을 읽고 코드를 돌려보고 수정하려면, PyTorch를 모르면 사실상 진행이 안 된다.
 
 **설치**:
 
@@ -556,7 +556,7 @@ Input --> Feature Extractor --> [Task Classifier]      --> Task Loss
                               \--> [Domain Discriminator] --> Domain Loss (GRL)
 ```
 
-- Gradient Reversal Layer (GRL): domain discriminator의 gradient를 반전시켜서, feature extractor가 domain을 구분하지 못하는 방향으로 학습한다.
+- Gradient Reversal Layer (GRL): domain discriminator의 gradient를 반전시켜서, domain discriminator가 source와 target을 구분하지 못하는 방향으로 feature extractor를 학습시킨다.
 - Task classifier는 source domain에서 정상적으로 학습한다.
 - feature extractor는 task에 유용하면서도 domain에 불변인 표현을 학습한다.
 
@@ -609,7 +609,7 @@ for batch in test_loader:
 ---
 
 > **기술 흐름: 딥러닝 기반 인식 (Deep Learning for Perception)**
-> - **2012**: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. "딥러닝 혁명"의 시작. hand-crafted feature의 시대가 끝나기 시작
+> - **2012**: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. "딥러닝 혁명"의 시작. hand-crafted feature의 시대가 저물기 시작
 > - **2014~2015**: VGGNet, GoogLeNet, ResNet 등장. 특히 ResNet (2015)의 residual connection은 수백 층의 네트워크를 학습 가능하게 만듦. 이 시기에 Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
 > - **2017**: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
 > - **2020~2021**: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 새 패러다임. DETR로 detection에도 Transformer 적용. Swin Transformer가 다양한 비전 태스크에서 SOTA 달성

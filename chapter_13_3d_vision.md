@@ -105,7 +105,7 @@ filtered_pcd = pcd.select_by_index(ind)
 
 ## 13.2.2 Normal Estimation
 
-각 점에서의 표면 법선 벡터를 추정한다. 많은 알고리즘의 전처리 단계이다.
+각 점의 표면 법선 벡터를 추정한다. 많은 알고리즘의 전처리 단계이다.
 
 ICP (정합), 표면 재구성(reconstruction), 조명 계산 등 거의 모든 3D 처리에서 법선 벡터를 요구한다. 법선이 없으면 "이 점이 평면의 일부인지 모서리의 일부인지"를 알 수 없다.
 
@@ -368,7 +368,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 만들어지고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 실시간으로 구축한다.
 
-- **SplaTAM (2024)**: RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 수행한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가/업데이트)을 번갈아 수행하며, 기존 Neural SLAM 대비 렌더링 품질과 속도 모두 크게 향상시켰다.
+- **SplaTAM (2024)**: RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 수행한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가/업데이트)을 번갈아 수행하며, 기존 Neural SLAM 대비 렌더링 품질과 속도를 크게 높인다.
 - **MonoGS (2024)**: 단안(monocular) 카메라만으로 3DGS 기반 SLAM을 수행한다. 깊이 센서 없이도 dense한 3D 맵을 구축할 수 있어 관심을 끌고 있다.
 - **Gaussian-SLAM (2024)**: 서브맵(sub-map) 기반으로 대규모 환경에서도 3DGS SLAM을 돌릴 수 있다.
 

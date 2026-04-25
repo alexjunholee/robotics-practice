@@ -43,7 +43,7 @@ F = ma
 
 ### Recursive Newton-Euler Algorithm (RNEA)
 
-직렬 매니퓰레이터(serial manipulator)의 역동역학(inverse dynamics)을 푸는 가장 효율적인 방법이다. 핵심 아이디어는 간단하다:
+RNEA는 직렬 매니퓰레이터(serial manipulator)의 역동역학(inverse dynamics)을 푸는 가장 효율적인 방법이다. 핵심 아이디어는 간단하다:
 
 **Forward pass (base → end-effector):** 각 링크의 속도와 가속도를 순방향으로 전파한다. 링크 i의 속도는 링크 i-1의 속도에 관절 i의 기여분을 더한 것이다.
 
@@ -97,7 +97,7 @@ tau_g = pin.rnea(model, data, q, np.zeros(model.nv), np.zeros(model.nv))
 print("Gravity compensation torques:", tau_g)
 ```
 
-중력 보상(gravity compensation)은 RNEA에서 v=0, a=0을 넣으면 바로 나온다. 이것만으로도 로봇이 중력으로 처지지 않는다. 실무에서 가장 먼저 구현하는 제어기 중 하나이다.
+중력 보상(gravity compensation)은 RNEA에서 v=0, a=0을 넣으면 바로 나온다. 이것만으로도 로봇이 중력에 처지지 않는다. 실무에서 가장 먼저 구현하는 제어기 중 하나이다.
 
 Drake에서의 동일한 계산:
 
@@ -669,7 +669,7 @@ L̇ = Σ (r_contact - r_CoM) × f_contact
 
 2. **차원 축소.** n-DOF 보행 로봇의 전체 동역학은 n차원이지만, centroidal dynamics는 6차원(선운동량 3 + 각운동량 3)이다. 이 6차원 공간에서 먼저 원하는 운동량 궤적을 계획하고, 그 다음 전체 관절 수준으로 분해하는 것이 일반적인 접근법이다.
 
-3. **접촉력 계획과 직접 연결된다.** 위의 식에서 보듯이, centroidal momentum의 변화율은 외력(접촉력 + 중력)만이 결정한다. 어떤 접촉력 패턴이 원하는 운동량 궤적을 만들어내는지 계획하는 것이 locomotion의 핵심 문제이다.
+3. **접촉력 계획과 직접 연결된다.** 위의 식에서 보듯이, centroidal momentum의 변화율은 외력(접촉력 + 중력)만으로 결정된다. 어떤 접촉력 패턴이 원하는 운동량 궤적을 만들어내는지 계획하는 것이 locomotion의 핵심 문제이다.
 
 ```python
 # Pinocchio에서 centroidal dynamics 계산
