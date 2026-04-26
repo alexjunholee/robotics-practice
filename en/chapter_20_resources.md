@@ -368,7 +368,7 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 - Image processing with OpenCV (grayscale conversion, edge detection, feature extraction)
 - Write a simple ROS2 node (publisher/subscriber)
 - Perform camera calibration — see Chapter 9 of this document
-- Read **Chapters 2 and 3** of this document to understand coordinate transformations and camera models
+- Read **Chapters 3 and 9** of this document to understand coordinate transformations and camera models
 
 **Milestone**: If you can read an image in Python, extract keypoints, and visualize matches between two images, you have graduated from the beginner stage.
 

@@ -479,7 +479,7 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 - Prototyping: "write code that extracts ORB features from the KITTI dataset and matches them. Use OpenCV, with Lowe's ratio test at 0.75" — give concrete instructions like this
 - Debugging: error message + code + "what causes this error" — AI's strong area
 - Refactoring: "turn this code into a PyTorch Dataset class" — strong at structural transformations
-- What AI can't do (see earlier in Ch.19): ROS QoS, hardware permissions, network settings, real-time timing
+- What AI can't do (see earlier in this chapter): ROS QoS, hardware permissions, network settings, real-time timing
 
 ### 19.7.3 Experiment Design
 
@@ -503,7 +503,7 @@ A concrete scenario for how to use AI in a daily routine:
 09:30 — Pick one interesting paper, second-pass read. Ask AI to derive unfamiliar equations
 10:30 — Analyze yesterday's training results. Screenshot the loss curve and ask AI "is this pattern normal?"
 11:00 — Write new experiment code. Have AI generate the DataLoader structure. Manually fix the augmentation logic
-14:00 — Debug SLAM code. ROS2 error → solve directly using Ch.19 (AI doesn't know QoS)
+14:00 — Debug SLAM code. ROS2 error → solve directly using this chapter (AI doesn't know QoS)
 16:00 — Draft the Related Work section. Have AI build a comparison table for 5 papers
 17:00 — Verify the table. Find that AI confused the methods of 2 papers, fix manually
 ```

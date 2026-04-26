@@ -368,7 +368,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 - OpenCV로 이미지 처리 (grayscale 변환, edge detection, feature 추출)
 - 간단한 ROS2 노드 작성 (publisher/subscriber)
 - 카메라 캘리브레이션 수행 — 본 문서 9장 참고
-- 본 문서의 **2장, 3장**을 읽으면서 좌표 변환과 카메라 모델을 이해한다
+- 본 문서의 **3장, 9장**을 읽으면서 좌표 변환과 카메라 모델을 이해한다
 
 **마일스톤**: Python으로 이미지를 읽어서 특징점을 추출하고, 두 이미지 간 매칭을 시각화할 수 있으면 입문 단계 졸업이다.
 
