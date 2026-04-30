@@ -423,7 +423,7 @@ Provide this information to AI and you'll get answers closer to the real cause i
 
 ## 19.6 How to Use AI Agents Properly
 
-*The general frame for putting AI to work (writing/reading territory) is covered in depth in [`../../survival-research/part1_reading/ch02_keshav_three_passes.md`](../../survival-research/part1_reading/ch02_keshav_three_passes.md) and [`part2_writing/A_workflow/ch01_mindset.md`](../../survival-research/part2_writing/A_workflow/ch01_mindset.md) *(Korean; English version planned)*. This §19.6 is the field-specific application to code and hardware.*
+*The general frame for putting AI to work (writing/reading territory) is covered in depth in [`../../research-notes/part1_reading/ch02_keshav_three_passes.md`](../../research-notes/part1_reading/ch02_keshav_three_passes.md) and [`part2_writing/A_workflow/ch01_mindset.md`](../../research-notes/part2_writing/A_workflow/ch01_mindset.md) *(Korean; English version planned)*. This §19.6 is the field-specific application to code and hardware.*
 
 ### 19.6.1 Provide Enough Context
 
@@ -472,7 +472,7 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 
 ### 19.7.1 Reading Papers
 
-*The paper-reading workflow (3-pass + AI layer cameo) is covered in depth in the AI-layer cameo of [`../../survival-research/part1_reading/ch02_keshav_three_passes.md`](../../survival-research/part1_reading/ch02_keshav_three_passes.md) *(Korean; English version planned)*.*
+*The paper-reading workflow (3-pass + AI layer cameo) is covered in depth in the AI-layer cameo of [`../../research-notes/part1_reading/ch02_keshav_three_passes.md`](../../research-notes/part1_reading/ch02_keshav_three_passes.md) *(Korean; English version planned)*.*
 
 Field-specific application: 3-pass + AI summary on the field's core papers — read the abstract, ask for a 3-line contribution summary, ask for step-by-step derivation of equations.
 
@@ -485,7 +485,7 @@ Field-specific application: 3-pass + AI summary on the field's core papers — r
 
 ### 19.7.3 Experiment Design
 
-*The frame for putting AI to work in experiment design, ablations, and result interpretation is captured as a cameo in [`../../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (or [`ch12_figures.md`](../../survival-research/part2_writing/C_sections/ch12_figures.md)) *(Korean; English version planned)*.*
+*The frame for putting AI to work in experiment design, ablations, and result interpretation is captured as a cameo in [`../../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md`](../../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md) (or [`ch12_figures.md`](../../research-notes/part2_writing/C_sections/ch12_figures.md)) *(Korean; English version planned)*.*
 
 Field-specific application: throw the baseline-comparison table at AI and ask *which comparison axis I missed* — that workflow.
 

@@ -11449,7 +11449,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 어떻게 읽을 것인가?
 
-논문 읽기는 별도 가이드에서 본격적으로 다룬다. 왜 읽는가, Keshav 3-pass, 5 Cs, reviewer 시점, CCC 렌즈, 독자 기대 진단까지 일곱 챕터에 걸쳐 [`../survival-research/part1_reading/`](../survival-research/part1_reading/) (ch01–ch07)에 정리되어 있다.
+논문 읽기는 별도 가이드에서 본격적으로 다룬다. 왜 읽는가, Keshav 3-pass, 5 Cs, reviewer 시점, CCC 렌즈, 독자 기대 진단까지 일곱 챕터에 걸쳐 [`../research-notes/part1_reading/`](../research-notes/part1_reading/) (ch01–ch07)에 정리되어 있다.
 
 분야 적용은 단순하다. SLAM/CV/로보틱스 분야의 *핵심 논문 5–10편* — 본 챕터 §20.4의 필독 리스트 — 을 첫 1년에 3-pass로 정독한다. 분야의 vocabulary와 baseline 감각이 그 안에서 만들어진다.
 
@@ -11495,7 +11495,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ## 20.5 주요 학회
 
-분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [`../survival-research/part3_presentations/ch02_conference_prep.md`](../survival-research/part3_presentations/ch02_conference_prep.md) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
+분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [`../research-notes/part3_presentations/ch02_conference_prep.md`](../research-notes/part3_presentations/ch02_conference_prep.md) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
 
 본 가이드는 SLAM/CV/로보틱스 분야 본체에 집중한다. 학회 일반론(왜 가는가·발표 opener·첫 마디 화법)과 분야별 표는 위 가이드에서 다룬다.
 
@@ -11692,20 +11692,20 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 ## 20.8 연구 실전 mindset (link)
 
-*대학원 수준.* 연구자 마인드셋과 논문 쓰기·실험 설계·학회 발표·리뷰 같은 메타 운영은 별도 가이드 [survival-research](../survival-research/)에서 본격적으로 다룬다. 본 챕터에서는 분야 instantiation에 해당하는 자리만 짧게 남기고 메타 자리는 link로 안내한다.
+*대학원 수준.* 연구자 마인드셋과 논문 쓰기·실험 설계·학회 발표·리뷰 같은 메타 운영은 별도 가이드 [research-notes](../research-notes/)·[grad-notes](../grad-notes/)에서 본격적으로 다룬다. 본 챕터에서는 분야 instantiation에 해당하는 자리만 짧게 남기고 메타 자리는 link로 안내한다.
 
 핵심 frame 한 줄: 엔지니어는 직업이 아니라 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
 
 ### 20.8.0 연구자 마인드셋 (link)
 
-- 방향·엔진·도구 세 layer + 통합 frame → [`gradnotes/p4_ch04_integrated_life.md`](../survival-research/gradnotes/p4_ch04_integrated_life.md) § 5
-- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [`gradnotes/p4_ch01_autonomy_weight.md`](../survival-research/gradnotes/p4_ch01_autonomy_weight.md) § 1
-- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [`gradnotes/p4_ch02_comparison_trap.md`](../survival-research/gradnotes/p4_ch02_comparison_trap.md) § 3
-- 견고한 기초 — *리젝 이유가 없는 논문* frame → [`part2_writing/A_workflow/ch01_mindset.md`](../survival-research/part2_writing/A_workflow/ch01_mindset.md) § 1
+- 방향·엔진·도구 세 layer + 통합 frame → [`gradnotes/p4_ch04_integrated_life.md`](../grad-notes/p4_ch04_integrated_life.md) § 5
+- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [`gradnotes/p4_ch01_autonomy_weight.md`](../grad-notes/p4_ch01_autonomy_weight.md) § 1
+- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [`gradnotes/p4_ch02_comparison_trap.md`](../grad-notes/p4_ch02_comparison_trap.md) § 3
+- 견고한 기초 — *리젝 이유가 없는 논문* frame → [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/part2_writing/A_workflow/ch01_mindset.md) § 1
 
 ### 20.8.1 논문 쓰기 (link)
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [`part2_writing/A_workflow/`](../survival-research/part2_writing/A_workflow/) (mindset·outline·time budget) 및 [`part2_writing/C_sections/ch08_introduction.md`](../survival-research/part2_writing/C_sections/ch08_introduction.md).
+Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [`part2_writing/A_workflow/`](../research-notes/part2_writing/A_workflow/) (mindset·outline·time budget) 및 [`part2_writing/C_sections/ch08_introduction.md`](../research-notes/part2_writing/C_sections/ch08_introduction.md).
 
 ### 20.8.2 실험 설계와 Ablation
 
@@ -11713,11 +11713,11 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 
 ### 20.8.3 학회 발표 (link)
 
-발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [`part3_presentations/`](../survival-research/part3_presentations/).
+발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [`part3_presentations/`](../research-notes/part3_presentations/).
 
 ### 20.8.4 논문 리뷰 — Peer Review (link)
 
-리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [`part1_reading/ch05_reading_for_review.md`](../survival-research/part1_reading/ch05_reading_for_review.md) (reviewer로 읽기) + [`part2_writing/E_after/ch17_revision_rebuttal.md`](../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (rebuttal 작성).
+리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [`part1_reading/ch05_reading_for_review.md`](../research-notes/part1_reading/ch05_reading_for_review.md) (reviewer로 읽기) + [`part2_writing/E_after/ch17_revision_rebuttal.md`](../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md) (rebuttal 작성).
 
 ### 20.8.5 도구
 
@@ -11728,7 +11728,7 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 - 알고리즘: algorithm2e
 - 수식: notation table을 따로 만들어 논문 전체에서 통일
 
-표기법(LaTeX·notation·수식) 자리는 [`part2_writing/D_sentence/ch15_math_and_proofs.md`](../survival-research/part2_writing/D_sentence/ch15_math_and_proofs.md) (글쓰기 단위 통일)이 메타 layer로 다룬다.
+표기법(LaTeX·notation·수식) 자리는 [`part2_writing/D_sentence/ch15_math_and_proofs.md`](../research-notes/part2_writing/D_sentence/ch15_math_and_proofs.md) (글쓰기 단위 통일)이 메타 layer로 다룬다.
 
 > 추천 자료:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — 논문 쓰기의 고전 강연
@@ -12244,15 +12244,15 @@ sudo apt-get install libeigen3-dev
 
 ### 생존을 위한 마인드셋
 
-생존 마인드셋 5 frame은 별도 가이드(survival-research)에서 본격적으로 다룬다. 메타 layer — 채점자 없는 시스템에서의 자율성·비교·기록 — 가 거기서 풀리고, 본 챕터의 분야 layer는 그 메타와 한 쌍을 이룬다.
+생존 마인드셋 5 frame은 별도 가이드(research-notes·grad-notes)에서 본격적으로 다룬다. 메타 layer — 채점자 없는 시스템에서의 자율성·비교·기록 — 가 거기서 풀리고, 본 챕터의 분야 layer는 그 메타와 한 쌍을 이룬다.
 
 각 항목이 흡수된 자리:
 
-- *모르는 건 당연하다* → [`../survival-research/gradnotes/p4_ch01_autonomy_weight.md`](../survival-research/gradnotes/p4_ch01_autonomy_weight.md) § 2 (대학원의 가치 재정의)
-- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [`../survival-research/gradnotes/p3_ch04_one_question_email.md`](../survival-research/gradnotes/p3_ch04_one_question_email.md) § 3 (형식의 사소한 표준)
-- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [`../survival-research/gradnotes/p3_ch02_time_use.md`](../survival-research/gradnotes/p3_ch02_time_use.md) § 5 (퇴근 전 포스트잇)
-- *작게 시작하라 — 작은 코드 조각부터* → [`../survival-research/gradnotes/p3_ch05_tool_trap.md`](../survival-research/gradnotes/p3_ch05_tool_trap.md) § 1 (셋업 시간은 연구 시간이 아니다)
-- *비교하지 마라 — 3개월 후의 나* → [`../survival-research/gradnotes/p4_ch02_comparison_trap.md`](../survival-research/gradnotes/p4_ch02_comparison_trap.md) § 3 (단거리 vs 장거리)
+- *모르는 건 당연하다* → [`../grad-notes/p4_ch01_autonomy_weight.md`](../grad-notes/p4_ch01_autonomy_weight.md) § 2 (대학원의 가치 재정의)
+- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [`../grad-notes/p3_ch04_one_question_email.md`](../grad-notes/p3_ch04_one_question_email.md) § 3 (형식의 사소한 표준)
+- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [`../grad-notes/p3_ch02_time_use.md`](../grad-notes/p3_ch02_time_use.md) § 5 (퇴근 전 포스트잇)
+- *작게 시작하라 — 작은 코드 조각부터* → [`../grad-notes/p3_ch05_tool_trap.md`](../grad-notes/p3_ch05_tool_trap.md) § 1 (셋업 시간은 연구 시간이 아니다)
+- *비교하지 마라 — 3개월 후의 나* → [`../grad-notes/p4_ch02_comparison_trap.md`](../grad-notes/p4_ch02_comparison_trap.md) § 3 (단거리 vs 장거리)
 
 
 ---
@@ -12288,13 +12288,13 @@ Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 �
 
 ## 22.3 하지 말아야 할 것
 
-신입이 자주 빠지는 함정 4 항목 — *논문 많이 읽기 / 환경 미리 완성 / 직접 짜기 / AI 의존*. 각 항목의 일반론은 [`../survival-research/part1_reading/ch01_why_read.md`](../survival-research/part1_reading/ch01_why_read.md) (논문 많이의 함정)과 [`../survival-research/gradnotes/p3_ch05_tool_trap.md`](../survival-research/gradnotes/p3_ch05_tool_trap.md) (장비병 — 환경/직접/AI 함정)에서 다룬다.
+신입이 자주 빠지는 함정 4 항목 — *논문 많이 읽기 / 환경 미리 완성 / 직접 짜기 / AI 의존*. 각 항목의 일반론은 [`../research-notes/part1_reading/ch01_why_read.md`](../research-notes/part1_reading/ch01_why_read.md) (논문 많이의 함정)과 [`../grad-notes/p3_ch05_tool_trap.md`](../grad-notes/p3_ch05_tool_trap.md) (장비병 — 환경/직접/AI 함정)에서 다룬다.
 
 분야 적용으로 한 줄. SLAM/CV에서는 *분야 도구가 깊다* — ORB-SLAM3·Colmap·Gaussian Splatting은 공개 구현이 표준이다. 직접 짜기는 교육 목적이거나 새 기여가 분명할 때만 의미가 있다. 그 외에는 기존 구현을 돌리고 고장 난 부분을 찾는 작업이 연구에 가깝다.
 
 ## 22.4 장기전의 감각
 
-박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../survival-research/gradnotes/p3_ch01_my_research.md`](../survival-research/gradnotes/p3_ch01_my_research.md) (내 연구가 생기는 시점), [`../survival-research/gradnotes/p1_ch01_phd_decision.md`](../survival-research/gradnotes/p1_ch01_phd_decision.md) (박사 결정의 시간 지평).
+박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/p3_ch01_my_research.md`](../grad-notes/p3_ch01_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/p1_ch01_phd_decision.md`](../grad-notes/p1_ch01_phd_decision.md) (박사 결정의 시간 지평).
 
 로보틱스 실험은 *세팅 3–6개월·실험 사이클 2주*가 흔한 단위다. 첫 논문이 1년 반 걸리는 것도 같은 이유다. 분야의 시간 감각이 박사 운영의 frame과 합쳐지면 매일의 속도에 덜 흔들린다.
 
@@ -12302,7 +12302,7 @@ Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 �
 
 여기까지 읽었다면 긴 글을 끝까지 읽는 능력은 이미 손에 있다. 분야 본체는 여기서 한 바퀴 끝난다.
 
-박사 운영·읽기 mindset의 본격 가이드는 [`../survival-research/`](../survival-research/)에서 다룬다.
+박사 운영·읽기 mindset의 본격 가이드는 [`../research-notes/`](../research-notes/)·[`../grad-notes/`](../grad-notes/)에서 다룬다.
 
 막히면 Slack. 이 문서는 계속 고쳐 쓴다.
 
@@ -23350,7 +23350,7 @@ These are YouTube channels you can watch more casually than textbooks or full co
 
 ### How to read them
 
-The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
+The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
 
 Field-specific application is simple. Read the *5–10 core papers* in SLAM/CV/robotics — the must-read list in §20.4 below — three-pass in your first year. The vocabulary and baseline sense of the field gets built inside that exercise.
 
@@ -23396,7 +23396,7 @@ Field-specific application is simple. Read the *5–10 core papers* in SLAM/CV/r
 
 ## 20.5 Major Conferences
 
-The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../survival-research/part3_presentations/ch02_conference_prep.md`](../../survival-research/part3_presentations/ch02_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
+The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../research-notes/part3_presentations/ch02_conference_prep.md`](../../research-notes/part3_presentations/ch02_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
 This guide focuses on the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
@@ -23597,10 +23597,10 @@ Git usage                       Point clouds (Open3D)            Paper writing
 
 The research-skill content of this section — researcher mindset, paper writing, experimental design, presentations, peer review, paper-writing tools — is covered in depth in a separate meta-skill guide *(Korean; English version planned)*:
 
-- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/) (5 chapters)
-- Paper reading → [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (7 chapters; see also §20.4 above)
-- Paper writing (structure, sentence craft, revision workflow) → [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/) (workflow · structure · sections · sentence · after-submission)
-- Conference presentations and peer review → [`../../survival-research/part3_presentations/`](../../survival-research/part3_presentations/) (3 chapters; see also §20.5 above)
+- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters)
+- Paper reading → [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (7 chapters; see also §20.4 above)
+- Paper writing (structure, sentence craft, revision workflow) → [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) (workflow · structure · sections · sentence · after-submission)
+- Conference presentations and peer review → [`../../research-notes/part3_presentations/`](../../research-notes/part3_presentations/) (3 chapters; see also §20.5 above)
 
 Field-specific notes for SLAM/CV/robotics:
 
@@ -24121,7 +24121,7 @@ When you first join a lab, it is natural to feel lost about what to do. This gui
 
 ### Mindset for survival
 
-The general survival mindset (not-knowing is normal, leveraging seniors, writing it down, starting small, not comparing) is treated in the meta-skill guide — see [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/) (5 chapters on entering research) *(Korean; English version planned)*.
+The general survival mindset (not-knowing is normal, leveraging seniors, writing it down, starting small, not comparing) is treated in the meta-skill guide — see [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters on entering research) *(Korean; English version planned)*.
 
 Field-specific application: in SLAM/CV/robotics labs the *senior code* is the highest-leverage starting point — copy the senior's environment, run their pipeline first, and only then begin modifying. Setup pain in robotics is high (CUDA · ROS · simulator versions); the time saved by not reinventing it goes straight into reading papers.
 
@@ -24159,13 +24159,13 @@ Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 mon
 
 ## 22.3 What Not to Do
 
-The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../survival-research/part1_reading/ch01_why_read.md`](../../survival-research/part1_reading/ch01_why_read.md) (the trap of reading-many) and [`../../survival-research/gradnotes/p3_ch05_tool_trap.md`](../../survival-research/gradnotes/p3_ch05_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
+The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../research-notes/part1_reading/ch01_why_read.md`](../../research-notes/part1_reading/ch01_why_read.md) (the trap of reading-many) and [`../../grad-notes/p3_ch05_tool_trap.md`](../../grad-notes/p3_ch05_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
 
 Field-specific application in one line. SLAM/CV has *deep field tooling* — ORB-SLAM3, Colmap, and Gaussian Splatting are open-source standards. Implementing from scratch is meaningful only for educational purposes or when there is a genuinely new contribution. Otherwise, running an existing implementation and finding where it breaks is closer to research.
 
 ## 22.4 A Sense of the Long Game
 
-The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../survival-research/gradnotes/p3_ch01_my_research.md`](../../survival-research/gradnotes/p3_ch01_my_research.md) (when your own research appears) and [`../../survival-research/gradnotes/p1_ch01_phd_decision.md`](../../survival-research/gradnotes/p1_ch01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
+The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../grad-notes/p3_ch01_my_research.md`](../../grad-notes/p3_ch01_my_research.md) (when your own research appears) and [`../../grad-notes/p1_ch01_phd_decision.md`](../../grad-notes/p1_ch01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
 
 Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cycle* unit. The year-and-a-half first-paper estimate comes from the same place. When the field's time-sense merges with the PhD's operating frame, daily pace shakes you less.
 
@@ -24173,7 +24173,7 @@ Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cyc
 
 If you have read this far, you already have one ability — the ability to read a long text to the end. The field core ends here, in one full loop.
 
-The full guide on PhD operation and reading mindset lives at [`../../survival-research/`](../../survival-research/) *(Korean; English version planned)*.
+The full guide on PhD operation and reading mindset lives at [`../../research-notes/`](../../research-notes/)·[`../../grad-notes/`](../../grad-notes/) *(Korean; English version planned)*.
 
 When stuck, Slack. This document keeps getting rewritten.
 

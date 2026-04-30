@@ -29,13 +29,13 @@ Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 mon
 
 ## 22.3 What Not to Do
 
-The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../survival-research/part1_reading/ch01_why_read.md`](../../survival-research/part1_reading/ch01_why_read.md) (the trap of reading-many) and [`../../survival-research/gradnotes/p3_ch05_tool_trap.md`](../../survival-research/gradnotes/p3_ch05_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
+The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../research-notes/part1_reading/ch01_why_read.md`](../../research-notes/part1_reading/ch01_why_read.md) (the trap of reading-many) and [`../../grad-notes/p3_ch05_tool_trap.md`](../../grad-notes/p3_ch05_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
 
 Field-specific application in one line. SLAM/CV has *deep field tooling* — ORB-SLAM3, Colmap, and Gaussian Splatting are open-source standards. Implementing from scratch is meaningful only for educational purposes or when there is a genuinely new contribution. Otherwise, running an existing implementation and finding where it breaks is closer to research.
 
 ## 22.4 A Sense of the Long Game
 
-The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../survival-research/gradnotes/p3_ch01_my_research.md`](../../survival-research/gradnotes/p3_ch01_my_research.md) (when your own research appears) and [`../../survival-research/gradnotes/p1_ch01_phd_decision.md`](../../survival-research/gradnotes/p1_ch01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
+The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../grad-notes/p3_ch01_my_research.md`](../../grad-notes/p3_ch01_my_research.md) (when your own research appears) and [`../../grad-notes/p1_ch01_phd_decision.md`](../../grad-notes/p1_ch01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
 
 Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cycle* unit. The year-and-a-half first-paper estimate comes from the same place. When the field's time-sense merges with the PhD's operating frame, daily pace shakes you less.
 
@@ -43,7 +43,7 @@ Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cyc
 
 If you have read this far, you already have one ability — the ability to read a long text to the end. The field core ends here, in one full loop.
 
-The full guide on PhD operation and reading mindset lives at [`../../survival-research/`](../../survival-research/) *(Korean; English version planned)*.
+The full guide on PhD operation and reading mindset lives at [`../../research-notes/`](../../research-notes/)·[`../../grad-notes/`](../../grad-notes/) *(Korean; English version planned)*.
 
 When stuck, Slack. This document keeps getting rewritten.
 

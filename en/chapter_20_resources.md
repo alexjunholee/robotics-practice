@@ -142,7 +142,7 @@ These are YouTube channels you can watch more casually than textbooks or full co
 
 ### How to read them
 
-The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
+The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
 
 ### Must-read paper list
 
@@ -186,7 +186,7 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 
 ## 20.5 Major Conferences
 
-The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../survival-research/part3_presentations/ch02_conference_prep.md`](../../survival-research/part3_presentations/ch02_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
+The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../research-notes/part3_presentations/ch02_conference_prep.md`](../../research-notes/part3_presentations/ch02_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
 This guide focuses on the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
@@ -354,14 +354,14 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 | --- | --- | --- |
 | Understanding and using VFMs | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
-| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/)* |
-| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/)* |
-| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [`../../survival-research/part2_writing/E_after/`](../../survival-research/part2_writing/E_after/)* |
+| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/)* |
+| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/)* |
+| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [`../../research-notes/part2_writing/E_after/`](../../research-notes/part2_writing/E_after/)* |
 
 **Exercises**:
 - Analyze the code of recent papers — clone from GitHub and run it yourself
 - Experiment with your own improvement ideas — try "what if I change this part?"
-- Attempt paper writing — *the full frame is [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/)*
+- Attempt paper writing — *the full frame is [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/)*
 - Read **Chapters 10-13** of this document to track recent research directions
 
 **Milestone**: If you can run an experiment that modifies or improves an existing paper's method and compare the result quantitatively, you have entered the advanced stage. Aim to reach a level where the work could be submitted to a conference workshop.
@@ -387,10 +387,10 @@ Git usage                       Point clouds (Open3D)            Paper writing
 
 The research-skill content of this section — researcher mindset, paper writing, experimental design, presentations, peer review, paper-writing tools — is covered in depth in a separate meta-skill guide *(Korean; English version planned)*:
 
-- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/) (5 chapters)
-- Paper reading → [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (7 chapters; see also §20.4 above)
-- Paper writing (structure, sentence craft, revision workflow) → [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/) (workflow · structure · sections · sentence · after-submission)
-- Conference presentations and peer review → [`../../survival-research/part3_presentations/`](../../survival-research/part3_presentations/) (3 chapters; see also §20.5 above)
+- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters)
+- Paper reading → [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (7 chapters; see also §20.4 above)
+- Paper writing (structure, sentence craft, revision workflow) → [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) (workflow · structure · sections · sentence · after-submission)
+- Conference presentations and peer review → [`../../research-notes/part3_presentations/`](../../research-notes/part3_presentations/) (3 chapters; see also §20.5 above)
 
 Field-specific notes for SLAM/CV/robotics:
 

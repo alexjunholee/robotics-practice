@@ -423,7 +423,7 @@ sudo tcpdump -i eth0 -w capture.pcap
 
 ## 19.6 AI 에이전트를 제대로 쓰는 법
 
-*AI 부려먹기의 일반 frame (writing·reading 영역)은 [`../survival-research/part1_reading/ch02_keshav_three_passes.md`](../survival-research/part1_reading/ch02_keshav_three_passes.md) + [`part2_writing/A_workflow/ch01_mindset.md`](../survival-research/part2_writing/A_workflow/ch01_mindset.md) 에서 본격 다룬다. 본 § 19.6은 코드·하드웨어 영역의 분야 적용.*
+*AI 부려먹기의 일반 frame (writing·reading 영역)은 [`../research-notes/part1_reading/ch02_keshav_three_passes.md`](../research-notes/part1_reading/ch02_keshav_three_passes.md) + [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/part2_writing/A_workflow/ch01_mindset.md) 에서 본격 다룬다. 본 § 19.6은 코드·하드웨어 영역의 분야 적용.*
 
 ### 19.6.1 컨텍스트를 충분히 제공하라
 
@@ -472,7 +472,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.1 논문 읽기
 
-*논문 읽기 워크플로우 (3-pass + AI layer cameo)는 [`../survival-research/part1_reading/ch02_keshav_three_passes.md`](../survival-research/part1_reading/ch02_keshav_three_passes.md) 의 AI layer cameo에서 본격 다룬다.*
+*논문 읽기 워크플로우 (3-pass + AI layer cameo)는 [`../research-notes/part1_reading/ch02_keshav_three_passes.md`](../research-notes/part1_reading/ch02_keshav_three_passes.md) 의 AI layer cameo에서 본격 다룬다.*
 
 분야 적용은 분야 핵심 논문에 3-pass + AI summary 결합 — abstract 읽고 contribution 3줄 요청, Eq. 단계별 유도 요청.
 
@@ -485,7 +485,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.3 실험 설계
 
-*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (또는 [`ch12_figures.md`](../survival-research/part2_writing/C_sections/ch12_figures.md)) 에 cameo로 담겼다.*
+*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md`](../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md) (또는 [`ch12_figures.md`](../research-notes/part2_writing/C_sections/ch12_figures.md)) 에 cameo로 담겼다.*
 
 분야 적용은 baseline 비교 표를 AI에게 던지고 *내가 놓친 비교 축*을 묻는 워크플로우.
 
