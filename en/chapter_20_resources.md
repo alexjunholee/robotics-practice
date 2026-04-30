@@ -142,27 +142,9 @@ These are YouTube channels you can watch more casually than textbooks or full co
 
 ### How to read them
 
-Reading papers is painfully hard at first. Everyone has the experience of spending two hours on a single paper and still having no idea what it says. For this reason, the **three-pass method** is recommended:
+The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
 
-1. **First pass** (5-10 minutes)
-    - Title, Abstract, Conclusion
-    - Skim the figures and tables
-    - Identify the key contribution
-    - At this stage, decide "is this paper relevant to me?"
-2. **Second pass** (1 hour)
-    - Read the whole thing (you can skip equations)
-    - Understand the methodology
-    - Map out the related work
-    - Look at the figures carefully — that is where the authors invested the most
-3. **Third pass** (several hours to several days)
-    - Follow the derivations
-    - Analyze the code
-    - Attempt a reimplementation
-    - If you get here, you are an expert on that paper
-
-> At the start, fully understanding one paper a week via the three-pass method beats skimming one per day. Speed comes naturally later.
-
-> Using AI: after pass 1, give the PDF to Claude or GPT and ask for "a three-line summary of this paper's contribution", "a step-by-step explanation of this equation (Eq.5)", or "the differences between this paper and [comparison paper]" — this can cut pass 2 time significantly. But reading only the AI summary without the original is not acceptable — AI often misses subtle assumptions and limitations. AI is a comprehension aid, not a replacement.
+Field-specific application is simple. Read the *5–10 core papers* in SLAM/CV/robotics — the must-read list in §20.4 below — three-pass in your first year. The vocabulary and baseline sense of the field gets built inside that exercise.
 
 ### Must-read paper list
 
@@ -206,36 +188,9 @@ Reading papers is painfully hard at first. Everyone has the experience of spendi
 
 ## 20.5 Major Conferences
 
-### Computer Vision
+The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../survival-research/part3_presentations/ch02_conference_prep.md`](../../survival-research/part3_presentations/ch02_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
-| Conference | Tier | Notes |
-| --- | --- | --- |
-| **CVPR** | Top | The largest CV conference. Every June |
-| **ICCV** | Top | Biennial (odd years). One of the two CV pillars together with CVPR |
-| **ECCV** | Top | Europe-centered, biennial (even years) |
-| **NeurIPS** | Top | ML broadly, including Vision. Every December |
-| **ICML** | Top | ML broadly. Every July |
-| **ICLR** | Top | Deep learning focused. Every May |
-
-### Robotics
-
-| Conference | Tier | Notes |
-| --- | --- | --- |
-| **ICRA** | Top | IEEE robotics. The largest robotics conference |
-| **IROS** | Top | IEEE/RSJ. One of the two pillars with ICRA |
-| **RSS** | Top | Small scale, selective. High quality |
-| **CoRL** | Top | Specialized in robot learning. Rapidly growing recently |
-
-### Autonomous driving
-
-| Conference/Journal | Notes |
-| --- | --- |
-| **CVPR Workshop** (WAD, OmniCV) | Autonomous driving workshops |
-| **T-IV** | Intelligent vehicles journal |
-| **T-ITS** | Intelligent transportation systems journal |
-
-> **Further reading**
-> - [CV Conference Deadlines](http://conferences.visionbib.com/Iris-Conferences.html) — collected deadlines for major CV/robotics conferences
+This guide focuses on the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
 ## 20.6 Useful GitHub Repositories
 
@@ -432,123 +387,19 @@ Git usage                       Point clouds (Open3D)            Paper writing
 
 *Graduate level.*
 
-### 20.8.0 The researcher's mindset
+The research-skill content of this section — researcher mindset, paper writing, experimental design, presentations, peer review, paper-writing tools — is covered in depth in a separate meta-skill guide *(Korean; English version planned)*:
 
-Technical skills like writing papers and designing experiments improve with practice, but if the mindset is wrong, you can work for years and not move forward.
+- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/) (5 chapters)
+- Paper reading → [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (7 chapters; see also §20.4 above)
+- Paper writing (structure, sentence craft, revision workflow) → [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/) (workflow · structure · sections · sentence · after-submission)
+- Conference presentations and peer review → [`../../survival-research/part3_presentations/`](../../survival-research/part3_presentations/) (3 chapters; see also §20.5 above)
 
-**Engineer is an identity, not a job**
+Field-specific notes for SLAM/CV/robotics:
 
-When people hear "robotics engineer", they usually picture "someone who builds robots" — someone who assembles robot arms, runs SLAM code, and debugs motor drivers. That is not wrong, but it describes what an engineer "does", not what an engineer "is".
+- *Experimental design.* Ablation removes components one at a time. Vary one variable at a time. Repeat at least 3 times and report mean/std. Compare on the same data, same split, same hardware — copying numbers from other papers often hides condition mismatches.
+- *Tooling.* LaTeX on Overleaf or local (texlive + VS Code). Reference management: PDF reader + AI for under 100 papers; Zotero + Better BibTeX once the count grows. Pipeline figures with TikZ (precise) or draw.io (fast); tables with `booktabs`; algorithms with `algorithm2e`. Build a notation table and apply it across the whole paper.
 
-Engineer is an identity, not a job. It is a way of seeing the world. When there is a problem, model it; solve the modeled problem; find the best possible solution. That is the engineer's stance toward the world, and that stance does not switch off when you leave the lab.
-
-**Everything is an optimization problem**
-
-> "Everything in this world is optimization."
->
-> — Dr. Dongjin Hyun, Head of Robotics LAB, Hyundai Motor Company
-
-There is no 100% in engineering. There is no 0% either. Science is the discipline of discovering natural laws. It produces categorical statements like "the speed of light is 299,792,458 m/s". Engineering is different. We deal with the messy, ambiguous problems of the real world. Sensors spit out noise, motors do not precisely deliver the commanded torque, and environments change unpredictably. These problems have no "correct answer". What exists is only "the best choice under these conditions".
-
-So the essence of what an engineer does is optimization. Model an uncertain, probabilistic world as expectations, decide the appropriate level of abstraction, and run optimization on top. In SLAM, modeling sensor noise as Gaussian and solving a factor graph to estimate the optimal pose is like this; in MPC, predicting a finite-horizon future and computing control inputs that minimize a cost function is like this.
-
-But this is not a story only about robot problems. Choosing where to have lunch, deciding whether to pull an all-nighter to write a paper or concentrate tomorrow, picking a research topic in grad school — the structure is the same. Within the observable state you have, in an uncertain world, find the option that maximizes expected reward. Through an engineer's eyes, almost every decision in the world fits this frame.
-
-**The true identity of shortsighted judgment**
-
-From this perspective, what "shortsighted judgment" means also becomes clear. When we look at someone and think "why did they make that choice?", it is not that the person is stupid. It is that long-term state is not in their loss function. If the future version of yourself — your career three years from now, your health, your relationships — is not in the decision model, you end up doing greedy optimization over only the state visible in front of you. And from that person's own vantage point, they have made the optimal decision within the state space they constructed. They are not wrong; the model is incomplete.
-
-Research is no different. Pulling an all-nighter to get this week's experimental result versus spending a week to properly structure the code and then experimenting — on the short-term loss function, the all-nighter wins, but extend the state up to six months out and the latter is overwhelmingly better. Clean code lets you repeat subsequent experiments ten times faster. The advice that "the long game matters" in research, stated mathematically, is "extend your optimization horizon".
-
-So to become a good researcher you must consciously expand the state space of your own decision model. Not "this paper right now" but "the me of three years from now" and "this field five years out" must be in the state. Of course the far-future state is uncertain. But dropping it because it is uncertain makes you shortsighted; including it with a large variance yields sensible long-term planning. It is the same principle as increasing process noise in a Kalman filter.
-
-Personally, I think this difference in horizon ultimately comes from attitude. Smart people being quick is true. But after a few years, the gap is not as large as you would expect. Over the long run, what separates people is... admitting when you are wrong, saying you do not know when you do not know, being firm without becoming rigid. A three-month gap is visible; over three years, the order often flips. The saying "attitude is everything" is about this context (of course super-geniuses are excluded here).
-
-**Then where does direction come from?**
-
-A key question arises here. To optimize, you need a cost function. "What do I minimize? What do I maximize?" In research, is it paper count? Citations? Time to graduation? Salary? These are measurable metrics, but whether they are truly the objective function to optimize is a separate question.
-
-What do I want? Where should I go? — the answer to this question is not found inside engineering. No matter how well you solve linear algebra, no matter how many SLAM papers you read, this question will not resolve. This is the domain of the humanities. Philosophy, literature, history.
-
-There is a saying that other people are my mirror. Reading books is about understanding their content, but it is also about looking into what life the writer lived, what they struggled with, and why they arrived at those thoughts. Through that, you can look back at yourself. Recognizing what you feel when you read this piece of writing — that is all metacognition is.
-
-Humans are creatures that repeat the same mistakes. That is unavoidable. But the reason we have come this far despite repeating mistakes for thousands of years is that there has been record. Writing, transmitting knowledge, and recognizing the self that receives that knowledge. The progress of civilization comes from here. You can empathize with classical literature because human DNA has hardly changed on a scale of thousands of years. The troubles that ancient people faced — anxiety about direction, loss of motivation, the frustration of comparison — are the same as what a grad student faces today.
-
-So to find direction as a researcher, read books sometimes — not papers. Books from outside engineering. In them you can find hints about what you value and which keywords recur in your own life — growth, people, freedom, recognition. There is no right answer, and knowing that there is no right answer is itself the start.
-
-**Three things: direction, engine, tools**
-
-To summarize, to last as a researcher you need three things.
-
-First, **direction**. Where you should go. As above, this must be found outside engineering. Without direction, no matter how hard you run, only the fact that "I ran hard" remains.
-
-Second, **the engine**. Motivation, driving force. What fuel does the engine in your heart take to produce output? It may be pure curiosity, a hunger for growth, or energy from exchanges with people. For some people, "the thrill of solving a problem" is fuel; for others, "seeing what I built operate in the world" is fuel. This differs by person and has no right answer. But you must know what your engine runs on. If you do not, you will not know why it stopped when the fuel runs out, and you will not be able to restart it.
-
-Third, **tools**. A degree, programming skill, math, lab infrastructure, colleagues, family support. All the technical content covered across 21 chapters of this document falls here. Tools matter. A knife must be sharp to cut wood. But if you only sharpen tools without direction and engine, you become a person with a very sharp knife who does not know where to go. And there are more such people than you might expect.
-
-The rest of this document is entirely a story about "tools". Direction and engine are for each person to find.
-
----
-
-The following is a concrete strategy for the early stages of research. (This part is restructured with reference to [Giseop Kim, "A Sustainable Growth Guide for Research Beginners"](https://gsk1m.github.io/productivity/2024/05/25/entering-research.html).)
-
-**Consistency beats explosive growth**
-
-Early in research, growth is slow. You read papers and do not understand them, your code does not run, experimental results differ from expectations. This is normal. What matters is pushing forward at a steady pace, one cycle at a time, without burning out. Reading one paper a week for six months is better than reading ten papers in a month and burning out. Linear growth returns as compound interest.
-
-**Do not be shaken by the pace next to you**
-
-Do not get anxious because a classmate who started with you has already published, or because the lab next door has better equipment. Different research fields produce results at different speeds, and within the same field speeds vary enormously by topic. The reference should be yesterday's self. Learn from others' research philosophies and ways of working, but if you obsess over numbers (paper count, citations), you lose direction.
-
-**A solid foundation before a magnum opus**
-
-For a first paper, aiming for "a paper with no grounds for rejection" is more realistic than aiming for Nature. A paper where the experiments are reproducible, comparisons are fair, and claims are backed by data. For a first paper, airtight completeness matters more than flashy novelty. Put only one core message in one paper. Title it first — and check whether that title summarizes the contribution in a single sentence.
-
-**You become good at research by doing research, not by studying theory**
-
-If you try to finish reading every textbook before starting, you will never start. The mindset of "I will experiment after I have perfectly understood this concept" is the most dangerous. Study only as much as you need and jump into experiments. When you get stuck, look things up then. Farming starts by planting seeds, not by finishing the agricultural theory book. Technical debt will pile up, but you can pay it off later. You must pay it off eventually, but that is better than delaying the start.
-
-**Intellectual honesty**
-
-A good researcher always keeps open the possibility that they are wrong. When experimental results differ from the hypothesis, doubt the hypothesis before doubting the results. Being able to change your own mind is an intellectually honest attitude. Metacognition is cultivated by reading papers from diverse perspectives. "Knowing what you do not know" is the core of research competence.
-
-**20.8.1 Paper writing**
-- Structure: Abstract → Introduction → Related Work → Method → Experiments → Conclusion
-- How to write the Introduction: (1) problem definition, (2) limitations of existing methods, (3) our approach, (4) list of contributions
-- Experiments section: baseline comparisons, ablation study, qualitative results
-- Common mistakes: unclear contribution, unfair experimental comparisons, missing key papers in related work
-- Before writing the paper, draw the figures/tables first. The story locks in
-
-**20.8.2 Experimental Design and Ablation Studies**
-- Ablation: measure each component's contribution by removing them one at a time from the model/system
-- Variable control: change only one thing at a time. Change two or more and you will not know which caused the effect
-- Statistical significance: repeat the same experiment multiple times (at least 3) and report mean/standard deviation
-- Fair comparison: compare on the same data, same split, same hardware. Copying numbers from other papers may mean different conditions
-
-**20.8.3 Conference Presentations**
-- Talk structure: problem (1 min) → existing limitations (1 min) → proposed method (3 min) → experimental results (3 min) → conclusion (1 min)
-- Slides: less text, more figures/diagrams. One message per slide
-- Posters: title and key figure must be visible from 3 m away
-- Demo videos: 30 seconds to 1 minute. Summarize the result first, then details
-
-**20.8.4 Peer Review**
-- What to check from a reviewer's viewpoint: novelty, technical soundness, experiments, clarity, reproducibility
-- Constructive feedback: instead of "this part is wrong", say "this part would be stronger with X added"
-- Writing a rebuttal: address each of the reviewer's core concerns one by one. No emotional reactions
-
-**20.8.5 Tools**
-- LaTeX: Overleaf or local (texlive + vscode)
-- Reference management: in the past, dedicated tools like Mendeley and Zotero were the norm, but these days the combination of **PDF reader + AI** is more efficient. For example:
-  - Read a paper in Adobe Acrobat with highlights and notes, then pass the PDF to Claude or GPT for a core summary, BibTeX generation, or related-work comparison
-  - Finding a paper on Google Scholar and copying BibTeX directly via the "Cite" button is often sufficient
-  - Zotero + Better BibTeX is still usable but not required. Once the paper count passes 100, having a management tool becomes convenient
-  - Subscribing to related papers via Semantic Scholar's Research Feed is also good
-- Pipeline figures: TikZ (precise control), draw.io (quick production), Inkscape (SVG editing)
-- Tables: the booktabs package (\toprule, \midrule, \bottomrule)
-- Algorithms: the algorithm2e package
-- Equations: unify notation across the whole paper (build a notation table)
-
-> Further reading:
+> Classic external references (kept here as field-agnostic must-reads):
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — a classic talk on paper writing
 > - [How to Read a Paper (S. Keshav)](http://ccr.sigcomm.org/online/files/p83-keshavA.pdf) — the 3-pass reading method
 > - [Tips for Writing Technical Papers (Jennifer Widom, Stanford)](https://cs.stanford.edu/people/widom/paper-writing.html) — concise, practical advice

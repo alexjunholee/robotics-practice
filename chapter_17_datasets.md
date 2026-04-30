@@ -6,7 +6,7 @@
 
 ## 17.1 자율주행/로봇 데이터셋
 
-## 17.1.1 KITTI / KITTI360
+### 17.1.1 KITTI / KITTI360
 
 자율주행 연구의 시작점이 된 오래된 데이터셋이다.
 
@@ -32,7 +32,7 @@ KITTI는 2012년에 공개된 이후 자율주행·3D 비전 연구의 사실상
 > - [KITTI-360 사이트](https://www.cvlibs.net/datasets/kitti-360/) — 더 넓은 범위의 360도 데이터셋
 > - [다크 프로그래머 — KITTI 데이터 사용하기 (LiDAR-카메라 변환)](https://darkpgmr.tistory.com/190) — KITTI 데이터의 좌표계 변환과 LiDAR-카메라 매핑 실습
 
-## 17.1.2 nuScenes
+### 17.1.2 nuScenes
 
 대규모 자율주행 데이터셋이다.
 
@@ -55,7 +55,7 @@ KITTI보다 센서 구성이 더 풍부하고(360도 카메라, Radar 포함), �
 > - [nuScenes devkit Documentation](https://www.nuscenes.org/nuscenes) — 데이터셋 사용법, devkit API, 튜토리얼 노트북
 > - [nuScenes devkit GitHub](https://github.com/nutonomy/nuscenes-devkit) — Python devkit 코드 및 예제
 
-## 17.1.3 Waymo Open Dataset
+### 17.1.3 Waymo Open Dataset
 
 Google의 대규모 자율주행 데이터셋이다.
 
@@ -75,7 +75,7 @@ nuScenes와 함께 최신 자율주행 연구의 양대 벤치마크이다. 데�
 > - [Waymo Open Dataset 공식 사이트](https://waymo.com/open/) — 데이터셋 다운로드 및 챌린지 참가
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — 공식 도구 및 예제 코드
 
-## 17.1.4 VIO / VINS용 데이터셋
+### 17.1.4 VIO / VINS용 데이터셋
 
 Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은 알아야 한다. 이 분야의 논문이라면 거의 예외 없이 이 데이터셋들에서 평가를 수행한다.
 
@@ -97,7 +97,7 @@ Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은
 
 ## 17.2 컴퓨터 비전 데이터셋
 
-## 17.2.1 ImageNet
+### 17.2.1 ImageNet
 
 이미지 분류의 표준 벤치마크이다.
 
@@ -107,7 +107,7 @@ Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은
 - 120만 학습 이미지
 - 사전학습(pretraining) 표준
 
-## 17.2.2 COCO
+### 17.2.2 COCO
 
 객체 탐지, 세그멘테이션의 표준이다.
 
@@ -124,7 +124,7 @@ Object detection 연구를 한다면 COCO 데이터셋의 평가 메트릭(COCO 
 - Keypoint detection
 - Captioning
 
-## 17.2.3 ScanNet / NYU Depth V2
+### 17.2.3 ScanNet / NYU Depth V2
 
 **ScanNet**:
 - 1513개 실내 장면
@@ -146,7 +146,7 @@ Object detection 연구를 한다면 COCO 데이터셋의 평가 메트릭(COCO 
 
 ## 17.3 데이터셋 활용법
 
-## 17.3.1 다운로드 및 포맷 이해
+### 17.3.1 다운로드 및 포맷 이해
 
 각 데이터셋마다 고유한 디렉토리 구조와 포맷이 있다.
 
@@ -182,7 +182,7 @@ with open('label.txt', 'r') as f:
 > - [KITTI Benchmark 공식 사이트 - Object Detection DevKit](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d) — 라벨 포맷 설명 및 평가 코드
 > - [nuScenes devkit Tutorial Notebooks](https://github.com/nutonomy/nuscenes-devkit/tree/master/python-sdk/tutorials) — Jupyter 노트북으로 데이터 구조 이해
 
-## 17.3.2 DataLoader 구현
+### 17.3.2 DataLoader 구현
 
 PyTorch에서 데이터 로딩을 위한 표준 패턴이다.
 
@@ -227,7 +227,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 공개 데이터셋만으로는 자기 연구에 딱 맞는 데이터를 구할 수 없는 경우가 많다. 자체 로봇에 맞는 센서 구성, 특수한 환경 조건 등을 위해 직접 데이터를 수집해야 할 때가 있다. 이때 센서 동기화, 캘리브레이션, 라벨링 과정을 체계적으로 해 두지 않으면 나중에 데이터를 쓸 수 없게 된다.
 
-## 17.4.1 센서 동기화
+### 17.4.1 센서 동기화
 
 여러 센서의 데이터를 시간 동기화하지 않으면 퓨전 자체가 의미가 없다.
 
@@ -256,7 +256,7 @@ sync = message_filters.ApproximateTimeSynchronizer(
 sync.registerCallback(self.callback)
 ```
 
-## 17.4.2 캘리브레이션
+### 17.4.2 캘리브레이션
 
 **Camera Intrinsic**: 체커보드 사용 (OpenCV calibrateCamera)
 
@@ -273,7 +273,7 @@ sync.registerCallback(self.callback)
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — 체커보드 기반 카메라 캘리브레이션
 > - [Kalibr GitHub](https://github.com/ethz-asl/kalibr) — Camera-IMU 캘리브레이션 표준 도구
 
-## 17.4.3 라벨링 도구
+### 17.4.3 라벨링 도구
 
 데이터를 수집했으면 라벨링(annotation)을 해야 한다. 라벨링은 연구에서 가장 시간이 많이 드는 작업 중 하나이며, 라벨 품질이 모델 성능을 좌우한다. 최근에는 SAM(Segment Anything Model) 같은 기초 모델을 활용한 반자동 라벨링이 보편화되고 있다.
 

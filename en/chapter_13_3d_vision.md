@@ -9,7 +9,7 @@ The data coming out of a LiDAR or a depth camera is a point cloud. An image is 2
 
 A **point cloud** is a set of points in 3D space. Each point has at least (x, y, z) coordinates, and may additionally carry attributes such as color (RGB), reflectance (intensity), or a normal.
 
-## 13.1.1 Data Structures and Formats
+### 13.1.1 Data Structures and Formats
 
 **Typical structure**:
 
@@ -33,7 +33,7 @@ In linear-algebra terms, a point cloud is just an N×D matrix. N ranges from ten
 > - [Open3D Documentation](http://www.open3d.org/docs/release/) — modern library for point cloud processing.
 > - [PCL (Point Cloud Library) Tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — classic library for point cloud processing.
 
-## 13.1.2 Libraries
+### 13.1.2 Libraries
 
 **PCL (Point Cloud Library)**:
 - C++ based, the most comprehensive
@@ -75,7 +75,7 @@ In practice, Open3D is good for prototyping because you can use it directly from
 
 ## 13.2 Point Cloud Processing
 
-## 13.2.1 Filtering
+### 13.2.1 Filtering
 
 Raw point clouds are noisy and have uneven point density. Using them as-is slows down downstream algorithms (registration, segmentation, and so on) or degrades their results. Filtering is the first stage of every point cloud pipeline.
 
@@ -103,7 +103,7 @@ Remove points that have too few neighbors within a given radius.
 > - [Open3D — Point Cloud Filtering Tutorial](http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html) — examples of voxel downsampling and outlier removal.
 > - [PCL — Filtering Tutorial](https://pcl.readthedocs.io/projects/tutorials/en/latest/passthrough.html) — PCL-based filtering.
 
-## 13.2.2 Normal Estimation
+### 13.2.2 Normal Estimation
 
 Estimate the surface normal vector at each point. This is a preprocessing step for many algorithms.
 
@@ -118,7 +118,7 @@ pcd.estimate_normals(
 
 Internally, for each point you gather its k nearest neighbors, compute the covariance matrix, and take the eigenvector corresponding to the smallest eigenvalue as the normal. This is exactly the same principle as PCA (Principal Component Analysis) from linear algebra class.
 
-## 13.2.3 Registration
+### 13.2.3 Registration
 
 The process of aligning two point clouds. SLAM needs it to stitch consecutive frames together, or to merge scans captured from multiple viewpoints.
 
@@ -162,7 +162,7 @@ The intuition behind ICP: "find the closest point pairs between the two point cl
 
 Predict 3D bounding boxes from a point cloud. In autonomous driving, this is the core technology for knowing "where that car is and how big it is."
 
-## 13.3.1 Point-based Methods
+### 13.3.1 Point-based Methods
 
 The core idea of PointNet is to apply deep learning **directly to raw points** without converting the point cloud to voxels or images. Previously there was no answer to "how do we apply a CNN to irregular points?" — PointNet solved this.
 
@@ -185,7 +185,7 @@ The core idea of PointNet is to apply deep learning **directly to raw points** w
 
 PointNet's core idea: the result must be the same even if the point order changes (permutation invariance). To achieve this, each point is passed independently through an MLP and then aggregated via max pooling. Mathematically, it takes the form f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))).
 
-## 13.3.2 Voxel-based Methods
+### 13.3.2 Voxel-based Methods
 
 **VoxelNet (2018)**:
 - Converts the point cloud into 3D voxels
@@ -204,7 +204,7 @@ PointNet's core idea: the result must be the same even if the point order change
 
 PointPillars' core idea: if you divide 3D space into vertical pillars, you can compress the points inside each pillar into a single feature vector and arrange them like a 2D image. You can then reuse well-validated 2D CNNs as-is, which is much faster than a 3D CNN.
 
-## 13.3.3 Multi-modal Methods
+### 13.3.3 Multi-modal Methods
 
 Combining multiple sensors lets each one cover the others' weaknesses. Cameras are rich in color and texture but lack depth, while LiDAR has accurate 3D information but no texture. How to fuse the two is the key question.
 
@@ -229,7 +229,7 @@ Combining multiple sensors lets each one cover the others' weaknesses. Cameras a
 
 Generate a 3D model from multiple views or depth information. A robot needs this technology to "remember" the environment in 3D.
 
-## 13.4.1 Structure from Motion (SfM)
+### 13.4.1 Structure from Motion (SfM)
 
 You can recover 3D structure from just a handful of 2D photographs. A few smartphone photos can yield a 3D model of a building. It is also the preprocessing step that produces the input data (camera poses) for NeRF or 3D Gaussian Splatting (3DGS).
 
@@ -259,7 +259,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — core lectures on multiple view geometry.
 > - [Schönberger & Frahm, "Structure-from-Motion Revisited" (2016)](https://openaccess.thecvf.com/content_cvpr_2016/papers/Schonberger_Structure-From-Motion_Revisited_CVPR_2016_paper.pdf) — the COLMAP paper.
 
-## 13.4.2 Multi-View Stereo (MVS)
+### 13.4.2 Multi-View Stereo (MVS)
 
 Generate a dense point cloud from the SfM result.
 
@@ -267,7 +267,7 @@ Where SfM recovers "where the cameras were" and "sparse 3D points," MVS uses tho
 
 **Tools**: COLMAP (dense reconstruction), OpenMVS
 
-## 13.4.3 Volumetric Reconstruction
+### 13.4.3 Volumetric Reconstruction
 
 **TSDF (Truncated Signed Distance Function)**:
 - Partition space into voxels and store the distance to the surface in each voxel
@@ -299,7 +299,7 @@ mesh = volume.extract_triangle_mesh()
 
 A new deep-learning-based approach to 3D representation and rendering. Prior methods (mesh, point cloud) had limits in representing complex scenes (reflections, transparent objects, thin structures). Neural rendering represents a scene as a learnable function, handling such effects naturally. Recently it has also been combined with SLAM for real-time mapping.
 
-## 13.5.1 NeRF (Neural Radiance Fields)
+### 13.5.1 NeRF (Neural Radiance Fields)
 
 **Concept**: represent a 3D scene as a continuous function.
 
@@ -332,7 +332,7 @@ Intuitively: NeRF learns, via a neural network, "for every point in 3D space, wh
 > - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — an intuitive explanation of NeRF's core idea.
 > - [Jon Barron — Understanding NeRF (ECCV 2022 Tutorial)](https://www.youtube.com/watch?v=HfJpQCBTqZs) — from a NeRF author.
 
-## 13.5.2 3D Gaussian Splatting (3DGS)
+### 13.5.2 3D Gaussian Splatting (3DGS)
 
 3DGS was adopted quickly because it fixed NeRF's fatal weakness, slow rendering. NeRF takes seconds to render a single frame, whereas 3DGS renders in real time at 100+ FPS. This speed makes it directly usable in robot applications such as SLAM and real-time mapping.
 

@@ -423,6 +423,8 @@ sudo tcpdump -i eth0 -w capture.pcap
 
 ## 19.6 AI 에이전트를 제대로 쓰는 법
 
+*AI 부려먹기의 일반 frame (writing·reading 영역)은 [`../survival-research/part1_reading/ch02_keshav_three_passes.md`](../survival-research/part1_reading/ch02_keshav_three_passes.md) + [`part2_writing/A_workflow/ch01_mindset.md`](../survival-research/part2_writing/A_workflow/ch01_mindset.md) 에서 본격 다룬다. 본 § 19.6은 코드·하드웨어 영역의 분야 적용.*
+
 ### 19.6.1 컨텍스트를 충분히 제공하라
 
 AI에게 질문할 때 가장 중요한 것은 컨텍스트의 양과 질이다.
@@ -470,9 +472,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.1 논문 읽기
 
-- 1패스에서 abstract/conclusion 읽은 뒤 AI에게 PDF 던지고: "이 논문의 contribution을 3줄로", "Related work에서 가장 많이 비교하는 baseline이 뭐야", "Eq.5를 단계별로 유도해줘"
-- 단, AI 요약만 믿으면 안 되는 경우: 논문의 subtle한 가정, limitation section의 뉘앙스, 실험 세팅의 세부사항은 직접 읽어야 한다
-- Semantic Scholar + AI: 관련 논문 추천받고, 각 논문의 차이점을 AI에게 비교 정리시키기
+*논문 읽기 워크플로우 (3-pass + AI layer cameo)는 [`../survival-research/part1_reading/ch02_keshav_three_passes.md`](../survival-research/part1_reading/ch02_keshav_three_passes.md) 의 AI layer cameo에서 본격 다룬다.*
+
+분야 적용은 분야 핵심 논문에 3-pass + AI summary 결합 — abstract 읽고 contribution 3줄 요청, Eq. 단계별 유도 요청.
 
 ### 19.7.2 코드 작성
 
@@ -483,9 +485,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.3 실험 설계
 
-- "내 모델이 baseline 대비 뭘 개선했는지 보여주려면 어떤 ablation을 해야 해?" — AI가 실험 설계 초안을 잡아줄 수 있다
-- "이 테이블의 결과를 보고 어떤 분석을 할 수 있어?" — AI에게 결과 해석을 시키면 놓친 관점을 찾을 수 있다
-- 주의: AI의 실험 제안을 그대로 따르면 안 된다. 자기 연구의 contribution과 맞지 않는 ablation을 제안할 수 있다. 실험 설계의 최종 판단은 연구자의 몫이다.
+*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (또는 [`ch12_figures.md`](../survival-research/part2_writing/D_polish/ch12_figures.md)) 에 cameo로 담겼다.*
+
+분야 적용은 baseline 비교 표를 AI에게 던지고 *내가 놓친 비교 축*을 묻는 워크플로우.
 
 ### 19.7.4 논문 쓰기
 

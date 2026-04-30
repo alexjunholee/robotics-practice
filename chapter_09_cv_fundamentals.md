@@ -9,7 +9,7 @@
 
 카메라에서 들어오는 raw 이미지는 노이즈가 많고 정보가 정리되지 않은 상태다. 어떤 알고리즘이든 그 위에서 동작하려면 먼저 이미지를 정제해야 한다. 필터링, 에지 검출, 형태학적 연산 — 이것들이 전처리의 기본 도구이고, 이걸 모르면 후속 파이프라인에서 결과가 왜 이상한지 잡을 수 없다.
 
-## 9.1.1 OpenCV 소개
+### 9.1.1 OpenCV 소개
 
 **OpenCV (Open Source Computer Vision Library)**는 가장 널리 사용되는 CV 라이브러리이다.
 
@@ -47,7 +47,7 @@ cv2.destroyAllWindows()
 > - [Szeliski, "Computer Vision: Algorithms and Applications"](https://szeliski.org/Book/) — 무료 PDF 제공. CV 분야의 표준 교과서
 > - [Stanford CS131 — Computer Vision: Foundations and Applications](http://vision.stanford.edu/teaching/cs131_fall1415/schedule.html) — CS231n보다 기초적인 CV 강의. 이미지 처리부터 시작하고 싶다면 여기서
 
-## 9.1.2 필터링 (Filtering)
+### 9.1.2 필터링 (Filtering)
 
 이미지에서 원하는 정보를 뽑아내거나, 원치 않는 노이즈를 제거하는 가장 기본적인 도구가 필터링이다. 필터링을 모르면 에지 검출 결과가 지저분해도 원인을 모르고, segmentation 전처리에서 왜 blur를 거치는지 감이 안 온다.
 
@@ -85,7 +85,7 @@ sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 > **실습**: [Convolution 시각화](https://alexjunholee.github.io/robotics-practice/app.html#convolution)
 > 다양한 커널을 이미지에 적용하며 convolution 연산이 어떻게 필터링을 수행하는지 직관적으로 이해할 수 있다.
 
-## 9.1.3 Morphology
+### 9.1.3 Morphology
 
 이진 이미지(binary image)를 다룰 때 필수적인 도구이다. 예를 들어, segmentation 결과에서 작은 노이즈 점들을 제거하거나, 끊어진 영역을 이어 붙이거나 할 때 morphology를 쓴다. 이걸 모르면 이진화 결과를 후처리할 때 막막하다.
 
@@ -117,7 +117,7 @@ Opening과 Closing의 순서를 헷갈리는 사람이 많은데 — Opening은 
 
 카메라가 세상을 어떻게 읽는지 모르면, 2D 이미지에서 3D를 복원하는 건 불가능하다. SLAM, 3D reconstruction, visual servoing — 이 모든 것의 출발점이 카메라 모델이다. 선형대수를 배웠다면 여기서 행렬이 어떻게 쓰이는지 체감할 수 있다.
 
-## 9.2.1 Pinhole Model
+### 9.2.1 Pinhole Model
 
 이상적인 카메라 모델로, 3D 점을 2D 이미지로 투영한다.
 
@@ -153,7 +153,7 @@ K는 카메라의 렌즈 특성을, [R|t]는 카메라가 세상 어디에 어�
 > **실습**: [Camera Projection](https://alexjunholee.github.io/robotics-practice/app.html#camera_projection)
 > 3D 공간의 점이 카메라 내부/외부 파라미터를 통해 2D 이미지로 투영되는 과정을 인터랙티브하게 확인할 수 있다.
 
-## 9.2.2 Distortion Models
+### 9.2.2 Distortion Models
 
 실제 렌즈에서는 왜곡이 발생한다.
 
@@ -189,7 +189,7 @@ undistorted = cv2.remap(distorted, map1, map2, cv2.INTER_LINEAR)
 > **실습**: [Lens Distortion 시각화](https://alexjunholee.github.io/robotics-practice/app.html#lens_distortion)
 > Radial/Tangential 왜곡 파라미터를 조절하며 이미지가 어떻게 변형되는지 직접 확인할 수 있다.
 
-## 9.2.3 캘리브레이션 (Calibration)
+### 9.2.3 캘리브레이션 (Calibration)
 
 카메라의 내부/외부 파라미터를 추정하는 과정이다.
 
@@ -245,7 +245,7 @@ reprojection error가 0.5 픽셀 이하면 양호, 0.1 이하면 매우 좋다. 
 
 SLAM을 이해하려면 특징점을 먼저 알아야 한다. 로봇이 카메라를 움직이면서 "지금 보는 장면이 아까 봤던 그곳인지"를 판단하려면 이미지 간에 같은 점을 찾아야 한다. 특징점은 그 대응점을 안정적으로 찾기 위한 핵심 도구다. SLAM, Visual Odometry, Object Recognition 등 거의 모든 시각 기반 로보틱스 알고리즘이 특징점에 의존한다.
 
-## 9.3.1 Keypoint Detection
+### 9.3.1 Keypoint Detection
 
 **Harris Corner**:
 - 코너 검출의 고전적 방법
@@ -282,7 +282,7 @@ SIFT는 2004년 Lowe가 발표한 알고리즘으로, CV 분야에서 가장 많
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — 딥러닝 기반 특징점의 시작
 > - [다크 프로그래머 — 영상 특징점(keypoint) 추출방법](https://darkpgmr.tistory.com/131) — SIFT, HOG, Haar, Ferns, LBP, MCT 등 특징점 비교 정리
 
-## 9.3.2 Descriptor
+### 9.3.2 Descriptor
 
 Keypoint를 찾았으면, 그 주변을 "어떻게 설명할 것인가"가 descriptor이다. 두 이미지에서 같은 물리적 점을 찾으려면, 그 점 주변의 패턴을 숫자로 표현해서 비교해야 한다.
 
@@ -306,7 +306,7 @@ Keypoint를 찾았으면, 그 주변을 "어떻게 설명할 것인가"가 descr
 > - [Sarlin et al., "SuperGlue: Learning Feature Matching with Graph Neural Networks" (2020)](https://arxiv.org/abs/1911.11763) — 딥러닝 기반 매칭의 대표작
 > - [OpenCV Feature Matching 튜토리얼](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — BFMatcher, FLANN 사용법
 
-## 9.3.3 Feature Matching
+### 9.3.3 Feature Matching
 
 SLAM에서 카메라가 움직일 때 이전 프레임과 현재 프레임에서 같은 점을 찾아야 한다. 이게 feature matching이고, 이걸 제대로 이해하지 못하면 왜 SLAM이 tracking lost를 뱉는지 감이 안 온다.
 
@@ -343,7 +343,7 @@ Lowe's ratio test가 핵심이다. kNN으로 가장 가까운 2개의 매치를 
 
 두 장의 사진에서 같은 물체를 봤을 때, 카메라가 어떻게 움직였는지(상대 자세)를 알아내고 나아가 3D 구조를 복원하는 것이 목표다. Visual Odometry와 SfM(Structure from Motion)의 수학적 기반이 여기에 있다. 선형대수에서 배운 SVD, eigenvalue 분해 등이 직접 쓰이는 부분이기도 하다.
 
-## 9.4.1 Essential Matrix (E)
+### 9.4.1 Essential Matrix (E)
 
 **정의**: 캘리브레이션된 카메라 쌍의 상대 자세를 인코딩
 
@@ -361,7 +361,7 @@ Essential Matrix에서 R과 t를 분해(decompose)하면 두 카메라 간의 �
 > **실습**: [Epipolar Geometry 시각화](https://alexjunholee.github.io/robotics-practice/app.html#epipolar)
 > 두 카메라 시점 간의 에피폴라 선과 에피폴을 인터랙티브하게 확인하며, Essential/Fundamental Matrix의 기하학적 의미를 이해할 수 있다.
 
-## 9.4.2 Fundamental Matrix (F)
+### 9.4.2 Fundamental Matrix (F)
 
 **정의**: 캘리브레이션되지 않은 카메라 쌍의 관계
 
@@ -376,7 +376,7 @@ p2^T F p1 = 0
 
 E와 F의 관계를 정리하면: F는 "픽셀 좌표에서 바로 쓸 수 있는" 버전이고, E는 "카메라 내부 파라미터를 이미 알고 있을 때 쓰는" 버전이다. 캘리브레이션을 했다면 E를, 안 했다면 F를 쓴다.
 
-## 9.4.3 Triangulation
+### 9.4.3 Triangulation
 
 두 시점에서 동일 점을 관측했을 때, 3D 위치를 계산한다.
 
@@ -407,7 +407,7 @@ points_3d = points_4d[:3] / points_4d[3]  # Homogeneous → Cartesian
 
 로봇이 카메라로 세상을 보면서 움직일 때, 각 픽셀이 다음 프레임에서 어디로 갔는지 아는 것은 유용하다. Visual Odometry 자세 추정, 동적 물체 감지, 충돌 회피 등에 직접 쓰인다. Feature matching이 sparse한 점만 다루는 반면, dense optical flow는 모든 픽셀의 움직임을 추정한다.
 
-## 9.5.1 Lucas-Kanade Method
+### 9.5.1 Lucas-Kanade Method
 
 - Sparse optical flow (특정 점들만)
 - 밝기 불변 가정
@@ -422,7 +422,7 @@ p1, status, err = cv2.calcOpticalFlowPyrLK(
 
 "PyrLK"에서 "Pyr"는 Pyramid를 뜻한다. 이미지 피라미드를 사용해서 큰 움직임도 잡을 수 있게 한 것이다. Lucas-Kanade의 "작은 움직임 가정"을 극복하기 위한 기법이다.
 
-## 9.5.2 Dense Optical Flow
+### 9.5.2 Dense Optical Flow
 
 - 모든 픽셀의 움직임 계산
 - Farneback, RAFT (딥러닝)

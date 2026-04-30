@@ -9,7 +9,7 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이�
 
 로봇은 카메라·LiDAR·모터·제어기 같은 수십 가지 모듈이 동시에 돌아가야 하는데, 이 모듈들이 서로 데이터를 주고받는 방법을 통일해 주는 것이 ROS의 핵심 역할이다. ROS 없이 이 작업을 하면 소켓 프로그래밍부터 시작해야 하는데, 연구 시간의 대부분이 인프라 구축에 날아간다.
 
-## 15.1.1 ROS1 vs ROS2
+### 15.1.1 ROS1 vs ROS2
 
 | 특징 | ROS1 | ROS2 |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이�
 > - [The Construct - ROS2 Basics](https://www.youtube.com/@TheConstruct) — ROS 전문 교육 채널. 시뮬레이터 내에서 실습 가능
 > - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/humble/How-To-Guides/Migrating-from-ROS1.html) — 기존 ROS1 코드 이전 공식 가이드
 
-## 15.1.2 핵심 개념
+### 15.1.2 핵심 개념
 
 이 개념들은 ROS의 뼈대이다. Topic, Service, Action의 차이를 정확히 모르면 "센서 데이터를 어떤 방식으로 보내야 하지?" 하는 질문에서 매번 막히게 된다. 각각이 언제 적합한지 감을 잡는 것이 중요하다.
 
@@ -86,7 +86,7 @@ class MinimalPublisher(Node):
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — 공식 개념 문서
 > - [The Construct - ROS2 Topics vs Services vs Actions](https://www.youtube.com/@TheConstruct) — 세 가지 통신 방식 비교 영상
 
-## 15.1.3 도구
+### 15.1.3 도구
 
 로봇을 개발할 때 "일단 코드 짜고 로봇에 올려 보자"는 접근은 위험하다. 센서 데이터가 제대로 들어오는지, 좌표계가 맞는지 눈으로 확인할 수 있어야 디버깅 시간이 줄어든다. 아래 도구들은 ROS 개발자라면 매일 쓰게 되는 필수 유틸리티이다.
 
@@ -135,7 +135,7 @@ transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Ti
 > - [The Construct - rviz2 Complete Guide](https://www.youtube.com/@TheConstruct) — rviz2 활용 영상
 > - [ros2 bag CLI 문서](https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html) — 데이터 녹화/재생 공식 가이드
 
-## 15.1.4 주요 패키지
+### 15.1.4 주요 패키지
 
 ROS의 진짜 힘은 커뮤니티가 만들어 놓은 패키지 생태계에 있다. 아래 패키지들은 거의 모든 로봇 프로젝트에서 한 번은 쓰게 되니, 이름이라도 기억해 두자.
 
@@ -158,7 +158,7 @@ ROS의 진짜 힘은 커뮤니티가 만들어 놓은 패키지 생태계에 있
 
 최근에는 **Embodied AI** 연구가 빠르게 늘면서, 로봇이 가상 환경에서 자율적으로 학습하는 시뮬레이터의 역할도 커졌다. NVIDIA Isaac Sim, AI2-THOR, Habitat 같은 플랫폼이 이 흐름을 이끌고 있으며, 시뮬레이터에서 학습한 정책을 실제 로봇에 전이하는 Sim-to-Real Transfer가 핵심 연구 주제다.
 
-## 15.2.1 Gazebo
+### 15.2.1 Gazebo
 
 Gazebo는 ROS와 가장 긴밀하게 연동되는 시뮬레이터이다. ROS 프로젝트 대부분의 시뮬레이션 데모가 Gazebo 기반으로 제공되므로, ROS를 쓰겠다면 Gazebo 사용법은 알아야 한다.
 
@@ -193,7 +193,7 @@ Gazebo는 ROS와 가장 긴밀하게 연동되는 시뮬레이터이다. ROS 프
 > - [URDF Tutorial (ROS2)](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/URDF-Main.html) — 로봇 모델링 기초
 > - [The Construct - Gazebo Sim with ROS2](https://www.youtube.com/@TheConstruct) — Gazebo + ROS2 실습 영상
 
-## 15.2.2 NVIDIA Isaac Sim
+### 15.2.2 NVIDIA Isaac Sim
 
 Embodied AI 연구에서 대규모 합성 데이터 생성과 Sim-to-Real 학습에 많이 쓰인다. 사실적인 렌더링과 정확한 물리 엔진을 결합해, 시뮬레이터에서 학습한 정책이 실제 로봇에서도 잘 작동하도록 지원한다.
 
@@ -223,7 +223,7 @@ Embodied AI 연구에서 대규모 합성 데이터 생성과 Sim-to-Real 학습
 > - [AI2-THOR Documentation](https://ai2thor.allenai.org/ithor/documentation) — Embodied AI 연구용 실내 시뮬레이터
 > - [Habitat Documentation](https://aihabitat.org/docs/habitat2/) — Meta의 Embodied AI 플랫폼
 
-## 15.2.3 CARLA
+### 15.2.3 CARLA
 
 자율주행 연구를 위한 시뮬레이터이다.
 

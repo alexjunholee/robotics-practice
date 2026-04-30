@@ -9,7 +9,7 @@ LiDAR나 깊이 카메라에서 나오는 데이터가 바로 포인트 클라�
 
 **Point Cloud (포인트 클라우드)**는 3D 공간의 점들의 집합이다. 각 점은 최소한 (x, y, z) 좌표를 가지며, 추가로 색상(RGB), 반사도(intensity), 법선(normal) 등의 속성을 가질 수 있다.
 
-## 13.1.1 데이터 구조 및 포맷
+### 13.1.1 데이터 구조 및 포맷
 
 **일반적인 구조**:
 
@@ -33,7 +33,7 @@ Point Cloud: N × D 행렬 (N개 점, D차원 속성)
 > - [Open3D Documentation](http://www.open3d.org/docs/release/) — 포인트 클라우드 처리의 현대적 라이브러리
 > - [PCL (Point Cloud Library) Tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — 포인트 클라우드 처리의 고전 라이브러리
 
-## 13.1.2 라이브러리
+### 13.1.2 라이브러리
 
 **PCL (Point Cloud Library)**:
 - C++ 기반, 가장 포괄적
@@ -75,7 +75,7 @@ points = np.asarray(pcd.points)  # (N, 3)
 
 ## 13.2 Point Cloud 처리
 
-## 13.2.1 필터링 (Filtering)
+### 13.2.1 필터링 (Filtering)
 
 원시 포인트 클라우드는 노이즈가 많고 점의 밀도가 불균일하다. 이걸 그대로 쓰면 이후 알고리즘(정합, 세그멘테이션 등)이 느려지거나 결과가 나빠진다. 필터링은 모든 포인트 클라우드 파이프라인의 첫 번째 단계이다.
 
@@ -103,7 +103,7 @@ filtered_pcd = pcd.select_by_index(ind)
 > - [Open3D — Point Cloud Filtering Tutorial](http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html) — Voxel downsampling, outlier removal 예제
 > - [PCL — Filtering Tutorial](https://pcl.readthedocs.io/projects/tutorials/en/latest/passthrough.html) — PCL 기반 필터링
 
-## 13.2.2 Normal Estimation
+### 13.2.2 Normal Estimation
 
 각 점의 표면 법선 벡터를 추정한다. 많은 알고리즘의 전처리 단계이다.
 
@@ -118,7 +118,7 @@ pcd.estimate_normals(
 
 내부적으로는 각 점의 이웃 k개를 모아 공분산 행렬을 구하고, 그 최소 고유값에 대응하는 고유벡터가 법선이 된다. 선형대수 시간에 배운 PCA(주성분 분석)와 정확히 같은 원리이다.
 
-## 13.2.3 Registration (정합)
+### 13.2.3 Registration (정합)
 
 두 포인트 클라우드를 정렬하는 과정이다. SLAM에서 연속 프레임을 이어 붙이거나, 여러 뷰에서 스캔한 데이터를 합칠 때 필요하다.
 
@@ -162,7 +162,7 @@ ICP의 직관: "두 포인트 클라우드에서 가장 가까운 점 쌍을 찾
 
 포인트 클라우드에서 3D bounding box를 예측한다. 자율주행에서 "저 차가 어디 있고 얼마나 큰지"를 아는 핵심 기술이다.
 
-## 13.3.1 Point-based Methods
+### 13.3.1 Point-based Methods
 
 PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 **생(raw) 포인트에 직접** 딥러닝을 적용한다는 것이다. 이전에는 "불규칙한 점들에 어떻게 CNN을 쓰지?"라는 질문에 답이 없었는데, PointNet이 이를 해결했다.
 
@@ -185,7 +185,7 @@ PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미
 
 PointNet의 핵심 아이디어: 포인트 클라우드의 점 순서가 바뀌어도 결과가 같아야 한다(permutation invariance). 이를 위해 각 점을 독립적으로 MLP에 통과시킨 뒤 max pooling으로 집계한다. 수학적으로 f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))) 형태이다.
 
-## 13.3.2 Voxel-based Methods
+### 13.3.2 Voxel-based Methods
 
 **VoxelNet (2018)**:
 - 포인트 클라우드를 3D 복셀로 변환
@@ -204,7 +204,7 @@ PointNet의 핵심 아이디어: 포인트 클라우드의 점 순서가 바뀌�
 
 PointPillars의 핵심 아이디어: 3D 공간을 수직 기둥(pillar)으로 나누면, 각 pillar 안의 점들을 하나의 특징 벡터로 압축한 뒤, 이를 2D 이미지처럼 배열할 수 있다. 잘 검증된 2D CNN을 그대로 쓸 수 있어서, 3D CNN보다 훨씬 빠르다.
 
-## 13.3.3 Multi-modal Methods
+### 13.3.3 Multi-modal Methods
 
 여러 센서를 결합하면 각 센서의 단점을 서로 보완할 수 있다. 카메라는 색상과 텍스처 정보가 풍부하지만 깊이가 없고, LiDAR는 정확한 3D 정보가 있지만 텍스처가 없다. 이 둘을 어떻게 합치느냐가 핵심이다.
 
@@ -229,7 +229,7 @@ PointPillars의 핵심 아이디어: 3D 공간을 수직 기둥(pillar)으로 �
 
 여러 뷰 또는 깊이 정보로부터 3D 모델을 생성한다. 로봇이 환경을 3D로 "기억"하려면 이 기술이 필요하다.
 
-## 13.4.1 Structure from Motion (SfM)
+### 13.4.1 Structure from Motion (SfM)
 
 여러 장의 2D 사진만으로 3D 구조를 복원할 수 있다. 스마트폰 사진 몇 장으로 건물의 3D 모델을 만들 수 있다는 얘기다. NeRF나 3D Gaussian Splatting의 입력 데이터(카메라 포즈)를 만드는 전처리 단계이기도 하다.
 
@@ -259,7 +259,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — 다중 뷰 기하학 핵심 강의
 > - [Schönberger & Frahm, "Structure-from-Motion Revisited" (2016)](https://openaccess.thecvf.com/content_cvpr_2016/papers/Schonberger_Structure-From-Motion_Revisited_CVPR_2016_paper.pdf) — COLMAP 논문
 
-## 13.4.2 Multi-View Stereo (MVS)
+### 13.4.2 Multi-View Stereo (MVS)
 
 SfM 결과를 기반으로 dense 포인트 클라우드를 생성한다.
 
@@ -267,7 +267,7 @@ SfM이 "카메라가 어디 있었는지"와 "sparse한 3D 점들"을 복원한�
 
 **도구**: COLMAP (dense reconstruction), OpenMVS
 
-## 13.4.3 Volumetric Reconstruction
+### 13.4.3 Volumetric Reconstruction
 
 **TSDF (Truncated Signed Distance Function)**:
 - 공간을 복셀로 나누고 각 복셀에 표면까지의 거리 저장
@@ -299,7 +299,7 @@ mesh = volume.extract_triangle_mesh()
 
 딥러닝을 이용한 새로운 3D 표현 및 렌더링 방식이다. 기존 방법(mesh, point cloud)은 복잡한 장면(반사, 투명체, 가는 구조)을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해서, 이런 복잡한 효과를 자연스럽게 처리한다. 최근에는 SLAM과 결합되어 실시간 매핑에도 쓰인다.
 
-## 13.5.1 NeRF (Neural Radiance Fields)
+### 13.5.1 NeRF (Neural Radiance Fields)
 
 **개념**: 3D 장면을 continuous 함수로 표현
 
@@ -332,7 +332,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 > - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — NeRF의 핵심 아이디어를 직관적으로 설명
 > - [Jon Barron — Understanding NeRF (ECCV 2022 Tutorial)](https://www.youtube.com/watch?v=HfJpQCBTqZs) — NeRF 저자 직강
 
-## 13.5.2 3D Gaussian Splatting (3DGS)
+### 13.5.2 3D Gaussian Splatting (3DGS)
 
 3DGS가 빠르게 채택된 이유는 NeRF의 치명적 단점인 느린 렌더링 속도를 해결했기 때문이다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸리지만, 3DGS는 100 FPS 이상으로 실시간 렌더링이 가능하다. 이 속도 덕분에 SLAM, 실시간 매핑 등 로봇 응용에 직접 쓸 수 있게 되었다.
 

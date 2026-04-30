@@ -29,27 +29,21 @@ Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 mon
 
 ## 22.3 What Not to Do
 
-A few traps newcomers fall into most often, from experience.
+The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../survival-research/part1_reading/ch01_why_read.md`](../../survival-research/part1_reading/ch01_why_read.md) (the trap of reading-many) and [`../../survival-research/gradnotes/p3_ch05_tool_trap.md`](../../survival-research/gradnotes/p3_ch05_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
 
-**Trying to read many papers first.** Without background, stacking up twenty papers leaves you with twenty disconnected papers. Grabbing one paper and reading the three chapters it references beats skimming ten. In the first month especially, slowly going through this guide once is faster.
-
-**Trying to perfect the environment first.** Insisting Docker be perfect, the GPU set up, and the dataset downloaded before starting eats up two to three weeks. Copy a senior's environment, change one line in code that already runs — that is faster. Setup can be learned when problems show up.
-
-**Trying to write everything yourself.** As of 2026, ORB-SLAM3, Colmap, and Gaussian Splatting are all open source. Writing it yourself only makes sense for educational purposes or when there is a genuinely new contribution. In an unfamiliar area, running an existing implementation first and finding where it breaks is closer to research.
-
-**Skipping fundamentals because "AI will write it for me".** Code agents move fast in the direction you design, but if the direction is wrong, they move fast in the wrong direction. Without the skeleton of the equations and algorithms, you cannot judge whether the agent's suggestion is correct. The workflow in Ch.19 also only works well "when the user can judge".
+Field-specific application in one line. SLAM/CV has *deep field tooling* — ORB-SLAM3, Colmap, and Gaussian Splatting are open-source standards. Implementing from scratch is meaningful only for educational purposes or when there is a genuinely new contribution. Otherwise, running an existing implementation and finding where it breaks is closer to research.
 
 ## 22.4 A Sense of the Long Game
 
-Robotics is not a field for the impatient. The first paper takes a year and a half. Once experiments start running, results come within two weeks, but getting the experiments to run takes three to six months. Knowing this makes you less shaken by day-to-day pace.
+The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../survival-research/gradnotes/p3_ch01_my_research.md`](../../survival-research/gradnotes/p3_ch01_my_research.md) (when your own research appears) and [`../../survival-research/gradnotes/p1_ch01_phd_decision.md`](../../survival-research/gradnotes/p1_ch01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
 
-From the perspective of three to four years of graduate school, the first six months are **time to learn the tools**. Some of ROS, PyTorch, Git, paper reading, MATLAB, and CAD have to feel natural in your hands. The next six months are **time to run and break existing systems**. Experience of reading someone else's code, failing, and fixing it accumulates. Around the year-and-a-half mark, your own problem finally appears. That is when research begins.
-
-When this order gets flipped — trying to look for "new ideas" before ever running someone else's code — things usually stall. If you do not know why the existing system looks the way it does, it is also hard to explain why a new proposal is needed.
+Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cycle* unit. The year-and-a-half first-paper estimate comes from the same place. When the field's time-sense merges with the PhD's operating frame, daily pace shakes you less.
 
 ## 22.5 One Line
 
-If you have read this far, you already have one ability — the ability to read a long text to the end. Agents write code these days, but reading a ten-thousand-line document and grasping the context is still a human job. People who read well also wield AI well.
+If you have read this far, you already have one ability — the ability to read a long text to the end. The field core ends here, in one full loop.
+
+The full guide on PhD operation and reading mindset lives at [`../../survival-research/`](../../survival-research/) *(Korean; English version planned)*.
 
 When stuck, Slack. This document keeps getting rewritten.
 

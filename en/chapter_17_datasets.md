@@ -6,7 +6,7 @@ The share of **synthetic data** has been growing recently. Collecting and labeli
 
 ## 17.1 Autonomous Driving / Robotics Datasets
 
-## 17.1.1 KITTI / KITTI360
+### 17.1.1 KITTI / KITTI360
 
 A long-standing dataset that became the starting point for autonomous driving research.
 
@@ -32,7 +32,7 @@ Since its release in 2012, KITTI has served as the de facto standard benchmark f
 > - [KITTI-360 site](https://www.cvlibs.net/datasets/kitti-360/) — a broader 360-degree dataset.
 > - [Dark Programmer — Using KITTI Data (LiDAR-camera transforms)](https://darkpgmr.tistory.com/190) — hands-on with coordinate frame transforms and LiDAR-camera mapping on KITTI.
 
-## 17.1.2 nuScenes
+### 17.1.2 nuScenes
 
 A large-scale autonomous driving dataset.
 
@@ -55,7 +55,7 @@ It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and
 > - [nuScenes devkit Documentation](https://www.nuscenes.org/nuscenes) — dataset usage, devkit API, tutorial notebooks.
 > - [nuScenes devkit GitHub](https://github.com/nutonomy/nuscenes-devkit) — Python devkit code and examples.
 
-## 17.1.3 Waymo Open Dataset
+### 17.1.3 Waymo Open Dataset
 
 Google's large-scale autonomous driving dataset.
 
@@ -75,7 +75,7 @@ Together with nuScenes, it is one of the two main benchmarks in current autonomo
 > - [Waymo Open Dataset official site](https://waymo.com/open/) — dataset download and challenge participation.
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — official tools and example code.
 
-## 17.1.4 Datasets for VIO / VINS
+### 17.1.4 Datasets for VIO / VINS
 
 If you work on Visual-Inertial Odometry (VIO) or SLAM, you need to know the datasets below. Papers in this area almost always report results on them.
 
@@ -97,7 +97,7 @@ If you work on Visual-Inertial Odometry (VIO) or SLAM, you need to know the data
 
 ## 17.2 Computer Vision Datasets
 
-## 17.2.1 ImageNet
+### 17.2.1 ImageNet
 
 The standard benchmark for image classification.
 
@@ -107,7 +107,7 @@ This is the dataset that marked the turn into deep learning. After AlexNet's ove
 - 1.2M training images
 - Pretraining standard
 
-## 17.2.2 COCO
+### 17.2.2 COCO
 
 The standard for object detection and segmentation.
 
@@ -124,7 +124,7 @@ If you work on object detection, you need to understand the COCO dataset's evalu
 - Keypoint detection
 - Captioning
 
-## 17.2.3 ScanNet / NYU Depth V2
+### 17.2.3 ScanNet / NYU Depth V2
 
 **ScanNet**:
 - 1513 indoor scenes
@@ -146,7 +146,7 @@ If you work on indoor robots (home, service robots, and so on), ScanNet and NYU 
 
 ## 17.3 How to Use Datasets
 
-## 17.3.1 Download and Format Understanding
+### 17.3.1 Download and Format Understanding
 
 Each dataset has its own directory structure and format.
 
@@ -182,7 +182,7 @@ with open('label.txt', 'r') as f:
 > - [KITTI Benchmark official site - Object Detection DevKit](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d) — label format description and evaluation code.
 > - [nuScenes devkit Tutorial Notebooks](https://github.com/nutonomy/nuscenes-devkit/tree/master/python-sdk/tutorials) — Jupyter notebooks for understanding the data structure.
 
-## 17.3.2 DataLoader Implementation
+### 17.3.2 DataLoader Implementation
 
 The standard pattern for data loading in PyTorch.
 
@@ -227,7 +227,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 Public datasets often cannot give you data that fits your own research exactly. You sometimes have to collect data yourself to match your robot's sensor configuration or particular environmental conditions. If you do not handle sensor synchronization, calibration, and labeling systematically at this stage, the data becomes unusable later.
 
-## 17.4.1 Sensor Synchronization
+### 17.4.1 Sensor Synchronization
 
 If you do not time-synchronize data from multiple sensors, fusion itself is meaningless.
 
@@ -256,7 +256,7 @@ sync = message_filters.ApproximateTimeSynchronizer(
 sync.registerCallback(self.callback)
 ```
 
-## 17.4.2 Calibration
+### 17.4.2 Calibration
 
 **Camera Intrinsic**: use a checkerboard (OpenCV calibrateCamera).
 
@@ -273,7 +273,7 @@ If calibration is inaccurate, the object position seen by the camera and the one
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — checkerboard-based camera calibration.
 > - [Kalibr GitHub](https://github.com/ethz-asl/kalibr) — standard tool for Camera-IMU calibration.
 
-## 17.4.3 Labeling Tools
+### 17.4.3 Labeling Tools
 
 Once data is collected, you have to annotate it. Labeling is one of the most time-consuming tasks in research, and label quality determines model performance. Recently, semi-automatic labeling using foundation models such as SAM (Segment Anything Model) has become widespread.
 

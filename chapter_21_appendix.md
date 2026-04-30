@@ -429,12 +429,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-- [ ] 논문 읽기/관리 환경 세팅 (PDF 리더 + AI 요약 워크플로우, 또는 Zotero)
-- [ ] 코드 에디터 (VS Code — 원격 서버 SSH 연결 가능)
-- [ ] 실험 로깅 (Weights & Biases 또는 MLflow)
-- [ ] GitHub 계정 (+ SSH 키 설정)
-- [ ] LaTeX 환경 (Overleaf 추천 — 온라인, 협업 가능)
-- [ ] 슬라이드 도구 (Google Slides, Keynote, 또는 LaTeX Beamer)
+*연구 도구의 본격 list는 [`../survival-research/part2_writing/`](../survival-research/part2_writing/) + [`part3_presentations/ch02_conference_prep.md`](../survival-research/part3_presentations/ch02_conference_prep.md) 에 흡수되었다. 분야 적용은 § 20.4 "논문 작성 도구" + § 20.7 추천 학습 경로 참고.*
 
 ### D.4 데이터셋 준비
 
@@ -475,24 +470,13 @@ sudo apt-get install libeigen3-dev
 
 ### Day 5: 논문 읽기 시작
 
-```
-[ ] 지도교수/선배에게 "먼저 읽어야 할 논문 3편" 추천받기
-[ ] 논문 관리 환경 세팅 (PDF 리더 + AI 워크플로우)
-[ ] 추천받은 논문 3편의 Abstract와 Conclusion 읽기
-[ ] 모르는 용어 정리 (본 문서의 부록 A 활용)
-```
+*Day 5·6-7의 메타 운영 (논문 추천받기·연구 방향 파악·자기소개 준비)은 [`../survival-research/gradnotes/p2_ch01_two_way_relationship.md`](../survival-research/gradnotes/p2_ch01_two_way_relationship.md) (Day 5) + [`p3_ch01_my_research.md`](../survival-research/gradnotes/p3_ch01_my_research.md) (Day 1-7 시퀀스)에서 본격 다룬다.*
 
 > 팁: 처음 읽는 논문은 이해가 안 되는 게 정상이다. "이 논문이 무슨 문제를 풀려고 하는가?"만 파악해도 첫 주로서는 충분하다.
 
 ### Day 6-7: 연구 방향 파악
 
-```
-[ ] 연구실 최근 논문/프로젝트 살펴보기
-[ ] 선배들의 연구 주제 파악 (누가 어떤 주제를 하고 있는지)
-[ ] 본 문서의 18장(연구실 연구 방향) 읽기
-[ ] 관심 있는 연구 방향 2-3개 메모
-[ ] 다음 주 랩미팅에서 발표할 자기소개 준비
-```
+*위 link 참조. 분야 적용 1줄: 본 문서의 18장(연구실 연구 방향)을 훑으면서 연구실의 최근 논문/프로젝트와 선배들의 주제를 매핑한다.*
 
 ### 첫 주에 하지 않아도 되는 것들
 
@@ -504,8 +488,12 @@ sudo apt-get install libeigen3-dev
 
 ### 생존을 위한 마인드셋
 
-1. **모르는 건 당연하다**: 3학년 학부생이 SLAM을 모르는 건 당연하다. 부끄러워하지 말고 물어보자.
-2. **선배를 활용하라**: 선배들은 같은 고통을 겪었기에 도와주고 싶어한다. 다만 "안 돼요"는 보고가 아니다. "무엇을 예측해서, 무엇을 어떻게 했는데, 예상과 달리 어떤 결과가 나왔다"라고 말해야 한다. 교수에게도 마찬가지다.
-3. **기록하라**: 오늘 뭘 했는지, 뭘 모르겠는지, 어떤 에러가 났는지 기록해두자. 나중에 같은 문제를 만났을 때 과거의 내가 도와준다.
-4. **작게 시작하라**: 거대한 시스템을 이해하려 하지 말고, 작은 코드 조각부터 돌려보자. "이 함수가 뭘 하는지" 하나만 이해해도 진전이다.
-5. **비교하지 마라**: 선배가 논문을 술술 읽는 건 그만큼 시간을 투자했기 때문이다. 3개월 후의 나는 지금보다 훨씬 잘할 것이다.
+생존 마인드셋 5 frame은 별도 가이드(survival-research)에서 본격적으로 다룬다. 메타 layer — 채점자 없는 시스템에서의 자율성·비교·기록 — 가 거기서 풀리고, 본 챕터의 분야 layer는 그 메타와 한 쌍을 이룬다.
+
+각 항목이 흡수된 자리:
+
+- *모르는 건 당연하다* → [`../survival-research/gradnotes/p4_ch01_autonomy_weight.md`](../survival-research/gradnotes/p4_ch01_autonomy_weight.md) § 2 (대학원의 가치 재정의)
+- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [`../survival-research/gradnotes/p3_ch04_one_question_email.md`](../survival-research/gradnotes/p3_ch04_one_question_email.md) § 3 (형식의 사소한 표준)
+- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [`../survival-research/gradnotes/p3_ch02_time_use.md`](../survival-research/gradnotes/p3_ch02_time_use.md) § 5 (퇴근 전 포스트잇)
+- *작게 시작하라 — 작은 코드 조각부터* → [`../survival-research/gradnotes/p3_ch05_tool_trap.md`](../survival-research/gradnotes/p3_ch05_tool_trap.md) § 1 (셋업 시간은 연구 시간이 아니다)
+- *비교하지 마라 — 3개월 후의 나* → [`../survival-research/gradnotes/p4_ch02_comparison_trap.md`](../survival-research/gradnotes/p4_ch02_comparison_trap.md) § 3 (단거리 vs 장거리)

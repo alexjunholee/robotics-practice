@@ -504,8 +504,6 @@ When you first join a lab, it is natural to feel lost about what to do. This gui
 
 ### Mindset for survival
 
-1. **Not knowing is normal**: It is normal for a third-year undergraduate not to know SLAM. Do not be embarrassed — ask.
-2. **Leverage your seniors**: Seniors went through the same pain and want to help. But "it does not work" is not a report. You have to say, "Predicting X, I did Y this way, but got the unexpected result Z". The same applies with your advisor.
-3. **Write it down**: Record what you did today, what you do not understand, and what errors came up. When the same issue hits later, your past self will help you.
-4. **Start small**: Do not try to understand a huge system at once — start by running a small piece of code. Understanding just "what this one function does" is progress.
-5. **Do not compare**: Seniors read papers fluently because they put in the time. The you of three months from now will be far better than the you of today.
+The general survival mindset (not-knowing is normal, leveraging seniors, writing it down, starting small, not comparing) is treated in the meta-skill guide — see [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/) (5 chapters on entering research) *(Korean; English version planned)*.
+
+Field-specific application: in SLAM/CV/robotics labs the *senior code* is the highest-leverage starting point — copy the senior's environment, run their pipeline first, and only then begin modifying. Setup pain in robotics is high (CUDA · ROS · simulator versions); the time saved by not reinventing it goes straight into reading papers.

@@ -9,7 +9,7 @@ ROS is an open-source framework for robot software development. It is not an ope
 
 A robot has to run dozens of modules concurrently (cameras, LiDAR, motors, controllers), and ROS's core role is unifying how these modules exchange data. Without ROS you start from socket programming, and most of your research time evaporates into infrastructure work.
 
-## 15.1.1 ROS1 vs ROS2
+### 15.1.1 ROS1 vs ROS2
 
 | Feature | ROS1 | ROS2 |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ However, many packages still support only ROS1, so choose based on the situation
 > - [The Construct - ROS2 Basics](https://www.youtube.com/@TheConstruct) — ROS-focused education channel. Hands-on inside a simulator
 > - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/humble/How-To-Guides/Migrating-from-ROS1.html) — Official guide for porting existing ROS1 code
 
-## 15.1.2 Core Concepts
+### 15.1.2 Core Concepts
 
 These concepts form the skeleton of ROS. Without a precise grasp of the difference between Topic, Service, and Action, you get stuck every time on the question "how should I send this sensor data?" Building intuition for when each one fits is what matters.
 
@@ -86,7 +86,7 @@ In short: Topic is for continuously flowing data like camera images, Service is 
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — Official concepts document
 > - [The Construct - ROS2 Topics vs Services vs Actions](https://www.youtube.com/@TheConstruct) — Video comparing the three communication patterns
 
-## 15.1.3 Tools
+### 15.1.3 Tools
 
 When developing a robot, the "just write code and throw it on the robot" approach is dangerous. You need to be able to see with your own eyes whether sensor data is arriving properly and whether coordinate frames line up; that is what cuts debugging time. The tools below are daily essentials for any ROS developer.
 
@@ -135,7 +135,7 @@ transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Ti
 > - [The Construct - rviz2 Complete Guide](https://www.youtube.com/@TheConstruct) — Video on using rviz2
 > - [ros2 bag CLI documentation](https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html) — Official guide for recording and replaying data
 
-## 15.1.4 Key Packages
+### 15.1.4 Key Packages
 
 The real power of ROS lies in the package ecosystem the community has built. You will use each of the packages below at least once in nearly every robot project, so at least remember the names.
 
@@ -158,7 +158,7 @@ Experimenting directly on a real robot can damage the hardware or injure people.
 
 Recently, as **embodied AI** research has grown rapidly, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
 
-## 15.2.1 Gazebo
+### 15.2.1 Gazebo
 
 A physics simulation environment that integrates with ROS.
 
@@ -195,7 +195,7 @@ Gazebo is the simulator most tightly integrated with ROS. Most simulation demos 
 > - [URDF Tutorial (ROS2)](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/URDF-Main.html) — Robot modeling basics
 > - [The Construct - Gazebo Sim with ROS2](https://www.youtube.com/@TheConstruct) — Hands-on video of Gazebo + ROS2
 
-## 15.2.2 NVIDIA Isaac Sim
+### 15.2.2 NVIDIA Isaac Sim
 
 Widely used in embodied AI research for large-scale synthetic data generation and sim-to-real training. It combines photorealistic rendering with an accurate physics engine so that policies learned in the simulator also work on real robots.
 
@@ -225,7 +225,7 @@ Widely used in embodied AI research for large-scale synthetic data generation an
 > - [AI2-THOR Documentation](https://ai2thor.allenai.org/ithor/documentation) — Indoor simulator for embodied AI research
 > - [Habitat Documentation](https://aihabitat.org/docs/habitat2/) — Meta's embodied AI platform
 
-## 15.2.3 CARLA
+### 15.2.3 CARLA
 
 A simulator for autonomous driving research.
 

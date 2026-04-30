@@ -6,7 +6,7 @@
 
 AI 코딩 에이전트가 코드 작성을 상당 부분 대신해 주는 시대이다. 이제 중요한 건 코드를 처음부터 짜는 능력보다, **기존 코드를 읽고 이해하는 능력**이다. 다른 사람의 연구 코드를 클론해서 구조를 파악하고, AI가 생성한 코드를 검증하고, 문제가 생겼을 때 어디를 고쳐야 하는지 판단할 수 있어야 한다.
 
-## 16.1.1 C++
+### 16.1.1 C++
 
 **용도**: 실시간 시스템, ROS 노드, SLAM, 성능 중요 모듈
 
@@ -42,7 +42,7 @@ auto func = [&](int x) { return x * 2; };
 
 > **⚠ AI 에이전트 주의**: AI가 생성한 C++ 코드가 x86에서는 빌드되지만 Jetson(ARM)에서 실패하는 경우가 많다. 크로스 컴파일 환경이나 타겟 아키텍처를 알려줘라.
 
-## 16.1.2 Python
+### 16.1.2 Python
 
 **용도**: 프로토타이핑, 딥러닝 학습/추론, 데이터 분석, 시각화
 
@@ -63,7 +63,7 @@ pip install transformers  # HuggingFace
 
 ## 16.2 개발 환경 설정
 
-## 16.2.1 Ubuntu
+### 16.2.1 Ubuntu
 
 로보틱스 개발은 사실상 Ubuntu에서 한다. ROS가 Ubuntu를 1차 지원 플랫폼으로 삼고 있고, GPU 드라이버·CUDA·cuDNN 등의 호환성도 Ubuntu에서 가장 잘 검증됐기 때문이다. macOS나 Windows에서도 일부 개발이 가능하지만, 결국 실제 로봇에 올릴 때는 Ubuntu로 돌아오게 된다.
 
@@ -89,7 +89,7 @@ sudo apt install -y vim tmux htop
 > - [The Missing Semester of Your CS Education (MIT)](https://missing.csail.mit.edu/) — 셸, vim, tmux, Git 등 "수업에서는 안 가르치지만 매일 쓰는" 개발 도구를 체계적으로 정리. 추천한다
 > - [Fireship - Linux in 100 Seconds](https://www.youtube.com/watch?v=rrB13utjYV4) — Linux가 뭔지 빠르게 감 잡기
 
-## 16.2.2 CUDA / cuDNN
+### 16.2.2 CUDA / cuDNN
 
 딥러닝 모델 학습은 CPU로는 현실적으로 불가능하다. GPU 가속을 위해 CUDA가 필요한데, PyTorch와 CUDA 버전이 안 맞으면 `import torch` 한 줄에서부터 에러가 난다. 로보틱스 연구자가 가장 많이 겪는 환경 문제 중 하나이다.
 
@@ -184,7 +184,7 @@ sudo make install
 
 (참고: [다크 프로그래머 — OpenCV + CUDA 직접 빌드하기](https://darkpgmr.tistory.com/184))
 
-## 16.2.3 환경 관리
+### 16.2.3 환경 관리
 
 프로젝트마다 필요한 Python 버전과 라이브러리 버전이 다르다. 환경 관리 도구 없이 `pip install`을 전역으로 하면 프로젝트 A에 필요한 라이브러리가 프로젝트 B와 충돌하는 "의존성 지옥(dependency hell)"에 빠진다. Conda나 venv로 프로젝트별 독립 환경을 만드는 것이 기본이다.
 
@@ -219,7 +219,7 @@ pip install -r requirements.txt
 
 ## 16.3 Docker
 
-## 16.3.1 왜 Docker인가?
+### 16.3.1 왜 Docker인가?
 
 연구실에서 코드를 공유할 때 가장 많이 듣는 말이 "내 컴퓨터에선 돌아가는데..."이다. Docker는 그 문제를 해결한다. OS, 라이브러리, 환경 설정을 통째로 패키징해서 어디서든 동일한 실행 환경을 보장하기 때문이다. 논문 코드를 재현할 때도 Docker 이미지가 제공되면 훨씬 수월하다.
 
@@ -228,7 +228,7 @@ pip install -r requirements.txt
 - **배포**: 쉬운 공유 및 배포
 - **의존성**: 복잡한 의존성 관리
 
-## 16.3.2 기본 사용법
+### 16.3.2 기본 사용법
 
 ```bash
 # 이미지 다운로드
@@ -263,7 +263,7 @@ WORKDIR /workspace
 > - [NetworkChuck - Docker Tutorial](https://www.youtube.com/watch?v=eGz9DS-aIeY) — Docker를 재미있고 쉽게 설명하는 영상. 입문용으로 적합
 > - [Fireship - Docker in 100 Seconds](https://www.youtube.com/watch?v=Gjnup-PuquQ) — Docker 핵심 개념을 빠르게 훑어보기
 
-## 16.3.3 NVIDIA Container Toolkit
+### 16.3.3 NVIDIA Container Toolkit
 
 일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 사실상 필수다.
 
@@ -286,7 +286,7 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 ```
 
-## 16.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
+### 16.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
 
 로보틱스에서 Docker를 쓸 때는 GPU, GUI(RViz/Gazebo), USB 센서를 동시에 써야 하는 경우가 대부분이다. 이걸 하나씩 붙이면 충돌하기 쉽고, 한 번에 설정하는 게 낫다.
 
@@ -388,7 +388,7 @@ CMD ["bash"]
 
 연구실 서버에 SSH로 접속해서 실험을 돌리고, 코드는 Git으로 관리하고, 데이터는 서버 간에 주고받는 것이 일상이다. 여기 나오는 도구들을 익혀 두면 이 과정이 매끄러워진다.
 
-## 16.4.1 Git/GitHub
+### 16.4.1 Git/GitHub
 
 ### 16.4.1.1 기본 워크플로우
 
@@ -451,7 +451,7 @@ chore: 빌드/설정 변경
 > - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — GitHub에서 직접 만든 Git 입문 가이드
 > - [Conventional Commits Specification](https://www.conventionalcommits.org/) — 커밋 메시지 규칙 공식 스펙
 
-## 16.4.2 SSH
+### 16.4.2 SSH
 
 연구실 GPU 서버에 접속하는 기본 도구이다. 비밀번호 대신 키 인증을 쓰면 편하고 안전하다.
 
@@ -480,7 +480,7 @@ Host lab-server
 
 이후 `ssh lab-server`로 바로 접속 가능. VS Code Remote-SSH도 이 설정을 읽는다.
 
-## 16.4.3 SCP & rsync
+### 16.4.3 SCP & rsync
 
 서버와 로컬 간 파일 전송 도구다. **SCP**는 단순 파일 복사, **rsync**는 변경된 부분만 전송한다.
 
@@ -512,7 +512,7 @@ rsync -avz --delete source/ user@server:/data/source/
 
 `scp`는 매번 전체를 복사하지만, `rsync`는 diff만 보내므로 수십 GB 데이터셋을 동기화할 때 차이가 크다.
 
-## 16.4.4 Tailscale
+### 16.4.4 Tailscale
 
 연구실 서버가 NAT/방화벽 뒤에 있으면 외부에서 SSH 접속이 안 된다. Tailscale은 WireGuard 기반 VPN으로, 설치만 하면 어디서든 연구실 서버에 직접 접속할 수 있게 해 준다.
 
@@ -547,7 +547,7 @@ Host lab-gpu
 
 ## 16.5 실험 관리
 
-## 16.5.1 Weights & Biases (wandb)
+### 16.5.1 Weights & Biases (wandb)
 
 딥러닝 실험을 하다 보면 "어제 돌린 모델의 하이퍼파라미터가 뭐였지?"라는 상황이 매일 발생한다. 실험 관리 도구 없이 엑셀이나 노트로 기록하면 금방 한계에 부딪힌다. wandb는 학습 과정을 자동으로 로깅하고 시각화해 주며, 팀원과 결과를 공유하기도 쉽다.
 
@@ -579,7 +579,7 @@ wandb.finish()
 > - [Weights & Biases 공식 문서 및 Quickstart](https://docs.wandb.ai/quickstart) — wandb 시작 가이드. 5분이면 첫 실험 로깅 가능
 > - [Weights & Biases YouTube](https://www.youtube.com/@WeightsBiases) — 사용법 튜토리얼 및 MLOps 관련 강연
 
-## 16.5.2 MLflow
+### 16.5.2 MLflow
 
 wandb가 클라우드 기반 서비스라면, MLflow는 자체 서버에서 운영할 수 있는 오픈소스 대안이다. 데이터 보안이 중요한 환경에서 유용하다.
 
@@ -594,7 +594,7 @@ with mlflow.start_run():
     mlflow.pytorch.log_model(model, "model")
 ```
 
-## 16.5.3 TensorBoard
+### 16.5.3 TensorBoard
 
 ```python
 from torch.utils.tensorboard import SummaryWriter
@@ -617,7 +617,7 @@ TensorBoard는 PyTorch에서도 바로 쓸 수 있고, 별도의 계정 생성 �
 
 ## 16.6 코드 포매팅
 
-## 16.6.1 Linting & Formatting
+### 16.6.1 Linting & Formatting
 
 코드 스타일이 사람마다 다르면 코드 리뷰에서 로직보다 스타일 논쟁에 시간을 더 쓰게 된다. 자동 포매터를 쓰면 이 문제가 사라진다. 혼자 연구할 때도 일관된 코드 스타일은 나중에 자기 코드를 다시 읽을 때 큰 도움이 된다.
 
@@ -645,7 +645,7 @@ mypy .
 clang-format -i src/*.cpp
 ```
 
-## 16.6.2 Testing
+### 16.6.2 Testing
 
 테스트를 작성하는 습관은 연구 코드에서도 중요하다. "모델 forward pass가 제대로 되는지", "데이터 전처리 결과가 예상과 같은지" 같은 기본적인 테스트만 있어도 리팩토링할 때 훨씬 안심이 된다.
 

@@ -9,7 +9,7 @@ The root of every process that turns raw camera data into meaningful information
 
 Raw images from a camera are noisy and unorganized. Before any algorithm can run on top of them, the image has to be cleaned up. Filtering, edge detection, morphological operations — these are the basic preprocessing tools, and without knowing them you cannot diagnose why the downstream pipeline produces strange results.
 
-## 9.1.1 Introduction to OpenCV
+### 9.1.1 Introduction to OpenCV
 
 **OpenCV (Open Source Computer Vision Library)** is the most widely used CV library.
 
@@ -47,7 +47,7 @@ cv2.destroyAllWindows()
 > - [Szeliski, "Computer Vision: Algorithms and Applications"](https://szeliski.org/Book/) — Free PDF. The standard textbook in CV.
 > - [Stanford CS131 — Computer Vision: Foundations and Applications](http://vision.stanford.edu/teaching/cs131_fall1415/schedule.html) — More introductory than CS231n. Start here if you want to begin from image processing.
 
-## 9.1.2 Filtering
+### 9.1.2 Filtering
 
 Filtering is the most basic tool for extracting desired information from an image or removing unwanted noise. Without knowing it, you cannot explain why edge detection output is noisy, or why blur is applied as preprocessing for segmentation.
 
@@ -85,7 +85,7 @@ Edges carry the most information in an image. Object contours, structure, bounda
 > **Exercise**: [Convolution Visualization](https://alexjunholee.github.io/robotics-practice/app.html#convolution)
 > Apply various kernels to an image and build intuition for how the convolution operation performs filtering.
 
-## 9.1.3 Morphology
+### 9.1.3 Morphology
 
 An essential tool when dealing with binary images. For example, morphology is used to remove small noise specks in a segmentation output, or to reconnect broken regions. Without knowing it, post-processing a binarization result feels hopeless.
 
@@ -117,7 +117,7 @@ Many people confuse the order of Opening and Closing — Opening "shrinks first 
 
 If you do not understand how a camera reads the world, recovering 3D from a 2D image is impossible. SLAM, 3D reconstruction, visual servoing — all of these start from the camera model. If you have learned linear algebra, this is where you can feel how matrices are actually used.
 
-## 9.2.1 Pinhole Model
+### 9.2.1 Pinhole Model
 
 An idealized camera model that projects a 3D point onto a 2D image.
 
@@ -153,7 +153,7 @@ K represents the lens characteristics of the camera, and [R|t] represents where 
 > **Exercise**: [Camera Projection](https://alexjunholee.github.io/robotics-practice/app.html#camera_projection)
 > Check interactively how a point in 3D space is projected onto a 2D image through the intrinsic and extrinsic parameters.
 
-## 9.2.2 Distortion Models
+### 9.2.2 Distortion Models
 
 Real lenses introduce distortion.
 
@@ -189,7 +189,7 @@ Calling `cv2.undistort()` every frame is slow. The standard in real-time systems
 > **Exercise**: [Lens Distortion Visualization](https://alexjunholee.github.io/robotics-practice/app.html#lens_distortion)
 > Adjust radial and tangential distortion parameters and see directly how the image deforms.
 
-## 9.2.3 Calibration
+### 9.2.3 Calibration
 
 The process of estimating a camera's intrinsic and extrinsic parameters.
 
@@ -245,7 +245,7 @@ A distinguishable point (keypoint) in an image together with a vector (descripto
 
 To understand SLAM, you need to understand features first. As the robot moves its camera, deciding "is what I see now the same place I saw earlier?" requires finding the same point across images. Features are the core tool for finding those correspondences reliably. SLAM, Visual Odometry, Object Recognition — nearly every vision-based robotics algorithm relies on features.
 
-## 9.3.1 Keypoint Detection
+### 9.3.1 Keypoint Detection
 
 **Harris Corner**:
 - Classical method for corner detection
@@ -282,7 +282,7 @@ SIFT is the algorithm Lowe published in 2004, and its paper is among the most ci
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — The starting point of deep-learning-based features.
 > - [Dark Programmer — Image keypoint extraction methods](https://darkpgmr.tistory.com/131) — Comparison of SIFT, HOG, Haar, Ferns, LBP, MCT, and other features.
 
-## 9.3.2 Descriptor
+### 9.3.2 Descriptor
 
 Once you have a keypoint, the descriptor is about "how to describe" its surroundings. To find the same physical point across two images, you have to express the pattern around that point as numbers so they can be compared.
 
@@ -306,7 +306,7 @@ The advantage of binary descriptors is matching speed. Because the distance betw
 > - [Sarlin et al., "SuperGlue: Learning Feature Matching with Graph Neural Networks" (2020)](https://arxiv.org/abs/1911.11763) — Representative work of deep-learning-based matching.
 > - [OpenCV Feature Matching tutorial](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — How to use BFMatcher and FLANN.
 
-## 9.3.3 Feature Matching
+### 9.3.3 Feature Matching
 
 In SLAM, as the camera moves you need to find the same point between the previous and current frames. This is feature matching, and without a proper grasp of it you cannot tell why SLAM throws a tracking-lost error.
 
@@ -343,7 +343,7 @@ Deals with the geometric relation between two camera viewpoints.
 
 Given two photos of the same object, the goal is to recover how the camera moved (relative pose) and from there reconstruct the 3D structure. This is the mathematical foundation of Visual Odometry and Structure from Motion (SfM). It is also where SVD and eigenvalue decomposition from linear algebra are directly used.
 
-## 9.4.1 Essential Matrix (E)
+### 9.4.1 Essential Matrix (E)
 
 **Definition**: encodes the relative pose between a pair of calibrated cameras
 
@@ -361,7 +361,7 @@ Decomposing the essential matrix into R and t gives the relative rotation and tr
 > **Exercise**: [Epipolar Geometry Visualization](https://alexjunholee.github.io/robotics-practice/app.html#epipolar)
 > Examine interactively the epipolar lines and epipoles between two camera viewpoints, and understand the geometric meaning of the essential/fundamental matrix.
 
-## 9.4.2 Fundamental Matrix (F)
+### 9.4.2 Fundamental Matrix (F)
 
 **Definition**: the relation between a pair of uncalibrated cameras
 
@@ -376,7 +376,7 @@ p2^T F p1 = 0
 
 To summarize the relation between E and F: F is the version "you can use directly on pixel coordinates", while E is the version "you use when you already know the camera intrinsics". If you have calibrated, use E; if not, use F.
 
-## 9.4.3 Triangulation
+### 9.4.3 Triangulation
 
 Given the same point observed from two viewpoints, compute its 3D position.
 
@@ -407,7 +407,7 @@ Estimates pixel motion between consecutive frames.
 
 As a robot sees the world through its camera while moving, knowing where each pixel goes in the next frame is useful. It is used directly in Visual Odometry pose estimation, dynamic object detection, collision avoidance, and so on. While feature matching only handles sparse points, dense optical flow estimates the motion of every pixel.
 
-## 9.5.1 Lucas-Kanade Method
+### 9.5.1 Lucas-Kanade Method
 
 - Sparse optical flow (specific points only)
 - Brightness constancy assumption
@@ -422,7 +422,7 @@ p1, status, err = cv2.calcOpticalFlowPyrLK(
 
 In "PyrLK", "Pyr" stands for Pyramid. It uses an image pyramid to capture large motions too — a technique for overcoming the small-motion assumption of Lucas-Kanade.
 
-## 9.5.2 Dense Optical Flow
+### 9.5.2 Dense Optical Flow
 
 - Computes motion for every pixel
 - Farneback, RAFT (deep learning)
