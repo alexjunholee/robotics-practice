@@ -429,12 +429,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 Research tools
 
-- [ ] Paper reading/management environment set up (PDF reader + AI summary workflow, or Zotero)
-- [ ] Code editor (VS Code — can connect to a remote server via SSH)
-- [ ] Experiment logging (Weights & Biases or MLflow)
-- [ ] GitHub account (+ SSH key set up)
-- [ ] LaTeX environment (Overleaf recommended — online, collaborative)
-- [ ] Slide tool (Google Slides, Keynote, or LaTeX Beamer)
+*The full list of research tools has been absorbed into [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/) and [`part3_presentations/ch02_conference_prep.md`](../../survival-research/part3_presentations/ch02_conference_prep.md) *(Korean; English version planned)*. Field-specific application: see §20.4 "Paper-writing tools" and §20.7 recommended learning roadmap.*
 
 ### D.4 Dataset preparation
 
@@ -475,24 +470,13 @@ When you first join a lab, it is natural to feel lost about what to do. This gui
 
 ### Day 5: Start reading papers
 
-```
-[ ] Ask your advisor/seniors for "3 papers to read first"
-[ ] Set up a paper management environment (PDF reader + AI workflow)
-[ ] Read the Abstract and Conclusion of the 3 recommended papers
-[ ] List unfamiliar terms (use Appendix A of this document)
-```
+*The meta-skill operations of Day 5 and Day 6–7 (asking for paper recommendations, getting the research direction, preparing a self-introduction) are treated in depth in [`../../survival-research/gradnotes/p2_ch01_two_way_relationship.md`](../../survival-research/gradnotes/p2_ch01_two_way_relationship.md) (Day 5) and [`p3_ch01_my_research.md`](../../survival-research/gradnotes/p3_ch01_my_research.md) (the Day 1–7 sequence) *(Korean; English version planned)*.*
 
 > Tip: It is normal not to understand a paper on the first read. Even grasping just "what problem is this paper trying to solve?" is enough for the first week.
 
 ### Day 6–7: Get the research direction
 
-```
-[ ] Look at the lab's recent papers/projects
-[ ] Figure out the seniors' research topics (who is working on what)
-[ ] Read Ch.18 of this document (the lab's research directions)
-[ ] Jot down 2–3 research directions that interest you
-[ ] Prepare a self-introduction for next week's lab meeting
-```
+*See the link above. Field-specific one-liner: skim Ch.18 of this document (the lab's research directions) and map the lab's recent papers/projects to the seniors' topics.*
 
 ### Things you do not need to do in the first week
 

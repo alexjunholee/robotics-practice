@@ -485,7 +485,7 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.3 실험 설계
 
-*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (또는 [`ch12_figures.md`](../survival-research/part2_writing/D_polish/ch12_figures.md)) 에 cameo로 담겼다.*
+*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (또는 [`ch12_figures.md`](../survival-research/part2_writing/C_sections/ch12_figures.md)) 에 cameo로 담겼다.*
 
 분야 적용은 baseline 비교 표를 AI에게 던지고 *내가 놓친 비교 축*을 묻는 워크플로우.
 

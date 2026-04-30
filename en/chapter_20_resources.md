@@ -144,8 +144,6 @@ These are YouTube channels you can watch more casually than textbooks or full co
 
 The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
 
-Field-specific application is simple. Read the *5–10 core papers* in SLAM/CV/robotics — the must-read list in §20.4 below — three-pass in your first year. The vocabulary and baseline sense of the field gets built inside that exercise.
-
 ### Must-read paper list
 
 **Classical CV/SLAM**:
@@ -356,14 +354,14 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 | --- | --- | --- |
 | Understanding and using VFMs | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
-| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) |
-| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops |
-| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) |
+| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../survival-research/part1_reading/`](../../survival-research/part1_reading/)* |
+| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../survival-research/part0_starting/`](../../survival-research/part0_starting/)* |
+| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [`../../survival-research/part2_writing/E_after/`](../../survival-research/part2_writing/E_after/)* |
 
 **Exercises**:
 - Analyze the code of recent papers — clone from GitHub and run it yourself
 - Experiment with your own improvement ideas — try "what if I change this part?"
-- Attempt paper writing — write a 4-6 page draft in LaTeX
+- Attempt paper writing — *the full frame is [`../../survival-research/part2_writing/`](../../survival-research/part2_writing/)*
 - Read **Chapters 10-13** of this document to track recent research directions
 
 **Milestone**: If you can run an experiment that modifies or improves an existing paper's method and compare the result quantitatively, you have entered the advanced stage. Aim to reach a level where the work could be submitted to a conference workshop.

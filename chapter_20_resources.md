@@ -144,8 +144,6 @@
 
 논문 읽기는 별도 가이드에서 본격적으로 다룬다. 왜 읽는가, Keshav 3-pass, 5 Cs, reviewer 시점, CCC 렌즈, 독자 기대 진단까지 일곱 챕터에 걸쳐 [`../survival-research/part1_reading/`](../survival-research/part1_reading/) (ch01–ch07)에 정리되어 있다.
 
-분야 적용은 단순하다. SLAM/CV/로보틱스 분야의 *핵심 논문 5–10편* — 본 챕터 §20.4의 필독 리스트 — 을 첫 1년에 3-pass로 정독한다. 분야의 vocabulary와 baseline 감각이 그 안에서 만들어진다.
-
 ### 필독 논문 리스트
 
 **Classical CV/SLAM**:

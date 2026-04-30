@@ -423,6 +423,8 @@ Provide this information to AI and you'll get answers closer to the real cause i
 
 ## 19.6 How to Use AI Agents Properly
 
+*The general frame for putting AI to work (writing/reading territory) is covered in depth in [`../../survival-research/part1_reading/ch02_keshav_three_passes.md`](../../survival-research/part1_reading/ch02_keshav_three_passes.md) and [`part2_writing/A_workflow/ch01_mindset.md`](../../survival-research/part2_writing/A_workflow/ch01_mindset.md) *(Korean; English version planned)*. This §19.6 is the field-specific application to code and hardware.*
+
 ### 19.6.1 Provide Enough Context
 
 The most important thing when asking AI is the quantity and quality of context.
@@ -470,9 +472,9 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 
 ### 19.7.1 Reading Papers
 
-- After reading the abstract/conclusion in the first pass, throw the PDF at AI: "summarize this paper's contributions in 3 lines," "which baseline is compared most in Related Work," "derive Eq.5 step by step"
-- But don't trust AI summaries in some cases: subtle assumptions in the paper, the nuance of the limitations section, details of the experimental setup — you have to read these yourself
-- Semantic Scholar + AI: get related paper recommendations, then have AI compare and summarize the differences between each paper
+*The paper-reading workflow (3-pass + AI layer cameo) is covered in depth in the AI-layer cameo of [`../../survival-research/part1_reading/ch02_keshav_three_passes.md`](../../survival-research/part1_reading/ch02_keshav_three_passes.md) *(Korean; English version planned)*.*
+
+Field-specific application: 3-pass + AI summary on the field's core papers — read the abstract, ask for a 3-line contribution summary, ask for step-by-step derivation of equations.
 
 ### 19.7.2 Writing Code
 
@@ -483,9 +485,9 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 
 ### 19.7.3 Experiment Design
 
-- "What ablations should I run to show how my model improves over the baseline?" — AI can draft an experiment design
-- "What analyses can I do looking at the results in this table?" — letting AI interpret results can surface angles you missed
-- Caveat: don't follow AI's experiment proposals as-is. It can suggest ablations that don't match your research contribution. The final judgment on experiment design is the researcher's.
+*The frame for putting AI to work in experiment design, ablations, and result interpretation is captured as a cameo in [`../../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md`](../../survival-research/part2_writing/E_after/ch17_revision_rebuttal.md) (or [`ch12_figures.md`](../../survival-research/part2_writing/C_sections/ch12_figures.md)) *(Korean; English version planned)*.*
+
+Field-specific application: throw the baseline-comparison table at AI and ask *which comparison axis I missed* — that workflow.
 
 ### 19.7.4 Writing Papers
 
