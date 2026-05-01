@@ -45,10 +45,4 @@ If you have read this far, you already have one ability — the ability to read 
 
 The full guide on PhD operation and reading mindset lives at [`../../research-notes/`](../../research-notes/)·[`../../grad-notes/`](../../grad-notes/) *(Korean; English version planned)*.
 
-When stuck, Slack. This document keeps getting rewritten.
-
----
-
-*Questions or feedback: the lab Slack channel.*
-
-Draft date: 2025.12.28 · Revision date: 2026.04.23
+Draft date: 2025.12.28 · Revision date: 2026.05.01
