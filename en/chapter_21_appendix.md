@@ -429,7 +429,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 Research tools
 
-*The full list of research tools has been absorbed into [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) and [`part3_presentations/ch02_conference_prep.md`](../../research-notes/part3_presentations/ch02_conference_prep.md) *(Korean; English version planned)*. Field-specific application: see §20.4 "Paper-writing tools" and §20.7 recommended learning roadmap.*
+*The full list of research tools has been absorbed into [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) and [`part3_presentations/ch02_conference_prep.md`](../../research-notes/chapter_34_conference_prep.md) *(Korean; English version planned)*. Field-specific application: see §20.4 "Paper-writing tools" and §20.7 recommended learning roadmap.*
 
 ### D.4 Dataset preparation
 
@@ -470,7 +470,7 @@ When you first join a lab, it is natural to feel lost about what to do. This gui
 
 ### Day 5: Start reading papers
 
-*The meta-skill operations of Day 5 and Day 6–7 (asking for paper recommendations, getting the research direction, preparing a self-introduction) are treated in depth in [`../../grad-notes/p2_ch01_two_way_relationship.md`](../../grad-notes/p2_ch01_two_way_relationship.md) (Day 5) and [`p3_ch01_my_research.md`](../../grad-notes/p3_ch01_my_research.md) (the Day 1–7 sequence) *(Korean; English version planned)*.*
+*The meta-skill operations of Day 5 and Day 6–7 (asking for paper recommendations, getting the research direction, preparing a self-introduction) are treated in depth in [`../../grad-notes/chapter_04_two_way_relationship.md`](../../grad-notes/chapter_04_two_way_relationship.md) (Day 5) and [`p3_ch01_my_research.md`](../../grad-notes/chapter_07_my_research.md) (the Day 1–7 sequence) *(Korean; English version planned)*.*
 
 > Tip: It is normal not to understand a paper on the first read. Even grasping just "what problem is this paper trying to solve?" is enough for the first week.
 

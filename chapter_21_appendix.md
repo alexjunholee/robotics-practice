@@ -429,7 +429,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-*연구 도구의 본격 list는 [`../research-notes/part2_writing/`](../research-notes/part2_writing/) + [`part3_presentations/ch02_conference_prep.md`](../research-notes/part3_presentations/ch02_conference_prep.md) 에 흡수되었다. 분야 적용은 § 20.4 "논문 작성 도구" + § 20.7 추천 학습 경로 참고.*
+*연구 도구의 본격 list는 [`../research-notes/part2_writing/`](../research-notes/part2_writing/) + [`part3_presentations/ch02_conference_prep.md`](../research-notes/chapter_34_conference_prep.md) 에 흡수되었다. 분야 적용은 § 20.4 "논문 작성 도구" + § 20.7 추천 학습 경로 참고.*
 
 ### D.4 데이터셋 준비
 
@@ -470,7 +470,7 @@ sudo apt-get install libeigen3-dev
 
 ### Day 5: 논문 읽기 시작
 
-*Day 5·6-7의 메타 운영 (논문 추천받기·연구 방향 파악·자기소개 준비)은 [`../grad-notes/p2_ch01_two_way_relationship.md`](../grad-notes/p2_ch01_two_way_relationship.md) (Day 5) + [`p3_ch01_my_research.md`](../grad-notes/p3_ch01_my_research.md) (Day 1-7 시퀀스)에서 본격 다룬다.*
+*Day 5·6-7의 메타 운영 (논문 추천받기·연구 방향 파악·자기소개 준비)은 [`../grad-notes/chapter_04_two_way_relationship.md`](../grad-notes/chapter_04_two_way_relationship.md) (Day 5) + [`p3_ch01_my_research.md`](../grad-notes/chapter_07_my_research.md) (Day 1-7 시퀀스)에서 본격 다룬다.*
 
 > 팁: 처음 읽는 논문은 이해가 안 되는 게 정상이다. "이 논문이 무슨 문제를 풀려고 하는가?"만 파악해도 첫 주로서는 충분하다.
 
@@ -492,8 +492,8 @@ sudo apt-get install libeigen3-dev
 
 각 항목이 흡수된 자리:
 
-- *모르는 건 당연하다* → [`../grad-notes/p4_ch01_autonomy_weight.md`](../grad-notes/p4_ch01_autonomy_weight.md) § 2 (대학원의 가치 재정의)
-- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [`../grad-notes/p3_ch04_one_question_email.md`](../grad-notes/p3_ch04_one_question_email.md) § 3 (형식의 사소한 표준)
-- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [`../grad-notes/p3_ch02_time_use.md`](../grad-notes/p3_ch02_time_use.md) § 5 (퇴근 전 포스트잇)
-- *작게 시작하라 — 작은 코드 조각부터* → [`../grad-notes/p3_ch05_tool_trap.md`](../grad-notes/p3_ch05_tool_trap.md) § 1 (셋업 시간은 연구 시간이 아니다)
-- *비교하지 마라 — 3개월 후의 나* → [`../grad-notes/p4_ch02_comparison_trap.md`](../grad-notes/p4_ch02_comparison_trap.md) § 3 (단거리 vs 장거리)
+- *모르는 건 당연하다* → [`../grad-notes/chapter_14_autonomy_weight.md`](../grad-notes/chapter_14_autonomy_weight.md) § 2 (대학원의 가치 재정의)
+- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [`../grad-notes/chapter_10_one_question_email.md`](../grad-notes/chapter_10_one_question_email.md) § 3 (형식의 사소한 표준)
+- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [`../grad-notes/chapter_08_time_use.md`](../grad-notes/chapter_08_time_use.md) § 5 (퇴근 전 포스트잇)
+- *작게 시작하라 — 작은 코드 조각부터* → [`../grad-notes/chapter_11_tool_trap.md`](../grad-notes/chapter_11_tool_trap.md) § 1 (셋업 시간은 연구 시간이 아니다)
+- *비교하지 마라 — 3개월 후의 나* → [`../grad-notes/chapter_15_comparison_trap.md`](../grad-notes/chapter_15_comparison_trap.md) § 3 (단거리 vs 장거리)

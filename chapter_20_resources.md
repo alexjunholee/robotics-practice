@@ -186,7 +186,7 @@
 
 ## 20.5 주요 학회
 
-분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [`../research-notes/part3_presentations/ch02_conference_prep.md`](../research-notes/part3_presentations/ch02_conference_prep.md) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
+분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [`../research-notes/chapter_34_conference_prep.md`](../research-notes/chapter_34_conference_prep.md) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
 
 본 가이드는 SLAM/CV/로보틱스 분야 본체에 집중한다. 학회 일반론(왜 가는가·발표 opener·첫 마디 화법)과 분야별 표는 위 가이드에서 다룬다.
 
@@ -389,14 +389,14 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 ### 20.8.0 연구자 마인드셋 (link)
 
-- 방향·엔진·도구 세 layer + 통합 frame → [`gradnotes/p4_ch04_integrated_life.md`](../grad-notes/p4_ch04_integrated_life.md) § 5
-- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [`gradnotes/p4_ch01_autonomy_weight.md`](../grad-notes/p4_ch01_autonomy_weight.md) § 1
-- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [`gradnotes/p4_ch02_comparison_trap.md`](../grad-notes/p4_ch02_comparison_trap.md) § 3
-- 견고한 기초 — *리젝 이유가 없는 논문* frame → [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/part2_writing/A_workflow/ch01_mindset.md) § 1
+- 방향·엔진·도구 세 layer + 통합 frame → [`gradnotes/p4_ch04_integrated_life.md`](../grad-notes/chapter_17_integrated_life.md) § 5
+- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [`gradnotes/p4_ch01_autonomy_weight.md`](../grad-notes/chapter_14_autonomy_weight.md) § 1
+- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [`gradnotes/p4_ch02_comparison_trap.md`](../grad-notes/chapter_15_comparison_trap.md) § 3
+- 견고한 기초 — *리젝 이유가 없는 논문* frame → [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/chapter_16_mindset.md) § 1
 
 ### 20.8.1 논문 쓰기 (link)
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [`part2_writing/A_workflow/`](../research-notes/part2_writing/A_workflow/) (mindset·outline·time budget) 및 [`part2_writing/C_sections/ch08_introduction.md`](../research-notes/part2_writing/C_sections/ch08_introduction.md).
+Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [`part2_writing/A_workflow/`](../research-notes/part2_writing/A_workflow/) (mindset·outline·time budget) 및 [`part2_writing/C_sections/ch08_introduction.md`](../research-notes/chapter_23_introduction.md).
 
 ### 20.8.2 실험 설계와 Ablation
 
@@ -408,7 +408,7 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 
 ### 20.8.4 논문 리뷰 — Peer Review (link)
 
-리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [`part1_reading/ch05_reading_for_review.md`](../research-notes/part1_reading/ch05_reading_for_review.md) (reviewer로 읽기) + [`part2_writing/E_after/ch17_revision_rebuttal.md`](../research-notes/part2_writing/E_after/ch17_revision_rebuttal.md) (rebuttal 작성).
+리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [`part1_reading/ch05_reading_for_review.md`](../research-notes/chapter_10_reading_for_review.md) (reviewer로 읽기) + [`part2_writing/E_after/ch17_revision_rebuttal.md`](../research-notes/chapter_32_revision_rebuttal.md) (rebuttal 작성).
 
 ### 20.8.5 도구
 
@@ -419,7 +419,7 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 - 알고리즘: algorithm2e
 - 수식: notation table을 따로 만들어 논문 전체에서 통일
 
-표기법(LaTeX·notation·수식) 자리는 [`part2_writing/D_sentence/ch15_math_and_proofs.md`](../research-notes/part2_writing/D_sentence/ch15_math_and_proofs.md) (글쓰기 단위 통일)이 메타 layer로 다룬다.
+표기법(LaTeX·notation·수식) 자리는 [`part2_writing/D_sentence/ch15_math_and_proofs.md`](../research-notes/chapter_30_math_and_proofs.md) (글쓰기 단위 통일)이 메타 layer로 다룬다.
 
 > 추천 자료:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — 논문 쓰기의 고전 강연
