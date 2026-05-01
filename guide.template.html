@@ -219,6 +219,69 @@ body {
 ::selection { background: rgba(0,113,227,0.20); color: var(--text); }
 mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; padding: 1px 3px; border-radius: 3px; }
 
+/* Guide overview at the start of content */
+.guide-overview {
+  margin: 0 0 80px 0;
+  padding: 0 0 48px 0;
+  border-bottom: 1px solid var(--border);
+}
+.guide-overview .overview-header { margin-bottom: 44px; }
+.guide-overview .overview-title {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  color: var(--text-heading);
+  margin: 0 0 10px 0;
+}
+.overview-group { margin-top: 36px; }
+.overview-group:first-child { margin-top: 0; }
+.overview-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.42);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 18px 0;
+}
+.overview-chapter { margin: 0 0 22px 0; }
+.overview-chapter:last-child { margin-bottom: 0; }
+.overview-chapter-link {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-heading);
+  text-decoration: none;
+  letter-spacing: -0.014em;
+  display: inline-block;
+}
+.overview-chapter-link:hover { color: var(--accent); }
+.overview-chapter-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.overview-sections {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+}
+.overview-sections a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.overview-sections a:hover { color: var(--accent); }
+.overview-sections .sep {
+  margin: 0 8px;
+  color: var(--border-strong);
+}
+
 @media (max-width: 1024px) { #main-content { padding-left: 40px; padding-right: 40px; } }
 
 @media (max-width: 900px) {
@@ -447,6 +510,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     ko: {
       docTitle: 'Spatial AI 로보틱스 가이드',
       topbarTitle: 'Spatial AI 로보틱스 가이드',
+      overviewTitle: 'Spatial AI 로보틱스 가이드',
       groups: [
         { label: '기초 지식', chapters: [1, 2, 3] },
         { label: '로봇', chapters: [4, 5, 6, 7, 8] },
@@ -460,6 +524,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     en: {
       docTitle: 'Spatial AI · Robotics Guide',
       topbarTitle: 'Spatial AI · Robotics Guide',
+      overviewTitle: 'Spatial AI · Robotics Guide',
       groups: [
         { label: 'Foundations', chapters: [1, 2, 3] },
         { label: 'Robot Systems', chapters: [4, 5, 6, 7, 8] },
@@ -519,6 +584,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
 
       document.getElementById('toc-container').innerHTML = '';
       embedDemos();
+      buildOverview();
       buildTOC();
 
       contentEl.style.display = 'block';
@@ -546,6 +612,106 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     });
   }
 
+  // ---- Build Guide Overview (top of page) ----
+  function buildOverview() {
+    var strs = I18N[state.lang];
+    var chapterGroups = strs.groups;
+    var h1s = contentEl.querySelectorAll('h1');
+    var chapters = {};
+
+    function slugify(text) {
+      return text.toLowerCase()
+        .replace(/[^\w\s가-힣-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 60);
+    }
+
+    h1s.forEach(function(h1) {
+      var m = h1.textContent.trim().match(/(?:Chapter|Ch\.?)\s*(\d+)\s*[\u2014\u2013-]\s*(.+)/);
+      if (!m) return;
+      var chNum = parseInt(m[1], 10);
+      if (!h1.id) h1.id = 'chapter-' + chNum;
+
+      var sections = [];
+      var node = h1.nextElementSibling;
+      while (node && node.tagName !== 'H1') {
+        if (node.tagName === 'H2') {
+          if (!node.id) node.id = slugify(node.textContent);
+          sections.push({ text: node.textContent.trim(), id: node.id });
+        }
+        node = node.nextElementSibling;
+      }
+
+      chapters[chNum] = { title: m[2].trim(), id: h1.id, sections: sections };
+    });
+
+    if (Object.keys(chapters).length === 0) return;
+
+    var overview = document.createElement('section');
+    overview.className = 'guide-overview';
+
+    var header = document.createElement('div');
+    header.className = 'overview-header';
+    var oTitle = document.createElement('h1');
+    oTitle.className = 'overview-title';
+    oTitle.textContent = strs.overviewTitle;
+    header.appendChild(oTitle);
+    overview.appendChild(header);
+
+    chapterGroups.forEach(function(group) {
+      var valid = group.chapters.filter(function(n) { return chapters[n]; });
+      if (valid.length === 0) return;
+
+      var groupEl = document.createElement('div');
+      groupEl.className = 'overview-group';
+
+      var label = document.createElement('div');
+      label.className = 'overview-group-label';
+      label.textContent = group.label;
+      groupEl.appendChild(label);
+
+      valid.forEach(function(chNum) {
+        var ch = chapters[chNum];
+        var chWrap = document.createElement('div');
+        chWrap.className = 'overview-chapter';
+
+        var chLink = document.createElement('a');
+        chLink.className = 'overview-chapter-link';
+        chLink.href = '#' + ch.id;
+        var numSpan = document.createElement('span');
+        numSpan.className = 'overview-chapter-num';
+        numSpan.textContent = 'Ch.' + chNum;
+        chLink.appendChild(numSpan);
+        chLink.appendChild(document.createTextNode(ch.title));
+        chWrap.appendChild(chLink);
+
+        if (ch.sections.length) {
+          var secsDiv = document.createElement('div');
+          secsDiv.className = 'overview-sections';
+          ch.sections.forEach(function(s, i) {
+            if (i > 0) {
+              var sep = document.createElement('span');
+              sep.className = 'sep';
+              sep.textContent = '·';
+              secsDiv.appendChild(sep);
+            }
+            var sLink = document.createElement('a');
+            sLink.href = '#' + s.id;
+            sLink.textContent = s.text;
+            secsDiv.appendChild(sLink);
+          });
+          chWrap.appendChild(secsDiv);
+        }
+
+        groupEl.appendChild(chWrap);
+      });
+
+      overview.appendChild(groupEl);
+    });
+
+    contentEl.insertBefore(overview, contentEl.firstChild);
+  }
+
   // ---- Build Table of Contents ----
   function buildTOC() {
     const headings = contentEl.querySelectorAll('h1, h2');
@@ -563,6 +729,8 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     }
 
     headings.forEach(function(heading, index) {
+      if (heading.classList.contains('overview-title')) return;
+
       // Create ID from heading text
       let id = heading.id;
       if (!id) {

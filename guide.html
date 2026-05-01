@@ -219,6 +219,69 @@ body {
 ::selection { background: rgba(0,113,227,0.20); color: var(--text); }
 mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; padding: 1px 3px; border-radius: 3px; }
 
+/* Guide overview at the start of content */
+.guide-overview {
+  margin: 0 0 80px 0;
+  padding: 0 0 48px 0;
+  border-bottom: 1px solid var(--border);
+}
+.guide-overview .overview-header { margin-bottom: 44px; }
+.guide-overview .overview-title {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  color: var(--text-heading);
+  margin: 0 0 10px 0;
+}
+.overview-group { margin-top: 36px; }
+.overview-group:first-child { margin-top: 0; }
+.overview-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.42);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 18px 0;
+}
+.overview-chapter { margin: 0 0 22px 0; }
+.overview-chapter:last-child { margin-bottom: 0; }
+.overview-chapter-link {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-heading);
+  text-decoration: none;
+  letter-spacing: -0.014em;
+  display: inline-block;
+}
+.overview-chapter-link:hover { color: var(--accent); }
+.overview-chapter-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.overview-sections {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+}
+.overview-sections a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.overview-sections a:hover { color: var(--accent); }
+.overview-sections .sep {
+  margin: 0 8px;
+  color: var(--border-strong);
+}
+
 @media (max-width: 1024px) { #main-content { padding-left: 40px; padding-right: 40px; } }
 
 @media (max-width: 900px) {
@@ -487,7 +550,7 @@ AI 발전으로 개선되는 영역이 분명히 있다. 인식 정확도, 의�
 
 AI가 코드를 짜고, 논문을 요약하고, 실험을 제안하는 시대에 로보티시스트의 가치는 어디에 있는가?
 
-- **문제 정의**: AI는 "이 문제를 풀어줘"라고 하면 풀지만, "어떤 문제를 풀어야 하는가"는 판단하지 못한다. 어떤 센서 조합이 이 환경에 적합한지, 어떤 정확도가 이 application에 충분한지, 어떤 trade-off가 acceptable한지 — 이건 도메인을 아는 사람만 판단할 수 있다.
+- **문제 정의**: AI는 "이 문제를 풀어줘"라고 하면 풀지만, "어떤 문제를 풀어야 하는가"는 판단하지 못한다. 어떤 센서 조합이 이 환경에 적합한지, 어떤 정확도가 이 application에 충분한지, 어떤 trade-off가 acceptable한지 — 이건 도메인을 아는 사람만 판단할 수 있다. (*문제 정의의 본격 frame은 [`../research-notes/chapter_01_review_paper.md`](../research-notes/chapter_01_review_paper.md) + [`ch02_feynman_problem.md`](../research-notes/chapter_02_feynman_problem.md) 에서 다룬다.*)
 - **시스템 통합**: 인식 모듈, 제어 모듈, 통신 스택, 하드웨어를 하나의 작동하는 시스템으로 만드는 것. AI는 각 모듈의 코드를 짤 수 있지만, 모듈 간의 인터페이스, 타이밍, 예외 처리를 설계하는 건 엔지니어의 일이다.
 - **물리 세계와의 접점**: 케이블이 빠졌는지, 센서 렌즈에 먼지가 낀 건지, 모터가 과열된 건지 — AI는 ssh로 접근할 수 없는 문제를 해결하지 못한다. 로봇 앞에 서서 손으로 만지는 사람이 필요하다.
 - **신뢰성 판단**: AI가 "99% 정확도"라고 보고해도, 그 1%가 안전 사고로 이어질 수 있는 상황인지 아닌지는 엔지니어가 판단해야 한다. 자율주행에서 99%는 충분하지 않고, 실내 서빙 로봇에서 99%는 충분할 수 있다.
@@ -1008,7 +1071,7 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 
 Spatial AI를 제대로 이해하려면 수학적 기초가 필요하다. 여기서는 핵심 개념만 간략히 짚고, 깊은 학습은 추천 자료를 참고하자.
 
-수학 파트를 건너뛰고 싶은 마음은 이해한다. 하지만 논문을 읽다 보면 결국 수식에서 막힌다. SLAM 논문에서 "SE(3) 위의 최적화"라는 말이 나오는데 SE(3)이 뭔지 모르면 논문의 핵심 아이디어를 놓치게 되고, "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 한 줄이 이해가 안 되면 그 논문의 방법론 전체를 이해할 수 없다. 여기서 다루는 수학은 "수학 시험을 위한 수학"이 아니라, "로봇 논문을 읽고 구현하기 위한 수학"이다. 공대 3학년이면 선형대수를 들었을 테니, 여기서는 학부 때 배운 것이 로보틱스에서 어떻게 쓰이는지 연결하는 데 집중한다.
+수학 파트를 건너뛰고 싶은 마음은 이해한다. 하지만 논문을 읽다 보면 결국 수식에서 막힌다. SLAM 논문에서 "SE(3) 위의 최적화"라는 말이 나오는데 SE(3)이 뭔지 모르면 논문의 핵심 아이디어를 놓치게 되고, "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 한 줄이 이해가 안 되면 그 논문의 방법론 전체를 이해할 수 없다. 여기서 다루는 수학은 로봇 논문을 읽고 구현하기 위한 수학이다. 공대 3학년이면 선형대수를 들었을 테니, 여기서는 학부 때 배운 것이 로보틱스에서 어떻게 쓰이는지 연결하는 데 집중한다.
 
 고전적인 수학 도구가 여전히 핵심이지만, Differentiable Programming과 Auto-Differentiation(자동 미분)이 최적화 문제 접근 방식을 바꾸고 있다. 예전에는 Jacobian을 손으로 유도해야 했지만, 이제는 PyTorch나 JAX의 자동 미분으로 복잡한 파이프라인의 gradient를 계산할 수 있다. End-to-End 학습 기반 SLAM, Differentiable Rendering(NeRF, 3D Gaussian Splatting) 등이 가능해진 배경이다. 자동 미분이 내부적으로 무엇을 하는지 이해하려면 결국 여기서 다루는 기초가 필요하다.
 
@@ -3365,7 +3428,7 @@ f = [n_O; f]
 P = f^T v = n_O · ω + f · v_O
 ```
 
-이것은 우연이 아니라, spatial vector가 이 성질을 갖도록 설계된 것이다.
+spatial vector는 이 성질을 갖도록 설계되었다.
 
 ### Spatial Inertia
 
@@ -3639,7 +3702,7 @@ print("CoM velocity:", data.vcom[0])
 
 ## 6.1 왜 제어를 배우는가
 
-인식(Perception)이 "세상을 이해하는 것"이라면, 제어(Control)는 "세상에 영향을 미치는 것"이다. 둘 다 없으면 로봇이 아니라 그냥 센서 덩어리 또는 모터 덩어리다.
+인식(Perception)이 "세상을 이해하는 것"이라면, 제어(Control)는 "세상에 영향을 미치는 것"이다. 둘 다 없으면 그냥 센서 덩어리 또는 모터 덩어리에 머문다.
 
 제어를 배워야 하는 이유는 단순하다:
 
@@ -5217,7 +5280,7 @@ model.learn(total_timesteps=1_000_000)
 
 ## 8.4 시뮬레이션 환경
 
-로봇 RL에서 시뮬레이션은 선택이 아니라 필수다. 실제 로봇에서 수백만 스텝의 데이터를 수집하는 건 비현실적이기 때문이다. 주요 시뮬레이터를 정리한다.
+로봇 RL에서 시뮬레이션은 사실상 필수다. 실제 로봇에서 수백만 스텝의 데이터를 수집하는 건 비현실적이기 때문이다. 주요 시뮬레이터를 정리한다.
 
 ### MuJoCo (Multi-Joint dynamics with Contact)
 
@@ -8400,7 +8463,7 @@ task planning, 자연어 기반 내비게이션, human-robot interaction 등에�
 # Ch.14 — SLAM & Odometry
 
 
-로봇이 낯선 환경에서 "나는 어디에 있고, 주변은 어떻게 생겼는가?"를 동시에 알아내는 문제가 SLAM이다. GPS가 안 되는 실내, 지하, 건물 내부에서 로봇이 자율적으로 움직이려면 SLAM은 선택이 아니라 필수이다. 로봇 소프트웨어 엔지니어에게 가장 자주 요구되는 기술 중 하나이므로, 이론과 실습 모두 탄탄히 잡아야 한다.
+로봇이 낯선 환경에서 "나는 어디에 있고, 주변은 어떻게 생겼는가?"를 동시에 알아내는 문제가 SLAM이다. GPS가 안 되는 실내, 지하, 건물 내부에서 로봇이 자율적으로 움직이려면 SLAM이 필요하다. 로봇 소프트웨어 엔지니어에게 가장 자주 요구되는 기술 중 하나이므로, 이론과 실습 모두 탄탄히 잡아야 한다.
 
 ---
 
@@ -11217,6 +11280,8 @@ sudo tcpdump -i eth0 -w capture.pcap
 
 ## 19.6 AI 에이전트를 제대로 쓰는 법
 
+*AI 부려먹기의 일반 frame (writing·reading 영역)은 [`../research-notes/chapter_07_keshav_three_passes.md`](../research-notes/chapter_07_keshav_three_passes.md) + [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/chapter_16_mindset.md) 에서 본격 다룬다. 본 § 19.6은 코드·하드웨어 영역의 분야 적용.*
+
 ### 19.6.1 컨텍스트를 충분히 제공하라
 
 AI에게 질문할 때 가장 중요한 것은 컨텍스트의 양과 질이다.
@@ -11264,9 +11329,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.1 논문 읽기
 
-- 1패스에서 abstract/conclusion 읽은 뒤 AI에게 PDF 던지고: "이 논문의 contribution을 3줄로", "Related work에서 가장 많이 비교하는 baseline이 뭐야", "Eq.5를 단계별로 유도해줘"
-- 단, AI 요약만 믿으면 안 되는 경우: 논문의 subtle한 가정, limitation section의 뉘앙스, 실험 세팅의 세부사항은 직접 읽어야 한다
-- Semantic Scholar + AI: 관련 논문 추천받고, 각 논문의 차이점을 AI에게 비교 정리시키기
+*논문 읽기 워크플로우 (3-pass + AI layer cameo)는 [`../research-notes/chapter_07_keshav_three_passes.md`](../research-notes/chapter_07_keshav_three_passes.md) 의 AI layer cameo에서 본격 다룬다.*
+
+분야 적용은 분야 핵심 논문에 3-pass + AI summary 결합 — abstract 읽고 contribution 3줄 요청, Eq. 단계별 유도 요청.
 
 ### 19.7.2 코드 작성
 
@@ -11277,9 +11342,9 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 
 ### 19.7.3 실험 설계
 
-- "내 모델이 baseline 대비 뭘 개선했는지 보여주려면 어떤 ablation을 해야 해?" — AI가 실험 설계 초안을 잡아줄 수 있다
-- "이 테이블의 결과를 보고 어떤 분석을 할 수 있어?" — AI에게 결과 해석을 시키면 놓친 관점을 찾을 수 있다
-- 주의: AI의 실험 제안을 그대로 따르면 안 된다. 자기 연구의 contribution과 맞지 않는 ablation을 제안할 수 있다. 실험 설계의 최종 판단은 연구자의 몫이다.
+*실험 설계·ablation·결과 해석에 AI 부려먹기 frame은 [`../research-notes/chapter_32_revision_rebuttal.md`](../research-notes/chapter_32_revision_rebuttal.md) (또는 [`ch12_figures.md`](../research-notes/chapter_27_figures.md)) 에 cameo로 담겼다.*
+
+분야 적용은 baseline 비교 표를 AI에게 던지고 *내가 놓친 비교 축*을 묻는 워크플로우.
 
 ### 19.7.4 논문 쓰기
 
@@ -11450,8 +11515,6 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 ### 어떻게 읽을 것인가?
 
 논문 읽기는 별도 가이드에서 본격적으로 다룬다. 왜 읽는가, Keshav 3-pass, 5 Cs, reviewer 시점, CCC 렌즈, 독자 기대 진단까지 일곱 챕터에 걸쳐 [`../research-notes/part1_reading/`](../research-notes/part1_reading/) (ch01–ch07)에 정리되어 있다.
-
-분야 적용은 단순하다. SLAM/CV/로보틱스 분야의 *핵심 논문 5–10편* — 본 챕터 §20.4의 필독 리스트 — 을 첫 1년에 3-pass로 정독한다. 분야의 vocabulary와 baseline 감각이 그 안에서 만들어진다.
 
 ### 필독 논문 리스트
 
@@ -11663,14 +11726,14 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | --- | --- | --- |
 | VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10-11장 + 논문 직접 읽기 |
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
-| 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) |
-| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 |
-| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) |
+| 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [`../research-notes/part1_reading/`](../research-notes/part1_reading/)* |
+| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [`../research-notes/part0_starting/`](../research-notes/part0_starting/)* |
+| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [`../research-notes/part2_writing/E_after/`](../research-notes/part2_writing/E_after/)* |
 
 **실습 과제**:
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
 - 자체 개선 아이디어 실험 — "이 부분을 바꾸면 어떨까?" 시도
-- 논문 작성 시도 — LaTeX로 4-6페이지짜리 draft 써보기
+- 논문 작성 시도 — *본격 frame은 [`../research-notes/part2_writing/`](../research-notes/part2_writing/)* 참고
 - 본 문서의 **10-13장**을 읽으면서 최신 연구 방향을 파악한다
 
 **마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교할 수 있으면 고급 단계에 진입한 것이다. 학회 워크숍에 제출할 수 있는 수준이 되는 것을 목표로 하자.
@@ -11694,7 +11757,7 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 *대학원 수준.* 연구자 마인드셋과 논문 쓰기·실험 설계·학회 발표·리뷰 같은 메타 운영은 별도 가이드 [research-notes](../research-notes/)·[grad-notes](../grad-notes/)에서 본격적으로 다룬다. 본 챕터에서는 분야 instantiation에 해당하는 자리만 짧게 남기고 메타 자리는 link로 안내한다.
 
-핵심 frame 한 줄: 엔지니어는 직업이 아니라 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
+핵심 frame 한 줄: 엔지니어는 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
 
 ### 20.8.0 연구자 마인드셋 (link)
 
@@ -11891,7 +11954,7 @@ A: 2026년 기준, 코드를 한 줄 한 줄 직접 쓰는 능력보다 *코딩 
 
 다만, 에이전트가 만든 코드가 맞는지 틀린지 판단하려면 도메인 지식이 있어야 한다. "이 DataLoader의 num_workers가 왜 0이면 느린지", "이 loss가 왜 NaN이 나오는지", "이 SLAM 코드에서 좌표계가 왜 뒤집혀 있는지" — 이런 건 에이전트가 알아서 못 잡는다(14장 참고). 결국 좋은 코드가 왜 좋은지, 나쁜 코드가 왜 나쁜지를 구분하는 눈이 필요하고, 그 눈은 좋은 코드를 많이 읽어야 생긴다.
 
-추천 접근법: 유명 오픈소스(ORB-SLAM3, Ultralytics, HuggingFace Transformers 등)의 코드를 읽으면서 "왜 이렇게 짰는지"를 이해하라. 코딩 실력은 타이핑 속도가 아니라 코드를 읽고 판단하는 능력이다.
+추천 접근법: 유명 오픈소스(ORB-SLAM3, Ultralytics, HuggingFace Transformers 등)의 코드를 읽으면서 "왜 이렇게 짰는지"를 이해하라. 코딩 실력은 결국 코드를 읽고 판단하는 능력이다.
 
 **Q: 학회 발표는 어떻게 준비하나요?**
 
@@ -12169,12 +12232,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-- [ ] 논문 읽기/관리 환경 세팅 (PDF 리더 + AI 요약 워크플로우, 또는 Zotero)
-- [ ] 코드 에디터 (VS Code — 원격 서버 SSH 연결 가능)
-- [ ] 실험 로깅 (Weights & Biases 또는 MLflow)
-- [ ] GitHub 계정 (+ SSH 키 설정)
-- [ ] LaTeX 환경 (Overleaf 추천 — 온라인, 협업 가능)
-- [ ] 슬라이드 도구 (Google Slides, Keynote, 또는 LaTeX Beamer)
+*연구 도구의 본격 list는 [`../research-notes/part2_writing/`](../research-notes/part2_writing/) + [`part3_presentations/ch02_conference_prep.md`](../research-notes/chapter_34_conference_prep.md) 에 흡수되었다. 분야 적용은 § 20.4 "논문 작성 도구" + § 20.7 추천 학습 경로 참고.*
 
 ### D.4 데이터셋 준비
 
@@ -12215,24 +12273,13 @@ sudo apt-get install libeigen3-dev
 
 ### Day 5: 논문 읽기 시작
 
-```
-[ ] 지도교수/선배에게 "먼저 읽어야 할 논문 3편" 추천받기
-[ ] 논문 관리 환경 세팅 (PDF 리더 + AI 워크플로우)
-[ ] 추천받은 논문 3편의 Abstract와 Conclusion 읽기
-[ ] 모르는 용어 정리 (본 문서의 부록 A 활용)
-```
+*Day 5·6-7의 메타 운영 (논문 추천받기·연구 방향 파악·자기소개 준비)은 [`../grad-notes/chapter_04_two_way_relationship.md`](../grad-notes/chapter_04_two_way_relationship.md) (Day 5) + [`p3_ch01_my_research.md`](../grad-notes/chapter_07_my_research.md) (Day 1-7 시퀀스)에서 본격 다룬다.*
 
 > 팁: 처음 읽는 논문은 이해가 안 되는 게 정상이다. "이 논문이 무슨 문제를 풀려고 하는가?"만 파악해도 첫 주로서는 충분하다.
 
 ### Day 6-7: 연구 방향 파악
 
-```
-[ ] 연구실 최근 논문/프로젝트 살펴보기
-[ ] 선배들의 연구 주제 파악 (누가 어떤 주제를 하고 있는지)
-[ ] 본 문서의 18장(연구실 연구 방향) 읽기
-[ ] 관심 있는 연구 방향 2-3개 메모
-[ ] 다음 주 랩미팅에서 발표할 자기소개 준비
-```
+*위 link 참조. 분야 적용 1줄: 본 문서의 18장(연구실 연구 방향)을 훑으면서 연구실의 최근 논문/프로젝트와 선배들의 주제를 매핑한다.*
 
 ### 첫 주에 하지 않아도 되는 것들
 
@@ -12285,6 +12332,8 @@ sudo apt-get install libeigen3-dev
 **구체적 프로젝트가 있는 사람**은 순서를 거꾸로 간다. Ch.17의 데이터셋·벤치마크부터 훑고, 비슷한 과제의 논문을 한두 편 골라 그 논문이 의존하는 챕터만 역추적한다. 전체를 다 읽을 필요가 없다.
 
 Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 더 자세히 있다. 이 챕터는 큰 방향만 잡는다.
+
+*박사 운영 측면의 프로필별 진입 경로 (학생 단계·연구자 단계 가이드)는 [`../research-notes/README.md`](../research-notes/README.md) 사용법 5 갈래에서 다룬다.*
 
 ## 22.3 하지 말아야 할 것
 
@@ -12387,7 +12436,7 @@ This is why this document covers math, sensors, SLAM, and calibration. Training 
 
 In an era where AI writes code, summarizes papers, and proposes experiments, where does a roboticist's value lie?
 
-- **Problem definition**: tell AI to "solve this problem" and it solves it, but it cannot judge "which problem should be solved". Which sensor combination suits this environment, which accuracy is sufficient for this application, which trade-offs are acceptable — only someone who knows the domain can judge these.
+- **Problem definition**: tell AI to "solve this problem" and it solves it, but it cannot judge "which problem should be solved". Which sensor combination suits this environment, which accuracy is sufficient for this application, which trade-offs are acceptable — only someone who knows the domain can judge these. (*The general frame for problem definition is covered in [`../../research-notes/chapter_01_review_paper.md`](../../research-notes/chapter_01_review_paper.md) and [`ch02_feynman_problem.md`](../../research-notes/chapter_02_feynman_problem.md) *(Korean; English version planned)*.*)
 - **System integration**: Turning perception modules, control modules, communication stacks, and hardware into a single working system. AI can write code for each module, but designing the interfaces, timing, and exception handling between modules is the engineer's job.
 - **Interface with the physical world**: Whether a cable came loose, whether dust settled on a sensor lens, whether a motor overheated — AI cannot solve problems it cannot reach via ssh. You need someone standing in front of the robot, touching it with their hands.
 - **Judging reliability**: Even when AI reports "99% accuracy", whether that 1% leads to a safety incident is something an engineer must judge. 99% is not enough in autonomous driving, but 99% may be enough for an indoor serving robot.
@@ -23118,6 +23167,8 @@ Provide this information to AI and you'll get answers closer to the real cause i
 
 ## 19.6 How to Use AI Agents Properly
 
+*The general frame for putting AI to work (writing/reading territory) is covered in depth in [`../../research-notes/chapter_07_keshav_three_passes.md`](../../research-notes/chapter_07_keshav_three_passes.md) and [`part2_writing/A_workflow/ch01_mindset.md`](../../research-notes/chapter_16_mindset.md) *(Korean; English version planned)*. This §19.6 is the field-specific application to code and hardware.*
+
 ### 19.6.1 Provide Enough Context
 
 The most important thing when asking AI is the quantity and quality of context.
@@ -23165,9 +23216,9 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 
 ### 19.7.1 Reading Papers
 
-- After reading the abstract/conclusion in the first pass, throw the PDF at AI: "summarize this paper's contributions in 3 lines," "which baseline is compared most in Related Work," "derive Eq.5 step by step"
-- But don't trust AI summaries in some cases: subtle assumptions in the paper, the nuance of the limitations section, details of the experimental setup — you have to read these yourself
-- Semantic Scholar + AI: get related paper recommendations, then have AI compare and summarize the differences between each paper
+*The paper-reading workflow (3-pass + AI layer cameo) is covered in depth in the AI-layer cameo of [`../../research-notes/chapter_07_keshav_three_passes.md`](../../research-notes/chapter_07_keshav_three_passes.md) *(Korean; English version planned)*.*
+
+Field-specific application: 3-pass + AI summary on the field's core papers — read the abstract, ask for a 3-line contribution summary, ask for step-by-step derivation of equations.
 
 ### 19.7.2 Writing Code
 
@@ -23178,9 +23229,9 @@ Section 19.6 covered AI's strengths and weaknesses. Building on that, this secti
 
 ### 19.7.3 Experiment Design
 
-- "What ablations should I run to show how my model improves over the baseline?" — AI can draft an experiment design
-- "What analyses can I do looking at the results in this table?" — letting AI interpret results can surface angles you missed
-- Caveat: don't follow AI's experiment proposals as-is. It can suggest ablations that don't match your research contribution. The final judgment on experiment design is the researcher's.
+*The frame for putting AI to work in experiment design, ablations, and result interpretation is captured as a cameo in [`../../research-notes/chapter_32_revision_rebuttal.md`](../../research-notes/chapter_32_revision_rebuttal.md) (or [`ch12_figures.md`](../../research-notes/chapter_27_figures.md)) *(Korean; English version planned)*.*
+
+Field-specific application: throw the baseline-comparison table at AI and ask *which comparison axis I missed* — that workflow.
 
 ### 19.7.4 Writing Papers
 
@@ -23351,8 +23402,6 @@ These are YouTube channels you can watch more casually than textbooks or full co
 ### How to read them
 
 The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
-
-Field-specific application is simple. Read the *5–10 core papers* in SLAM/CV/robotics — the must-read list in §20.4 below — three-pass in your first year. The vocabulary and baseline sense of the field gets built inside that exercise.
 
 ### Must-read paper list
 
@@ -23564,14 +23613,14 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 | --- | --- | --- |
 | Understanding and using VFMs | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
-| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) |
-| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops |
-| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) |
+| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/)* |
+| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/)* |
+| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [`../../research-notes/part2_writing/E_after/`](../../research-notes/part2_writing/E_after/)* |
 
 **Exercises**:
 - Analyze the code of recent papers — clone from GitHub and run it yourself
 - Experiment with your own improvement ideas — try "what if I change this part?"
-- Attempt paper writing — write a 4-6 page draft in LaTeX
+- Attempt paper writing — *the full frame is [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/)*
 - Read **Chapters 10-13** of this document to track recent research directions
 
 **Milestone**: If you can run an experiment that modifies or improves an existing paper's method and compare the result quantitatively, you have entered the advanced stage. Aim to reach a level where the work could be submitted to a conference workshop.
@@ -24046,12 +24095,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 Research tools
 
-- [ ] Paper reading/management environment set up (PDF reader + AI summary workflow, or Zotero)
-- [ ] Code editor (VS Code — can connect to a remote server via SSH)
-- [ ] Experiment logging (Weights & Biases or MLflow)
-- [ ] GitHub account (+ SSH key set up)
-- [ ] LaTeX environment (Overleaf recommended — online, collaborative)
-- [ ] Slide tool (Google Slides, Keynote, or LaTeX Beamer)
+*The full list of research tools has been absorbed into [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) and [`part3_presentations/ch02_conference_prep.md`](../../research-notes/chapter_34_conference_prep.md) *(Korean; English version planned)*. Field-specific application: see §20.4 "Paper-writing tools" and §20.7 recommended learning roadmap.*
 
 ### D.4 Dataset preparation
 
@@ -24092,24 +24136,13 @@ When you first join a lab, it is natural to feel lost about what to do. This gui
 
 ### Day 5: Start reading papers
 
-```
-[ ] Ask your advisor/seniors for "3 papers to read first"
-[ ] Set up a paper management environment (PDF reader + AI workflow)
-[ ] Read the Abstract and Conclusion of the 3 recommended papers
-[ ] List unfamiliar terms (use Appendix A of this document)
-```
+*The meta-skill operations of Day 5 and Day 6–7 (asking for paper recommendations, getting the research direction, preparing a self-introduction) are treated in depth in [`../../grad-notes/chapter_04_two_way_relationship.md`](../../grad-notes/chapter_04_two_way_relationship.md) (Day 5) and [`p3_ch01_my_research.md`](../../grad-notes/chapter_07_my_research.md) (the Day 1–7 sequence) *(Korean; English version planned)*.*
 
 > Tip: It is normal not to understand a paper on the first read. Even grasping just "what problem is this paper trying to solve?" is enough for the first week.
 
 ### Day 6–7: Get the research direction
 
-```
-[ ] Look at the lab's recent papers/projects
-[ ] Figure out the seniors' research topics (who is working on what)
-[ ] Read Ch.18 of this document (the lab's research directions)
-[ ] Jot down 2–3 research directions that interest you
-[ ] Prepare a self-introduction for next week's lab meeting
-```
+*See the link above. Field-specific one-liner: skim Ch.18 of this document (the lab's research directions) and map the lab's recent papers/projects to the seniors' topics.*
 
 ### Things you do not need to do in the first week
 
@@ -24212,6 +24245,7 @@ Draft date: 2025.12.28 · Revision date: 2026.04.23
     ko: {
       docTitle: 'Spatial AI 로보틱스 가이드',
       topbarTitle: 'Spatial AI 로보틱스 가이드',
+      overviewTitle: 'Spatial AI 로보틱스 가이드',
       groups: [
         { label: '기초 지식', chapters: [1, 2, 3] },
         { label: '로봇', chapters: [4, 5, 6, 7, 8] },
@@ -24225,6 +24259,7 @@ Draft date: 2025.12.28 · Revision date: 2026.04.23
     en: {
       docTitle: 'Spatial AI · Robotics Guide',
       topbarTitle: 'Spatial AI · Robotics Guide',
+      overviewTitle: 'Spatial AI · Robotics Guide',
       groups: [
         { label: 'Foundations', chapters: [1, 2, 3] },
         { label: 'Robot Systems', chapters: [4, 5, 6, 7, 8] },
@@ -24284,6 +24319,7 @@ Draft date: 2025.12.28 · Revision date: 2026.04.23
 
       document.getElementById('toc-container').innerHTML = '';
       embedDemos();
+      buildOverview();
       buildTOC();
 
       contentEl.style.display = 'block';
@@ -24311,6 +24347,106 @@ Draft date: 2025.12.28 · Revision date: 2026.04.23
     });
   }
 
+  // ---- Build Guide Overview (top of page) ----
+  function buildOverview() {
+    var strs = I18N[state.lang];
+    var chapterGroups = strs.groups;
+    var h1s = contentEl.querySelectorAll('h1');
+    var chapters = {};
+
+    function slugify(text) {
+      return text.toLowerCase()
+        .replace(/[^\w\s가-힣-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 60);
+    }
+
+    h1s.forEach(function(h1) {
+      var m = h1.textContent.trim().match(/(?:Chapter|Ch\.?)\s*(\d+)\s*[\u2014\u2013-]\s*(.+)/);
+      if (!m) return;
+      var chNum = parseInt(m[1], 10);
+      if (!h1.id) h1.id = 'chapter-' + chNum;
+
+      var sections = [];
+      var node = h1.nextElementSibling;
+      while (node && node.tagName !== 'H1') {
+        if (node.tagName === 'H2') {
+          if (!node.id) node.id = slugify(node.textContent);
+          sections.push({ text: node.textContent.trim(), id: node.id });
+        }
+        node = node.nextElementSibling;
+      }
+
+      chapters[chNum] = { title: m[2].trim(), id: h1.id, sections: sections };
+    });
+
+    if (Object.keys(chapters).length === 0) return;
+
+    var overview = document.createElement('section');
+    overview.className = 'guide-overview';
+
+    var header = document.createElement('div');
+    header.className = 'overview-header';
+    var oTitle = document.createElement('h1');
+    oTitle.className = 'overview-title';
+    oTitle.textContent = strs.overviewTitle;
+    header.appendChild(oTitle);
+    overview.appendChild(header);
+
+    chapterGroups.forEach(function(group) {
+      var valid = group.chapters.filter(function(n) { return chapters[n]; });
+      if (valid.length === 0) return;
+
+      var groupEl = document.createElement('div');
+      groupEl.className = 'overview-group';
+
+      var label = document.createElement('div');
+      label.className = 'overview-group-label';
+      label.textContent = group.label;
+      groupEl.appendChild(label);
+
+      valid.forEach(function(chNum) {
+        var ch = chapters[chNum];
+        var chWrap = document.createElement('div');
+        chWrap.className = 'overview-chapter';
+
+        var chLink = document.createElement('a');
+        chLink.className = 'overview-chapter-link';
+        chLink.href = '#' + ch.id;
+        var numSpan = document.createElement('span');
+        numSpan.className = 'overview-chapter-num';
+        numSpan.textContent = 'Ch.' + chNum;
+        chLink.appendChild(numSpan);
+        chLink.appendChild(document.createTextNode(ch.title));
+        chWrap.appendChild(chLink);
+
+        if (ch.sections.length) {
+          var secsDiv = document.createElement('div');
+          secsDiv.className = 'overview-sections';
+          ch.sections.forEach(function(s, i) {
+            if (i > 0) {
+              var sep = document.createElement('span');
+              sep.className = 'sep';
+              sep.textContent = '·';
+              secsDiv.appendChild(sep);
+            }
+            var sLink = document.createElement('a');
+            sLink.href = '#' + s.id;
+            sLink.textContent = s.text;
+            secsDiv.appendChild(sLink);
+          });
+          chWrap.appendChild(secsDiv);
+        }
+
+        groupEl.appendChild(chWrap);
+      });
+
+      overview.appendChild(groupEl);
+    });
+
+    contentEl.insertBefore(overview, contentEl.firstChild);
+  }
+
   // ---- Build Table of Contents ----
   function buildTOC() {
     const headings = contentEl.querySelectorAll('h1, h2');
@@ -24328,6 +24464,8 @@ Draft date: 2025.12.28 · Revision date: 2026.04.23
     }
 
     headings.forEach(function(heading, index) {
+      if (heading.classList.contains('overview-title')) return;
+
       // Create ID from heading text
       let id = heading.id;
       if (!id) {

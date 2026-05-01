@@ -525,7 +525,7 @@ f = [n_O; f]
 P = f^T v = n_O · ω + f · v_O
 ```
 
-이것은 우연이 아니라, spatial vector가 이 성질을 갖도록 설계된 것이다.
+spatial vector는 이 성질을 갖도록 설계되었다.
 
 ### Spatial Inertia
 
