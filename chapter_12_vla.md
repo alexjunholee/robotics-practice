@@ -17,7 +17,7 @@
 - 단순 인식을 넘어 행동까지 포함
 - 시뮬레이션과 실제 환경의 간극 (Sim-to-Real)
 
-Embodied AI가 기존 AI와 다른 점은, 모델이 단순히 "이것은 컵이다"라고 분류하는 데 그치지 않고, 실제로 컵을 집어 올리는 물리적 행동을 수행해야 한다는 것이다. 이 과정에서 중력, 마찰, 충돌 같은 물리 법칙을 모두 고려해야 하므로, 단순 이미지 분류보다 훨씬 어렵다.
+Embodied AI는 "이것은 컵이다"라는 분류 위에 실제로 컵을 집어 올리는 물리적 행동까지 얹는다. 이 과정에서 중력, 마찰, 충돌 같은 물리 법칙을 모두 고려해야 하므로, 단순 이미지 분류보다 훨씬 어렵다.
 
 > **추천 자료**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — RT-1, RT-2, PaLM-E 등의 공식 블로그 포스트
@@ -91,7 +91,7 @@ action = model.predict(
 
 ### 12.2.4 Navigation 관련
 
-로봇이 물체를 조작(manipulation)하는 것뿐 아니라, 환경 내에서 이동(navigation)하는 것도 Embodied AI의 핵심 과제이다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용하는 접근이다.
+물체 조작(manipulation)과 함께 환경 내 이동(navigation)도 Embodied AI의 핵심 과제이다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용하는 접근이다.
 
 **LINGO**: Language-guided Indoor Navigation
 

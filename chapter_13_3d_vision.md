@@ -297,7 +297,7 @@ mesh = volume.extract_triangle_mesh()
 
 ## 13.5 Neural Rendering
 
-딥러닝을 이용한 새로운 3D 표현 및 렌더링 방식이다. 기존 방법(mesh, point cloud)은 복잡한 장면(반사, 투명체, 가는 구조)을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해서, 이런 복잡한 효과를 자연스럽게 처리한다. 최근에는 SLAM과 결합되어 실시간 매핑에도 쓰인다.
+딥러닝을 이용한 새로운 3D 표현 및 렌더링 방식이다. 기존 방법(mesh, point cloud)은 복잡한 장면(반사, 투명체, 가는 구조)을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해서, 이런 복잡한 효과를 자연스럽게 처리한다. 최근에는 SLAM과 결합되어 실시간 매핑에까지 활용 범위가 넓어지는 중.
 
 ### 13.5.1 NeRF (Neural Radiance Fields)
 
