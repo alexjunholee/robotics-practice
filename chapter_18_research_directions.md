@@ -280,3 +280,40 @@ class GlobalModule:
     - Local/Global 지도 동기화 — 두 모듈의 지도가 다르면 로봇이 혼란
     - Semantic 정보 일관성 — "저건 의자"라고 했는데 나중에 "테이블"로 바뀌면 안 됨
     - **선행 학습**: 3장(최적화), 14장(SLAM, 맵 관리) 필수
+
+## 18.6 Motivation ≠ Novelty — 명작 논문 3편에서 배우는 도약
+
+연구 방향을 잡을 때 가장 자주 막히는 자리가 motivation과 novelty의 구분이다. 신입생이 자기 첫 글을 검토할 때 가장 먼저 부딪히는 벽이기도 하다.
+
+**핵심 명제.** "기존이 X를 못한다 → 우리가 모듈을 붙였다"는 **motivation**이지 **novelty**가 아니다. Top-tier 논문은 항상 "왜 그 모듈이 그 형태여야 하는가"에 원리적으로 답한다. 같은 문제를 풀더라도 2티어 논문은 motivation 단계에서 멈추고, top-tier 논문은 한 걸음 더 나아간다.
+
+세 편의 명작이 그 도약의 모양을 보여준다. 각 사례에서 motivation은 분야의 누구나 적을 수 있는 한 줄이지만, novelty는 그 한 줄이 *왜 그 형태로* 해결되어야 하는가에 대한 원리적 답이다.
+
+### Case 1 — ORB-SLAM (Mur-Artal et al. 2015)
+
+- **Motivation**: 기존 SLAM이 mono / stereo / RGB-D를 각각 별도로 처리 → 통합이 필요하다
+- **2티어 답**: stereo branch · RGB-D branch · mono branch을 추가한 시스템 한 편
+- **Novelty (top-tier)**: 모든 modality가 같은 factor-graph 백본을 공유하도록 frontend를 재정의. 차이는 frontend 측정 함수에 한정되고, backend는 동일한 bundle adjustment formulation으로 통합
+- **도약의 한 줄**: backend와 frontend의 *분리* 자체가 modality 일반화의 충분조건이라는 원리적 답
+
+### Case 2 — 3D Gaussian Splatting (Kerbl et al. 2023)
+
+- **Motivation**: NeRF가 너무 느리다 → 빠르게 만들어야 한다
+- **2티어 답**: NeRF 위에 sparse sampling · pruning · distillation 같은 가속 모듈 한 층
+- **Novelty (top-tier)**: ray-marching이라는 비효율의 원천을 탐색 자체로 진단하고, 그 자리를 명시적 primitive(3D Gaussian)로 교체. Primitive를 직접 rasterization 가능한 형태로 설계
+- **도약의 한 줄**: "암시적 표현 + ray-marching"이라는 NeRF의 근본 형식이 속도 한계의 원인이라는 진단, 그 자리에 직접 rasterization을 허용하는 primitive를 두는 *형식의 교체*
+
+### Case 3 — DUSt3R (Wang et al. 2024)
+
+- **Motivation**: 기존 SfM이 brittle하고 camera intrinsics가 필요하다 → 더 강건한 방법이 필요하다
+- **2티어 답**: SfM 파이프라인 안의 한 단계(matching · triangulation 등)를 NN으로 대체
+- **Novelty (top-tier)**: 2-view 입력으로부터 양쪽 view의 pointmap을 직접 예측하는 reformulation. Camera intrinsics 추정조차 pointmap에서 유도되는 부산물
+- **도약의 한 줄**: SfM의 단계별 분해를 거치지 않고 *공통 좌표계의 pointmap*을 출력 형식으로 두면 intrinsics · correspondence · structure가 동시에 풀린다는 형식 재구성
+
+### 도약의 공통 패턴
+
+세 편 모두에서 motivation은 1년차 학생도 읽고 적을 수 있는 한 줄. Novelty가 다르다. 세 편이 모두 묻는 질문은 같은 모양을 한다 — *왜 그 모듈이 그 형태여야 하는가*. 답하는 방식은 *형식의 재구성*에 가까운 자리. 모듈을 더하는 자리에서 멈추지 않고, 형식 자체의 다른 좌표에 솔루션을 둔다.
+
+> 본인 논문의 contribution 절을 읽었을 때 *왜 이 모듈이어야 하는가*에 한 단락이 답해 있는가. 답이 비어 있으면 그 자리는 아직 motivation 단계다. 한 단락이 채워지기 시작하는 자리에서 novelty가 생긴다.
+
+논문 쓰기의 본격 메타 가이드는 [「연구노트」 Ch.23 Introduction](../research-notes/chapter_23_introduction.md) · [Ch.25 Method](../research-notes/chapter_25_method.md)에서 다룬다. 이 절은 *연구 방향 선택* 시점에 그 도약을 미리 의식하게 두는 자리다.
