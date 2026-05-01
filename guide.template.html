@@ -141,12 +141,12 @@ body {
   transition: color 0.15s, background 0.15s, border-color 0.15s;
   cursor: pointer;
 }
-.toc-item.toc-h3 { padding: 5px 16px 5px 36px; font-size: 13px; font-weight: 400; color: var(--text-muted); letter-spacing: -0.012em; }
-.toc-item.toc-h3 + .toc-item:not(.toc-h3) { margin-top: 6px; }
+.toc-item.toc-h2 { padding: 5px 16px 5px 36px; font-size: 13px; font-weight: 400; color: var(--text-muted); letter-spacing: -0.012em; }
+.toc-item.toc-h2 + .toc-item:not(.toc-h2) { margin-top: 6px; }
 .toc-item:hover { color: var(--text); background: rgba(0,0,0,0.04); }
-.toc-item.toc-h3:hover { color: var(--text); }
+.toc-item.toc-h2:hover { color: var(--text); }
 .toc-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,113,227,0.08); font-weight: 600; }
-.toc-item.toc-h3.active { font-weight: 500; color: var(--accent); }
+.toc-item.toc-h2.active { font-weight: 500; color: var(--accent); }
 .toc-item.toc-hidden { display: none; }
 
 .toc-group-label {
@@ -447,6 +447,12 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     ko: {
       docTitle: 'Spatial AI 로보틱스 가이드',
       topbarTitle: 'Spatial AI 로보틱스 가이드',
+      groups: [
+        { label: '기초 지식', chapters: [1, 2, 3] },
+        { label: '로봇', chapters: [4, 5, 6, 7, 8] },
+        { label: '인식과 공간 이해', chapters: [9, 10, 11, 12, 13, 14] },
+        { label: '연구 실전', chapters: [15, 16, 17, 18, 19, 20, 21, 22] }
+      ],
       searchPlaceholder: '섹션 검색... (Ctrl+K)',
       noResults: '검색 결과 없음',
       loading: '가이드 렌더링 중...'
@@ -454,6 +460,12 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     en: {
       docTitle: 'Spatial AI · Robotics Guide',
       topbarTitle: 'Spatial AI · Robotics Guide',
+      groups: [
+        { label: 'Foundations', chapters: [1, 2, 3] },
+        { label: 'Robot Systems', chapters: [4, 5, 6, 7, 8] },
+        { label: 'Perception & Spatial Understanding', chapters: [9, 10, 11, 12, 13, 14] },
+        { label: 'Research Practice', chapters: [15, 16, 17, 18, 19, 20, 21, 22] }
+      ],
       searchPlaceholder: 'Search sections... (Ctrl+K)',
       noResults: 'No matching sections',
       loading: 'Rendering guide...'
@@ -536,29 +548,18 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
 
   // ---- Build Table of Contents ----
   function buildTOC() {
-    const headings = contentEl.querySelectorAll('h2, h3');
+    const headings = contentEl.querySelectorAll('h1, h2');
     const tocContainer = document.getElementById('toc-container');
     const fragment = document.createDocumentFragment();
 
-    // Part groupings: insert label before the first chapter number of each group
-    // Chapters appear in order: 1..3, 4..8, 9..14, 15..22
-    var groupFirstChapter = {
-      '1.': '기초 지식',
-      '4.': '로봇',
-      '9.': '인식과 공간 이해',
-      '15.': '연구 실전'
-    };
+    var groupFirstChapter = {};
+    I18N[state.lang].groups.forEach(function(group) {
+      if (group.chapters.length) groupFirstChapter[group.chapters[0]] = group.label;
+    });
 
-    function getGroupLabel(text) {
-      var trimmed = text.trim();
-      for (var prefix in groupFirstChapter) {
-        if (trimmed.indexOf(prefix) === 0) {
-          var label = groupFirstChapter[prefix];
-          delete groupFirstChapter[prefix];
-          return label;
-        }
-      }
-      return null;
+    function getChapterNumber(text) {
+      var m = text.trim().match(/(?:Chapter|Ch\.?)\s*(\d+)/);
+      return m ? parseInt(m[1], 10) : null;
     }
 
     headings.forEach(function(heading, index) {
@@ -573,13 +574,12 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
         heading.id = id;
       }
 
-      // Insert group label before first chapter of each part (h2 only)
-      if (heading.tagName === 'H2') {
-        var groupLabel = getGroupLabel(heading.textContent);
-        if (groupLabel) {
+      if (heading.tagName === 'H1') {
+        var chNum = getChapterNumber(heading.textContent);
+        if (chNum !== null && groupFirstChapter[chNum]) {
           var label = document.createElement('div');
           label.className = 'toc-group-label';
-          label.textContent = groupLabel;
+          label.textContent = groupFirstChapter[chNum];
           fragment.appendChild(label);
         }
       }
@@ -603,7 +603,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
 
   // ---- Scroll tracking with IntersectionObserver ----
   function setupScrollTracking() {
-    const headings = contentEl.querySelectorAll('h2, h3');
+    const headings = contentEl.querySelectorAll('h1, h2');
     if (headings.length === 0) return;
 
     const observer = new IntersectionObserver(function(entries) {
@@ -648,7 +648,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
       window.addEventListener('scroll', function() {
         if (!ticking) {
           requestAnimationFrame(function() {
-            const curHeadings = contentEl.querySelectorAll('h2, h3');
+            const curHeadings = contentEl.querySelectorAll('h1, h2');
             const tocContainer = document.getElementById('toc-container');
             let found = null;
             const scrollTop = window.scrollY + 80;
