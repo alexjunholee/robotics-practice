@@ -1,7 +1,7 @@
 # Ch.13 — 3D 비전 (3D Vision)
 
 
-로봇이 2D 이미지만으로는 "저 물체가 얼마나 멀리 있는지", "저 벽 뒤에 뭐가 있는지"를 알기 어렵다. 3D 비전은 로봇에게 공간 감각을 부여하는 분야다. 포인트 클라우드 처리, 3D 물체 감지, 장면 복원이 여기에 속한다. SLAM도, 로봇 조작(manipulation)도 이 내용 없이는 온전히 이해하기 어렵다. 다음 챕터(SLAM)의 기반이 되는 내용이니 꼼꼼히 봐두자.
+로봇이 2D 이미지만으로는 "저 물체가 얼마나 멀리 있는지", "저 벽 뒤에 뭐가 있는지"를 알기 어렵다. 3D 비전은 로봇에게 공간 감각을 부여하는 분야다. 포인트 클라우드 처리, 3D 물체 감지, 장면 복원이 여기에 속한다. SLAM도, 로봇 조작(manipulation)도 이 내용 없이는 온전히 이해하기 어렵다.
 
 ## 13.1 Point Cloud 기초
 
@@ -66,7 +66,7 @@ o3d.visualization.draw_geometries([pcd])
 points = np.asarray(pcd.points)  # (N, 3)
 ```
 
-실제로 작업할 때는 Open3D가 Python에서 바로 쓸 수 있어서 프로토타이핑에 좋고, PCL은 C++ ROS 노드를 만들 때 주로 쓴다. 처음 시작한다면 Open3D부터 시작하는 것을 추천한다.
+실제로 작업할 때는 Open3D가 Python에서 바로 쓸 수 있어서 프로토타이핑에 좋고, PCL은 C++ ROS 노드를 만들 때 주로 쓴다. 처음 시작한다면 Open3D부터 보면 된다.
 
 > **추천 자료**
 > - [Open3D Getting Started](http://www.open3d.org/docs/release/getting_started.html) — Python으로 포인트 클라우드 다루기 입문
@@ -77,7 +77,7 @@ points = np.asarray(pcd.points)  # (N, 3)
 
 ### 13.2.1 필터링 (Filtering)
 
-원시 포인트 클라우드는 노이즈가 많고 점의 밀도가 불균일하다. 이걸 그대로 쓰면 이후 알고리즘(정합, 세그멘테이션 등)이 느려지거나 결과가 나빠진다. 필터링은 모든 포인트 클라우드 파이프라인의 첫 번째 단계이다.
+원시 포인트 클라우드는 노이즈가 많고 점의 밀도가 불균일하다. 그대로 쓰면 이후 알고리즘(정합, 세그멘테이션 등)이 느려지거나 결과가 나빠진다. 필터링은 모든 포인트 클라우드 파이프라인의 첫 번째 단계이다.
 
 **Voxel Grid Downsampling**:
 공간을 격자로 나누고 각 격자 내 점들을 하나로 축소한다.
@@ -105,7 +105,7 @@ filtered_pcd = pcd.select_by_index(ind)
 
 ### 13.2.2 Normal Estimation
 
-각 점의 표면 법선 벡터를 추정한다. 많은 알고리즘의 전처리 단계이다.
+각 점의 표면 법선 벡터를 추정한다. 3D 처리 파이프라인 전반의 전처리 단계이다.
 
 ICP (정합), 표면 재구성(reconstruction), 조명 계산 등 거의 모든 3D 처리에서 법선 벡터를 요구한다. 법선이 없으면 "이 점이 평면의 일부인지 모서리의 일부인지"를 알 수 없다.
 
@@ -137,7 +137,7 @@ reg = o3d.pipelines.registration.registration_icp(
 transformation = reg.transformation
 ```
 
-ICP의 직관: "두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 쌍들이 최대한 겹치도록 회전+이동 변환을 구한다. 한 번에 완벽하지 않으니 이걸 반복한다." 선형대수적으로는 SVD(특이값 분해)를 이용해 최적의 회전 행렬 R과 이동 벡터 t를 구하는 것이다.
+ICP의 직관: "두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 쌍들이 최대한 겹치도록 회전+이동 변환을 구한다. 한 번에 완벽하지 않으니 이 과정을 반복한다." 선형대수적으로는 SVD(특이값 분해)를 이용해 최적의 회전 행렬 R과 이동 벡터 t를 구하는 것이다.
 
 **Point-to-Plane ICP**: 점과 평면 거리 최소화 (더 정확)
 
@@ -160,11 +160,11 @@ ICP의 직관: "두 포인트 클라우드에서 가장 가까운 점 쌍을 찾
 
 ## 13.3 3D Object Detection
 
-포인트 클라우드에서 3D bounding box를 예측한다. 자율주행에서 "저 차가 어디 있고 얼마나 큰지"를 아는 핵심 기술이다.
+포인트 클라우드에서 3D bounding box를 예측하는 분야다. 자율주행에서 "저 차가 어디 있고 얼마나 큰지"를 파악하는 핵심 기술이다.
 
 ### 13.3.1 Point-based Methods
 
-PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 **생(raw) 포인트에 직접** 딥러닝을 적용한다는 것이다. 이전에는 "불규칙한 점들에 어떻게 CNN을 쓰지?"라는 질문에 답이 없었는데, PointNet이 이를 해결했다.
+PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 raw 포인트에 직접 딥러닝을 적용한다는 것이다. 이전에는 "불규칙한 점들에 어떻게 CNN을 쓰지?"라는 질문에 답이 없었는데, PointNet이 이를 해결했다.
 
 **PointNet (2017)**:
 - Raw 포인트에 직접 적용
@@ -244,7 +244,7 @@ PointPillars의 핵심 아이디어: 3D 공간을 수직 기둥(pillar)으로 �
 Bundle Adjustment는 "모든 카메라 포즈와 3D 점 위치를 동시에 최적화"하는 것이다. 비선형 최소자승법(Levenberg-Marquardt 등)을 사용하며, 변수가 수만~수십만 개가 될 수 있다. 선형대수에서 배운 최소자승법의 대규모 비선형 확장이라고 보면 된다.
 
 **도구**:
-- **COLMAP**: 가장 많이 사용, GUI/CLI
+- **COLMAP**: 분야 사실상 표준, GUI/CLI
 - **OpenMVG**: 라이브러리 형태
 
 ```bash
@@ -263,7 +263,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 
 SfM 결과를 기반으로 dense 포인트 클라우드를 생성한다.
 
-SfM이 "카메라가 어디 있었는지"와 "sparse한 3D 점들"을 복원한다면, MVS는 그 카메라 포즈를 이용해 **조밀한(dense)** 3D 포인트 클라우드를 만든다. SfM → MVS → Mesh 생성이 전형적인 3D 복원 파이프라인이다.
+SfM이 "카메라가 어디 있었는지"와 "sparse한 3D 점들"을 복원한다면, MVS는 그 카메라 포즈를 이용해 조밀한(dense) 3D 포인트 클라우드를 만든다. SfM → MVS → Mesh 생성이 전형적인 3D 복원 파이프라인이다.
 
 **도구**: COLMAP (dense reconstruction), OpenMVS
 
@@ -297,7 +297,7 @@ mesh = volume.extract_triangle_mesh()
 
 ## 13.5 Neural Rendering
 
-딥러닝을 이용한 새로운 3D 표현 및 렌더링 방식이다. 기존 방법(mesh, point cloud)은 복잡한 장면(반사, 투명체, 가는 구조)을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해서, 이런 복잡한 효과를 자연스럽게 처리한다. 최근에는 SLAM과 결합되어 실시간 매핑에까지 활용 범위가 넓어지는 중.
+딥러닝을 이용한 새로운 3D 표현 및 렌더링 방식이다. 기존 방법(mesh, point cloud)은 복잡한 장면(반사, 투명체, 가는 구조)을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해서, 이런 복잡한 효과를 자연스럽게 처리한다. 최근에는 SLAM과 결합되어 실시간 매핑에까지 활용 범위가 넓어지고 있다.
 
 ### 13.5.1 NeRF (Neural Radiance Fields)
 
@@ -349,7 +349,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 **렌더링**: Gaussian을 이미지에 투영 (splatting)
 
 **장점**:
-- NeRF 대비 **실시간 렌더링** (100+ FPS)
+- NeRF 대비 실시간 렌더링 (100+ FPS)
 - 빠른 학습 (수 분)
 - 명시적 표현 (편집 용이)
 
@@ -366,13 +366,13 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 **3DGS + SLAM (최신 트렌드)**:
 
-3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 만들어지고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 실시간으로 구축한다.
+3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 열리고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 실시간으로 구축한다.
 
 - **SplaTAM (2024)**: RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 수행한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가/업데이트)을 번갈아 수행하며, 기존 Neural SLAM 대비 렌더링 품질과 속도를 크게 높인다.
-- **MonoGS (2024)**: 단안(monocular) 카메라만으로 3DGS 기반 SLAM을 수행한다. 깊이 센서 없이도 dense한 3D 맵을 구축할 수 있어 관심을 끌고 있다.
+- **MonoGS (2024)**: 단안(monocular) 카메라만으로 3DGS 기반 SLAM을 수행한다. 깊이 센서 없이도 dense한 3D 맵을 구축할 수 있다.
 - **Gaussian-SLAM (2024)**: 서브맵(sub-map) 기반으로 대규모 환경에서도 3DGS SLAM을 돌릴 수 있다.
 
-로봇이 돌아다니면서 포토리얼리스틱한 3D 맵을 실시간으로 만들 수 있다면, AR/VR 콘텐츠 생성, 디지털 트윈, 건물 검사 등 다양한 응용이 열린다.
+로봇이 돌아다니면서 포토리얼리스틱한 3D 맵을 실시간으로 만들 수 있다면, 디지털 트윈이나 AR/VR 콘텐츠 생성 같은 응용이 열린다.
 
 > **추천 자료**
 > - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — 3DGS 원 논문
@@ -468,7 +468,7 @@ density σ(x) = max(-dΦ_s(f(x))/dt, 0) / Φ_s(f(x))
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-NeRF, 3DGS, NeuS 등 최근 3D 비전의 핵심 기술들은 하나의 공통 원리를 공유한다: **렌더링 과정을 미분 가능하게 만들어서, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화**하는 것이다. 이 패러다임을 analysis-by-synthesis라 한다.
+NeRF, 3DGS, NeuS 등 최근 3D 비전의 핵심 기술들은 하나의 공통 원리를 공유한다: 렌더링 과정을 미분 가능하게 만들어서, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화하는 것이다. 이 패러다임을 analysis-by-synthesis라 한다.
 
 **Volume Rendering Equation**
 
@@ -519,7 +519,7 @@ mesh 기반 3D 표현을 미분 가능하게 렌더링하는 도구들이다.
 5. 반복
 ```
 
-이 패러다임의 장점은 3D 표현 형태에 관계없이 "이미지"라는 공통 supervision을 쓸 수 있다는 점이다. 별도의 3D ground truth가 필요 없다.
+이 패러다임은 3D 표현 형태에 관계없이 "이미지"라는 공통 supervision을 쓸 수 있다. 별도의 3D ground truth가 필요 없다.
 
 **SLAM과의 연결**
 
@@ -576,7 +576,7 @@ MIT에서 개발한 실시간 3D scene graph 구축 시스템이다. RGB-D 또�
 3. 물체 노드 추출 및 관계 설정
 4. 계층 구조 연결
 
-Hydra의 핵심은 이 모든 과정을 실시간(online)으로 수행한다는 점이다. 로봇이 탐색하면서 동시에 scene graph가 갱신된다.
+Hydra는 이 모든 과정을 실시간(online)으로 수행한다. 로봇이 탐색하면서 동시에 scene graph가 갱신된다.
 
 **ConceptGraphs**
 
@@ -592,7 +592,7 @@ Foundation model(CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구�
 5. Scene graph 구축
 ```
 
-"빨간 컵"처럼 훈련 시 본 적 없는 쿼리도 처리할 수 있다는 것이 핵심이다.
+훈련 시 본 적 없는 "빨간 컵" 같은 쿼리도 처리할 수 있다.
 
 **왜 필요한가?**
 
@@ -602,7 +602,7 @@ Foundation model(CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구�
 | Semantic Map | 부분적 | "컵"은 찾지만 "주방에 있는"이라는 관계 처리 어려움 |
 | 3D Scene Graph | 가능 | 물체 + 관계 + 계층 모두 표현 |
 
-task planning, 자연어 기반 내비게이션, human-robot interaction 등에서 scene graph는 3D 표현과 고수준 추론을 연결하는 다리 역할을 한다.
+task planning이나 자연어 기반 내비게이션에서 scene graph는 3D 표현과 고수준 추론을 연결하는 다리 역할을 한다.
 
 > **추천 자료**
 > - [Hughes et al., "Hydra: A Real-time Spatial Perception System for 3D Scene Graph Construction and Optimization" (RSS 2022)](https://arxiv.org/abs/2201.13360) — Hydra 원 논문
@@ -617,4 +617,4 @@ task planning, 자연어 기반 내비게이션, human-robot interaction 등에�
 > - **2020~**: NeRF 등장으로 Neural Rendering이 주목받았다. 사진 몇 장으로 포토리얼리스틱한 3D 장면을 만들 수 있게 되었고, Instant-NGP, Mip-NeRF 등 후속 연구가 빠르게 이어졌다.
 > - **2023~**: 3D Gaussian Splatting이 NeRF의 속도 한계를 극복했다. 실시간 렌더링과 명시적 표현의 장점을 동시에 갖추었고, BEVFusion 등 멀티모달 3D 감지가 자율주행에서 기준점이 되었다.
 > - **2024~**: 3DGS + SLAM 결합(SplaTAM, MonoGS, Gaussian-SLAM)으로 Neural SLAM의 새 방향이 열리고 있다. 로봇이 이동하면서 실시간으로 포토리얼리스틱 3D 맵을 구축하는 방식이다.
-> - **지금 주목할 것**: SLAM/로보틱스 응용에서 3DGS 기반 방법이 빠르게 늘고 있다. NeRFStudio에서 두 방법 모두 실험해볼 수 있으니 직접 비교해보는 것을 추천한다.
+> - **지금 주목할 것**: SLAM/로보틱스 응용에서 3DGS 기반 방법이 빠르게 늘고 있다. NeRFStudio에서 두 방법 모두 실험해볼 수 있으니 직접 비교해보자.

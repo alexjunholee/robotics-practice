@@ -20,6 +20,8 @@ Spatial AI is the fusion of these techniques:
 - **Deep Learning**: learning-based recognition and prediction
 - **Sensor Fusion**: integrating information from multiple sensors
 
+All of these techniques face a common obstacle: uncertainty. Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, §1.1 identifies five sources. First, the environment itself is inherently unpredictable. Second, every measurement carries resolution limits and noise. Third, motor torque variation and wheel slip mean the actual motion differs from the commanded motion — robot actuation is never exact. Fourth, the moment you abstract an environment or a robot into equations, the model is already an approximation. Fifth, under real-time constraints, approximate solutions replace optimal ones. These five sources are the shared motivation for every algorithm this guide covers, from Bayes filters to SLAM; the detailed treatment appears in Ch.3 §3.9–3.11 and Ch.14 §14.16.
+
 > **Further reading**
 > - [Andrew Davison — From SLAM to Spatial AI (MIT Robotics)](https://www.youtube.com/watch?v=BRRtlR0C_CY) — Prof. Andrew Davison's talk laying out the vision for Spatial AI. Worth watching to orient yourself in this field.
 > - [FutureMapping paper (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — The paper that first systematized the Spatial AI concept.

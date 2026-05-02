@@ -1,6 +1,6 @@
 # Ch.17 — 데이터셋 & 벤치마크
 
-로보틱스와 컴퓨터 비전 연구에서 데이터셋은 알고리즘만큼 중요하다. 좋은 데이터 없이는 좋은 모델을 만들 수 없고, 공정한 벤치마크 없이는 논문에서 자기 방법이 진짜 좋은지 증명할 수 없다. 이 챕터는 주요 데이터셋의 구성과 특징, 자체 데이터 수집·관리 방법을 정리한다.
+로보틱스와 컴퓨터 비전 연구에서 데이터셋은 알고리즘만큼 중요하다. 좋은 데이터 없이는 좋은 모델을 만들 수 없고, 공정한 벤치마크 없이는 논문에서 자기 방법이 진짜 좋은지 증명할 수 없다. 여기서는 주요 데이터셋의 구성과 특징, 자체 데이터 수집·관리 방법을 본다.
 
 최근 **합성 데이터(Synthetic Data)**의 비중이 높아지고 있다. 실제 데이터 수집과 라벨링은 비용과 시간이 많이 드는데, 시뮬레이터에서 자동 생성한 합성 데이터로 사전학습한 뒤 소량의 실제 데이터로 미세조정(fine-tuning)하는 방식이 자리를 잡았다. NVIDIA Isaac Sim의 Domain Randomization이나 Habitat의 대규모 장면 생성이 대표적이다. **Sim-to-Real 데이터셋** — 시뮬레이터 데이터와 대응하는 실제 데이터를 쌍으로 제공하는 데이터셋 — 도 활발히 구축되고 있다.
 
@@ -10,22 +10,22 @@
 
 자율주행 연구의 시작점이 된 오래된 데이터셋이다.
 
-KITTI는 2012년에 공개된 이후 자율주행·3D 비전 연구의 사실상 표준 벤치마크 역할을 해 왔다. 비록 지금은 더 크고 다양한 데이터셋이 있지만, 많은 논문이 여전히 KITTI 결과를 보고하고 있어서 기준점으로 알아 두어야 한다. 특히 Visual Odometry, Stereo Depth Estimation 분야에서는 아직도 KITTI가 1차 벤치마크이다.
+KITTI는 2012년에 공개된 이후 자율주행·3D 비전 연구의 사실상 표준 벤치마크 역할을 해 왔다. 비록 지금은 더 크고 다양한 데이터셋이 있지만, 2024년 기준으로도 주요 VO·SLAM 논문들이 KITTI 결과를 보고하므로 기준점으로 알아 두어야 한다. 특히 Visual Odometry, Stereo Depth Estimation 분야에서는 아직도 KITTI가 1차 벤치마크이다.
 
-**구성**:
+구성:
 - 스테레오 카메라
 - 3D LiDAR (Velodyne HDL-64E)
 - GPS/IMU
 - 2D/3D 라벨
 
-**태스크**:
+태스크:
 - Stereo depth estimation
 - Optical flow
 - Visual odometry / SLAM
 - 3D object detection
 - Semantic segmentation
 
-**다운로드**: https://www.cvlibs.net/datasets/kitti/
+다운로드: https://www.cvlibs.net/datasets/kitti/
 
 > **추천 자료**
 > - [KITTI Benchmark 공식 사이트](https://www.cvlibs.net/datasets/kitti/) — 데이터셋 다운로드 및 각 태스크별 리더보드 확인
@@ -36,20 +36,20 @@ KITTI는 2012년에 공개된 이후 자율주행·3D 비전 연구의 사실상
 
 대규모 자율주행 데이터셋이다.
 
-KITTI보다 센서 구성이 더 풍부하고(360도 카메라, Radar 포함), 데이터 규모도 훨씬 크다. 최근 자율주행 논문에서 KITTI와 함께 가장 많이 인용되는 데이터셋이다. 특히 3D Object Detection과 BEV(Bird's Eye View) 기반 인식 연구에서 핵심적으로 쓰인다.
+KITTI보다 센서 구성이 더 풍부하고(360도 카메라, Radar 포함), 데이터 규모도 훨씬 크다. 3D Object Detection과 BEV(Bird's Eye View) 기반 인식 연구에서 KITTI와 함께 표준 평가셋으로 자리잡았다.
 
-**구성**:
+구성:
 - 6개 카메라 (360° 커버)
 - 5개 Radar
 - 1개 LiDAR
 - 1000 장면, 40K 키프레임
 
-**특징**:
+특징:
 - 23개 객체 클래스
 - 풍부한 Annotation (속성, 가시성)
 - 밤, 비 등 다양한 조건
 
-**평가 메트릭**: mAP, NDS
+평가 메트릭: mAP, NDS
 
 > **추천 자료**
 > - [nuScenes devkit Documentation](https://www.nuscenes.org/nuscenes) — 데이터셋 사용법, devkit API, 튜토리얼 노트북
@@ -61,12 +61,12 @@ Google의 대규모 자율주행 데이터셋이다.
 
 nuScenes와 함께 최신 자율주행 연구의 양대 벤치마크이다. 데이터 품질과 규모 면에서 가장 앞서 있으며, 매년 챌린지를 통해 최신 기술 동향을 파악할 수 있다.
 
-**규모**:
+규모:
 - 1,150 장면 (20초)
 - 12M LiDAR 라벨
 - 12M 카메라 라벨
 
-**특징**:
+특징:
 - 높은 품질의 센서
 - 다양한 환경 (도시, 교외, 밤)
 - 연간 챌린지 개최
@@ -77,7 +77,7 @@ nuScenes와 함께 최신 자율주행 연구의 양대 벤치마크이다. 데�
 
 ### 17.1.4 VIO / VINS용 데이터셋
 
-Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은 알아야 한다. 이 분야의 논문이라면 거의 예외 없이 이 데이터셋들에서 평가를 수행한다.
+Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은 알아야 한다. VIO·SLAM 논문이 평가셋으로 이 두 데이터셋을 빠뜨리는 경우는 드물다.
 
 **TUM RGB-D**:
 - RGB-D 카메라 시퀀스
@@ -113,12 +113,12 @@ Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은
 
 Object detection 연구를 한다면 COCO 데이터셋의 평가 메트릭(COCO mAP)은 업계 표준이므로 이해해야 한다. IoU threshold별 AP를 계산하는 방식이 PASCAL VOC와 다르니 주의할 것.
 
-**특징**:
+특징:
 - 80 객체 카테고리
 - 33만 이미지, 150만 객체 인스턴스
 - Dense annotation (bounding box, segmentation mask)
 
-**태스크**:
+태스크:
 - Object detection
 - Instance segmentation
 - Keypoint detection
@@ -152,7 +152,7 @@ Object detection 연구를 한다면 COCO 데이터셋의 평가 메트릭(COCO 
 
 데이터셋을 다운로드했는데 디렉토리 구조와 라벨 포맷을 제대로 이해하지 못하면, 데이터 로더를 짜는 데만 며칠이 걸릴 수 있다. 특히 3D 라벨은 좌표계(coordinate system)가 데이터셋마다 다르므로(카메라 좌표계 vs LiDAR 좌표계, y-up vs z-up 등) 문서를 꼼꼼히 읽어야 한다.
 
-**예시: KITTI Object Detection**:
+예시 — KITTI Object Detection:
 
 ```
 kitti/
@@ -165,7 +165,7 @@ kitti/
     └── ...
 ```
 
-**라벨 파일 읽기 예시**:
+라벨 파일 읽기 예시:
 
 ```python
 # KITTI label format: type truncated occluded alpha bbox(4) dimensions(3) location(3) rotation_y
@@ -225,7 +225,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 ## 17.4 자체 데이터 수집
 
-공개 데이터셋만으로는 자기 연구에 딱 맞는 데이터를 구할 수 없는 경우가 많다. 자체 로봇에 맞는 센서 구성, 특수한 환경 조건 등을 위해 직접 데이터를 수집해야 할 때가 있다. 이때 센서 동기화, 캘리브레이션, 라벨링 과정을 체계적으로 해 두지 않으면 나중에 데이터를 쓸 수 없게 된다.
+공개 데이터셋만으로는 자기 연구에 딱 맞는 데이터를 구하기 어렵다. 자체 로봇에 맞는 센서 구성, 특수한 환경 조건을 위해 직접 데이터를 수집해야 할 때가 있다. 이때 센서 동기화, 캘리브레이션, 라벨링 과정을 체계적으로 해 두지 않으면 나중에 데이터를 쓸 수 없게 된다.
 
 ### 17.4.1 센서 동기화
 
@@ -233,15 +233,15 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 카메라와 LiDAR의 타임스탬프가 10ms만 어긋나도 고속 주행 시 수십 cm의 위치 오차가 생긴다. 센서 퓨전의 기본 전제가 "같은 시점의 데이터"인데, 동기화가 안 되면 그 전제가 무너진다.
 
-**하드웨어 동기화**:
+하드웨어 동기화:
 - 트리거 신호로 동시 촬영
 - PPS (Pulse Per Second) 신호
 
-**소프트웨어 동기화**:
+소프트웨어 동기화:
 - 타임스탬프 기반 근사 동기화
 - 보간(interpolation) 사용
 
-**ROS에서는 받는 시점만 필터링 가능:**
+ROS에서는 받는 시점만 필터링 가능:
 
 ```python
 import message_filters
@@ -258,14 +258,14 @@ sync.registerCallback(self.callback)
 
 ### 17.4.2 캘리브레이션
 
-**Camera Intrinsic**: 체커보드 사용 (OpenCV calibrateCamera)
+Camera Intrinsic: 체커보드 사용 (OpenCV calibrateCamera)
 
-**Camera-LiDAR Extrinsic**:
+Camera-LiDAR Extrinsic:
 - 체커보드 기반 (평면 맞춤)
 - Target-based (특수 타겟 사용)
 - Target-less (자동 특징점 매칭)
 
-**Camera-IMU**: Kalibr 사용 권장
+Camera-IMU: Kalibr 사용 권장
 
 캘리브레이션이 부정확하면 카메라에서 본 객체 위치와 LiDAR에서 본 객체 위치가 일치하지 않는다. 센서 퓨전 정확도는 캘리브레이션 품질에 달려 있다. 선형대수 기준으로 보면, intrinsic은 3×3 카메라 행렬 K, extrinsic은 4×4 변환 행렬 [R|t]에 해당한다.
 
@@ -275,7 +275,7 @@ sync.registerCallback(self.callback)
 
 ### 17.4.3 라벨링 도구
 
-데이터를 수집했으면 라벨링(annotation)을 해야 한다. 라벨링은 연구에서 가장 시간이 많이 드는 작업 중 하나이며, 라벨 품질이 모델 성능을 좌우한다. 최근에는 SAM(Segment Anything Model) 같은 기초 모델을 활용한 반자동 라벨링이 보편화되고 있다.
+데이터를 수집했으면 라벨링(annotation)을 해야 한다. 라벨링은 연구에서 가장 시간이 많이 드는 작업 중 하나이며, 라벨 품질이 모델 성능을 좌우한다. SAM(Segment Anything Model) 같은 기초 모델을 활용한 반자동 라벨링도 2023년 이후 연구 환경에서 쓰이기 시작했다.
 
 **CVAT (Computer Vision Annotation Tool)**:
 - 웹 기반, 무료
@@ -291,7 +291,7 @@ sync.registerCallback(self.callback)
 - SUSTechPOINTS: LiDAR 포인트 클라우드
 - KITTI-360 labeling tool
 
-**합성 데이터를 통한 자동 라벨링**: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 생성하면 라벨도 함께 만들어지므로 수동 라벨링이 필요 없다. Domain Randomization으로 텍스처, 조명, 배경을 무작위 변형하면 모델의 일반화 성능도 높일 수 있다. 실제 데이터 대비 수집 비용이 거의 0에 가깝다.
+합성 데이터를 통한 자동 라벨링: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 생성하면 라벨도 함께 만들어지므로 수동 라벨링이 필요 없다. Domain Randomization으로 텍스처, 조명, 배경을 무작위 변형하면 모델의 일반화 성능도 높일 수 있다. 실제 데이터 대비 수집 비용이 거의 0에 가깝다.
 
 > **추천 자료**
 > - [CVAT Documentation](https://docs.cvat.ai/) — 오픈소스 라벨링 도구 공식 문서

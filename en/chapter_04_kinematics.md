@@ -897,9 +897,313 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 > - Dietrich et al., "An Overview of Null Space Projections for Redundant, Torque-Controlled Robots" (2015)
 > - Franka Emika research interface: https://frankaemika.github.io/docs/
 
+Everything so far has been deterministic kinematics. §4.7 layers probability on top of it.
+
 ---
 
-## 4.7 Further Reading
+## 4.7 Advanced: Probabilistic Motion Models
+
+### 4.7.1 From Determinism to Probability
+
+§4.2 forward kinematics and §4.3 inverse kinematics are deterministic. Feed in joint angles and one end-effector position comes out; feed in an end-effector position and a set of joint angles comes out. The output is a point estimate given the input. It is the world of manipulators where the math tells you exactly where the fingertip is.
+
+Wheeled mobile robots are different. The wheels do not roll at precisely the commanded speed. There is slip, effective radius changes with wear, and asymmetric wear on left and right wheels generates straight-line error. The result: even after issuing a control command $u_t$, the next pose $x_t$ is not a single point but a probability distribution. Formalizing that distribution is what a **probabilistic motion model** does.
+
+The state is a planar pose, $x_t = (x, y, \theta)^T \in SE(2)$. The motion model defines the conditional probability distribution of the next pose given the previous pose $x_{t-1}$ and the control input $u_t$:
+
+$$p(x_t \mid u_t, x_{t-1})$$
+
+Two representations exist for this distribution.
+
+**Velocity model**: the control input is given as linear and angular velocity, $u_t = (v, \omega)^T$. Usable at the planning stage. The error between the robot's commanded speed and its actual speed is modeled as noise.
+
+**Odometry model**: the control input is a pair of poses measured by the wheel encoder, $u_t = (\bar{x}_{t-1}, \bar{x}_t)$. It is retrospective, so it cannot be used for planning, but since the encoder measures directly, it is more accurate than the velocity model.
+
+For each of the two models there are two ways to use it: **closed-form density evaluation** and **sampling**. Closed-form returns a probability density value answering "how plausible is this hypothesized pose $x_t$?" That is what EKF and UKF need in their prediction step. Sampling is forward simulation that generates the next pose. A particle filter (MCL) uses this form directly. The four combinations are covered in §4.7.2–§4.7.5.
+
+
+### 4.7.2 Velocity Motion Model — Closed-Form
+
+**Intuition.** Without noise, a robot moving at linear velocity $v$ and angular velocity $\omega$ traces a circular arc. At $\omega = 0$ the arc degenerates to a straight line. Noise means the arc actually traced differs from the commanded one. Closed-form evaluation inverts this logic: given two poses $x_{t-1}$ and $x_t$, it back-computes the center $(x_c, y_c)$ and radius $r^*$ of the arc connecting them, recovers the hypothetical velocity $(\hat{v}, \hat{\omega})$ that would have produced that arc, and then evaluates the difference from the commanded velocity $(v, \omega)$ under a noise distribution.
+
+**Equations.** Given $x_{t-1} = (x, y, \theta)^T$ and a hypothesized $x_t = (x', y', \theta')^T$:
+
+$$\mu = \frac{1}{2} \cdot \frac{(x - x')\cos\theta + (y - y')\sin\theta}{(y - y')\cos\theta - (x - x')\sin\theta}$$
+
+$$x_c = \frac{x + x'}{2} + \mu(y - y'), \quad y_c = \frac{y + y'}{2} + \mu(x' - x)$$
+
+$$r^* = \sqrt{(x - x_c)^2 + (y - y_c)^2}$$
+
+$$\Delta\theta = \text{atan2}(y' - y_c,\ x' - x_c) - \text{atan2}(y - y_c,\ x - x_c)$$
+
+$$\hat{v} = \frac{\Delta\theta \cdot r^*}{\Delta t}, \quad \hat{\omega} = \frac{\Delta\theta}{\Delta t}, \quad \hat{\gamma} = \frac{\theta' - \theta}{\Delta t} - \hat{\omega}$$
+
+The noise model is additive, with variance proportional to command magnitude. The second argument $b$ (variance) of `prob(a, b)` is:
+
+$$b_v = \alpha_1|v| + \alpha_2|\omega|, \quad b_\omega = \alpha_3|v| + \alpha_4|\omega|, \quad b_\gamma = \alpha_5|v| + \alpha_6|\omega|$$
+
+$b_v$ is the noise variance on linear velocity, $b_\omega$ on angular velocity. $\hat{\gamma}$ is a final-heading correction term. With only two noise variables $(v, \omega)$, hypothesized poses are confined to a 2D manifold within 3D pose space — a *degeneracy* problem. Adding $\hat{\gamma}$ secures full 3D support.
+
+The six parameters physically: $\alpha_1, \alpha_2$ weight the variance of linear-velocity noise; $\alpha_3, \alpha_4$ weight angular-velocity noise; $\alpha_5, \alpha_6$ weight final-heading noise. Because variance scales linearly with command magnitude, faster motion becomes more uncertain — which matches intuition. Each robot needs its $\alpha_i$ calibrated from straight-line, circular, and figure-eight trajectories.
+
+**Algorithm box (PR Table 5.1: `motion_model_velocity`).**
+
+```
+Algorithm motion_model_velocity(x_t, u_t, x_{t-1}):
+  # inputs: x_t=(x',y',θ'), u_t=(v,ω), x_{t-1}=(x,y,θ)
+  # output: p(x_t | u_t, x_{t-1}) probability density
+
+  μ = 0.5 * ((x − x')cosθ + (y − y')sinθ) / ((y − y')cosθ − (x − x')sinθ)
+  x* = (x + x')/2 + μ(y − y')
+  y* = (y + y')/2 + μ(x' − x)
+  r* = sqrt((x − x*)² + (y − y*)²)
+  Δθ = atan2(y' − y*, x' − x*) − atan2(y − y*, x − x*)
+  v̂ = Δθ·r*/Δt
+  ω̂ = Δθ/Δt
+  γ̂ = (θ' − θ)/Δt − ω̂
+
+  p1 = prob(v − v̂,  α₁|v| + α₂|ω|)
+  p2 = prob(ω − ω̂,  α₃|v| + α₄|ω|)
+  p3 = prob(γ̂,       α₅|v| + α₆|ω|)
+
+  return p1 · p2 · p3
+```
+
+`prob(a, b)` is the density of a zero-mean normal or triangular distribution with variance $b$.
+
+Generating a pose sample from the same noise parameters works in the opposite direction, covered next.
+
+### 4.7.3 Velocity Motion Model — Sampling
+
+Closed-form evaluated a hypothesized pose by inverting the arc. Sampling runs in the opposite direction: draw noise first, perturb the commanded velocity, then integrate the arc forward to produce one pose sample. A particle filter needs exactly this one sample per particle, and the implementation is simpler than the closed-form version.
+
+Perturbed controls:
+
+$$\hat{v} = v + \text{sample}(\alpha_1|v| + \alpha_2|\omega|)$$
+$$\hat{\omega} = \omega + \text{sample}(\alpha_3|v| + \alpha_4|\omega|)$$
+$$\hat{\gamma} = \text{sample}(\alpha_5|v| + \alpha_6|\omega|)$$
+
+Forward arc integration:
+
+$$x' = x - \frac{\hat{v}}{\hat{\omega}}\sin\theta + \frac{\hat{v}}{\hat{\omega}}\sin(\theta + \hat{\omega}\Delta t)$$
+$$y' = y + \frac{\hat{v}}{\hat{\omega}}\cos\theta - \frac{\hat{v}}{\hat{\omega}}\cos(\theta + \hat{\omega}\Delta t)$$
+$$\theta' = \theta + \hat{\omega}\Delta t + \hat{\gamma}\Delta t$$
+
+Note: when $|\hat{\omega}| < \epsilon$ the above diverges. The implementation must fall back to a straight-line approximation: $x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$.
+
+`sample(b)` draws a zero-mean sample with variance $b$. Normal approximation: $\frac{b}{6}\sum_{i=1}^{12}\text{rand}(-1,1)$ (central-limit-theorem approximation using 12 uniform draws).
+
+**Algorithm box (PR Table 5.3: `sample_motion_model_velocity`).**
+
+```
+Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
+  # inputs: u_t=(v,ω), x_{t-1}=(x,y,θ)
+  # output: sample x_t ~ p(x_t | u_t, x_{t-1})
+
+  v̂ = v + sample(α₁|v| + α₂|ω|)
+  ω̂ = ω + sample(α₃|v| + α₄|ω|)
+  γ̂ = sample(α₅|v| + α₆|ω|)
+
+  if |ω̂| < ε:   # straight-line fallback
+    x' = x + v̂·cosθ·Δt
+    y' = y + v̂·sinθ·Δt
+  else:
+    x' = x − (v̂/ω̂)sinθ + (v̂/ω̂)sin(θ + ω̂Δt)
+    y' = y + (v̂/ω̂)cosθ − (v̂/ω̂)cos(θ + ω̂Δt)
+  θ' = θ + ω̂Δt + γ̂Δt
+
+  return (x', y', θ')ᵀ
+```
+
+**Closed-form vs. sampling.** `motion_model_velocity` returns a probability density value, used alongside the Jacobian in the EKF/UKF prediction step. `sample_motion_model_velocity` produces one pose and is called directly to propagate each particle in a particle filter (MCL, §14.7). Both algorithms share the same noise parameters $\alpha_1..\alpha_6$, but their directions are opposite: closed-form *evaluates* a hypothesized pose, sampling *generates* the next pose.
+
+```python
+import numpy as np
+
+def sample_normal(b):
+    """Zero-mean normal approximation sample with variance b (12 uniform draws)."""
+    return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+
+def sample_motion_model_velocity(v, omega, x, y, theta, dt,
+                                  alpha, eps=1e-6):
+    """
+    Velocity motion model sampling.
+    alpha: [α₁, α₂, α₃, α₄, α₅, α₆]
+    """
+    v_hat   = v     + sample_normal(alpha[0]*abs(v) + alpha[1]*abs(omega))
+    w_hat   = omega + sample_normal(alpha[2]*abs(v) + alpha[3]*abs(omega))
+    g_hat   =         sample_normal(alpha[4]*abs(v) + alpha[5]*abs(omega))
+
+    if abs(w_hat) < eps:
+        x_new = x + v_hat * np.cos(theta) * dt
+        y_new = y + v_hat * np.sin(theta) * dt
+    else:
+        r = v_hat / w_hat
+        x_new = x - r * np.sin(theta) + r * np.sin(theta + w_hat * dt)
+        y_new = y + r * np.cos(theta) - r * np.cos(theta + w_hat * dt)
+    theta_new = theta + w_hat * dt + g_hat * dt
+
+    return x_new, y_new, theta_new
+```
+
+The two velocity model variants share the same noise parameters $\alpha_1..\alpha_6$ and the same assumption that the control input is a commanded velocity $(v, \omega)$. Changing that assumption leads to the second model family.
+
+### 4.7.4 Odometry Motion Model — Closed-Form
+
+**Intuition.** The velocity model estimates motion from commanded velocity. The odometry model goes the other way: it treats the pair of poses $u_t = (\bar{x}_{t-1}, \bar{x}_t)$ measured by the wheel encoder as if they were the control. The relative motion between these two poses is decomposed into three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$: first rotate toward the destination, then translate straight, then correct the final heading. This decomposition can represent any planar motion.
+
+Strictly speaking, the odometry measurement is a sensor reading, but here it is treated as a control input. Treating it as a genuine measurement model would require adding velocity to the state space, which enlarges the dimension. This is a practical simplification.
+
+**Equations.** Extract relative motion from the odometry measurement $u_t = (\bar{x}_{t-1}, \bar{x}_t)$:
+
+$$\delta_{\text{rot1}} = \text{atan2}(\bar{y}' - \bar{y},\ \bar{x}' - \bar{x}) - \bar{\theta}$$
+$$\delta_{\text{trans}} = \sqrt{(\bar{x} - \bar{x}')^2 + (\bar{y} - \bar{y}')^2}$$
+$$\delta_{\text{rot2}} = \bar{\theta}' - \bar{\theta} - \delta_{\text{rot1}}$$
+
+Noise model (four parameters $\alpha_1..\alpha_4$). The variance argument to `prob()` depends on the $(\hat\delta_{\text{rot1}}, \hat\delta_{\text{trans}}, \hat\delta_{\text{rot2}})$ back-computed from the hypothesized pose:
+
+$$b_{\text{rot1}} = \alpha_1|\hat\delta_{\text{rot1}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
+$$b_{\text{trans}} = \alpha_3|\hat\delta_{\text{trans}}| + \alpha_4(|\hat\delta_{\text{rot1}}| + |\hat\delta_{\text{rot2}}|)$$
+$$b_{\text{rot2}} = \alpha_1|\hat\delta_{\text{rot2}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
+
+$\alpha_1$: how much rotation disturbs rotation (rotational slip); $\alpha_2$: how much translation disturbs rotation; $\alpha_3$: translation's own variance; $\alpha_4$: how much rotation disturbs translation. The final-heading correction trick from the velocity model ($\alpha_5, \alpha_6$) is unnecessary here. Three independent noise variables naturally secure 3D support.
+
+One implementation note: angular differences must be wrapped to $[-\pi, \pi]$. Omitting this wrap is a common bug that causes the distribution to blow up.
+
+**Algorithm box (PR Table 5.5: `motion_model_odometry`).**
+
+```
+Algorithm motion_model_odometry(x_t, u_t, x_{t-1}):
+  # inputs: x_t=(x',y',θ'), u_t=(x̄_{t-1}, x̄_t), x_{t-1}=(x,y,θ)
+  # output: p(x_t | u_t, x_{t-1}) probability density
+
+  # extract (δ_rot1, δ_trans, δ_rot2) from odometry measurement
+  δ_rot1  = atan2(ȳ' − ȳ, x̄' − x̄) − θ̄
+  δ_trans = sqrt((x̄ − x̄')² + (ȳ − ȳ')²)
+  δ_rot2  = θ̄' − θ̄ − δ_rot1
+
+  # same decomposition from the hypothesized pose pair (inverse model)
+  δ̂_rot1  = atan2(y' − y, x' − x) − θ
+  δ̂_trans = sqrt((x − x')² + (y − y')²)
+  δ̂_rot2  = θ' − θ − δ̂_rot1
+
+  # evaluate the three parameter differences as independent noise
+  p1 = prob(δ_rot1  − δ̂_rot1,  α₁|δ̂_rot1|  + α₂|δ̂_trans|)
+  p2 = prob(δ_trans − δ̂_trans, α₃|δ̂_trans| + α₄(|δ̂_rot1| + |δ̂_rot2|))
+  p3 = prob(δ_rot2  − δ̂_rot2,  α₁|δ̂_rot2|  + α₂|δ̂_trans|)
+
+  return p1 · p2 · p3
+```
+
+The three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ are treated as independent noise variables, so the result can be used directly to evaluate a hypothesized pose in the EKF/UKF prediction step.
+
+### 4.7.5 Odometry Model — Sampling for Particle Filters
+
+The odometry closed-form used an inverse model to evaluate a hypothesized pose. Sampling reverses the direction: add noise to the $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ extracted from the odometry, then compose the perturbed values forward to generate a new pose. No inverse model is needed at all, making the implementation considerably simpler than the closed-form version.
+
+**Equations.** Forward composition (PR eq. 5.40):
+
+$$\begin{pmatrix}x'\\y'\\\theta'\end{pmatrix} = \begin{pmatrix}x\\y\\\theta\end{pmatrix} + \begin{pmatrix}\hat{\delta}_{\text{trans}}\cos(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{trans}}\sin(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{rot1}} + \hat{\delta}_{\text{rot2}}\end{pmatrix}$$
+
+This approximates motion as *two rotations plus one translation* rather than a circular arc — a first-order arc approximation for small $\Delta t$. Unlike velocity sampling, there is no need for an $\omega \to 0$ branch.
+
+**Algorithm box (PR Table 5.6: `sample_motion_model_odometry`).**
+
+```
+Algorithm sample_motion_model_odometry(u_t, x_{t-1}):
+  # inputs: u_t=(x̄_{t-1}, x̄_t), x_{t-1}=(x,y,θ)
+  # output: sample x_t ~ p(x_t | u_t, x_{t-1})
+
+  # extract relative motion from odometry
+  δ_rot1  = atan2(ȳ' − ȳ, x̄' − x̄) − θ̄
+  δ_trans = sqrt((x̄ − x̄')² + (ȳ − ȳ')²)
+  δ_rot2  = θ̄' − θ̄ − δ_rot1
+
+  # perturb with noise
+  δ̂_rot1  = δ_rot1  − sample(α₁|δ_rot1|  + α₂|δ_trans|)
+  δ̂_trans = δ_trans − sample(α₃|δ_trans| + α₄(|δ_rot1| + |δ_rot2|))
+  δ̂_rot2  = δ_rot2  − sample(α₁|δ_rot2|  + α₂|δ_trans|)
+
+  # forward composition
+  x' = x + δ̂_trans · cos(θ + δ̂_rot1)
+  y' = y + δ̂_trans · sin(θ + δ̂_rot1)
+  θ' = θ + δ̂_rot1 + δ̂_rot2
+
+  return (x', y', θ')ᵀ
+```
+
+ROS2 Nav2's `nav2_amcl` implements this as the `differential` motion model. It is the direct application to wheeled AMR localization.
+
+```python
+import numpy as np
+
+def sample_motion_model_odometry(bar_x_prev, bar_x_curr, x, y, theta,
+                                  alpha):
+    """
+    Odometry motion model sampling.
+    bar_x_prev, bar_x_curr: odometry pose pair (x̄,ȳ,θ̄)
+    alpha: [α₁, α₂, α₃, α₄]
+    """
+    bx,  by,  bt  = bar_x_prev
+    bx_, by_, bt_ = bar_x_curr
+
+    d_rot1  = np.arctan2(by_ - by, bx_ - bx) - bt
+    d_trans = np.sqrt((bx - bx_)**2 + (by - by_)**2)
+    d_rot2  = bt_ - bt - d_rot1
+
+    def sample_normal(b):
+        return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+
+    dh_rot1  = d_rot1  - sample_normal(alpha[0]*abs(d_rot1)  + alpha[1]*abs(d_trans))
+    dh_trans = d_trans - sample_normal(alpha[2]*abs(d_trans) + alpha[3]*(abs(d_rot1) + abs(d_rot2)))
+    dh_rot2  = d_rot2  - sample_normal(alpha[0]*abs(d_rot2)  + alpha[1]*abs(d_trans))
+
+    x_new     = x + dh_trans * np.cos(theta + dh_rot1)
+    y_new     = y + dh_trans * np.sin(theta + dh_rot1)
+    theta_new = theta + dh_rot1 + dh_rot2
+
+    return x_new, y_new, theta_new
+```
+
+<!-- DEMO: probabilistic_motion_model.html -->
+
+All four algorithms so far model motion alone, without a map. In a localization problem, a map $m$ is present.
+
+### 4.7.6 Motion + Map: Map-Conditioned Motion Model
+
+The models above ignored map information. In localization, a map $m$ is available, and it can be used to filter out physically impossible poses.
+
+**Equations.** Computing the map-conditioned transition distribution exactly is hard. A practical approximate factorization:
+
+$$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid m)$$
+
+The first factor $p(x_t \mid u_t, x_{t-1})$ is the motion model from §4.7.2–§4.7.5. The second factor $p(x_t \mid m)$ is the map-conditioned probability: in an occupancy grid, it is close to 1 when $x_t$ lies in a free cell and close to 0 in a wall or occupied cell.
+
+**Effect.** Particles no longer walk through walls in the particle filter. The simplest implementation samples a new pose, queries the map, and sets that particle's weight to 0 (or very low) when the cell is occupied. Strictly, $p(x_t \mid m)$ acts as a prior rather than a likelihood here, so the approximation assumes the motion model and the map information are independent — a limitation worth noting.
+
+In practice an occupancy grid has unknown regions in addition to free space. Whether $p(x_t \mid m)$ is set to 1 or to some intermediate value for unknown cells affects localization quality. ROS2 Nav2's default treats unknown cells as free.
+
+The mathematical basis for this factorization is in §3.3 (Bayes' theorem and conditional independence, Ch.3). The product factorization is exact only when the motion model and the map prior are independent.
+
+### 4.7.7 What Survived
+
+**Standard in wheeled AGVs and warehouse robots.** Both the velocity model and the odometry model — especially their sampling variants — are implemented directly in ROS2 Nav2 `nav2_amcl`. They provide the motion prior in particle filter localization for warehouse AMRs, service robots, and logistics automation. At 1k–10k particles the filter runs in real time at 20–50 fps.
+
+**Platforms where VIO and IMU preintegration are standard.** Humanoids, drones, and legged robots are hard to describe in terms of body velocity $(v, \omega)$. Legs bring a different slip model entirely, and drones move in SE(3) rather than SE(2). On these platforms, IMU preintegration provides the motion prior. That topic is in §14.10. The formal framework — $p(x_t \mid u_t, x_{t-1})$ — is the same; the content is entirely different.
+
+**Limits of the model.** Every model here is SE(2)-only. Holonomic robots (Mecanum wheels) or vehicles with lateral dynamics require separate models.
+
+**Where these models are used next.** §14.7 Monte Carlo Localization (MCL) calls `sample_motion_model_odometry` directly in the prediction step of the particle filter (Ch.14). §14.10 IMU preintegration shows how the wheeled odometry model and the IMU model compare (Ch.14). In both contexts, the $p(x_t \mid u_t, x_{t-1})$ derived here enters the prediction term of the Gaussian filter and nonparametric filter families from §3.10 and §3.11 (Ch.3).
+
+---
+
+Deterministic FK/IK maps input to a single output point. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
+
+One question remains. Every model here stacks noise on top of the kinematic constraint that wheels do not slip. In mud or on inclines — environments where that constraint itself breaks down — how far can $\alpha_i$ calibration compensate? §4.8 collects the textbooks and software referenced across this chapter.
+
+---
+
+## 4.8 Further Reading
 
 To study kinematics and mechatronics seriously, the most effective approach is to work through one textbook cover to cover.
 

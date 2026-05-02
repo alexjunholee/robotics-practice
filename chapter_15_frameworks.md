@@ -21,11 +21,11 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이�
 | Master | 필요 (roscore) | 불필요 |
 | Python | 2/3 | 3 only |
 
-**현재 권장**: ROS2 (Humble)
+현재 권장: ROS2 (Humble)
 
 하지만 많은 패키지가 아직 ROS1만 지원하므로 상황에 따라 선택.
 
-**ROS1 → ROS2 마이그레이션 현황**: 2024년을 기점으로 ROS1 Noetic의 공식 지원이 종료(EOL)되었다. 새 프로젝트라면 특별한 이유가 없는 한 ROS2로 시작한다. 기존 ROS1 패키지를 써야 한다면 `ros1_bridge`로 두 노드를 동시에 운용할 수 있다. Nav2, MoveIt2 등 핵심 패키지의 ROS2 포팅이 완료된 상태이므로, 대부분의 로봇 개발에서는 ROS2만으로 충분하다.
+ROS1 Noetic의 공식 지원은 2024년에 종료(EOL)되었다. 새 프로젝트라면 특별한 이유가 없는 한 ROS2로 시작한다. 기존 ROS1 패키지를 써야 한다면 `ros1_bridge`로 두 노드를 동시에 운용할 수 있다. Nav2, MoveIt2 등 핵심 패키지의 ROS2 포팅이 완료된 상태이므로, 대부분의 로봇 개발에서는 ROS2만으로 충분하다.
 
 > **추천 자료**
 > - [ROS2 공식 튜토리얼](https://docs.ros.org/en/humble/Tutorials.html) — ROS2 Humble 기준 공식 단계별 가이드. 처음이라면 "Beginner: CLI tools"부터 시작
@@ -34,7 +34,7 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이�
 
 ### 15.1.2 핵심 개념
 
-이 개념들은 ROS의 뼈대이다. Topic, Service, Action의 차이를 정확히 모르면 "센서 데이터를 어떤 방식으로 보내야 하지?" 하는 질문에서 매번 막히게 된다. 각각이 언제 적합한지 감을 잡는 것이 중요하다.
+이 개념들은 ROS의 뼈대이다. Topic, Service, Action의 차이를 정확히 모르면 "센서 데이터를 어떤 방식으로 보내야 하지?" 하는 질문에서 매번 막히게 된다.
 
 **Node (노드)**:
 - 실행 가능한 프로세스
@@ -103,7 +103,7 @@ class MinimalPublisher(Node):
 - 데이터 녹화/재생
 - 디버깅, 알고리즘 개발에 필수
 
-이 도구들을 알아두면 실험 시간이 크게 줄어든다. 실제 로봇을 매번 돌려가며 알고리즘을 테스트하면 시간도 비용도 많이 든다. rosbag으로 한 번 녹화해 두면 같은 데이터로 몇 번이고 반복 실험이 가능하다. 재현성 측면에서 필수 도구다.
+실제 로봇을 매번 돌려가며 알고리즘을 테스트하면 시간도 비용도 많이 든다. rosbag으로 한 번 녹화해 두면 같은 데이터로 몇 번이고 반복 실험할 수 있어, 재현성 면에서도 필수다.
 
 ```bash
 # ROS2 bag 녹화
@@ -162,13 +162,13 @@ ROS의 진짜 힘은 커뮤니티가 만들어 놓은 패키지 생태계에 있
 
 Gazebo는 ROS와 가장 긴밀하게 연동되는 시뮬레이터이다. ROS 프로젝트 대부분의 시뮬레이션 데모가 Gazebo 기반으로 제공되므로, ROS를 쓰겠다면 Gazebo 사용법은 알아야 한다.
 
-**구성 요소**:
+구성 요소:
 - **SDF (Simulation Description Format)**: 환경 정의
 - **URDF (Unified Robot Description Format)**: 로봇 모델
 
-**Gazebo Classic vs Gazebo Sim (Ignition)**:
-- Gazebo Sim: 새로운 버전, ROS2 권장
-- 모듈화된 구조, 더 나은 확장성
+Gazebo Classic vs Gazebo Sim (Ignition):
+- Gazebo Sim: 새 버전, ROS2 권장
+- 모듈화 구조, 더 나은 확장성
 
 ```xml
 <!-- URDF 예시 -->
@@ -195,20 +195,9 @@ Gazebo는 ROS와 가장 긴밀하게 연동되는 시뮬레이터이다. ROS 프
 
 ### 15.2.2 NVIDIA Isaac Sim
 
-Embodied AI 연구에서 대규모 합성 데이터 생성과 Sim-to-Real 학습에 많이 쓰인다. 사실적인 렌더링과 정확한 물리 엔진을 결합해, 시뮬레이터에서 학습한 정책이 실제 로봇에서도 잘 작동하도록 지원한다.
+Embodied AI 연구에서 대규모 합성 데이터 생성과 Sim-to-Real 학습에 많이 쓰인다. RTX 렌더링과 PhysX 5 물리 엔진을 결합하고, Domain Randomization으로 합성 데이터를 생성한다. ROS2와 통합되며 Manipulation 연구에 주로 쓰인다.
 
-**특징**:
-- 사실적인 그래픽 (RTX 렌더링)
-- 정확한 물리 시뮬레이션 (PhysX 5)
-- 합성 데이터 생성 (Domain Randomization)
-- ROS2 통합
-
-**주 용도**:
-- 조작(Manipulation) 연구
-- 대규모 합성 데이터 생성
-- Sim-to-Real 학습
-
-**Embodied AI 시뮬레이터 비교**: Isaac Sim 외에도 Embodied AI 연구에 많이 쓰이는 시뮬레이터들이 있다.
+Isaac Sim 외에도 Embodied AI 연구에 많이 쓰이는 시뮬레이터들이 있다.
 
 | 시뮬레이터 | 주 용도 | 특징 |
 | --- | --- | --- |
@@ -225,15 +214,9 @@ Embodied AI 연구에서 대규모 합성 데이터 생성과 Sim-to-Real 학습
 
 ### 15.2.3 CARLA
 
-자율주행 연구를 위한 시뮬레이터이다.
+자율주행 연구용 시뮬레이터로, 논문 실험 환경으로 자주 쓰인다. 자율주행 쪽 연구를 한다면 익혀 두면 좋다.
 
-자율주행 논문에서 실험 환경으로 CARLA를 사용하는 경우가 매우 많다. 자율주행 쪽 연구를 하고 싶다면 CARLA 환경을 다루는 법을 익혀 두면 좋다.
-
-**특징**:
-- 도시 환경 시뮬레이션
-- 다양한 날씨, 시간대
-- 센서 시뮬레이션 (카메라, LiDAR, Radar)
-- ROS 브릿지 제공
+도시 환경과 다양한 날씨·시간대를 지원하고, 카메라·LiDAR·Radar 센서 시뮬레이션과 ROS 브릿지를 제공한다.
 
 > **추천 자료**
 > - [CARLA Documentation](https://carla.readthedocs.io/) — 공식 문서 및 Python API 레퍼런스
@@ -270,27 +253,27 @@ ROS와 시뮬레이터 외에도, 특정 용도에 특화된 프레임워크와 
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-**15.4.1 Latency Budgeting**
+15.4.1 Latency Budgeting
 - 전체 파이프라인의 latency를 구간별로 할당
 - 예시: 자율주행 — 센서 입력(10ms) → 인식(50ms) → 계획(30ms) → 제어(10ms) = 100ms total
 - 각 구간이 budget을 초과하면 전체가 실패. 가장 느린 구간이 bottleneck
 - profiling 방법: ROS2 callback duration, `ros2 topic delay`, tracing (ros2_tracing)
 
-**15.4.2 Behavior Tree**
+15.4.2 Behavior Tree
 - 유한 상태 기계(FSM)보다 확장성이 좋은 로봇 행동 설계 방법
 - 노드 유형: Sequence (순차), Fallback (대안), Action (실행), Condition (조건)
 - 장점: 모듈적 — 하위 트리를 독립적으로 테스트/재사용 가능
 - ROS2에서: BehaviorTree.CPP, Nav2에서 사용
 - FSM은 상태가 늘어나면 전이가 기하급수적으로 복잡해진다. BT는 트리 구조로 복잡도를 관리
 
-**15.4.3 Safety와 Failsafe**
+15.4.3 Safety와 Failsafe
 - Watchdog timer: 특정 시간 내에 heartbeat 없으면 safe stop
 - E-stop (Emergency Stop): 하드웨어 레벨의 전원 차단
 - Software safety: 속도 제한, workspace 제한, collision check
 - ISO 13482: 서비스 로봇 안전 표준 (개요만)
 - 실무: 새 알고리즘을 올릴 때는 safety wrapper를 먼저 만들고, 그 안에서 실험
 
-**15.4.4 배포와 필드 테스트**
+15.4.4 배포와 필드 테스트
 - CI/CD: colcon build + test 자동화, Docker 이미지 빌드
 - Hardware-in-the-Loop (HIL): 실제 센서 데이터를 재생하면서 새 코드 테스트
 - 필드 테스트 프로토콜: 통제된 환경 → 반통제 → 실제 환경, 단계적으로

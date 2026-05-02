@@ -1,7 +1,7 @@
 # Ch.8 — 로봇 러닝 (Robot Learning)
 
 
-로봇 러닝은 로봇이 명시적 프로그래밍 대신 데이터와 경험으로부터 행동을 학습하는 분야다. 강화학습 기초부터 sim-to-real transfer, 모방학습, 최근 foundation model 기반 접근까지 다룬다.
+로봇 러닝은 로봇이 명시적 프로그래밍 대신 데이터와 경험에서 행동을 학습하는 분야다. 전통적 제어가 한계에 부딪히는 지점에서 시작해 sim-to-real transfer, 모방학습, 최근 foundation model 기반 접근으로 이어진다.
 
 ---
 
@@ -31,6 +31,8 @@ PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정
 
 전통적 방법으로 풀 수 있으면 전통적 방법을 쓰는 게 낫다. 학습은 전통적 방법이 한계에 부딪히는 문제에 적용하는 도구다. 둘을 적절히 조합하는 것이 실무에서 가장 현실적이다.
 
+그렇다면 한계에 부딪히는 문제란 구체적으로 어디인가. Probabilistic Robotics(Thrun·Burgard·Fox)는 구체적인 로봇 도메인으로 이 그림을 그린다. 산업용 매니퓰레이터는 작업 공간이 제어되면 전통적 제어로 충분하지만, 수중 탐사 차량은 조류·시야·부력 변화 때문에 사전 모델을 세우기 어렵다. 헬리콥터 자율 비행은 공기역학 비선형성과 외란이 커서 학습 기반 제어가 두드러진다. 화성 탐사 로버는 지구와의 통신 지연 때문에 자율 의사결정이 필수이며, 지형 모델을 사전에 완전히 알 수 없다. 어느 도메인에서 학습이 더 절실한지는 모델 불확실성의 크기와 직결된다.
+
 
 ---
 
@@ -53,6 +55,80 @@ J(π) = E[ Σ_{t=0}^{∞} γ^t · r_t ]
 ```
 
 Markov property는 "다음 상태는 현재 상태와 행동에만 의존한다"는 가정이다. 이전 히스토리 전체를 볼 필요가 없다는 뜻인데, 실제 로봇에서는 이 가정이 깨지는 경우도 있다 (부분 관측, 즉 POMDP 상황). 이 경우 observation history를 state로 사용하거나 recurrent policy를 쓴다.
+
+MDP 정의는 "무엇이 최적인가"의 기준을 세운다. 환경 모델 $p(x'|x,a)$와 보상 $r$이 알려져 있을 때 그 최적 정책을 *어떻게* 계산하는가는 다음 절에서 다룬다.
+
+### MDP Value Iteration
+
+환경 모델 $p(x'|x,a)$와 보상 $r$이 **알려진** 경우 dynamic programming으로 직접 최적 정책을 계산할 수 있다. 여기서는 PR(Thrun·Burgard·Fox) 표기를 따라 상태를 $x$로 쓴다(앞 절의 $s$와 동일한 개념이다).
+
+#### Payoff와 Horizon
+
+보상 $r(x, a)$를 payoff 함수라 부른다. 상태 $x$에서 행동 $a$를 취했을 때 즉시 받는 스칼라 값이다. 정책 $\pi: x \mapsto a$는 모든 상태를 행동으로 보내는 함수다. 정책의 품질은 누적 할인 보상의 기댓값으로 측정한다.
+
+$$V^\pi(x_0) = \mathbb{E}\left[\sum_{t=0}^{T} \gamma^t \, r(x_t, \pi(x_t))\right]$$
+
+Horizon $T$에 따라 세 경우로 나뉜다.
+
+- **T=1 (greedy)**: 다음 한 스텝의 보상만 최대화한다. 단순하지만 장기 결과를 무시한다.
+- **유한 horizon**: 정해진 $T$ 스텝까지 최적화한다. 시간 $t$에 따라 정책이 달라져야 하므로(time-dependent policy) 표현이 복잡해진다.
+- **무한 horizon (T=∞)**: $\gamma < 1$이면 $V^\pi$가 유한하다($|V^\pi| \leq r_{\max}/(1-\gamma)$). 따라서 시간에 무관한 정상 정책(stationary policy)이 존재한다. 로봇 RL에서는 무한 horizon + 할인이 기본 설정이다.
+
+할인 인자 $\gamma$의 직관: 1 스텝 뒤의 보상은 $\gamma$배, 2 스텝 뒤는 $\gamma^2$배로 감가된다. $\gamma$가 낮을수록 로봇이 근시안적으로, 높을수록 장기적으로 행동한다. 로봇 RL에서 $\gamma = 0.99$가 흔한 초기값인 이유는, 충분히 먼 미래까지 고려하면서도 수렴을 보장하기 위해서다.
+
+#### Bellman 방정식
+
+무한 horizon에서 최적 가치 함수 $V^*(x)$는 다음 Bellman 방정식을 만족한다.
+
+$$V^*(x) = \max_a \left[ r(x, a) + \gamma \sum_{x'} p(x' \mid x, a) \, V^*(x') \right]$$
+
+이 식의 의미: 상태 $x$에서 최적 가치는, 행동 $a$를 취하고 얻는 즉시 보상 $r(x,a)$와 그 다음 상태들의 최적 가치를 할인해 더한 것 중 최대값이다. 재귀 구조다.
+
+최적 정책은 이 식에서 그리디하게 추출된다.
+
+$$\pi^*(x) = \arg\max_a \left[ r(x, a) + \gamma \sum_{x'} p(x' \mid x, a) \, V^*(x') \right]$$
+
+$T=1$ 최적 → $T=2$ 재귀 → $T \to \infty$ 극한을 취하면 위 Bellman 방정식이 유도된다. 각 단계에서 "지금 최적 + 나머지 최적"을 결합하는 Dynamic Programming의 표준 구조다.
+
+#### Value Iteration 알고리즘
+
+Bellman 방정식은 $V^*$에 대한 고정점 방정식(fixed-point equation)이다. $V^*$를 직접 풀기 어렵지만, 오른쪽에 현재 추정값 $V_k$를 대입하여 $V_{k+1}$을 구하고 반복하면 수렴한다. 이것이 Value Iteration이다.
+
+```
+Algorithm MDP_value_iteration():
+  모든 상태 x에 대해:
+    V_0(x) ← 0
+
+  수렴할 때까지 반복:           ε: 허용 오차 (예: 1e-6)
+    모든 상태 x에 대해:
+      V_{k+1}(x) ← max_a [ r(x, a) + γ · Σ_{x'} p(x'|x, a) · V_k(x') ]
+    if max_x |V_{k+1}(x) - V_k(x)| < ε: break
+
+  최적 정책 추출:
+    π*(x) ← argmax_a [ r(x, a) + γ · Σ_{x'} p(x'|x, a) · V_k(x') ]
+
+  return V_k, π*
+```
+
+변수 정리: $V_k$는 k번째 반복의 가치 추정값, $V^*$는 수렴 후 최적 가치, $\pi^*$는 최적 정책, $r$은 보상, $\gamma$는 할인 인자, $p(x'|x,a)$는 전이 확률.
+
+갱신 순서는 임의여도 된다. Sutton &amp; Barto(2018) §4.4에 따르면 각 상태가 무한히 자주 갱신되기만 하면 수렴이 보장된다. 이산 상태 공간에서는 위 수식의 적분이 합(Σ)으로 대체된다.
+
+수렴 보장: Bellman 갱신 연산자는 $\gamma$를 수축률(contraction rate)로 하는 수축 사상(contraction mapping)이다. 따라서 반복은 반드시 유일한 고정점 $V^*$로 수렴한다. $k$번 반복 후 오차는 초기 오차의 $\gamma^k$배 이하로 감소한다: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
+
+<!-- DEMO: mdp_value_iteration_grid.html -->
+
+#### 2D Grid World 예시
+
+$5 \times 5$ 격자 공간을 상상한다. 각 셀이 상태 $x$이고, 행동은 상하좌우 4방향이다. 목표 셀에 도달하면 $r = +100$, 장애물 셀에 부딪히면 $r = -10$, 그 외는 $r = -1$ (이동 비용). 전이는 의도한 방향으로 0.8 확률, 직교 방향으로 각 0.1 확률 (확률적 전이).
+
+Value Iteration을 실행하면 가치 함수가 목표 셀 주변에서 높고, 장애물 주변에서 낮은 등고선 형태를 이룬다. 초기에는 목표 셀 인접 상태만 양수 가치를 가지지만, 반복이 진행될수록 파급(propagation)이 멀리 퍼진다. 수렴 후 각 셀에서 최대 가치 방향을 따라가면 최적 경로를 얻는다. 장애물 주변에서 경로가 우회하는 것도 자동으로 나타난다.
+
+이 그리디 경로가 곧 $\pi^*$다. 명시적으로 경로를 탐색(RRT, A*)하지 않아도 가치 함수의 경사(gradient)를 따라가는 것만으로 최적 경로가 나온다.
+
+MDP는 환경 모델 $p(x'|x,a)$와 $r$이 *주어졌을 때* 적용된다. 모델을 *모르고* 경험으로 학습하는 RL은 §8.3에서, *부분 관측* 하의 플래닝은 ch.7 §7.9 심화 POMDP에서 다룬다.
+
+실제 로봇에서는 전이 확률 $p(x'|x,a)$를 미리 아는 경우가 드물다. 모델 없이 직접 policy를 개선하는 방법이 필요하다.
 
 ### Policy Gradient 직관
 
@@ -102,7 +178,7 @@ L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
 
 여기서 r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t)는 probability ratio, ε의 원 논문 기본값은 0.2다.
 
-PPO가 인기 있는 이유는 구현이 비교적 간단하고, 하이퍼파라미터에 둔감하며, 안정적으로 학습된다는 점이다. NVIDIA Isaac Lab 등 대규모 병렬 시뮬레이션과 결합하면 수천 개 환경에서 동시에 데이터를 수집할 수 있어서 sample efficiency 문제를 물량으로 해결할 수 있다.
+PPO가 널리 쓰이는 이유는 구현이 간단하고 하이퍼파라미터에 둔감하다는 데 있다. 안정적이기도 하다. NVIDIA Isaac Lab 등 대규모 병렬 시뮬레이션과 결합하면 수천 개 환경에서 동시에 데이터를 수집할 수 있어서 sample efficiency 문제를 물량으로 해결할 수 있다.
 
 ### SAC (Soft Actor-Critic)
 
@@ -118,7 +194,7 @@ J(π) = E[ Σ_t γ^t ( r_t + α · H(π(·|s_t)) ) ]
 
 ### TD3 (Twin Delayed DDPG)
 
-TD3는 DDPG의 개선 버전으로, SAC와 비슷한 off-policy 알고리즘이다. 핵심 개선점 세 가지:
+TD3는 DDPG의 개선 버전으로, SAC와 비슷한 off-policy 알고리즘이다. 세 가지를 바꿨다.
 
 1. **Twin Q-networks**: Q-function 두 개를 학습하고 작은 값을 사용하여 overestimation bias를 줄인다.
 2. **Delayed policy update**: critic을 여러 번 업데이트한 후에 policy를 한번 업데이트한다.
@@ -238,7 +314,7 @@ Google에서 개발한 JAX 기반 물리 엔진이다. JAX의 JIT 컴파일과 �
 
 ## 8.5 Sim-to-Real Transfer
 
-시뮬레이션에서 학습한 policy를 실제 로봇에 적용하는 것을 sim-to-real transfer라 한다. 이론적으로는 시뮬레이션에서 충분히 학습하고 실제 로봇에 배포하면 끝이지만, 현실은 그렇지 않다.
+시뮬레이션에서 학습한 policy를 실제 로봇에 그대로 올리는 것을 sim-to-real transfer라 한다. 시뮬레이션에서 충분히 학습한 뒤 배포하면 될 것 같지만, 실제로는 그렇게 되지 않는다.
 
 ### Reality Gap
 
@@ -298,7 +374,7 @@ def add_obs_noise(obs, config):
 
 ### System Identification (Sys-ID)
 
-Domain randomization과 반대 방향의 접근이다. 실제 로봇의 물리 파라미터를 가능한 한 정확하게 측정/추정해서 시뮬레이션에 반영한다.
+Domain randomization이 불확실성을 폭넓게 덮는 방향이라면, Sys-ID는 반대로 실제 로봇의 물리 파라미터를 최대한 정확하게 측정해서 시뮬레이션에 반영한다.
 
 방법:
 - 직접 측정: 전자저울로 질량 측정, 마찰 계수 실험 측정
@@ -335,7 +411,7 @@ Sys-ID는 domain randomization과 같이 쓰는 경우가 많다. Sys-ID로 대�
 
 ## 8.6 모방 학습 (Imitation Learning)
 
-강화학습은 reward 함수를 설계해야 하고, 학습에 많은 데이터가 필요하다. 반면 모방 학습은 전문가(사람)의 시연 데이터로부터 직접 policy를 학습한다. "보고 배우기"에 해당한다.
+강화학습은 reward 함수를 설계해야 하고 학습에 많은 데이터가 필요하다. 모방 학습은 전문가(사람)의 시연 데이터에서 직접 policy를 학습한다. 보고 배우는 방식이다.
 
 ### Behavioral Cloning (BC)
 
@@ -386,7 +462,7 @@ for epoch in range(100):
         print(f"Epoch {epoch+1}, Loss: {total_loss/len(loader):.4f}")
 ```
 
-**Compounding error 문제**: BC의 구조적 한계다. 학습된 policy가 조금이라도 전문가 trajectory에서 벗어나면, 학습 데이터에 없는 상태에 도달하게 된다. 거기서의 행동은 예측 불가능하고, 더 벗어나게 되고, 에러가 누적된다. 시간에 따라 에러가 기하급수적으로 커질 수 있다.
+**Compounding error**: BC의 구조적 한계다. 학습된 policy가 조금이라도 전문가 trajectory에서 벗어나면 학습 데이터에 없는 상태에 도달하고, 거기서의 행동은 예측 불가능해진다. 더 벗어나고, 에러가 누적되는 과정이 반복되면서 시간에 따라 에러가 기하급수적으로 커질 수 있다.
 
 ### DAgger (Dataset Aggregation)
 
@@ -404,7 +480,7 @@ DAgger는 compounding error를 해결하기 위한 방법이다.
 
 ### ACT (Action Chunking with Transformers)
 
-Stanford의 ALOHA 프로젝트에서 제안한 방법이다. 핵심 아이디어 두 가지:
+Stanford의 ALOHA 프로젝트에서 제안한 방법이다. 핵심 아이디어는 두 가지다.
 
 1. **Action chunking**: 한 번에 하나의 action을 예측하는 대신, 미래 k 스텝의 action sequence를 한 번에 예측한다. 이렇게 하면 temporal correlation을 잡을 수 있고, compounding error를 줄인다.
 2. **CVAE (Conditional Variational Autoencoder)**: action의 다봉(multimodal) 분포를 모델링한다. 같은 상황에서도 여러 유효한 행동이 있을 수 있는데, 단순 MSE loss로는 이걸 평균내버려서 어중간한 action이 나온다.
@@ -415,7 +491,7 @@ Stanford의 ALOHA 프로젝트에서 제안한 방법이다. 핵심 아이디어
 
 CMU의 Chi et al. (2023)이 제안한 방법으로, diffusion model을 action 생성에 적용한다.
 
-기존 BC가 unimodal Gaussian으로 action을 모델링하는 반면, diffusion policy는 denoising 과정을 통해 임의의 복잡한 action 분포를 표현할 수 있다. 특히 다봉 분포를 잘 다룬다.
+Diffusion policy는 denoising 과정을 통해 임의의 복잡한 action 분포를 표현할 수 있다. BC가 unimodal Gaussian에 머무는 것과 달리, 다봉 분포도 자연스럽게 다룬다.
 
 ```python
 # Diffusion Policy의 action 생성 과정 (pseudo-code)
@@ -456,9 +532,9 @@ LLM과 VLM의 성공에 영감을 받아, 로봇 분야에서도 대규모 사�
 
 ### RT-1, RT-2 (Google DeepMind)
 
-**RT-1 (2022)**: 13만 개의 로봇 시연 데이터(약 17개월 수집)로 학습한 Transformer 기반 policy. 이미지와 자연어 명령을 입력으로 받아 action을 출력한다. 700개 이상의 태스크를 하나의 모델로 수행.
+**RT-1 (2022)**: 13만 개의 로봇 시연 데이터(약 17개월 수집)로 학습한 Transformer 기반 policy다. 이미지와 자연어 명령을 입력으로 받아 action을 출력하며, 700개 이상의 태스크를 하나의 모델로 수행했다.
 
-**RT-2 (2023)**: VLM (Vision-Language Model)을 직접 action 출력으로 fine-tuning한 것. PaLM-E나 PaLI-X를 base model로 사용. 웹 스케일 사전학습 지식이 로봇 제어에도 전이된다는 것을 보여줬다. 학습 데이터에 없던 물체에 대해서도 어느 정도 일반화됐다.
+**RT-2 (2023)**: VLM(Vision-Language Model)을 직접 action 출력으로 fine-tuning했다. PaLM-E나 PaLI-X를 base model로 사용했다. 웹 스케일 사전학습 지식이 로봇 제어에도 전이된다는 것을 보여줬고, 학습 데이터에 없던 물체에 대해서도 어느 정도 일반화됐다.
 
 ### Octo
 
@@ -470,16 +546,11 @@ UC Berkeley 등에서 개발한 오픈소스 범용 로봇 정책이다. Open X-
 
 ### OpenVLA
 
-오픈소스 VLA (Vision-Language-Action) 모델이다. 7B 파라미터의 VLM을 fine-tuning하여 action token을 출력하도록 학습했다. 누구나 접근 가능한 오픈소스라는 점이 핵심 기여다.
+오픈소스 VLA (Vision-Language-Action) 모델이다. 7B 파라미터의 VLM을 fine-tuning하여 action token을 출력하도록 학습했다. 누구나 접근할 수 있는 오픈소스 공개가 핵심 기여다.
 
 ### 현실적 평가
 
-Foundation model for robotics는 아직 초기 단계다. 솔직히 말하면:
-
-- 특정 태스크에서는 해당 태스크에 특화된 전통적 방법이나 task-specific 학습이 더 나은 경우가 많다.
-- 대규모 로봇 데이터 수집 비용이 매우 크다. 인터넷 텍스트/이미지 데이터와는 규모가 다르다.
-- 안전성 보장이 없다. Foundation model의 행동을 예측하기 어렵다.
-- 추론 속도(inference latency)가 실시간 제어에 충분하지 않을 수 있다.
+Foundation model for robotics는 아직 초기 단계다. 특정 태스크에서는 해당 태스크에 특화된 전통적 방법이나 task-specific 학습이 더 나은 경우가 많다. 대규모 로봇 데이터 수집 비용도 만만치 않다. 인터넷 텍스트·이미지 데이터와는 규모가 다르다. 안전성 보장이 없고, 행동을 예측하기 어렵다는 점도 실사용의 장벽이다. 추론 속도(inference latency)가 실시간 제어에 충분하지 않을 수 있다.
 
 ### 연구 방향
 
@@ -495,7 +566,7 @@ Foundation model for robotics는 아직 초기 단계다. 솔직히 말하면:
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-RL의 성패는 reward 함수 설계에 달려 있다고 해도 과언이 아니다. 그리고 실제 로봇에 RL을 적용하려면 안전성 문제를 반드시 다뤄야 한다.
+reward 함수를 잘못 설계하면 RL은 엉뚱한 방향으로 수렴한다. 실제 로봇에 RL을 적용할 때는 안전성 문제도 함께 다뤄야 한다.
 
 ### Reward Shaping
 
@@ -544,7 +615,7 @@ Agent가 reward를 최대화하되, 설계자가 의도하지 않은 방식으�
 
 ### Constrained RL
 
-Safety constraint를 명시적으로 다루는 RL이다. 일반적인 RL이 reward를 최대화하는 것이라면, constrained RL은 reward를 최대화하되 cost를 일정 한도 이하로 유지한다.
+Safety constraint를 명시적으로 다루는 RL이다. 일반 RL과 달리, constrained RL은 reward를 최대화하면서 동시에 cost를 일정 한도 이하로 유지한다는 조건을 건다.
 
 ```
 max_π E[ Σ γ^t r_t ]   subject to   E[ Σ γ^t c_t ] ≤ d
@@ -563,7 +634,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 2. 선호도 데이터로 reward model을 학습한다.
 3. 학습된 reward model로 RL을 수행한다.
 
-수치적으로 reward를 정의하기 어려운 태스크 (예: "자연스럽게 걷기", "조심스럽게 물건 놓기")에서 유용하다. 단점은 사람의 시간이 많이 든다는 점과, reward model이 부정확할 수 있다는 점이다.
+수치로 reward를 정의하기 어려운 태스크, 예컨대 걸음걸이의 자연스러움이나 물건을 놓을 때의 조심성 같은 것을 다룰 때 유용하다. 단점은 사람의 시간이 많이 든다는 점과, reward model이 부정확할 수 있다는 점이다.
 
 
 ---
@@ -646,3 +717,9 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 2025 ── Cross-embodiment learning 연구 확산
          서로 다른 로봇 간 정책 전이. 데이터 스케일링 법칙 검증 중.
 ```
+
+---
+
+모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 어느 쪽을 택하든 sim-to-real gap은 반드시 넘어야 한다. OpenAI Dactyl은 그 gap을 넘기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 쌓았다.
+
+로봇이 학습하려면 먼저 환경을 지각해야 한다. Ch.9에서는 카메라 이미지에서 정보를 뽑아내는 컴퓨터 비전 기초를 다룬다.

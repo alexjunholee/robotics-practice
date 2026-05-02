@@ -1,6 +1,6 @@
 # Ch.10 — 딥러닝 기반 인식 (Deep Learning for Perception)
 
-로봇이 "무엇을 보고 있는지"를 이해하는 핵심 기술들이다. 고전 CV가 "이미지를 어떻게 처리하고, 기하학적 관계를 어떻게 추출하는가"에 집중했다면, 여기서는 "이미지 안에 뭐가 있는지"를 인식하는 데 집중한다. 물체 탐지, 분류, 분할 — 로봇이 "저기 빨간 컵이 있으니 집어" 같은 명령을 수행하려면, 이 기술들이 필수이다.
+로봇이 "무엇을 보고 있는지"를 이해하는 핵심 기술들이다. 고전 CV가 "이미지를 어떻게 처리하고, 기하학적 관계를 어떻게 추출하는가"에 집중했다면, 여기서는 "이미지 안에 뭐가 있는지"를 인식하는 데 집중한다. 물체 탐지, 분류, 분할이 그 대상이다. 로봇이 "저기 빨간 컵이 있으니 집어" 같은 명령을 수행하려면, 이 기술들이 필요하다.
 
 ---
 
@@ -62,19 +62,19 @@ x = x.to(device)
 
 ## 10.2 딥러닝 기초 개념
 
-이 섹션의 개념들을 모르면 "왜 딥러닝이 이미지 인식에서 고전 방법을 압도하는가"를 이해할 수 없다. CNN의 구조를 모르면 ResNet이 왜 중요한지 모르고, Transformer를 모르면 ViT와 DETR이 왜 기존 접근을 대체하는지 이해할 수 없다.
+이 섹션의 개념들을 모르면 "왜 딥러닝이 이미지 인식에서 고전 방법을 압도하는가"를 이해할 수 없다. CNN의 구조를 모르면 ResNet이 왜 중요한지 모르고, Transformer를 모르면 ViT와 DETR이 기존 접근을 왜 대체하는지도 모른다.
 
 ### 10.2.1 CNN (Convolutional Neural Network)
 
 이미지에서 공간적 특징을 추출하는 핵심 구조이다.
 
-CNN은 "이미지의 지역적 패턴(에지, 코너, 텍스처)을 자동으로 학습"하는 구조이다. 앞서 배운 고전 CV에서는 SIFT, ORB 같은 특징을 사람이 설계(hand-craft)했지만, CNN은 데이터에서 자동으로 최적의 특징을 배운다. 딥러닝의 전환점이 여기다.
+CNN은 "이미지의 지역적 패턴(에지, 코너, 텍스처)을 자동으로 학습"하는 구조이다. 앞서 배운 고전 CV에서는 SIFT, ORB 같은 특징을 사람이 설계(hand-craft)했다. CNN은 데이터에서 최적의 특징을 스스로 배운다. 딥러닝의 전환점이 여기다.
 
 **주요 구성 요소**:
-- **Convolution Layer**: 필터로 특징 추출
-- **Pooling Layer**: 공간 크기 축소 (Max, Average)
-- **Activation**: nonlinearity 도입 (ReLU, GELU)
-- **Batch Normalization**: 학습 안정화
+- Convolution Layer: 필터로 특징 추출
+- Pooling Layer: 공간 크기 축소 (Max, Average)
+- Activation: nonlinearity 도입 (ReLU, GELU)
+- Batch Normalization: 학습 안정화
 
 ```python
 # 간단한 CNN 블록
@@ -109,7 +109,7 @@ CNN과의 차이를 알면 왜 Transformer가 뜨는지 바로 이해된다. CNN
 **Vision Transformer (ViT)**는 이미지를 16×16 같은 고정 크기 패치로 나누고, 각 패치를 NLP에서 "단어"처럼 취급해서 Transformer encoder에 넣는다. 아이디어 자체는 단순하지만, 대규모 데이터에서 CNN을 넘어서는 성능을 보여주면서 최근 비전 태스크의 주력이 되었다.
 
 > **추천 자료**
-> - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — Transformer 원논문. 모든 것의 시작
+> - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — Transformer 원논문
 > - [Dosovitskiy et al., "An Image is Worth 16x16 Words" (2020)](https://arxiv.org/abs/2010.11929) — ViT 원논문
 > - [Yannic Kilcher — Vision Transformer 설명](https://www.youtube.com/watch?v=TrdevFK_am4) — 논문을 쉽게 풀어서 설명
 > - [Andrej Karpathy — Let's build GPT from scratch](https://www.youtube.com/watch?v=kCc8FmEb1nY) — Transformer 구현을 밑바닥부터. NLP지만 ViT 이해에 직결된다
@@ -177,7 +177,7 @@ Faster R-CNN은 two-stage detection의 대표작이고, 정확도가 중요한 �
 - 실시간 처리 가능 (30+ FPS)
 - 버전: YOLOv5, YOLOv8, YOLOv11 (Ultralytics)
 
-YOLO는 이름 그대로 "한 번만 본다" — two-stage처럼 후보를 먼저 뽑지 않고, 이미지 전체를 한 번에 처리해서 모든 물체를 탐지한다. 로봇 시스템에서 실시간성이 중요할 때 가장 먼저 고려하는 모델이다. Ultralytics의 YOLOv8/v11은 설치와 사용이 매우 간편해서 프로토타이핑에 최적이다.
+YOLO는 이름 그대로 "한 번만 본다" — 이미지 전체를 한 번에 처리해서 모든 물체를 탐지한다. 로봇 시스템에서 실시간성이 중요할 때 가장 먼저 고려하는 모델이다. Ultralytics의 YOLOv8/v11은 설치와 사용이 매우 간편해서 프로토타이핑에 최적이다.
 
 ```python
 from ultralytics import YOLO
@@ -202,7 +202,7 @@ results[0].show()
 
 ### 10.4.3 Transformer-based
 
-**DETR (Detection Transformer)**은 detection을 "집합 예측 문제"로 재정의했다. Object Query라는 고정 개수의 학습 가능한 벡터가 각 물체에 대응하고, NMS 없이 end-to-end로 학습한다. 기존 방법들이 수천 개의 anchor box를 만들고 NMS로 중복을 제거하는 복잡한 파이프라인을 썼던 것과 대조적이다. 초기 학습이 느리다는 단점이 있었지만, 구조가 깔끔해서 Deformable DETR, DINO, Co-DETR 등 많은 후속 연구로 이어졌다.
+**DETR (Detection Transformer)**은 detection을 "집합 예측 문제"로 재정의했다. Object Query라는 고정 개수의 학습 가능한 벡터가 각 물체에 대응하고, NMS 없이 end-to-end로 학습한다. 기존 방법들이 수천 개의 anchor box와 NMS 후처리를 요구했던 것에 비하면 파이프라인이 훨씬 단순하다. 초기 학습이 느리다는 단점이 있었지만, 구조가 깔끔해서 Deformable DETR, DINO, Co-DETR 등 많은 후속 연구로 이어졌다.
 
 > **추천 자료**
 > - [Carion et al., "End-to-End Object Detection with Transformers" (2020)](https://arxiv.org/abs/2005.12872) — DETR 원논문
@@ -267,12 +267,12 @@ model = SegformerForSemanticSegmentation.from_pretrained(
 
 단일 이미지에서 깊이를 예측하는 태스크이다.
 
-스테레오 카메라나 LiDAR 없이 단안(monocular) 카메라 하나로 깊이 정보를 얻을 수 있다면, 하드웨어 비용과 무게를 크게 줄일 수 있다. 특히 드론이나 소형 로봇처럼 payload가 제한적인 시스템에서 매우 유용하다. 최근 foundation model 수준의 일반화 성능을 보여주는 모델들이 나오면서 실용성이 크게 높아졌다.
+스테레오 카메라나 LiDAR 없이 단안(monocular) 카메라 하나로 깊이 정보를 얻을 수 있다면, 하드웨어 비용과 무게를 크게 줄일 수 있다. 특히 드론이나 소형 로봇처럼 payload가 제한적인 시스템에서 매우 유용하다. 최근 foundation model 수준의 일반화 성능을 보여주는 모델들이 나왔다.
 
 **대표 모델**:
-- **MiDaS**: 다양한 데이터셋 학습, 범용성
-- **Depth Anything**: Foundation model 수준의 일반화
-- **ZoeDepth**: 메트릭 깊이 추정
+- MiDaS: 다양한 데이터셋 학습, 범용성
+- Depth Anything: Foundation model 수준의 일반화
+- ZoeDepth: 메트릭 깊이 추정
 
 ```python
 # Depth Anything 사용
@@ -283,7 +283,7 @@ result = pipe("image.jpg")
 depth = result['depth']
 ```
 
-주의할 점: MiDaS와 Depth Anything은 기본적으로 **상대적 깊이(relative depth)**를 추정한다. 즉, "A가 B보다 가깝다"는 알 수 있지만, "A까지 정확히 몇 미터"인지는 알 수 없다. 메트릭 깊이가 필요하면 ZoeDepth나 Depth Anything V2의 metric 버전을 사용해야 한다.
+주의할 점: MiDaS와 Depth Anything은 기본적으로 상대적 깊이(relative depth)를 추정한다. "A가 B보다 가깝다"는 알 수 있지만, "A까지 정확히 몇 미터"인지는 알 수 없다. 메트릭 깊이가 필요하면 ZoeDepth나 Depth Anything V2의 metric 버전을 사용해야 한다.
 
 > **추천 자료**
 > - [Yang et al., "Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data" (2024)](https://arxiv.org/abs/2401.10891) — Depth Anything 원논문
@@ -301,11 +301,11 @@ depth = result['depth']
 
 **Learning Rate Schedule**:
 
-- **Cosine Annealing with Warm-up**: 가장 널리 쓰이는 스케줄. 초기 몇 epoch 동안 learning rate를 0에서 목표값까지 선형으로 올리고(warm-up), 이후 cosine 곡선으로 감쇠한다.
+- Cosine Annealing with Warm-up: 가장 널리 쓰이는 스케줄. 초기 몇 epoch 동안 learning rate를 0에서 목표값까지 선형으로 올리고(warm-up), 이후 cosine 곡선으로 감쇠한다.
 
 $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(\frac{t \cdot \pi}{T}\right)\right)$$
 
-- **OneCycleLR**: learning rate를 한 번 올렸다가 내리는 정책. Super-convergence를 달성할 수 있어서 적은 epoch으로 빠르게 수렴한다.
+- OneCycleLR: learning rate를 한 번 올렸다가 내리는 정책. Super-convergence를 달성할 수 있어서 적은 epoch으로 빠르게 수렴한다.
 
 ```python
 import torch.optim as optim
@@ -343,9 +343,9 @@ transform = T.Compose([
 
 **Regularization**:
 
-- **Label Smoothing**: hard label (0 또는 1) 대신 soft label (0.1, 0.9 등)을 사용. overconfidence를 방지한다. `nn.CrossEntropyLoss(label_smoothing=0.1)`
-- **Stochastic Depth**: 학습 시 일부 layer를 랜덤으로 건너뛴다. ResNet 계열에서 overfitting 방지에 효과적이다.
-- **Weight Decay**: optimizer에서 `weight_decay=0.01~0.05` 설정. AdamW에서는 decoupled weight decay를 사용한다.
+- Label Smoothing: hard label (0 또는 1) 대신 soft label (0.1, 0.9 등)을 사용. overconfidence를 방지한다. `nn.CrossEntropyLoss(label_smoothing=0.1)`
+- Stochastic Depth: 학습 시 일부 layer를 랜덤으로 건너뛴다. ResNet 계열에서 overfitting 방지에 효과적이다.
+- Weight Decay: optimizer에서 `weight_decay=0.01~0.05` 설정. AdamW에서는 decoupled weight decay를 사용한다.
 
 **Gradient Clipping**: gradient가 폭발하는 것을 방지한다. Transformer 학습에서는 거의 필수이다.
 
@@ -395,16 +395,14 @@ model = DDP(model, device_ids=[local_rank])
 
 ## 10.9 심화: 자기지도 학습과 대조 학습
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 로보틱스 데이터는 라벨이 부족하다. 로봇이 수집하는 이미지는 수천, 수만 장이지만, 이것에 일일이 바운딩 박스나 세그멘테이션 마스크를 다는 것은 비현실적이다. 자기지도 학습(self-supervised learning)은 라벨 없이 데이터 자체에서 학습 신호를 만들어내는 방법이다.
 
 **Contrastive Learning**:
 
-핵심 아이디어는 단순하다: 같은 이미지의 다른 augmentation은 가깝게(positive pair), 다른 이미지는 멀게(negative pair) 임베딩 공간에 배치한다.
+같은 이미지의 다른 augmentation은 가깝게(positive pair), 다른 이미지는 멀게(negative pair) 임베딩 공간에 배치한다.
 
-- **SimCLR**: 같은 이미지에 서로 다른 augmentation을 적용하여 positive pair를 만든다. 배치 내 다른 이미지들이 negative pair. 큰 배치 사이즈가 필요하다.
-- **MoCo (Momentum Contrast)**: momentum encoder와 queue를 사용해서 큰 배치 없이도 많은 negative를 확보한다.
+- SimCLR: 같은 이미지에 서로 다른 augmentation을 적용하여 positive pair를 만든다. 배치 내 다른 이미지들이 negative pair. 큰 배치 사이즈가 필요하다.
+- MoCo (Momentum Contrast): momentum encoder와 queue를 사용해서 큰 배치 없이도 많은 negative를 확보한다.
 
 **InfoNCE Loss**:
 
@@ -423,8 +421,8 @@ ViT 기반으로, 이미지 패치의 75%를 랜덤 마스킹하고 나머지 25
 
 DINOv2는 self-distillation 방식으로 학습한다. Teacher-student 구조이되, teacher는 student의 EMA(exponential moving average)이다.
 
-- **Self-distillation**: student와 teacher가 같은 구조. teacher의 weight는 student weight의 EMA.
-- **Centering + Sharpening**: teacher output에 centering(평균 빼기)과 sharpening(낮은 temperature)을 적용하여 mode collapse를 방지한다.
+- Self-distillation: student와 teacher가 같은 구조. teacher의 weight는 student weight의 EMA.
+- Centering + Sharpening: teacher output에 centering(평균 빼기)과 sharpening(낮은 temperature)을 적용하여 mode collapse를 방지한다.
 - 결과물인 DINOv2 feature는 별도 학습 없이도 ImageNet k-NN 83.0%, ADE20K linear probe 82.0% 등 supervised 방법에 필적하는 성능을 보인다.
 
 **실무 — HuggingFace에서 self-supervised backbone fine-tune**:
@@ -460,8 +458,6 @@ class MyClassifier(nn.Module):
 ---
 
 ## 10.10 심화: Knowledge Distillation
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 큰 모델(teacher)의 "지식"을 작은 모델(student)에 전달하는 기법이다. 로보틱스에서 특히 중요한 이유는, VFM 같은 거대 모델을 edge device에서 돌려야 하기 때문이다. SAM을 Jetson에서 실시간으로 돌리고 싶다면, distillation이 거의 유일한 방법이다.
 
@@ -527,9 +523,7 @@ def distillation_loss(student_logits, teacher_logits, labels,
 
 ## 10.11 심화: 도메인 적응
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-시뮬레이션에서 학습한 모델을 실제 로봇에 배포하면, 성능이 급격히 떨어진다. 실내 데이터로 학습해서 실외에 배포해도 마찬가지이다. 이 문제를 **domain shift**라 하고, 이를 해결하는 연구가 domain adaptation이다. 로보틱스에서는 sim-to-real gap 문제와 직결된다.
+시뮬레이션에서 학습한 모델을 실제 로봇에 배포하면, 성능이 크게 떨어진다. 실내 데이터로 학습해서 실외에 배포해도 마찬가지이다. 이 문제를 **domain shift**라 하고, 이를 해결하는 연구가 domain adaptation이다. 로보틱스에서는 sim-to-real gap 문제와 직결된다.
 
 **문제 정의**:
 - Source domain D_s (라벨 있음): 시뮬레이션 데이터 또는 기존 데이터셋
@@ -545,7 +539,7 @@ def distillation_loss(student_logits, teacher_logits, labels,
 - 카메라 파라미터: focal length, 위치, 각도에 noise 추가
 - 물리 파라미터: 마찰 계수, 질량, 관성 등을 범위 내에서 랜덤 설정
 
-아이디어: 충분히 다양한 시뮬레이션 환경을 보면, 실제 환경도 "또 하나의 변종"으로 처리될 수 있다.
+충분히 다양한 시뮬레이션 환경을 보면, 실제 환경도 "또 하나의 변종"으로 처리될 수 있다.
 
 **Adversarial Domain Adaptation**:
 
@@ -568,8 +562,8 @@ $$\mathcal{L} = \mathcal{L}_{task}(D_s) - \lambda \cdot \mathcal{L}_{domain}(D_s
 
 배포 후에도 모델이 새로운 환경에 적응하는 방법이다. 학습 데이터에 접근하지 않고, 추론 시 들어오는 데이터만으로 모델을 조정한다.
 
-- **TENT**: batch normalization의 affine parameter를 entropy minimization으로 조정한다.
-- **CoTTA**: continual TTA. 시간에 따라 distribution이 변하는 경우에도 적응한다.
+- TENT: batch normalization의 affine parameter를 entropy minimization으로 조정한다.
+- CoTTA: continual TTA. 시간에 따라 distribution이 변하는 경우에도 적응한다.
 
 ```python
 # TENT 핵심 아이디어 (간략화)
@@ -609,9 +603,9 @@ for batch in test_loader:
 ---
 
 > **기술 흐름: 딥러닝 기반 인식 (Deep Learning for Perception)**
-> - **2012**: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. "딥러닝 혁명"의 시작. hand-crafted feature의 시대가 저물기 시작
-> - **2014~2015**: VGGNet, GoogLeNet, ResNet 등장. 특히 ResNet (2015)의 residual connection은 수백 층의 네트워크를 학습 가능하게 만듦. 이 시기에 Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
-> - **2017**: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
-> - **2020~2021**: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 새 패러다임. DETR로 detection에도 Transformer 적용. Swin Transformer가 다양한 비전 태스크에서 SOTA 달성
-> - **2022~**: ConvNeXt가 "CNN도 아직 죽지 않았다"를 보여줌. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. Spatial AI로의 확장 — depth estimation, 3D scene understanding이 딥러닝의 다음 전장
-> - **지금 주목할 것**: 단일 태스크 모델에서 foundation model로의 전환. DINOv2 하나로 detection, segmentation, depth feature를 모두 추출하는 파이프라인이 실험적으로 등장하고 있다
+> - 2012: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. hand-crafted feature 시대의 전환점
+> - 2014~2015: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
+> - 2017: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
+> - 2020~2021: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 새 패러다임. DETR로 detection에도 Transformer 적용. Swin Transformer가 다양한 비전 태스크에서 SOTA 달성
+> - 2022~: ConvNeXt가 CNN 기반 모델도 여전히 경쟁력이 있음을 보였다. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. 이후 depth estimation, 3D scene understanding이 딥러닝의 다음 영역으로 부상
+> - 지금 주목할 것: 단일 태스크 모델에서 foundation model로의 전환. DINOv2 하나로 detection, segmentation, depth feature를 모두 추출하는 파이프라인이 실험적으로 등장하고 있다

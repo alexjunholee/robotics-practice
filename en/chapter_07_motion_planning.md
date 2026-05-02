@@ -430,9 +430,336 @@ Recently, attempts to replace the symbolic planner with an LLM have been active:
 
 Practical limits: LLM-based TAMP is still experimental. Complex geometric constraints (manipulation in tight spaces, precision assembly) are hard for LLMs to handle, and traditional motion planners are still needed in the end. A realistic division of labor: LLM for high-level planning, motion planner for low-level execution.
 
+TAMP assumes the environment dynamics and actions are deterministic. When both dynamics and observations are stochastic, see §7.9 Advanced: POMDP.
+
 ---
 
-## 7.9 Further Reading
+## 7.9 Advanced: Decision-Making Under Uncertainty (POMDP and Belief Space Planning)
+
+*If you want to become a researcher, start reading here.*
+
+§7.1–§7.8 assumed the robot knows its own state and the environment exactly. Real robots observe only partial information through noisy sensors. A robot that does not know which side of a symmetric corridor it is on, a situation where it is uncertain whether a door is open or closed — planning from the "current best-estimate state" fails in these cases. The plan must be built directly over the belief (the posterior distribution). Thrun, Burgard, and Fox's *Probabilistic Robotics* §15.2 and §16 address this problem.
+
+### 7.9.1 Introduction: Three Paradigms
+
+Three planners give different answers in the same environment. Take a left-right symmetric corridor with a Goal, a Pit, and a Robot.
+
+Classical planning assumes the state is fully known and actions are deterministic. A* from §7.3 belongs here: compute the shortest path once, and no sensing is needed during execution.
+
+**MDP (Markov Decision Process)**: full state observability, stochastic actions. A policy $\pi: s \to a$ maps every state to an action. In a narrow passage the planner can choose a wider route to reduce the risk of hitting a wall. Ch.8 §8.2 falls in this category.
+
+**POMDP**: both actions and observations are stochastic. The policy $\pi: b \to a$ is defined over belief $b$. In the symmetric corridor the robot starts without knowing its position, so it deliberately detours into an asymmetric region to gather information before heading for the goal. This is **active information gathering**.
+
+The three paradigms are nested: classical $\subset$ MDP $\subset$ POMDP. Uncertainty has two axes: action uncertainty (where you tried to go versus where you actually went) and perceptual uncertainty (where you actually are versus what the sensor read). MDP handles the first; POMDP handles both.
+
+Ch.3's filters *tracked* the belief; this section addresses what to *do* with the tracked belief.
+
+<!-- DEMO: pomdp_three_paradigms.html -->
+
+### 7.9.2 Value Iteration over Belief
+
+Comparing the equations of the three paradigms shows immediately where POMDP becomes hard. The core equation of MDP value iteration is the Bellman equation:
+
+$$C^T(s) = \max_a \int \left[ c(s') + C^{T-1}(s') \right] P(s' \mid a, s)\, ds'$$
+
+Replace state $s$ with belief $b$ and the POMDP value iteration follows:
+
+$$C^T(b) = \max_a \int \left[ c(b') + C^{T-1}(b') \right] P(b' \mid a, b)\, db' \tag{16.2}$$
+
+The policy is:
+
+$$\pi^T(b) = \arg\max_a \int \left[ c(b') + C^{T-1}(b') \right] P(b' \mid a, b)\, db' \tag{16.3}$$
+
+The problem is that $b'$ is a distribution over distributions. $b$ is a probability distribution over the state space $\mathcal{S}$, and $b'$ is itself a distribution over that space of distributions. The integral dimension diverges.
+
+In the infinite-horizon limit, if this recursion converges, we get the standard Bellman equation:
+
+$$V(b) = \max_a \left[ r(b, a) + \gamma \sum_{o'} P(o' \mid b, a)\, V(B(b, a, o')) \right]$$
+
+where $r(b,a) = \sum_s b(s)\, c(s,a)$ is the expected immediate reward over the belief. Written as a finite-horizon recursion this is eq. (16.2).
+
+There is a key trick for handling this. Once observation $o'$ is determined, the posterior belief $B(b, a, o')$ is *uniquely* determined by the Bayes filter. So the integral over the entire belief space can be recast as an integral over the observation space:
+
+$$C^T(b) = \max_a \int \left[ c(B(b, a, o')) + C^{T-1}(B(b, a, o')) \right] P(o' \mid a, b)\, do' \tag{16.34}$$
+
+The belief update operator is:
+
+$$B(b, a, o')(s') = \frac{1}{P(o' \mid a, b)}\, P(o' \mid s') \int P(s' \mid a, s)\, b(s)\, ds$$
+
+In discrete state and observation spaces the integrals become sums. This reformulation is the starting point for all modern POMDP solvers.
+
+### 7.9.3 Four-State Toy Example
+
+To see the PWLC (piecewise-linear convex) structure directly, a small example helps. Work through a 4-state, 2-action, 2-observation problem by hand.
+
+**Setup:**
+- States $s_1, s_2, s_3, s_4$. Initially in one of $(s_1, s_2)$.
+- Action $a_1$: information gathering. Swaps $s_1 \leftrightarrow s_2$ with probability 0.9.
+- Action $a_2$: termination. Moves to $s_3$ (reward +80) or $s_4$ (reward −80).
+- Observations $o_1, o_2$: probabilities $(0.7, 0.3)$ from $s_1$, $(0.4, 0.6)$ from $s_2$.
+- Belief $b = (p_1, p_2)$ with $p_1 + p_2 = 1$, so it is one-dimensional.
+
+**Horizon 1 computation:**
+
+The immediate reward is linear in belief: $c(b) = \sum_i c(s_i) p_i$.
+
+Taking $a_2$ gives the $T=1$ value ($\gamma = 0.9$):
+$$C^1(b, a_2) = \gamma(80 p_1 - 80 p_2) = 72 p_1 - 72 p_2$$
+
+Taking $a_1$ yields no termination, so only the immediate reward: $C^1(b, a_1) \approx 0$.
+
+Therefore:
+$$C^1(b) = \max\{ 0,\; 72p_1 - 72p_2 \}$$
+
+$C^1(b)$ is the max of two linear functions. It bends at $p_1 = 0.5$. If $p_1 > 0.5$, take $a_2$; otherwise take $a_1$.
+
+**Horizon 2 computation:**
+
+Integrating over the probabilities of observing $o_1, o_2$ after $a_1$:
+$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 7.78 p_2\}$$
+
+(Coefficients are computed through the observation probabilities and the belief update.)
+
+Full $T=2$:
+$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 7.78 p_2,\; 72 p_1 - 72 p_2 \}$$
+
+The max of three linear pieces. As the horizon grows, more pieces are added.
+
+"Knowledge always helps" — $\beta C(b) + (1-\beta) C(b') \geq C(\beta b + (1-\beta) b')$. The value at a certain belief is always at least as high as at an uncertain one.
+
+<!-- DEMO: pomdp_toy_pwlc.html -->
+
+### 7.9.4 PWLC Structure and Alpha-Vectors
+
+The four-state example showed that the value function takes the form of a *max of linear pieces*. This is not a coincidence; the following inductive argument shows it holds in general.
+
+Base case ($T=1$): the immediate reward $c(b) = \sum_i c(s_i) p_i$ is linear in belief. So $C^1(b) = \max_a \sum_i C^1_{a,i}\, p_i$ — one linear function per action.
+
+Inductive step: suppose $C^{T-1}(b)$ is PWLC. Expanding $C^{T-1}(B(b,a,o'))$ as a function of $b$ in eq. (16.34): the nonlinear normalization factor $1/P(o'\mid a, b)$ in the belief update cancels with the weight $P(o'\mid a, b)$ in eq. (16.34), so each inner product $\langle \phi, B(b,a,o') \rangle \cdot P(o'\mid a, b)$ reduces to a linear function of $b$. The max of a max of linear functions is still a max of linear functions. So $C^T(b)$ is PWLC.
+
+Each coefficient vector of a linear piece is called an **alpha-vector** $\phi$. The value function is:
+
+$$V(b) = \max_\phi \langle \phi, b \rangle$$
+
+With $\Phi$ the set of alpha-vectors, $V(b) = \max_{\phi \in \Phi} \sum_i \phi_i\, p_i$.
+
+Each alpha-vector corresponds to one *conditional policy* (current action plus subsequent policy contingent on observations). The count $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$ grows doubly exponentially. Starting from $|\Phi^1| = 1$: $|\Phi^2| = 2 \cdot 2^1 = 4$, $|\Phi^3| = 2 \cdot 2^4 = 32$, $|\Phi^4| = 2 \cdot 2^{32} \approx 10^{10}$. By horizon 4 we are already above ten billion vectors. This is why exact solutions are impractical.
+
+### 7.9.5 LP Solution
+
+If the doubly exponential growth in alpha-vector count is the problem, there is a way to reduce the max–sum–max structure to a linear program (LP) directly, computing an exact solution without enumerating alpha-vectors.
+
+**Reduction principle**: $C = \max_a x(a)$ is solved as $\min C$ subject to $\{C \geq x(a) \;\forall a\}$. For $C = \sum_i \max_a x(a,i)$, introduce a function $a(\cdot)$ selecting an action per state and add $\{C \geq \sum_i x(a(i),i)\}$ for every combination. The number of constraints is $|A|^{|\mathcal{S}|}$.
+
+POMDP horizon $T$ constraints (eq. 16.67):
+
+$$\bigcup_a \bigcup_{k(o'):1 \leq k(o') \leq |\Phi^{T-1}|} \left\{ C^T(b) \geq \gamma \sum_{o'} \sum_i \left(c_i + C^{T-1}_{k(o'),i}\right) P(o' \mid s_i') \sum_j P(s_i' \mid a, s_j)\, p_j \right\}$$
+
+The number of constraints is $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$.
+
+---
+
+**Algorithm: finite_world_POMDP** (Thrun et al., Table 16.1, adapted)
+
+```
+Algorithm finite_world_POMDP(T):
+  Φ¹ = { φ : C¹(b) = γ Σᵢ c(sᵢ) pᵢ }     # single alpha-vector for horizon 1
+
+  for t = 2 to T:
+    Φᵗ = ∅
+    for each action a:
+      for each assignment k(o') ∈ {1, …, |Φᵗ⁻¹|} for each o':
+        # compute new alpha-vector
+        for each state sⱼ:
+          φⱼ = γ Σₒ' Σᵢ (cᵢ + Φᵗ⁻¹[k(o'), i]) · P(o'|sᵢ') · P(sᵢ'|a, sⱼ)
+        Φᵗ = Φᵗ ∪ { ⟨a, φ⟩ }
+
+  # remove dominated alpha-vectors (pruning)
+  Φᵀ = prune(Φᵀ)
+  return Φᵀ
+```
+
+---
+
+$|\Phi^T|$ grows doubly exponentially. With a horizon of 5, 3 actions, and 5 observations, millions of alpha-vectors are already needed, and even with pruning the number is unmanageable in realistic domains. The exact solution is a proof of concept; approximation is essential in practice.
+
+### 7.9.6 General POMDP
+
+If the LP solution is already impractical for discrete finite-state problems, continuous state spaces make things worse.
+
+With a continuous state space, alpha-vectors become continuous functions. Eq. (16.34) still holds in principle, but $\Phi^{T-1}$ becomes a set of functions — infinite-dimensional.
+
+---
+
+**Algorithm: POMDP(T)** (Thrun et al., Table 16.2, adapted, compressed)
+
+```
+Algorithm POMDP(T):
+  initialize: Φ¹ ← value function at horizon 1 (continuous)
+
+  for t = 2 to T:
+    for each action a:
+      for each "conditional plan" k(·) mapping observations to Φᵗ⁻¹ elements:
+        new function φ(b) = γ ∫ₒ' [ c(B(b,a,o')) + Φᵗ⁻¹[k(o')](B(b,a,o')) ] P(o'|a,b) do'
+        Φᵗ ← Φᵗ ∪ { φ }
+
+  return Φᵀ
+```
+
+---
+
+In continuous spaces, storing and comparing sets of functions is itself impractical. This algorithm is an in-principle solution; practical algorithms (MC-POMDP, AMDP) emerge as alternatives.
+
+### 7.9.7 MC-POMDP
+
+With exact solutions blocked, the next step is to approximate the belief with samples and bring computation down to a tractable level.
+
+Represent the belief with a particle filter and approximate the value-iteration update on a sample basis. In ch.3 §3.11, the particle filter served for estimation; here it serves for *planning*.
+
+Belief $\theta$ is a set of weighted particles $\langle s^{(i)}, w^{(i)} \rangle$. The belief update $B(b, a, o')$ is implemented in particle form:
+
+```
+Algorithm particle_filter_belief_update(θ, a, o'):
+  θ' = ∅
+  for i = 1 to N:
+    s ~ θ                         # sample a particle
+    s' ~ P(s'|a, s)               # motion model
+    w' = P(o'|s')                 # measurement model
+    θ' ← θ' ∪ { ⟨s', w'⟩ }
+  normalize weights in θ'
+  return θ'
+```
+
+The value-iteration update learns a Q-value $Q(\theta, a)$ per action for each belief $\theta$. Sample $N$ times at each belief, take the max Q from the next belief, and average:
+
+---
+
+**Algorithm: MC-POMDP** (Thrun et al., Table 16.3, skeleton adapted)
+
+```
+Algorithm MCPOMDP(belief_database):
+  for each belief θ in database:
+    V(θ) = −∞
+    for each action a:
+      Q(θ, a) = 0
+      for i = 1 to N:
+        s ~ θ
+        s' ~ P(s'|a, s)
+        o' ~ P(o'|s')
+        θ' = particle_filter_belief_update(θ, a, o')
+        Q(θ, a) += (1/N) · γ · [V(θ') + c(s')]
+      if Q(θ, a) > V(θ):
+        V(θ) = Q(θ, a)
+
+  return V, policy σ(θ) = argmax_a Q(θ, a)
+```
+
+---
+
+Q-function update (eq. 16.78):
+
+$$Q(\theta_t, a_t) \leftarrow \mathbb{E}\left[ R(o_{t+1}) + \gamma \max_{\bar{a}} Q(\theta_{t+1}, \bar{a}) \right]$$
+
+Policy (eq. 16.79):
+
+$$\sigma^Q(\theta) = \arg\max_{\bar{a}} Q(\theta, \bar{a})$$
+
+Q-value function approximation uses nearest-neighbor lookup. Because belief $\theta$ is a particle set, it cannot be fed directly into a feedforward network. Instead a database of $\langle \theta, a, Q \rangle$ tuples is maintained, and for a new belief $\theta'$ the $k$ nearest neighbors by KL divergence yield the average Q-value.
+
+KL divergence between two beliefs is approximated with Gaussian KDE. KL-based kNN acts as the function approximator. Modern implementations replace this with neural function approximation, but the algorithmic skeleton is the same.
+
+The outer loop either holds a static belief database or generates beliefs naturally through $\varepsilon$-greedy simulation trials — the latter concentrates computation on beliefs the real robot is likely to visit.
+
+### 7.9.8 Experiments: Heaven/Hell and Find-and-Fetch
+
+**Heaven/Hell problem**: in a T-shaped corridor, one end is heaven (+1) and the other is hell (−1). Only a priest near the entrance knows which is which. The robot must first ask the priest (information gathering), then head in the correct direction. The POMDP planner automatically learns a policy that detours to the priest. Going directly on the shortest path reaches hell 50% of the time; consulting the priest guarantees the right direction.
+
+**Find-and-Fetch (monocular camera)**: the robot must find and retrieve a target object using a monocular camera. The camera gives the object's direction but not its distance. MC-POMDP learns a policy that actively changes viewpoint to reduce distance uncertainty, observing the object from multiple angles to narrow down its position before approaching.
+
+Both experiments track the belief and include *information-gathering actions* in the plan. State estimation followed by greedy action selection alone never produces these detour policies.
+
+### 7.9.9 AMDP — Dimensionality Reduction via Belief Statistics
+
+MC-POMDP tracks the belief directly as a particle set. AMDP (Augmented MDP) rests on the observation that the same uncertainty can be summarized with far fewer statistics. The two extremes of POMDP are MDP (polynomial in $|S|$) and exact POMDP (doubly exponential). AMDP sits in between.
+
+The idea: along real robot trajectories, belief does not fill the entire belief space but occupies a narrow manifold. Summarize that manifold with *low-dimensional statistics* $\bar{b} = f(b)$ and apply standard MDP value iteration over $\bar{b}$.
+
+**Standard statistics** (eq. 16.80):
+
+$$\bar{b} = \langle \arg\max_s b(s),\; H[b] \rangle$$
+
+Most likely state plus belief entropy. Entropy:
+
+$$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
+
+An infinite-dimensional belief summarized by a single scalar. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
+
+Using $\arg\max_s b(s)$ alone is a standard MDP. Adding entropy to the state encodes "how much I do not know."
+
+---
+
+**Algorithm: Augmented_MDP_value_iteration** (Thrun et al., Table 16.4, adapted)
+
+```
+Algorithm Augmented_MDP_value_iteration():
+  for all b̄:
+    Ĉ(b̄) = 0
+
+  repeat until convergence:
+    for all b̄:
+      Ĉ(b̄) ← max_a ∫ [c(b̄') + Ĉ(b̄')] P(b̄'|a, b̄) db̄'
+
+  return Ĉ
+  policy: π(b̄) = argmax_a ∫ [c(b̄') + Ĉ(b̄')] P(b̄'|a, b̄) db̄'
+```
+
+---
+
+The form is identical to MDP_value_iteration (§15.3.3). The only difference is that the state is $\bar{b}$ instead of $s$.
+
+Transition probability $P(\bar{b}' \mid a, \bar{b})$ (eq. 16.85):
+
+$$P(\bar{b}' \mid a, \bar{b}) = \int\!\!\int\!\!\int I_{f(b)=\bar{b}}\, I_{f(B(o',a,b))=\bar{b}'}\, P(o' \mid s') P(s' \mid a, s) P(s \mid b)\, ds\, ds'\, do'\, db$$
+
+In practice this is approximated by simulation with a lookup-table cache, estimating transitions statistically over many random trials.
+
+### 7.9.10 Coastal Navigation Example
+
+Coastal navigation is the easiest emergent behavior produced by AMDP to describe.
+
+The motivation: crossing a wide open space, a conventional MDP planner takes the straight-line path because it is short. But in open space, lidar or a camera sees only featureless walls, so the entropy of the position belief grows substantially. The robot reaches the destination without knowing where it is.
+
+In the same environment, an AMDP planner chooses a **curved path that follows the wall**. Near the wall, lidar measurements tightly constrain the position and entropy stays low. Entropy is part of the cost function, so preferring "information-rich" paths comes out automatically.
+
+Analogy: a ship navigating without GPS follows the coastline. Landmarks are plentiful near the coast, which keeps the position estimate sharp.
+
+In Thrun et al.'s Figure 16.5, as sensor range decreases the arrival entropy of the conventional planner rises steeply, while the coastal planner's arrival entropy barely changes. This is where the robustness of information-aware path planning shows up.
+
+Selecting paths to reduce position uncertainty in Active SLAM, and moving toward the highest-information viewpoint in next-best-view planning, are both modern forms of coastal navigation.
+
+<!-- DEMO: coastal_navigation_amdp.html -->
+
+### 7.9.11 What Survived
+
+Coastal navigation is the conclusion a planner reaches automatically once entropy is included in the cost function. The value iteration over belief that started in §7.9.2 produces coastal navigation as its answer, in concrete form.
+
+The exact solutions (§7.9.5 and §7.9.6) are impractical but remain useful as conceptual tools. Modern POMDP solvers have branched into three families.
+
+Point-based value iteration (SARSOP, HSVI, PBVI) performs alpha-vector backup only at sampled belief points, not across the full belief space. The alpha-vector structure from §7.9.4 is intact; restricting the search range prevents the explosion.
+
+**MCTS family**: POMCP (Silver & Veness, 2010) and DESPOT. Rollouts estimate Q-values and belief trees are searched with MCTS. This combines the Q estimation structure of §7.9.7's MC-POMDP with tree search.
+
+**Deep POMDP**: DRQN (Recurrent Q-network), DVRL (Igl et al.). The RNN's hidden state serves as an implicit belief. MC-POMDP's nearest-neighbor function approximation replaced by neural function approximation.
+
+AMDP's core idea lives on under other names. Bayes-adaptive MDP (BAMDP) uses the posterior distribution over model parameters as an augmented state. Active SLAM includes the variance of the position belief in the cost function. In NeRF-based active perception, entropy-augmented planning has become a standard tool.
+
+Ch.8 §8.3's deep RL methods (PPO, SAC) learn from experience and need no model (transition probabilities, observation model). POMDP planning computes the optimal policy when the model is known. Without a model, MC-POMDP does not run either. MC-POMDP sits at the intersection: belief tracked with the model, Q-values learned from experience.
+
+Value iteration over belief is mathematically clean but scales doubly exponentially in the number of states — that is why approximate solvers exist. MC-POMDP represents belief with a particle filter and learns Q-values from samples. AMDP summarizes belief as a (most likely state, entropy) pair and reduces to a standard MDP. The methods differ, but the goal is one: active information gathering. Its modern forms are MCTS-based POMCP, Deep POMDP, and entropy-augmented planning in Active SLAM.
+
+---
+
+## 7.10 Further Reading
 
 > **LaValle, "Planning Algorithms"**
 > http://lavalle.pl/planning/

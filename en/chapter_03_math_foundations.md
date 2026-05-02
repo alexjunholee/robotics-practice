@@ -879,3 +879,602 @@ Here a is the action, Z_a is the observation obtained through that action, and X
 > - **2016~2020**: Real-time large-scale optimization became practical. Incremental optimization enabled per-frame real-time updates. Ceres Solver became an industry standard.
 > - **2021~**: The era of differentiable programming. End-to-end optimization using auto-differentiation (Auto-Diff) in PyTorch/JAX. With the rise of differentiable rendering such as NeRF and 3D Gaussian Splatting, Jacobians that used to be derived by hand were replaced by auto-diff. Differentiable optimization libraries like Theseus (Meta) also appeared.
 > - **Now**: Classical math (Lie groups, probability, optimization) is still essential. Differentiable programming is changing how we approach optimization problems, but understanding what auto-diff does internally still requires the foundations covered here. Knowing only the tools means you can't debug.
+
+---
+
+## 3.9 Advanced: Bayes Filter
+
+Source: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.2 (Recursive State Estimation).
+
+§3.8 information theory gave us a tool to *measure* uncertainty. The question now is how to *update* that uncertainty as new observations accumulate over time. Running the Bayes' rule of §3.3.2 recursively along the time axis produces the structure that answers "where is the robot right now?" Where the factor graph of §3.6 assembled spatial constraints into a graph, the Bayes filter extends that estimation structure along the time direction.
+
+"Where is the robot right now?" is not a single-shot estimation problem but a **recursive estimation** problem. The Bayes filter is the most general form of that recursive structure; the Kalman filter and particle filter both operate within this framework.
+
+### 3.9.1 State and the Markov Assumption
+
+**State $x_t$** is the collection of variables that contains all information needed to predict the robot's and environment's future. A "complete state" is a sufficient statistic on its own for predicting the future. That property is the **Markov property**.
+
+$$p(x_{t+1} \mid x_t,\, x_{0:t-1},\, z_{1:t},\, u_{1:t}) = p(x_{t+1} \mid x_t)$$
+
+Under the complete-state assumption, the future depends only on the current $x_t$. The past is irrelevant.
+
+State variables fall into several categories. Along the time axis: dynamic states that change (robot position, velocity) and static states that do not (wall positions, landmarks). By value type: continuous states (pose), discrete states (whether a sensor has failed), and hybrid states (both). In practice, a complete state is almost never achievable, so filters always run on partial approximations. The main sources of Markov assumption violations are model inaccuracies and unmodeled dynamics, along with errors arising from the approximation itself.
+
+### 3.9.2 Environment Interaction: Measurements and Controls
+
+Interactions between the robot and the environment decompose into two data streams.
+
+- **Measurement data** $z_t$: information the environment gives the robot (LiDAR range, camera image). Increases the robot's knowledge over the interval $(t-1, t]$.
+- **Control data** $u_t$: actions the robot applies to the environment (motor commands). Applying control increases state uncertainty.
+
+$$z_{t_1:t_2} = z_{t_1},\, z_{t_1+1},\, \ldots,\, z_{t_2} \qquad u_{t_1:t_2} = u_{t_1},\, \ldots,\, u_{t_2}$$
+
+**Odometry is treated as control data.** Wheel encoders are physically sensors, but because they carry information about state change (how far the robot moved), they are classified as $u_t$. A do-nothing command also counts as control: time passing is itself control information.
+
+### 3.9.3 Defining Belief
+
+Belief is the robot's internal posterior distribution over the true state $x_t$, which cannot be measured directly.
+
+$$\text{bel}(x_t) = p(x_t \mid z_{1:t},\, u_{1:t})$$
+
+The predicted belief *before* incorporating measurement $z_t$ is written separately:
+
+$$\overline{\text{bel}}(x_t) = p(x_t \mid z_{1:t-1},\, u_{1:t})$$
+
+The transition $\overline{\text{bel}} \to \text{bel}$ is called the **correction** or **measurement update**. Even GPS does not directly hand the robot its pose — belief is always the result of indirect inference. This $\text{bel}/\overline{\text{bel}}$ distinction is the conceptual foundation of the two phases of the Bayes filter.
+
+### 3.9.4 Generative Laws: Motion Model and Measurement Model
+
+The complete-state assumption yields two conditional independences:
+
+$$p(x_t \mid x_{0:t-1},\, z_{1:t-1},\, u_{1:t}) = p(x_t \mid x_{t-1},\, u_t) \quad \text{(motion model)}$$
+
+$$p(z_t \mid x_{0:t},\, z_{1:t-1},\, u_{1:t}) = p(z_t \mid x_t) \quad \text{(measurement model)}$$
+
+Because $x_{t-1}$ is a sufficient statistic for all past data, the next state depends only on the immediately preceding state and control, and measurements depend only on the current state. Under a time-invariant assumption these collapse to $p(x' \mid u, x)$ and $p(z \mid x)$.
+
+The complete generative model = motion model + measurement model + initial distribution $p(x_0)$. This structure is a Hidden Markov Model / Dynamic Bayes Network.
+
+### 3.9.5 The General Bayes Filter
+
+The most general form of any belief calculator. It alternates a **prediction** step and a **correction** step.
+
+$$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t-1})\, dx_{t-1} \tag{prediction}$$
+
+$$\text{bel}(x_t) = \eta\, p(z_t \mid x_t)\, \overline{\text{bel}}(x_t) \tag{correction}$$
+
+$\eta$ is a normalization constant corresponding to the total-probability denominator ($P(B)$) in the Bayes rule of §3.3.2.
+
+```
+# Algorithm Bayes_filter (Table 2.1, adapted)
+# Input:  bel(x_{t-1}), u_t, z_t
+# Output: bel(x_t)
+
+for all x_t do
+    # prediction: integrate over x_{t-1} via the motion model
+    bel_bar(x_t) = ∫ p(x_t | u_t, x_{t-1}) · bel(x_{t-1}) dx_{t-1}
+
+    # correction: weight by measurement model and normalize
+    bel(x_t) = η · p(z_t | x_t) · bel_bar(x_t)
+endfor
+return bel(x_t)
+```
+
+In a discrete state space the integral becomes a summation. An initial belief $\text{bel}(x_0)$ is required — set it to a point mass if the initial state is known exactly, or a uniform distribution if not. This general form is only directly implementable when the integral has a closed form or the state space is small enough. The Kalman filter (§3.10) and the particle filter (§3.11) each approximate this general form in different ways.
+
+### 3.9.6 Door Estimation: A Worked Example
+
+A two-state (open/closed) door is used to trace by hand how belief updates.
+
+**Model setup:**
+
+- Measurement model: $p(\text{sense\_open} \mid \text{is\_open}) = 0.6$, $p(\text{sense\_open} \mid \text{is\_closed}) = 0.2$
+- Motion model push: if already open stays open (probability 1); if closed opens with probability 0.8
+- Motion model do_nothing: deterministic identity (state unchanged)
+- Initial: $\text{bel}(X_0 = \text{open}) = \text{bel}(X_0 = \text{closed}) = 0.5$
+
+**Step 1: $u_1$ = do_nothing (apply control)**
+
+do_nothing is the identity transform, so $\overline{\text{bel}}(X_1) = (0.5,\; 0.5)$, unchanged.
+
+**Step 2: $z_1$ = sense_open (incorporate measurement)**
+
+$$\overline{\text{bel}}(X_1 = \text{open}) = 0.5, \quad p(\text{sense\_open} \mid \text{open}) = 0.6$$
+$$\overline{\text{bel}}(X_1 = \text{closed}) = 0.5, \quad p(\text{sense\_open} \mid \text{closed}) = 0.2$$
+
+Unnormalized posterior: $(0.6 \times 0.5,\; 0.2 \times 0.5) = (0.30,\; 0.10)$. Normalization constant $\eta = 1/(0.30 + 0.10) = 2.5$.
+
+$$\text{bel}(X_1 = \text{open}) = 0.75, \quad \text{bel}(X_1 = \text{closed}) = 0.25$$
+
+**Step 3: $u_2$ = push (apply control)**
+
+$$\overline{\text{bel}}(X_2 = \text{open}) = 1 \cdot 0.75 + 0.8 \cdot 0.25 = 0.95$$
+$$\overline{\text{bel}}(X_2 = \text{closed}) = 0 \cdot 0.75 + 0.2 \cdot 0.25 = 0.05$$
+
+**Step 4: $z_2$ = sense_open (incorporate measurement)**
+
+Unnormalized: $(0.6 \times 0.95,\; 0.2 \times 0.05) = (0.570,\; 0.010)$. $\eta = 1/0.580 \approx 1.724$.
+
+$$\text{bel}(X_2 = \text{open}) \approx 0.983, \quad \text{bel}(X_2 = \text{closed}) \approx 0.017$$
+
+| Step | $\text{bel(open)}$ | $\text{bel(closed)}$ |
+|------|:-----------------:|:-------------------:|
+| Initial | 0.500 | 0.500 |
+| After $z_1$ | 0.750 | 0.250 |
+| After $u_2$ | 0.950 | 0.050 |
+| After $z_2$ | 0.983 | 0.017 |
+
+Even with substantial sensor noise (60% / 20%) and nondeterministic control, accumulated measurements and controls drive belief rapidly toward one hypothesis. Whether 0.983 is a sufficient threshold for autonomous decision-making is a question this example deliberately leaves open.
+
+### 3.9.7 Mathematical Derivation
+
+The two update equations of the Bayes filter follow from three tools alone: Bayes' rule, the law of total probability, and the Markov (complete-state) assumption.
+
+**Correction step derivation:**
+
+Apply Bayes' rule:
+$$p(x_t \mid z_{1:t},\, u_{1:t}) = \eta\, p(z_t \mid x_t,\, z_{1:t-1},\, u_{1:t})\, p(x_t \mid z_{1:t-1},\, u_{1:t})$$
+
+The complete-state assumption gives $p(z_t \mid x_t,\, z_{1:t-1},\, u_{1:t}) = p(z_t \mid x_t)$, so:
+$$\text{bel}(x_t) = \eta\, p(z_t \mid x_t)\, \overline{\text{bel}}(x_t)$$
+
+**Prediction step derivation:**
+
+Expand $\overline{\text{bel}}$ using the law of total probability:
+$$\overline{\text{bel}}(x_t) = \int p(x_t \mid x_{t-1},\, z_{1:t-1},\, u_{1:t})\, p(x_{t-1} \mid z_{1:t-1},\, u_{1:t})\, dx_{t-1}$$
+
+The complete-state assumption reduces the first factor to $p(x_t \mid x_{t-1},\, u_t)$. In the second factor, $u_t$ arrives later than $x_{t-1}$ and can be dropped:
+$$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t-1})\, dx_{t-1}$$
+
+The entire derivation rests on the Markov assumption. When the Markov assumption breaks, the equations themselves become inaccurate.
+
+The two lines of the algorithm in §3.9.5 are consequences of Bayes' rule, the law of total probability, and the Markov assumption — nothing else. Knowing where each assumption enters tells you exactly where this filter will fail.
+
+> **Further reading**
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.2 is the primary source for this section. Algorithm, examples, and derivation are covered completely.
+> - [Cyrill Stachniss — Bayes Filter Lecture (YouTube)](https://www.youtube.com/watch?v=0lKHFJpaZkI) — Lecture from Freiburg University. A clear slide-based walkthrough of the Bayes filter.
+
+---
+
+## 3.10 Advanced: Gaussian Filters (KF, EKF, IF)
+
+Source: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.3 (Gaussian Filters).
+
+The Bayes filter of §3.9 handles arbitrary beliefs, but the integrals cannot be solved in closed form, which makes direct implementation difficult. The Gaussian filter family resolves this by restricting belief to a Gaussian $\mathcal{N}(\mu_t, \Sigma_t)$. The Kalman filter (KF), extended Kalman filter (EKF), and information filter (IF) all belong to this family, and all three carry over the prediction-correction structure of §3.9 unchanged.
+
+### 3.10.1 Kalman Filter
+
+#### Linear Gaussian System Assumptions
+
+For the KF to be an exact Bayes filter, belief must remain Gaussian at every step. Three assumptions guarantee this.
+
+**State transition (motion model):**
+$$x_t = A_t x_{t-1} + B_t u_t + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
+
+$A_t$ is the $n \times n$ state-transition matrix, $B_t$ is the $n \times m$ control-input matrix, and $R_t$ is the process-noise covariance.
+
+**Measurement model:**
+$$z_t = C_t x_t + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
+
+$C_t$ is the $k \times n$ measurement matrix and $Q_t$ is the measurement-noise covariance.
+
+**Initial belief:**
+$$\text{bel}(x_0) = \mathcal{N}(\mu_0, \Sigma_0)$$
+
+Under these three assumptions, belief at every time step remains Gaussian:
+$$p(x_t \mid u_t, x_{t-1}) = \mathcal{N}(x_t;\; A_t x_{t-1} + B_t u_t,\; R_t)$$
+$$p(z_t \mid x_t) = \mathcal{N}(z_t;\; C_t x_t,\; Q_t)$$
+
+#### Kalman Filter Algorithm
+
+The KF represents belief with two quantities $(\mu_t, \Sigma_t)$ and completes one cycle in five steps: two lines of prediction followed by three lines of update.
+
+```
+# Algorithm Kalman_filter (Table 3.1, adapted)
+# Input:  μ_{t-1}, Σ_{t-1}, u_t, z_t
+# Output: μ_t, Σ_t
+
+# --- prediction ---
+1: μ̄_t = A_t μ_{t-1} + B_t u_t          # state prediction: apply motion model
+2: Σ̄_t = A_t Σ_{t-1} A_t^T + R_t        # covariance prediction: uncertainty grows
+
+# --- correction ---
+3: K_t  = Σ̄_t C_t^T (C_t Σ̄_t C_t^T + Q_t)^{-1}   # Kalman gain
+4: μ_t  = μ̄_t + K_t (z_t - C_t μ̄_t)    # correct mean using innovation
+5: Σ_t  = (I - K_t C_t) Σ̄_t             # covariance shrinks
+
+return μ_t, Σ_t
+```
+
+Lines 1–2 are prediction (incorporating control $u_t$; uncertainty grows), and lines 3–5 are the measurement update (incorporating observation $z_t$; uncertainty shrinks).
+
+**Meaning of Kalman gain $K_t$:** $K_t$ sets the confidence balance between prediction and measurement. Large measurement noise $Q_t$ shrinks $K_t$, reducing trust in the measurement; large prediction uncertainty $\bar\Sigma_t$ grows $K_t$, increasing trust in the measurement.
+
+**Innovation:** $z_t - C_t \bar\mu_t$ is the difference between the predicted measurement and the actual measurement. When this is zero, no new information has arrived.
+
+#### 1D KF Illustration: How Information Combines
+
+Visualizing each step of the KF in a 1D position estimation problem makes the intuition clear.
+
+- **Prior $\text{bel}(x_{t-1})$**: a narrow Gaussian — high confidence from the previous estimate.
+- **After prediction**: motion adds variance ($\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$). The Gaussian flattens.
+- **Measurement $z_t$**: represented as a separate Gaussian. Sensor precision $Q_t$ determines the width of this curve.
+- **After correction**: multiplying the two Gaussians produces a result narrower than either one — the effect of information combination. The mean sits at the weighted average of the two Gaussians.
+- Next motion: variance grows again. Next measurement: variance shrinks again.
+
+Core intuition: **measurements shrink variance; motion grows it.** This alternation is the essence of state estimation. The same intuition carries through §3.10.2 EKF, §3.11.3 particle filter, Ch.14 §14.7 EKF localization, and §14.10 IMU preintegration.
+
+<!-- DEMO: kalman_1d_illustration.html -->
+
+#### Mathematical Derivation of the KF (Key Steps)
+
+The five lines of the KF are the closed-form solution to the two integrals of the Bayes filter (§3.9.5) under the linear Gaussian assumption.
+
+**Part 1 (Prediction).** In the prediction integral of the Bayes filter, the exponent $L_t$ is quadratic in both $x_{t-1}$ and $x_t$. Splitting $L_t$ into a part quadratic in $x_{t-1}$ and a part depending only on $x_t$ makes the $x_{t-1}$ integral a constant, absorbed into normalization. The first- and second-order coefficients in the remaining $x_t$ quadratic yield directly $\bar\mu_t = A_t \mu_{t-1} + B_t u_t$ and $\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$.
+
+**Part 2 (Measurement update).** From the correction integral $\text{bel}(x_t) \propto \exp\{-J_t\}$, the first and second derivatives of $J_t$ give $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$. Inverting this directly requires $n \times n$ operations, but the **inversion lemma** (Woodbury identity; see §3.1 linear algebra) transforms it into:
+$$K_t = \bar\Sigma_t C_t^T (C_t \bar\Sigma_t C_t^T + Q_t)^{-1}$$
+which needs only a $k \times k$ ($k$ = measurement dimension) inversion. When $k \ll n$, the computational cost drops considerably.
+
+**Complexity:** $O(k^{2.8} + n^2)$ per cycle ($k$: measurement dimension, $n$: state dimension).
+
+The derivation pattern — quadratic splitting plus the inversion lemma — recurs identically in the EKF derivation of §3.10.2 and the Gauss-Newton update of the factor graph in §3.6.
+
+The brevity of the five KF lines rests on the linear Gaussian assumption. Relaxing that assumption to the nonlinear case leads to §3.10.2 EKF.
+
+### 3.10.2 Extended Kalman Filter (EKF)
+
+#### Extension to Nonlinear Systems
+
+Real robot systems are not linear. The motion model $g$ for a robot rotating while moving, and the measurement model $h$ for a range sensor, are both inherently nonlinear.
+
+$$x_t = g(u_t, x_{t-1}) + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
+$$z_t = h(x_t) + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
+
+A Gaussian passed through a nonlinear $g$ is no longer Gaussian. The EKF addresses this with a **first-order Taylor expansion**: it linearizes $g$ and $h$ around the most likely point (the predicted mean) to force Gaussian closure.
+
+$$g(u_t, x_{t-1}) \approx g(u_t, \mu_{t-1}) + G_t (x_{t-1} - \mu_{t-1})$$
+
+$$G_t := \frac{\partial g(u_t, x_{t-1})}{\partial x_{t-1}}\bigg|_{\mu_{t-1}} \quad (n \times n \text{ Jacobian})$$
+
+$$h(x_t) \approx h(\bar\mu_t) + H_t (x_t - \bar\mu_t)$$
+
+$$H_t := \frac{\partial h(x_t)}{\partial x_t}\bigg|_{\bar\mu_t} \quad (k \times n \text{ Jacobian})$$
+
+Linearization quality depends on two factors: how nonlinear the function is, and how wide the belief is. Larger variance makes the tangent-plane approximation break down sooner — EKF works well when variance is small.
+
+#### EKF Algorithm
+
+Going from KF to EKF requires only replacing the linear terms with nonlinear functions and their Jacobians.
+
+```
+# Algorithm Extended_Kalman_filter (Table 3.3, adapted)
+# Input:  μ_{t-1}, Σ_{t-1}, u_t, z_t
+# Output: μ_t, Σ_t
+
+# --- prediction ---
+1: μ̄_t = g(u_t, μ_{t-1})                         # nonlinear motion model
+2: Σ̄_t = G_t Σ_{t-1} G_t^T + R_t                  # covariance propagated through Jacobian
+
+# --- correction ---
+3: K_t  = Σ̄_t H_t^T (H_t Σ̄_t H_t^T + Q_t)^{-1}  # Kalman gain (H_t substituted in)
+4: μ_t  = μ̄_t + K_t (z_t - h(μ̄_t))               # nonlinear predicted measurement
+5: Σ_t  = (I - K_t H_t) Σ̄_t
+
+return μ_t, Σ_t
+```
+
+The KF and EKF differ in two lines: (line 1) $A_t \mu_{t-1} + B_t u_t \to g(u_t, \mu_{t-1})$, and (line 4) $C_t \bar\mu_t \to h(\bar\mu_t)$. In the covariance propagation, $A_t \to G_t$ and $C_t \to H_t$.
+
+#### Derivation Summary and Practical Comparison
+
+The derivation parallels §3.10.1 KF: replace the nonlinear $g$ and $h$ with their first-order Taylor expansions, then run the same quadratic-splitting plus inversion-lemma procedure. The result:
+$$\bar\mu_t = g(u_t, \mu_{t-1}), \quad \bar\Sigma_t = G_t \Sigma_{t-1} G_t^T + R_t$$
+$$\mu_t = \bar\mu_t + K_t (z_t - h(\bar\mu_t)), \quad \Sigma_t = (I - K_t H_t) \bar\Sigma_t, \quad K_t = \bar\Sigma_t H_t^T (H_t \bar\Sigma_t H_t^T + Q_t)^{-1}$$
+
+**Practical comparison:**
+
+The EKF was widely used in SLAM, VIO, and IMU fusion through the mid-2010s. Several alternatives now compete.
+
+- **UKF (Unscented KF):** Uses sigma points to propagate nonlinearity more accurately. No hand-computed Jacobians needed. Useful when state dimension is low.
+- **IEKF (Iterated EKF):** Re-computes the Jacobian by repeating the update point. More accurate than EKF under strong nonlinearity.
+- **LIEKF (Left-Invariant EKF):** For SO(3)/SE(3) states, uses manifold linearization in place of Taylor linearization. Improves rotation estimation accuracy.
+
+The EKF/IEKF used in Ch.14 §14.7 EKF localization and §14.10 IMU preintegration takes this algorithm box directly. IMU preintegration in §14.10 uses IEKF to reduce rotation drift; localization in §14.7 feeds odometry into EKF prediction and landmark observations into correction. Understanding what $g$, $h$, $G_t$, and $H_t$ are here means the algorithm skeleton in Ch.14 does not need to be rederived when you encounter specific sensor models there.
+
+### 3.10.3 Information Filter (IF)
+
+#### Canonical Form: $(\Omega, \xi)$
+
+The KF and EKF represented Gaussians with $(\mu, \Sigma)$. Writing the same Gaussian in different coordinates swaps the computational complexity of prediction and measurement update. When measurements from multiple robots or sensors must be fused independently, this coordinate system is substantially more convenient.
+
+There is a second way to represent a Gaussian: instead of mean and covariance $(\mu, \Sigma)$, use the **information matrix** $\Omega$ and the **information vector** $\xi$.
+
+$$\Omega = \Sigma^{-1}, \quad \xi = \Sigma^{-1} \mu$$
+
+Inverse: $\Sigma = \Omega^{-1}$, $\mu = \Omega^{-1} \xi$.
+
+In these coordinates the negative log-likelihood of the Gaussian is quadratic in $\Omega$ and $\xi$:
+
+$$p(x) = \eta \exp\!\left\{-\tfrac{1}{2} x^T \Omega x + x^T \xi\right\}$$
+
+$$-\log p(x) = \mathrm{const} + \tfrac{1}{2} x^T \Omega x - x^T \xi$$
+
+The minimum is at $\Omega x = \xi$, i.e., $x = \Omega^{-1} \xi = \mu$. This has exactly the same structure as the normal equation $H \delta x = -b$ of the Gauss-Newton method in §3.4.
+
+**Intuition:** $\Omega = 0$ means total absence of information (complete uncertainty, uniform distribution). In the moments representation $\Sigma = \infty$ is unrepresentable, but the information representation handles it naturally. It is as if you were directly measuring certainty.
+
+#### Information Filter Algorithm
+
+The information filter is the dual of the KF. Where the KF's prediction step was additive, the information filter's **measurement update is additive**.
+
+```
+# Algorithm Information_filter (Table 3.4, adapted)
+# Input:  ξ_{t-1}, Ω_{t-1}, u_t, z_t
+# Output: ξ_t, Ω_t
+
+# --- prediction (requires two matrix inversions) ---
+1: Ω̄_t = (A_t Ω_{t-1}^{-1} A_t^T + R_t)^{-1}
+2: ξ̄_t = Ω̄_t (A_t Ω_{t-1}^{-1} ξ_{t-1} + B_t u_t)
+
+# --- correction (simple addition!) ---
+3: Ω_t  = C_t^T Q_t^{-1} C_t + Ω̄_t       # one measurement = one term added to Ω
+4: ξ_t  = C_t^T Q_t^{-1} z_t + ξ̄_t       # one measurement = one term added to ξ
+
+return ξ_t, Ω_t
+```
+
+**Complexity duality between KF and IF:**
+
+| Step | KF | IF |
+|------|:---:|:---:|
+| Prediction | $O(n^2)$ additive | $O(n^{2.8})$, two inversions |
+| Measurement update | $O(k^{2.8})$, inversion needed | $O(n^2)$ additive |
+
+$k$: measurement dimension, $n$: state dimension. When measurements touch only part of the state (sparse $C_t$), the IF's measurement update is even cheaper.
+
+#### EIF (Extended Information Filter)
+
+As with the EKF, replacing linear $g, h$ with Jacobians $G_t, H_t$ for nonlinear systems yields the EIF. Substituting $A_t \to G_t$ in prediction and $C_t \to H_t$ in correction gives the EIF algorithm.
+
+```
+# Algorithm Extended_Information_filter (key changes only)
+# prediction  (μ_{t-1} = Ω_{t-1}^{-1} ξ_{t-1})
+Ω̄_t = (G_t Ω_{t-1}^{-1} G_t^T + R_t)^{-1}
+ξ̄_t = Ω̄_t · g(u_t, μ_{t-1})       # replaces linear IF's A_t μ_{t-1}+B_t u_t
+
+# correction
+Ω_t  = H_t^T Q_t^{-1} H_t + Ω̄_t
+ξ_t  = H_t^T Q_t^{-1} z_t + ξ̄_t - H_t^T Q_t^{-1} h(μ̄_t) + H_t^T Q_t^{-1} H_t μ̄_t
+```
+
+#### Additivity and the SLAM Connection
+
+The additivity of the measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$ is a powerful property. One measurement = one term added to $\Omega$. When multiple robots fuse independent measurements, $\Omega_{\text{total}} = \sum_i \Omega_i$ and $\xi_{\text{total}} = \sum_i \xi_i$ combine directly.
+
+This additivity generalizes in §3.6 factor graphs to "one measurement factor = one term $H^T Q^{-1} H$ and one term $H^T Q^{-1} z$ added." The reason factor graphs solve efficiently via sparse Cholesky, and the reason the information matrices in GTSAM and iSAM2 are sparse, both trace back to this additive structure.
+
+The additivity of the information form is the direct foundation of the SLAM information-form representation in EIF SLAM and SEIF — the historical details are in Ch.14 §14.16.
+
+> **Further reading**
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.3 is the primary source. KF, EKF, and IF derivations appear side by side.
+> - [Cyrill Stachniss — Kalman Filter and EKF Lectures](https://www.youtube.com/watch?v=PiCC-SxWlH8) — Freiburg lectures. Strong visual explanations.
+> - [Welch & Bishop — An Introduction to the Kalman Filter (2006)](https://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf) — A standard KF introduction. Derivation and intuition are balanced throughout.
+
+---
+
+## 3.11 Advanced: Nonparametric Filters
+
+Source: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.4 (Nonparametric Filters).
+
+The Gaussian filters of §3.10 compress belief into two numbers $(\mu, \Sigma)$, but at the cost of being unable to handle nonlinearity or multi-modal distributions properly. Nonparametric filters lift this restriction and can represent arbitrary distributions. The price is computational cost.
+
+### 3.11.1 Histogram Filter / Discrete Bayes Filter
+
+#### Finite State Spaces: Integral Becomes Summation
+
+When the Bayes filter integral of §3.9.5 cannot be solved in closed form, the most direct escape is to make the state space finite. If the state takes only $K$ discrete values $\{x_1, x_2, \ldots, x_K\}$, the integral of §3.9.5 becomes a summation:
+
+$$\bar p_{k,t} = \sum_i p(x_k \mid u_t, x_i)\, p_{i,t-1} \quad \text{(prediction)}$$
+$$p_{k,t} = \eta\, p(z_t \mid x_k)\, \bar p_{k,t} \quad \text{(correction)}$$
+
+```
+# Algorithm Discrete_Bayes_filter (Table 4.1, adapted)
+# Input:  {p_{k,t-1}}, u_t, z_t
+# Output: {p_{k,t}}
+
+for all k do
+    # prediction: sum transitions from all prior states to x_k
+    p̄_{k,t} = Σ_i p(X_t = x_k | u_t, X_{t-1} = x_i) · p_{i,t-1}
+
+    # correction: weight by measurement likelihood
+    p_{k,t} = η · p(z_t | X_t = x_k) · p̄_{k,t}
+endfor
+return {p_{k,t}}
+```
+
+This algorithm has the same structure as the HMM forward algorithm in speech recognition. For problems where the state space is naturally discrete (door open/closed, semantic class) it remains the shortest path.
+
+#### Continuous State: Histogram Filter
+
+Partition the continuous state space into a finite collection of regions $\{\mathbf{x}_{k,t}\}$ and assume belief is piecewise uniform within each region:
+
+$$p(x_t) = \frac{p_{k,t}}{|\mathbf{x}_{k,t}|} \quad x_t \in \mathbf{x}_{k,t}$$
+
+Approximate the model using a representative value (mean state) $\hat x_{k,t}$ per region:
+
+$$p(z_t \mid \mathbf{x}_{k,t}) \approx p(z_t \mid \hat x_{k,t})$$
+$$p(\mathbf{x}_{k,t} \mid u_t, \mathbf{x}_{i,t-1}) \approx \frac{\eta}{|\mathbf{x}_{k,t}|}\, p(\hat x_{k,t} \mid u_t, \hat x_{i,t-1})$$
+
+When all regions have equal size, the $|\mathbf{x}_{k,t}|$ factors are absorbed into normalization. The resulting discrete Bayes filter is called a **histogram filter**.
+
+**Limitations:** The curse of dimensionality makes it impractical above five dimensions or so. It is unsuitable for 6-DoF pose estimation. Decomposition approaches include density trees (non-uniform partitioning by state density), selective updating (updating only regions where change occurred), and mixed topological-metric representations.
+
+Occupancy grid mapping in Ch.14 is the direct descendant of the histogram filter.
+
+### 3.11.2 Binary Bayes Filter (Log-Odds Form)
+
+#### Binary Estimation of a Static State
+
+When estimating a binary state that does not change over time (e.g., "is this cell occupied?"), there is no state-transition model and the prediction step disappears. Only the correction step repeats.
+
+Directly computing the posterior $p(x \mid z_{1:t})$ at every measurement risks numerical underflow as likelihood products accumulate, and the $[0, 1]$ clamping also needs handling. **Log-odds representation** solves both.
+
+$$l(x) := \log \frac{p(x)}{1 - p(x)} \in (-\infty, +\infty)$$
+
+Log-odds has the entire real line as its range, so clamping is not an issue. The multiplicative Bayes update becomes **additive**:
+
+$$l_t = l_{t-1} + \log\frac{p(x \mid z_t)}{1 - p(x \mid z_t)} - l_0$$
+
+Here $l_0 = \log\frac{p(x)}{1-p(x)}$ is the prior log-odds.
+
+Recovering belief: $\text{bel}_t(x) = 1 - \dfrac{1}{1 + \exp(l_t)}$
+
+```
+# Algorithm Binary_Bayes_filter (Table 4.2, adapted)
+# Input:  l_{t-1}, z_t
+# Output: l_t
+# (static state assumed: no prediction step)
+
+1: l_t = l_{t-1}
+         + log( p(x|z_t) / (1 - p(x|z_t)) )   # incorporate measurement via inverse sensor model
+         - log( p(x) / (1 - p(x)) )            # subtract prior (avoid double-counting)
+return l_t
+```
+
+#### Inverse Sensor Model
+
+The **inverse sensor model** $p(x \mid z)$ is the reverse of the forward measurement model $p(z \mid x)$. When the camera "sees an open door," the probability that a cell is empty is an example of an inverse model that can be easier to specify than the forward direction. The binary Bayes filter takes this inverse model directly as input.
+
+The log-odds update equation is applied cell by cell in Ch.14 Occupancy Grid Mapping.
+
+### 3.11.3 Particle Filter
+
+#### Core Idea of Nonparametric Representation
+
+The histogram filter's grid grows exponentially with dimension. The particle filter sidesteps this by approximating the distribution with samples instead of a grid.
+
+The particle filter represents belief with $M$ random samples (particles):
+
+$$\mathcal{X}_t = \{x_t^{[1]},\, x_t^{[2]},\, \ldots,\, x_t^{[M]}\}$$
+
+Each particle $x_t^{[m]}$ is more densely concentrated where belief is high. Without any Gaussian assumption, arbitrary distribution shapes — multi-modal, heavy-tailed — can be represented.
+
+#### Particle Filter Algorithm: Sampling, Weighting, Resampling
+
+```
+# Algorithm Particle_filter (Table 4.3, adapted)
+# Input:  X_{t-1}, u_t, z_t
+# Output: X_t (M particles)
+
+X̄_t = X_t = ∅
+for m = 1 to M do
+    # Step 1: sampling — propagate each particle through the motion model
+    x_t^[m] ~ p(x_t | u_t, x_{t-1}^[m])
+
+    # Step 2: weighting — compute importance weight via measurement likelihood
+    w_t^[m] = p(z_t | x_t^[m])
+
+    X̄_t = X̄_t ∪ {x_t^[m], w_t^[m]}
+endfor
+
+for m = 1 to M do
+    # Step 3: resampling — draw M new particles proportional to weights
+    draw i with probability ∝ w_t^[i] from X̄_t
+    add x_t^[i] to X_t
+endfor
+return X_t
+```
+
+In the limit $M \to \infty$, $x_t^{[m]} \sim p(x_t \mid z_{1:t}, u_{1:t})$.
+
+#### Importance Sampling Intuition
+
+When direct sampling from a target distribution $f$ is difficult, draw from a proposal distribution $g$ and correct with weights $w = f/g$:
+
+$$w^{[m]} = \frac{f(x^{[m]})}{g(x^{[m]})}$$
+
+The weighted empirical distribution converges, for any Borel set $A$:
+$$\left[\sum_{m=1}^M w^{[m]}\right]^{-1} \sum_{m=1}^M \mathbf{1}(x^{[m]} \in A)\, w^{[m]} \;\longrightarrow\; \int_A f(x)\, dx$$
+
+The convergence rate is $O(1/\sqrt{M})$. The closer the proposal is to the target, the smaller the constant.
+
+In the particle filter, the proposal propagates each particle through the motion model $p(x_t \mid u_t, x_{t-1})$, and the target is $\text{bel}(x_t)$ which also incorporates the measurement. The "missing information" between a proposal that has not seen $z_t$ and a target that has is $p(z_t \mid x_t^{[m]})$, which gives the Step 2 weights their intuitive justification.
+
+Why this falls out to exactly $p(z_t \mid x_t^{[m]})$ becomes clear when the argument is made rigorously in sequence space.
+
+#### Convergence and Implementation
+
+The rigorous derivation works by treating each particle not as a single state $x_t^{[m]}$ but as a state sequence $x_{0:t}^{[m]}$. Two applications of Bayes plus the Markov property factorize the target; the proposal factorizes inductively; their ratio reduces to exactly $\eta\, p(z_t \mid x_t^{[m]})$. This holds exactly only as $M \to \infty$.
+
+Without resampling, weights concentrate on a small number of particles — **weight degeneracy** — which is why Step 3 is needed. §3.11.4 covers the new problems that resampling itself introduces.
+
+<!-- DEMO: particle_filter_1d.html -->
+
+### 3.11.4 Four Sources of Error in Particle Filters
+
+The particle filter is an approximation and carries structural errors. Resampling is a weight-based selection, similar to how low-weight candidates get pruned in the optimization of §3.4. Understanding the four error sources makes particle filter debugging systematic.
+
+#### (1) Systematic Bias from Finite $M$
+
+Imagine $M = 1$. The single weight normalizes against itself: $w/w = 1$. The measurement is completely ignored. With finite $M$, weights are confined to the $M-1$-dimensional simplex and random errors accumulate. Bias decreases as $M$ grows, but computational cost grows linearly.
+
+#### (2) Sample Impoverishment from Resampling
+
+In a static state ($x_t = x_{t-1}$) with no motion, all particles follow identical trajectories. Unbounded resampling drives particle diversity to zero and the filter collapses to a single state.
+
+Mitigation: hold resampling when the robot is stationary. Alternatively, resample only when weight variance is high and otherwise accumulate weights multiplicatively:
+
+$$w_t^{[m]} = \begin{cases} 1 & \text{(immediately after resampling)} \\ p(z_t \mid x_t^{[m]})\, w_{t-1}^{[m]} & \text{(when not resampling)} \end{cases}$$
+
+#### (3) Proposal-Target Divergence
+
+When sensors are very accurate but motion is imprecise, the target belief is narrow while the proposal is wide, and efficiency collapses. In the extreme, a noiseless range sensor would confine the support of $p(z \mid x)$ to a low-dimensional manifold, leaving most particles with weight $\approx 0$.
+
+Mitigation: deliberately inflate measurement noise (at the cost of some precision) or use a measurement-aware proposal that incorporates measurement information at the sampling stage.
+
+#### (4) Particle Deprivation
+
+In a high-dimensional space, there may be no particle near the true state. The randomness of resampling has a nonzero probability every cycle of sweeping out all particles near the true state. Once lost, they are hard to recover.
+
+Mitigation: inject a small number of **random particles** drawn from the prior every cycle. This slightly distorts the posterior but prevents catastrophic failure.
+
+#### Low-Variance Sampler
+
+The standard resampling implementation is the **low-variance (systematic) sampler**. A single random number draws $M$ particles at regular intervals, achieving $O(M)$ complexity.
+
+```
+# Algorithm Low_variance_sampler (Table 4.4, adapted)
+# Input:  X̄_t (weighted particles), W_t (weight array)
+# Output: X̄_t (resampled particles)
+
+r = rand(0, M^{-1})    # single uniform random number in [0, 1/M)
+c = w_t^[1]             # cumulative weight
+i = 1
+X̄_t = ∅
+for m = 1 to M do
+    u = r + (m-1) · M^{-1}   # advance at regular intervals
+    while u > c do
+        i = i + 1
+        c = c + w_t^[i]       # accumulate weight
+    endwhile
+    add x_t^[i] to X̄_t       # select particle at this position
+endfor
+return X̄_t
+```
+
+When all weights are equal, the output is identical to the input — no particles are lost in steps with no measurement. $O(M)$ versus $O(M \log M)$ for independent sampling.
+
+With this, both why the particle filter works and where it breaks down are clear. Each of the four error sources has a mitigation, and choosing the right tradeoff for the situation is the core of practical implementation. The four errors are addressed by augmented MCL and mixture MCL in Ch.14 §14.7.
+
+> **Further reading**
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.4 is the primary source. Algorithms and analysis for histogram, binary Bayes, and particle filters are covered completely.
+> - [Arulampalam et al. — A Tutorial on Particle Filters (IEEE Trans. Signal Processing 2002)](https://ieeexplore.ieee.org/document/978374) — A standard tutorial on particle filter theory and applications.
+> - [Thrun — Particle Filters in Robotics (UAI 2002)](https://www.aaai.org/Papers/UAI/2002/UAI02-079.pdf) — A short paper explaining the connection to Rao-Blackwellized PF and FastSLAM.
+> - [ROS AMCL package](https://wiki.ros.org/amcl) — The theory of §3.11.3–3.11.4 implemented in a production package. Augmented MCL and the low-variance sampler are applied directly.
+
+---
+
+The Bayes filter is the framework. The KF, EKF, and IF are closed-form implementations of that framework under the Gaussian assumption. The histogram filter and particle filter buy flexibility without the Gaussian assumption, at the cost of computation. Which filter to choose is determined by state-space dimension and whether the distribution is multi-modal.
+
+When you encounter EKF localization (§14.7), MCL (§14.7), and IMU preintegration (§14.10) in Ch.14, there is no need to follow each algorithm's derivation from scratch. The filter vocabulary built here makes it possible to identify what $g$, $h$, and the proposal are in each algorithm, and the skeleton becomes immediately visible.

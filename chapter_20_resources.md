@@ -16,7 +16,7 @@
 **Computer Vision: Algorithms and Applications** (Szeliski)
 - 포괄적인 CV 교과서
 - 최신 버전 (2022)에 딥러닝 포함
-- **무료 PDF 제공** — 학생에게는 축복
+- 무료 PDF 제공 — 학생에게는 축복
 - 무료 PDF: https://szeliski.org/Book/
 
 ### Robotics
@@ -31,19 +31,19 @@
 **State Estimation for Robotics** (Tim Barfoot)
 - 상태 추정 심화
 - Lie Groups, Factor Graph — 수학적으로 깊지만 설명이 친절하다
-- **무료 PDF 제공**
+- 무료 PDF 제공
 - 무료 PDF: http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf
 
 ### Deep Learning
 
 **Deep Learning** (Goodfellow, Bengio, Courville)
 - 딥러닝 이론 표준 교과서
-- **무료 온라인** 제공
+- 무료 온라인 제공
 - 무료 PDF: https://www.deeplearningbook.org/
 
 **Dive into Deep Learning** (d2l.ai)
 - 실습 중심 — 코드와 함께 배운다
-- **무료, 인터랙티브**
+- 무료, 인터랙티브
 - 링크: https://d2l.ai/
 - PyTorch, TensorFlow, JAX 버전 모두 지원
 
@@ -56,7 +56,7 @@
 
 **Convex Optimization** (Boyd & Vandenberghe)
 - 최적화 이론의 표준 교재
-- **무료 PDF 제공**
+- 무료 PDF 제공
 - 무료 PDF: https://web.stanford.edu/~boyd/cvxbook/
 
 ## 20.2 온라인 강의
@@ -113,7 +113,7 @@
 
 ## 20.3 유튜브 채널 추천
 
-교과서나 강의보다 가볍게 볼 수 있는 유튜브 채널들이다. 출퇴근길에, 밥 먹으면서, 쉬는 시간에 틀어놓으면 감각이 쌓인다.
+교과서나 강의보다 가볍게 볼 수 있는 유튜브 채널들이다. 이동 중이나 쉬는 시간에 틀어놓으면 감각이 쌓인다.
 
 | 채널 | 주제 | 특징 |
 | --- | --- | --- |
@@ -127,7 +127,7 @@
 | **sentdex** | Python, ML | Python으로 ML/로보틱스 실습. 코드 중심 |
 | **The Coding Train** | 알고리즘 시각화 | 알고리즘을 시각적으로 이해. 에너지 넘치는 진행 |
 
-**링크 모음**:
+링크:
 - Cyrill Stachniss: https://www.youtube.com/@CyrillStachniss
 - First Principles of Computer Vision: https://www.youtube.com/@firstprinciplesofcomputerv3258
 - Andrej Karpathy: https://www.youtube.com/@AndrejKarpathy
@@ -306,7 +306,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 ### 입문 단계 (1-3개월)
 
-**목표**: 기초 도구 습득 — "일단 뭔가 돌려볼 수 있는 상태"가 되는 것
+**목표**: 기초 도구 습득 — 일단 뭔가 돌려볼 수 있는 상태
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
@@ -327,7 +327,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 ### 중급 단계 (3-6개월)
 
-**목표**: 핵심 기술 이해 — "논문을 읽고 코드를 돌려볼 수 있는 상태"
+**목표**: 핵심 기술 이해 — 논문을 읽고 코드를 돌려볼 수 있는 상태
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
@@ -348,7 +348,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 ### 고급 단계 (6개월+)
 
-**목표**: 연구 능력 개발 — "새로운 아이디어를 내고 실험할 수 있는 상태"
+**목표**: 연구 능력 개발 — 새로운 아이디어를 내고 실험할 수 있는 상태
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
@@ -360,7 +360,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 **실습 과제**:
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
-- 자체 개선 아이디어 실험 — "이 부분을 바꾸면 어떨까?" 시도
+- 자체 개선 아이디어 실험 — 이 부분을 바꾸면 어떻게 될지 직접 시도
 - 논문 작성 시도 — *본격 frame은 [`../research-notes/part2_writing/`](../research-notes/part2_writing/)* 참고
 - 본 문서의 **10-13장**을 읽으면서 최신 연구 방향을 파악한다
 
@@ -385,7 +385,7 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 *대학원 수준.* 연구자 마인드셋과 논문 쓰기·실험 설계·학회 발표·리뷰 같은 메타 운영은 별도 가이드 [research-notes](../research-notes/)·[grad-notes](../grad-notes/)에서 본격적으로 다룬다. 본 챕터에서는 분야 instantiation에 해당하는 자리만 짧게 남기고 메타 자리는 link로 안내한다.
 
-핵심 frame 한 줄: 엔지니어는 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
+엔지니어는 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
 
 ### 20.8.0 연구자 마인드셋 (link)
 

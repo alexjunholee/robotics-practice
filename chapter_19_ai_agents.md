@@ -10,7 +10,7 @@ AI 코딩 에이전트(Claude, Copilot, ChatGPT 등)는 일반 소프트웨어 �
 
 ### 19.2.1 QoS 설정
 
-AI는 거의 항상 QoS(Quality of Service)를 무시하거나 default(RELIABLE)로 놓는다. 문제는 센서 토픽(카메라, LiDAR)이 보통 BEST_EFFORT로 퍼블리시된다는 점이다. subscriber가 RELIABLE이면 데이터가 아예 안 들어온다. 에러 메시지도 안 뜨고 그냥 조용히 안 되니까, AI는 "토픽이 없나?" 하고 엉뚱한 방향으로 디버깅을 시작한다.
+AI에게 ROS2 subscriber를 짜달라고 하면 QoS(Quality of Service)를 default(RELIABLE)로 놓는다. 센서 토픽(카메라, LiDAR)은 BEST_EFFORT로 퍼블리시되는 경우가 대부분인데, subscriber가 RELIABLE이면 데이터가 아예 안 들어온다. 에러 메시지도 안 뜨고 그냥 조용히 안 되니까, AI는 "토픽이 없나?" 하고 엉뚱한 방향으로 디버깅을 시작한다.
 
 ```bash
 # 토픽의 QoS 프로파일 확인
@@ -34,7 +34,7 @@ AI에게 코드를 요청할 때는 "이 토픽의 QoS는 BEST_EFFORT / SENSOR_D
 
 ### 19.2.2 use_sim_time과 tf2 타이밍
 
-rosbag 재생 시 `use_sim_time:=true`를 안 하면 tf lookup이 전부 실패한다. AI는 "tf2 lookup failed" 에러를 보면 높은 확률로 `static_transform_publisher`를 추가하라고 한다. 엉뚱한 방향이다.
+rosbag 재생 시 `use_sim_time:=true`를 안 하면 tf lookup이 전부 실패한다. AI는 "tf2 lookup failed" 에러를 보면 `static_transform_publisher`를 추가하라고 한다. 엉뚱한 방향이다.
 
 실제 원인은 시뮬레이션 클럭과 시스템 클럭의 불일치다. bag 파일의 타임스탬프는 과거 시점인데, 노드는 현재 시스템 시간을 기준으로 tf를 조회하니까 당연히 못 찾는다.
 
@@ -46,7 +46,7 @@ ros2 bag play my_bag --clock
 ros2 launch my_package my_launch.py use_sim_time:=true
 ```
 
-tf2 lookup에는 timeout과 try/except가 필요한데, AI는 이걸 빼먹는 경우가 많다.
+tf2 lookup에는 timeout과 try/except가 필요한데, AI는 이걸 빠뜨린다.
 
 ```python
 from rclpy.duration import Duration
@@ -63,7 +63,7 @@ except tf2_ros.LookupException as e:
 
 ### 19.2.3 Workspace 소싱 순서
 
-ROS2 workspace의 소싱 순서가 중요하다. `/opt/ros/humble/setup.bash`를 먼저 source하고, 그다음에 `~/ros2_ws/install/setup.bash`를 source해야 한다. AI는 하나만 source하거나, 순서를 뒤집거나, overlay workspace 개념 자체를 모르는 경우가 많다.
+ROS2 workspace의 소싱 순서가 중요하다. `/opt/ros/humble/setup.bash`를 먼저 source하고, 그다음에 `~/ros2_ws/install/setup.bash`를 source해야 한다. AI는 하나만 source하거나 순서를 뒤집는다. overlay workspace 개념을 아예 모르는 경우도 있다.
 
 ```bash
 # 올바른 순서
@@ -71,11 +71,11 @@ source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash
 ```
 
-`.bashrc`에 넣었는데 새 터미널에서 패키지를 못 찾으면, AI는 패키지 재설치를 권한다. 대부분 `source` 문제다. `echo $AMENT_PREFIX_PATH`로 현재 소싱된 workspace를 확인하자.
+`.bashrc`에 넣었는데 새 터미널에서 패키지를 못 찾으면, AI는 패키지 재설치를 권한다. `source` 문제다. `echo $AMENT_PREFIX_PATH`로 현재 소싱된 workspace를 확인하자.
 
 ### 19.2.4 커스텀 메시지와 빌드
 
-AI는 `.msg` 파일은 잘 만든다. 하지만 `CMakeLists.txt`와 `package.xml`의 의존성 추가를 빠뜨리는 경우가 잦다.
+AI는 `.msg` 파일은 잘 만든다. 하지만 `CMakeLists.txt`와 `package.xml`의 의존성 추가를 빠뜨린다.
 
 `rosidl_generate_interfaces` 설정이 빠지면 빌드는 되는데 Python에서 import할 때 실패한다. 이 에러가 나면 AI는 "패키지가 설치 안 됐다"고 오진하기 쉽다.
 
@@ -105,7 +105,7 @@ colcon build --symlink-install
 
 ### 19.2.5 네임스페이스와 리매핑
 
-`ros2 topic echo /camera/image_raw` 했는데 데이터가 안 오면, AI는 드라이버 문제라고 진단하기 쉽다. 하지만 네임스페이스 때문에 토픽 이름이 `/robot1/camera/image_raw`일 수 있다.
+`ros2 topic echo /camera/image_raw` 했는데 데이터가 안 오면, AI는 드라이버 문제라고 진단한다. 네임스페이스 때문에 토픽 이름이 `/robot1/camera/image_raw`일 수 있는데도.
 
 ```bash
 # 토픽 목록부터 확인하라
@@ -119,7 +119,7 @@ AI에게 디버깅을 시킬 때는 `ros2 topic list`와 `ros2 node list` 출력
 
 ### 19.2.6 Launch 파일
 
-AI가 ROS2 Python launch 파일을 쓸 때 흔히 하는 실수들:
+AI가 ROS2 Python launch 파일을 쓸 때 반복적으로 하는 실수들:
 
 - ROS1 XML 문법을 섞는다 (ROS2 launch는 Python이 기본이다)
 - `LaunchDescription`의 action 순서를 잘못 잡는다 (노드 의존성 고려 필요)
@@ -142,7 +142,7 @@ AI에게 launch 파일을 요청할 때는 "ROS2 Python launch 파일", "multi-r
 
 ### 19.3.1 GUI/시각화 문제
 
-Docker 안에서 RViz나 Gazebo 같은 GUI 도구를 띄우려면 X11 포워딩이 필요하다. AI는 흔히 `xhost +local:docker`를 권하지만, 이는 모든 로컬 연결에 X 서버 접근을 허용하는 것이라 보안상 위험하다.
+Docker 안에서 RViz나 Gazebo 같은 GUI 도구를 띄우려면 X11 포워딩이 필요하다. AI는 `xhost +local:docker`를 권하는데, 이는 모든 로컬 연결에 X 서버 접근을 허용하는 것이라 보안상 위험하다.
 
 제대로 하려면 다음과 같이 설정한다:
 
@@ -162,7 +162,7 @@ docker run -it \
 
 ### 19.3.2 USB 디바이스 패스스루
 
-카메라, LiDAR, IMU 등 USB 장치를 Docker 안에서 쓰려면 디바이스를 명시적으로 매핑해야 한다. AI는 보통 이걸 모르고 "드라이버 설치하라"고 한다.
+카메라, LiDAR, IMU 등 USB 장치를 Docker 안에서 쓰려면 디바이스를 명시적으로 매핑해야 한다. AI는 이걸 모르고 "드라이버 설치하라"고 한다.
 
 ```bash
 # 특정 디바이스만 매핑 (권장)
@@ -180,7 +180,7 @@ docker run -it --privileged my_image
 
 Docker 컨테이너 간 ROS2 통신에서 `--network=host`가 가장 간단하지만, 호스트의 포트를 전부 공유하므로 포트 충돌 위험이 있다.
 
-AI는 bridge 네트워크에서 ROS2가 왜 안 되는지 모르는 경우가 많다. 원인은 DDS(Data Distribution Service)가 multicast를 사용하는데, Docker bridge 네트워크에서는 multicast가 기본적으로 안 되기 때문이다.
+AI는 bridge 네트워크에서 ROS2가 왜 안 되는지 설명하지 못한다. 원인은 DDS(Data Distribution Service)가 multicast를 사용하는데, Docker bridge 네트워크에서는 multicast가 기본적으로 안 되기 때문이다.
 
 ```bash
 # 가장 간단한 방법 (개발 환경에서)
@@ -250,7 +250,7 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", MODE="0666"
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-이렇게 하면 해당 USB 장치가 항상 `/dev/gps`라는 고정 이름으로 잡히고, 권한도 자동으로 설정된다. 여러 개의 동일 장치를 구분해야 할 때(예: IMU 2개)도 시리얼 넘버로 구분할 수 있다. AI는 udev를 거의 모른다.
+이렇게 하면 해당 USB 장치가 항상 `/dev/gps`라는 고정 이름으로 잡히고, 권한도 자동으로 설정된다. 여러 개의 동일 장치를 구분해야 할 때(예: IMU 2개)도 시리얼 넘버로 구분할 수 있다. AI는 udev를 모른다.
 
 ### 19.4.2 USB 대역폭
 
@@ -306,11 +306,11 @@ v4l2-ctl -d /dev/video0 --set-ctrl=exposure_absolute=100
 v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_automatic=0
 ```
 
-AI는 이런 low-level 카메라 제어를 거의 모른다. "SLAM이 불안정하다"고 하면 알고리즘 파라미터 튜닝을 권하지만, 카메라 자동 설정을 끄는 것만으로 극적으로 개선되는 경우가 있다.
+AI는 이런 low-level 카메라 제어를 모른다. "SLAM이 불안정하다"고 하면 알고리즘 파라미터 튜닝을 권하지만, 카메라 자동 설정을 끄는 것만으로 크게 개선되는 경우가 있다.
 
 ### 19.4.5 Jetson (ARM) 환경
 
-AI가 생성한 코드나 Docker 설정은 거의 100% x86 기준이다. NVIDIA Jetson(ARM64)에서는 안 돌아가는 경우가 많다.
+AI가 생성한 코드나 Docker 설정은 x86 기준이다. NVIDIA Jetson(ARM64)에서는 안 돌아가는 경우가 많다.
 
 주의해야 할 점:
 - `pip install`로 설치할 때 pre-built 바이너리(wheel)가 ARM용으로 없는 패키지가 많다. 특히 `scipy`, `opencv-python`은 소스에서 빌드해야 해서 수십 분이 걸린다.
@@ -352,7 +352,7 @@ AI가 "100Hz로 제어하면 된다"고 해도, `ros2 topic hz`로 실제 주파
 
 ### 19.5.1 "It works in simulation"
 
-Gazebo에서 잘 되는데 실제 로봇에서 안 되는 상황. AI는 "시뮬레이션에서 되니까 코드는 맞고 하드웨어 문제"라고 결론 내리기 쉽다. 하지만 실제 원인은 sim-to-real gap인 경우가 대부분이다:
+Gazebo에서 잘 되는데 실제 로봇에서 안 되는 상황. AI는 "시뮬레이션에서 되니까 코드는 맞고 하드웨어 문제"라고 결론 낸다. 실제 원인은 sim-to-real gap이다:
 
 - **센서 노이즈**: 시뮬레이션의 가우시안 노이즈와 실제 센서 노이즈는 분포가 다르다
 - **통신 지연**: Gazebo 안에서는 토픽 전달이 즉시 이뤄지지만, 실제로는 수~수십 ms의 지연이 있다
@@ -365,7 +365,7 @@ AI에게는 "시뮬레이션에서는 되는데 실제 로봇에서 안 된다. 
 
 케이블 불량, 접촉 불량, 전원 부족 — AI는 이런 물리적 문제를 진단할 수 없다.
 
-"센서 데이터가 간헐적으로 끊긴다"고 하면 AI는 버퍼 크기 조절, 타임아웃 설정, QoS 변경 등을 권한다. 하지만 USB 케이블이 느슨하거나 USB 허브의 전원이 부족한 경우가 많다.
+"센서 데이터가 간헐적으로 끊긴다"고 하면 AI는 버퍼 크기 조절, 타임아웃 설정, QoS 변경 등을 권한다. USB 케이블이 느슨하거나 USB 허브의 전원이 부족한 것인데도.
 
 ```bash
 # 커널 로그에서 하드웨어 문제 단서 찾기
@@ -464,11 +464,11 @@ AI의 답을 그대로 실행하기 전에 다음을 확인하라:
 | 시각화 코드 (matplotlib, Open3D) | 센서 간 시간 동기화 실전 |
 | 에러 메시지 해석 (일반적인) | dmesg/커널 로그 기반 디버깅 |
 
-결국 이런 구조다: AI는 "순수 소프트웨어" 영역에서는 강하지만, 하드웨어와 소프트웨어가 만나는 경계에서 약하다. 그리고 로보틱스 문제의 대부분이 그 경계에서 발생한다. AI가 강한 영역은 맡기고, AI가 약한 영역에서는 직접 디버깅한 결과를 AI에게 먹여서 분석하게 하는 게 맞다.
+AI는 "순수 소프트웨어" 영역에서는 강하지만, 하드웨어와 소프트웨어가 만나는 경계에서 약하다. 로보틱스 문제의 대부분이 그 경계에서 발생한다. AI가 강한 영역은 맡기고, AI가 약한 영역에서는 직접 디버깅한 결과를 AI에게 먹여서 분석하게 하는 게 맞다.
 
 ## 19.7 AI를 연구 도구로 쓰는 워크플로우
 
-19.6절에서 AI의 강점과 약점을 짚었다. 여기서는 그걸 바탕으로, 로보틱스 연구자가 하루 일과에서 AI를 어떻게 쓸 수 있는지 실전 워크플로우를 본다.
+로보틱스 연구자의 하루 일과에서 AI가 어디에 쓰이는지 구체적으로 본다.
 
 ### 19.7.1 논문 읽기
 

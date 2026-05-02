@@ -3,7 +3,7 @@
 
 로봇 팔 하나를 책상 위에 올려놓았다고 하자. 모터 6개에 각각 어떤 각도를 줘야 손끝이 커피잔에 닿는가? 이 질문에 답하는 학문이 기구학이다. 그리고 그 모터를 실제로 돌리고, 센서를 읽고, 제어 루프를 1kHz로 돌리는 현실의 문제가 메카트로닉스이다.
 
-수학부터 실제 하드웨어 선정과 통신 프로토콜까지 다룬다. 수식이 좀 나오지만, 목적은 "로봇을 실제로 움직이는 것"이다.
+수학부터 실제 하드웨어 선정과 통신 프로토콜까지 다룬다. 수식이 좀 나오지만 목적은 실제 로봇을 움직이는 것이다.
 
 ---
 
@@ -13,10 +13,10 @@
 
 이 둘 사이의 관계를 수학적으로 기술하는 것이 **기구학(Kinematics)**이다.
 
-- **순기구학 (Forward Kinematics, FK)**: 관절 각도 → 끝단 위치/자세
-- **역기구학 (Inverse Kinematics, IK)**: 끝단 위치/자세 → 관절 각도
+- 순기구학(Forward Kinematics, FK): 관절 각도 → 끝단 위치/자세
+- 역기구학(Inverse Kinematics, IK): 끝단 위치/자세 → 관절 각도
 
-동역학(Dynamics)과 다르다. 기구학은 힘과 질량을 고려하지 않는다. "어디에 있는가"의 문제이지, "어떤 힘이 필요한가"의 문제가 아니다. 동역학은 다음 장에서 다룬다.
+동역학(Dynamics)과 다르다. 기구학은 힘과 질량을 고려하지 않는다. 어디에 있는가의 문제이지, 어떤 힘이 필요한가의 문제가 아니다. 동역학은 다음 장에서 다룬다.
 
 기구학을 모르면 다음 상황에서 막힌다:
 - 로봇 팔 경로 계획 (motion planning)
@@ -45,7 +45,7 @@ T = | R  p |
 T_02 = T_01 * T_12
 ```
 
-이것이 순기구학의 본질이다. 베이스에서 끝단까지 각 관절의 변환을 순서대로 곱하면 된다.
+이 행렬 곱이 순기구학의 본질이다. 베이스에서 끝단까지 각 관절의 변환을 순서대로 곱하면 된다.
 
 
 ### 4.2.2 DH Parameters (Denavit-Hartenberg)
@@ -54,10 +54,10 @@ T_02 = T_01 * T_12
 
 | 파라미터 | 의미 |
 |---------|------|
-| **a_i** (link length) | x_i 축을 따른 z_{i-1}에서 z_i까지의 거리 |
-| **α_i** (link twist) | z_{i-1}에서 z_i까지 x_i 축 기준 회전 각도 |
-| **d_i** (link offset) | z_{i-1} 축을 따른 x_{i-1}에서 x_i까지의 거리 |
-| **θ_i** (joint angle) | x_{i-1}에서 x_i까지 z_{i-1} 축 기준 회전 각도 |
+| a_i (link length) | x_i 축을 따른 z_{i-1}에서 z_i까지의 거리 |
+| α_i (link twist) | z_{i-1}에서 z_i까지 x_i 축 기준 회전 각도 |
+| d_i (link offset) | z_{i-1} 축을 따른 x_{i-1}에서 x_i까지의 거리 |
+| θ_i (joint angle) | x_{i-1}에서 x_i까지 z_{i-1} 축 기준 회전 각도 |
 
 회전 관절(revolute joint)에서는 θ_i가 변수이고, 나머지 3개는 상수이다.
 직선 관절(prismatic joint)에서는 d_i가 변수이다.
@@ -118,7 +118,7 @@ print(f"End-effector position: ({x:.3f}, {y:.3f}), orientation: {np.degrees(phi)
 # 출력: End-effector position: (0.259, 1.366), orientation: 75.0°
 ```
 
-이게 지나치게 단순해 보인다면 정상이다. 실제 6축 로봇 팔의 FK도 원리는 같다. 4×4 행렬을 6번 곱하면 될 뿐이다.
+단순해 보인다면 맞다. 실제 6축 로봇 팔의 FK도 원리는 같다. 4×4 행렬을 6번 곱하면 된다.
 
 
 ### 4.2.4 Product of Exponentials (PoE)
@@ -137,7 +137,7 @@ T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
 - M은 모든 관절이 영 위치(home configuration)일 때의 끝단 자세
 - θ_i는 관절 변수
 
-**DH vs PoE 비교:**
+DH vs PoE 비교:
 
 | 항목 | DH | PoE |
 |------|-----|-----|
@@ -175,11 +175,7 @@ FK는 쉽다. 행렬 곱이면 된다. 문제는 IK이다.
 
 "끝단을 (x, y, z)에 놓고 싶은데, 관절 각도를 각각 얼마로 해야 하는가?"
 
-이 문제가 어려운 이유:
-1. **비선형 방정식** — 삼각함수가 얽혀 있다
-2. **다중 해** — 같은 끝단 위치에 도달하는 관절 각도 조합이 여러 개일 수 있다 (elbow-up, elbow-down 등)
-3. **해가 없을 수도 있다** — workspace 밖의 점은 도달 불가
-4. **무한히 많은 해** — 자유도가 남으면 (redundant manipulator) 해가 무한대
+이 문제가 어려운 이유는 네 가지다. 삼각함수가 얽힌 비선형 방정식이고, 같은 끝단 위치에 도달하는 관절 각도 조합이 여러 개일 수 있다(elbow-up, elbow-down). Workspace 밖의 점은 아예 해가 없고, 자유도가 남으면(redundant manipulator) 해가 무한히 많다.
 
 
 ### 4.3.1 Analytical IK (해석적 방법)
@@ -294,18 +290,14 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 
 ### 4.3.3 특이점 (Singularity)
 
-자코비안의 rank가 부족해지는 관절 배치를 특이점(singularity)이라 한다. 특이점에서는:
-
-1. **특정 방향으로 끝단을 움직일 수 없다** — 자유도 상실
-2. **미소 이동에 관절 속도가 무한대** — 실제 모터는 이를 따라갈 수 없다
-3. **IK 해가 불연속** — 경로 추종 시 갑작스러운 관절 점프
+자코비안의 rank가 부족해지는 관절 배치를 특이점(singularity)이라 한다. 특이점에서는 특정 방향으로 끝단을 전혀 움직일 수 없고, 미소 이동에도 관절 속도가 폭발하며, IK 해가 불연속적이어서 경로 추종 시 관절이 급격히 점프한다.
 
 2-link arm의 특이점은 간단하다: θ_2 = 0 (팔이 완전히 펴진 경우) 또는 θ_2 = π (완전히 접힌 경우). 이때 끝단은 반지름 방향으로만 움직일 수 있고, 접선 방향 속도는 낼 수 없다.
 
 6축 로봇의 대표적 특이점:
-- **Wrist singularity**: 축 4와 6이 정렬됨 (q5 ≈ 0)
-- **Shoulder singularity**: 끝단이 축 1 위에 위치
-- **Elbow singularity**: 팔이 완전히 펴짐
+- Wrist singularity: 축 4와 6이 정렬됨 (q5 ≈ 0)
+- Shoulder singularity: 끝단이 축 1 위에 위치
+- Elbow singularity: 팔이 완전히 펴짐
 
 실무 대처법:
 - 특이점 근처를 피하는 경로 계획
@@ -319,11 +311,11 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 
 | 솔버 | 방법 | 특징 |
 |------|------|------|
-| **KDL** | Numerical (Newton-Raphson) | ROS 기본, 느림, 특이점 취약 |
-| **IKFast** (OpenRAVE) | Analytical (코드 생성) | 특정 구조에 대해 C++ 코드 자동 생성. 빠름 |
-| **TRAC-IK** | KDL + SQP 듀얼 | KDL보다 성공률 높음, ROS 패키지 존재 |
-| **MoveIt2 IK** | 위 솔버들을 통합 | ROS2 생태계, 충돌 회피 통합 |
-| **pinocchio** | PoE 기반 | 현대적, 빠름, 미분 가능 (differentiable) |
+| KDL | Numerical (Newton-Raphson) | ROS 기본, 느림, 특이점 취약 |
+| IKFast (OpenRAVE) | Analytical (코드 생성) | 특정 구조에 대해 C++ 코드 자동 생성. 빠름 |
+| TRAC-IK | KDL + SQP 듀얼 | KDL보다 성공률 높음, ROS 패키지 존재 |
+| MoveIt2 IK | 위 솔버들을 통합 | ROS2 생태계, 충돌 회피 통합 |
+| pinocchio | PoE 기반 | 현대적, 빠름, 미분 가능 (differentiable) |
 
 ```python
 # TRAC-IK가 KDL보다 나은 이유: 시간 내 해를 찾을 확률
@@ -358,6 +350,8 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 
 n < 6이면 under-actuated, n = 6이면 fully-actuated, n > 6이면 redundant이다.
 
+차륜 mobile robot의 경우 관절 속도가 아닌 차체 속도 $(v, \omega)$가 주 제어이며, 노이즈가 동반된 형태는 §4.7 확률적 운동 모델 참조.
+
 
 ### 4.4.2 힘/토크 관계 (Duality)
 
@@ -369,7 +363,7 @@ n < 6이면 under-actuated, n = 6이면 fully-actuated, n > 6이면 redundant이
 
 여기서 τ는 관절 토크, F는 끝단에 작용하는 힘/모멘트이다.
 
-이것이 **정역학적 이중성(static duality)**이다. 속도와 힘이 자코비안과 그 전치를 통해 쌍대 관계를 이룬다. 파워 보존 원리에서 자연스럽게 유도된다:
+이것이 **정역학적 이중성(static duality)**이다. 속도와 힘은 자코비안과 그 전치를 통해 쌍대 관계를 이룬다. 파워 보존 원리에서 자연스럽게 유도된다:
 
 ```
 P = F^T * ẋ = F^T * J * q̇ = (J^T * F)^T * q̇ = τ^T * q̇
@@ -474,7 +468,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 가장 기본적인 액추에이터. 전압을 가하면 회전한다. 토크는 전류에 비례하고 (τ = K_t * i), 역기전력은 속도에 비례한다 (V_emf = K_e * ω). 제어가 쉽고 가격이 저렴하지만, 브러시 마모가 있다.
 
 **BLDC (Brushless DC) 모터:**
-브러시 없이 전자적으로 전류를 전환한다. 수명이 길고, 토크 밀도가 높고, 효율이 좋다. 현대 로봇의 표준이다. FOC(Field-Oriented Control)로 제어하면 토크 리플(ripple)을 최소화할 수 있다.
+브러시 없이 전자적으로 전류를 전환한다. 수명이 길고 토크 밀도가 높으며 효율도 좋아 현대 로봇의 표준이다. FOC(Field-Oriented Control)로 제어하면 토크 리플(ripple)을 최소화할 수 있다.
 
 **서보 모터 (Dynamixel 시리즈):**
 모터 + 감속기 + 엔코더 + 컨트롤러를 일체형으로 묶은 제품이다. Robotis의 Dynamixel 시리즈가 연구용으로 가장 널리 쓰인다.
@@ -489,15 +483,12 @@ Dynamixel의 장점은 데이지 체인 연결, 위치/속도/토크 제어 모�
 
 **Quasi-Direct Drive (QDD):**
 
-MIT Mini Cheetah(2019)로 주목받은 방식이다. 핵심 아이디어는 단순하다: **감속비를 낮추는 것.**
+MIT Mini Cheetah(2019)로 주목받은 방식이다. 핵심 아이디어는 감속비를 낮추는 것이다.
 
 일반적인 로봇 관절: 감속비 100:1 이상 (harmonic drive)
 QDD: 감속비 6:1 ~ 10:1 (유성기어 또는 belt)
 
-낮은 감속비의 장점:
-- **높은 백드라이버빌리티(backdrivability)**: 외력이 가해졌을 때 관절이 자연스럽게 따라간다. 충돌 시 안전하고, 힘 제어가 용이하다.
-- **높은 투명도(transparency)**: 토크 센서 없이도 모터 전류만으로 끝단 힘을 추정할 수 있다.
-- **높은 대역폭**: 감속기의 마찰과 탄성이 적어 빠른 토크 응답이 가능하다.
+낮은 감속비의 장점은 세 방향에서 나타난다. 외력이 가해졌을 때 관절이 자연스럽게 따라가는 백드라이버빌리티(backdrivability)가 높아서 충돌 시 안전하고 힘 제어가 쉬워진다. 토크 센서 없이 모터 전류만으로 끝단 힘을 추정할 수 있는 투명도(transparency)도 높다. 감속기의 마찰과 탄성이 적으니 토크 응답 대역폭도 넓어진다.
 
 단점: 동일 크기 대비 출력 토크가 낮다. 큰 토크가 필요하면 더 큰 모터를 써야 한다.
 
@@ -532,13 +523,7 @@ QDD를 사용하는 최근 시스템들:
 
 **액추에이터 선정 기준:**
 
-로봇 관절의 액추에이터를 선정할 때 고려해야 할 것들:
-
-1. **필요 토크 (torque)**: 정적 토크 (자세 유지) + 동적 토크 (가속). 안전 계수 2~3배.
-2. **필요 속도 (speed)**: 관절의 최대 각속도. 감속비를 고려하여 모터 RPM 결정.
-3. **백드라이버빌리티**: 협동 로봇이나 힘 제어가 필요하면 QDD, 아니면 harmonic drive.
-4. **크기와 무게**: 로봇 링크에 장착해야 하므로 물리적 제약 존재.
-5. **열 (thermal)**: 연속 토크 사양 확인. 피크 토크는 짧은 시간만 가능.
+로봇 관절의 액추에이터를 선정할 때 고려할 항목들이다. 필요 토크는 정적 토크(자세 유지)와 동적 토크(가속)의 합에 안전 계수 2~3배를 곱한다. 필요 속도는 관절의 최대 각속도로, 감속비를 고려하여 모터 RPM을 결정한다. 협동 로봇이나 힘 제어가 필요하면 QDD, 아니면 harmonic drive가 낫다. 크기와 무게는 링크 장착의 물리적 제약에 따른다. 열 특성은 연속 토크 사양으로 확인한다. 피크 토크는 짧은 시간만 가능하다.
 
 ```python
 # 간단한 액추에이터 선정 계산 예시
@@ -671,10 +656,7 @@ void send_motor_command(CAN_HandleTypeDef* hcan, uint8_t motor_id,
 
 산업용 실시간 이더넷 프로토콜이다. 일반 이더넷 하드웨어를 사용하면서 마이크로초 단위의 결정적(deterministic) 통신을 제공한다.
 
-왜 로봇에서 쓰는가:
-- **속도**: 100 Mbps, 수십~수백 개 노드를 마이크로초 주기로 동기화
-- **결정론적 타이밍**: 패킷 지연이 일정 → 실시간 제어에 적합
-- **처리 방식**: 마스터가 보낸 프레임을 각 슬레이브가 on-the-fly로 읽고 쓴다 (프레임이 지나가면서 처리). 대역폭 효율이 극히 높다.
+왜 로봇에서 쓰는가: 100 Mbps로 수십~수백 개 노드를 마이크로초 주기로 동기화하고, 패킷 지연이 일정하여 실시간 제어에 맞다. 마스터가 보낸 프레임을 각 슬레이브가 on-the-fly로 읽고 쓰는 방식이라 대역폭 효율이 극히 높다.
 
 KUKA, Beckhoff, 그리고 최근의 많은 연구용 로봇 플랫폼이 EtherCAT을 사용한다.
 
@@ -717,15 +699,15 @@ print(f"현재 위치: {pos} (= {pos * 360 / 4096:.1f}°)")
 
 ### 4.5.4 실시간 시스템
 
-로봇 제어에서 "실시간(real-time)"은 "빠른"이 아니라 **"정해진 시간 안에 반드시 완료되는"**을 의미한다. 1kHz 제어 루프라면, 매 1ms마다 센서 읽기 → 제어 계산 → 모터 명령 전송이 완료되어야 한다. 한 번이라도 지연되면 로봇이 불안정해질 수 있다.
+로봇 제어에서 "실시간(real-time)"은 "빠른"이 아니라 "정해진 시간 안에 반드시 완료되는"을 의미한다. 1kHz 제어 루프라면, 매 1ms마다 센서 읽기 → 제어 계산 → 모터 명령 전송이 완료되어야 한다. 한 번이라도 지연되면 로봇이 불안정해질 수 있다.
 
 **RTOS (Real-Time Operating System):**
 
 | RTOS | 특징 | 용도 |
 |------|------|------|
-| **FreeRTOS** | 경량, 마이크로컨트롤러용, 무료 | STM32, ESP32 등 |
-| **Zephyr** | 최신, 다양한 하드웨어 지원, Linux Foundation | IoT, 로봇 임베디드 |
-| **VxWorks** | 상용, NASA도 사용 | 항공우주, 산업용 |
+| FreeRTOS | 경량, 마이크로컨트롤러용, 무료 | STM32, ESP32 등 |
+| Zephyr | 최신, 다양한 하드웨어 지원, Linux Foundation | IoT, 로봇 임베디드 |
+| VxWorks | 상용, NASA도 사용 | 항공우주, 산업용 |
 
 마이크로컨트롤러에서 직접 모터를 제어할 때는 RTOS를 쓴다. 태스크 우선순위를 설정하여 제어 루프가 다른 태스크에 밀리지 않도록 한다.
 
@@ -757,12 +739,7 @@ sudo cyclictest -m -p 99 -t 1 -n
 
 **왜 1kHz인가:**
 
-로봇 제어 루프의 표준 주기가 1kHz (1ms)인 이유:
-
-1. **임피던스/힘 제어**: 기계적 공진 주파수보다 충분히 높은 제어 주파수가 필요하다. 대부분의 로봇 팔은 수~수십 Hz의 고유 진동수를 가지므로, 안정적 제어를 위해 적어도 10배 이상 (→ 수백 Hz~1kHz)이 필요하다.
-2. **Nyquist 정리**: 100Hz의 동적 현상을 제어하려면 최소 200Hz 샘플링이 필요하고, 실제로는 5~10배(→ 1kHz) 정도가 바람직하다.
-3. **통신 대역폭**: CAN bus 1 Mbps로 10개 모터를 1kHz로 제어하면 꽉 찬다. 그 이상은 EtherCAT이 필요하다.
-4. **관행**: MIT Cheetah가 CAN + 1kHz 구성으로 동적 보행을 시연한 이후 QDD + 1kHz가 사실상 표준이 되었다.
+로봇 제어 루프의 표준 주기가 1kHz(1ms)인 이유는 여러 제약이 맞물린 결과다. 임피던스/힘 제어는 기계적 공진 주파수보다 충분히 높아야 하고, 대부분의 로봇 팔은 수~수십 Hz의 고유 진동수를 가지므로 안정적 제어를 위해 적어도 10배 이상(수백 Hz~1kHz)이 필요하다. Nyquist 관점에서도 100Hz 동적 현상을 제어하려면 실제로는 5~10배(1kHz) 샘플링이 바람직하다. CAN bus 1 Mbps로 10개 모터를 1kHz로 제어하면 대역폭이 거의 꽉 찬다. 그리고 MIT Cheetah가 CAN + 1kHz 구성으로 동적 보행을 시연한 이후 QDD + 1kHz가 사실상 표준이 되었다.
 
 고주파 제어 (5~10kHz)가 필요한 경우: 매우 가벼운 로봇 (낮은 관성), 고속 충돌 대응, 일부 촉각 제어. 이 경우 EtherCAT이나 FPGA 기반 제어가 필요하다.
 
@@ -788,7 +765,7 @@ sudo cyclictest -m -p 99 -t 1 -n
 
 **Dexterous workspace**: 끝단이 임의의 자세로 도달할 수 있는 점의 집합. "어디서 자유롭게 움직일 수 있는가." 당연히 reachable workspace의 부분집합이고, 보통 훨씬 작다.
 
-6-DOF 로봇의 경우, dexterous workspace는 상당히 제한적일 수 있다. 이것이 7-DOF 로봇이 존재하는 이유 중 하나이다.
+6-DOF 로봇의 경우 dexterous workspace는 상당히 제한적일 수 있다. 이 제약이 7-DOF 로봇이 등장한 이유 중 하나이다.
 
 Workspace 분석은 Monte Carlo 방법으로 수행할 수 있다: 관절 공간을 무작위로 샘플링하고, FK로 끝단 위치를 계산하여 점구름(point cloud)을 만든다.
 
@@ -850,10 +827,10 @@ plt.savefig('workspace.png', dpi=150)
 같은 끝단 자세를 유지하면서 팔 전체의 형태(configuration)를 바꿀 수 있다. 사람 팔이 주먹의 위치를 고정한 채 팔꿈치를 올리거나 내리는 것과 같다.
 
 이 자유도를 활용하는 전략:
-1. **특이점 회피**: 자코비안의 manipulability를 최대화하는 방향으로 여분 자유도 사용
-2. **관절 제한 회피**: 관절이 한계에 가까워지면 여분 자유도로 중앙 위치 복귀
-3. **장애물 회피**: 팔꿈치가 장애물과 충돌하지 않도록 형태 조정
-4. **에너지 최적화**: 토크를 최소화하는 자세 선택
+1. 특이점 회피: 자코비안의 manipulability를 최대화하는 방향으로 여분 자유도 사용
+2. 관절 제한 회피: 관절이 한계에 가까워지면 여분 자유도로 중앙 위치 복귀
+3. 장애물 회피: 팔꿈치가 장애물과 충돌하지 않도록 형태 조정
+4. 에너지 최적화: 토크를 최소화하는 자세 선택
 
 수학적으로, 여분 자유도는 자코비안의 null space에 해당한다:
 
@@ -897,21 +874,325 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 > - Dietrich et al., "An Overview of Null Space Projections for Redundant, Torque-Controlled Robots" (2015)
 > - Franka Emika 연구 인터페이스: https://frankaemika.github.io/docs/
 
+여기까지는 결정론적 기구학이었다. §4.7에서는 그 위에 확률을 얹는다.
+
 ---
 
-## 4.7 추천 자료
+## 4.7 심화: 확률적 운동 모델 (Probabilistic Motion Models)
+
+### 4.7.1 도입: 결정론에서 확률로
+
+§4.2 순기구학과 §4.3 역기구학은 결정론적이다. 관절 각도를 넣으면 끝단 위치 하나가 나오고, 끝단 위치를 넣으면 관절 각도 집합이 나온다. 입력에 대한 출력은 점 추정이다. 팔 끝이 어디 있는지 수학적으로 정확히 계산할 수 있는 매니퓰레이터의 세계다.
+
+차륜 구동 모바일 로봇은 다르다. 명령한 속도대로 바퀴가 정확히 굴러가지 않는다. 슬립이 있고, 바퀴 마모로 실효 반지름이 변한다. 좌우 바퀴의 비대칭 마모가 직진 오차를 만들기도 한다. 결과적으로, 제어 명령 $u_t$를 내리더라도 다음 pose $x_t$는 하나의 점이 아니라 확률 분포이다. 이 분포를 정형화하는 것이 **확률적 운동 모델(probabilistic motion model)**이다.
+
+상태는 평면 상의 pose, $x_t = (x, y, \theta)^T \in SE(2)$이다. 운동 모델은 이전 pose $x_{t-1}$과 제어 입력 $u_t$가 주어졌을 때 다음 pose의 조건부 확률 분포
+
+$$p(x_t \mid u_t, x_{t-1})$$
+
+를 정의한다. 이 분포를 표현하는 방법으로 두 가지가 있다.
+
+**Velocity model**: 제어 입력이 선속도와 각속도 $u_t = (v, \omega)^T$로 주어진다. 계획 단계에서 사용할 수 있다. 실제 로봇의 명령 속도와 실제 속도 사이의 오차를 노이즈로 모델링한다.
+
+**Odometry model**: 제어 입력이 휠 인코더에서 측정한 두 pose pair $u_t = (\bar{x}_{t-1}, \bar{x}_t)$로 주어진다. 사후(retrospective) 정보이므로 계획에는 쓸 수 없지만, 인코더가 직접 측정한 값이므로 velocity model보다 정확하다.
+
+두 모델 각각에 대해 **폐쇄형 밀도 평가(closed-form density evaluation)**와 **샘플링(sampling)** 두 가지 사용 방법이 있다. 폐쇄형은 "이 가설 pose $x_t$가 얼마나 그럴듯한가"를 확률밀도 수치로 돌려준다. EKF·UKF의 prediction 단계에서 필요하다. 샘플링은 "다음 pose 하나를 생성하라"는 forward 시뮬레이션이다. Particle filter(MCL)가 이 형태를 직접 쓴다. 4개의 조합을 §4.7.2~§4.7.5에서 각각 다룬다.
+
+
+### 4.7.2 Velocity Motion Model — 폐쇄형
+
+**직관.** 노이즈가 없다면, 선속도 $v$와 각속도 $\omega$로 움직이는 로봇은 원형 호(circular arc)를 그린다. $\omega = 0$이면 직선이다. 노이즈가 있으면 실제로 그린 호는 명령값과 다르다. 폐쇄형 평가는 이 논리를 뒤집는다: 두 pose $x_{t-1}$과 $x_t$가 주어지면, 이 두 점을 잇는 원호의 회전 중심 $(x_c, y_c)$와 반지름 $r^*$를 역산하고, 그 호를 만들었을 가상의 속도 $(\hat{v}, \hat{\omega})$를 구한 다음, 명령 속도 $(v, \omega)$와의 차이를 노이즈 분포로 평가한다.
+
+**수식.** 두 pose $x_{t-1} = (x, y, \theta)^T$와 가설 $x_t = (x', y', \theta')^T$가 주어졌을 때:
+
+$$\mu = \frac{1}{2} \cdot \frac{(x - x')\cos\theta + (y - y')\sin\theta}{(y - y')\cos\theta - (x - x')\sin\theta}$$
+
+$$x_c = \frac{x + x'}{2} + \mu(y - y'), \quad y_c = \frac{y + y'}{2} + \mu(x' - x)$$
+
+$$r^* = \sqrt{(x - x_c)^2 + (y - y_c)^2}$$
+
+$$\Delta\theta = \text{atan2}(y' - y_c,\ x' - x_c) - \text{atan2}(y - y_c,\ x - x_c)$$
+
+$$\hat{v} = \frac{\Delta\theta \cdot r^*}{\Delta t}, \quad \hat{\omega} = \frac{\Delta\theta}{\Delta t}, \quad \hat{\gamma} = \frac{\theta' - \theta}{\Delta t} - \hat{\omega}$$
+
+잡음 모델은 분산이 명령 크기에 비례하는 가산형이다. `prob(a, b)`의 두 번째 인자 $b$(분산)는 다음과 같이 결정된다:
+
+$$b_v = \alpha_1|v| + \alpha_2|\omega|, \quad b_\omega = \alpha_3|v| + \alpha_4|\omega|, \quad b_\gamma = \alpha_5|v| + \alpha_6|\omega|$$
+
+$b_v$는 선속도, $b_\omega$는 각속도의 노이즈 분산이다. $\hat{\gamma}$는 "최종 방향 보정" 항이다. $(v, \omega)$ 두 노이즈 변수만으로는 3D pose 공간 안의 2D 매니폴드 위에서만 가설 pose가 생성되는 *축퇴(degeneracy)* 문제가 생긴다. $\hat{\gamma}$를 추가하면 3D 지지(support)가 확보된다.
+
+6개 파라미터의 물리적 의미: $\alpha_1, \alpha_2$는 선속도 노이즈의 분산 가중치, $\alpha_3, \alpha_4$는 각속도 노이즈, $\alpha_5, \alpha_6$는 최종 회전 노이즈. 분산이 명령 크기에 선형 비례하므로 빠를수록 더 불확실해지는 직관과 일치한다. 로봇마다 직선·원·8자 주행 데이터로 $\alpha_i$를 calibration해야 한다.
+
+알고리즘 박스 (PR Table 5.1: `motion_model_velocity`).
+
+```
+Algorithm motion_model_velocity(x_t, u_t, x_{t-1}):
+  # 입력: x_t=(x',y',θ'), u_t=(v,ω), x_{t-1}=(x,y,θ)
+  # 출력: p(x_t | u_t, x_{t-1}) 확률밀도
+
+  μ = 0.5 * ((x − x')cosθ + (y − y')sinθ) / ((y − y')cosθ − (x − x')sinθ)
+  x* = (x + x')/2 + μ(y − y')
+  y* = (y + y')/2 + μ(x' − x)
+  r* = sqrt((x − x*)² + (y − y*)²)
+  Δθ = atan2(y' − y*, x' − x*) − atan2(y − y*, x − x*)
+  v̂ = Δθ·r*/Δt
+  ω̂ = Δθ/Δt
+  γ̂ = (θ' − θ)/Δt − ω̂
+
+  p1 = prob(v − v̂,  α₁|v| + α₂|ω|)
+  p2 = prob(ω − ω̂,  α₃|v| + α₄|ω|)
+  p3 = prob(γ̂,       α₅|v| + α₆|ω|)
+
+  return p1 · p2 · p3
+```
+
+`prob(a, b)`는 평균 0, 분산 $b$의 정규 분포 또는 삼각 분포의 밀도값이다.
+
+같은 노이즈 파라미터로 pose를 직접 생성하는 것도 가능하다. 방향만 반대다.
+
+### 4.7.3 Velocity Motion Model — 샘플링
+
+폐쇄형은 "가설 pose가 얼마나 그럴듯한가"를 역산으로 평가했다. Sampling은 반대 방향이다. 노이즈를 먼저 뽑아 명령 속도를 perturb하고, perturbed 속도로 forward 시뮬레이션을 돌려 다음 pose 하나를 생성한다. Particle filter는 매 입자마다 이 샘플 하나가 필요하다. 구현도 폐쇄형보다 단순하다.
+
+Perturbed 제어:
+
+$$\hat{v} = v + \text{sample}(\alpha_1|v| + \alpha_2|\omega|)$$
+$$\hat{\omega} = \omega + \text{sample}(\alpha_3|v| + \alpha_4|\omega|)$$
+$$\hat{\gamma} = \text{sample}(\alpha_5|v| + \alpha_6|\omega|)$$
+
+Forward 원호 적분:
+
+$$x' = x - \frac{\hat{v}}{\hat{\omega}}\sin\theta + \frac{\hat{v}}{\hat{\omega}}\sin(\theta + \hat{\omega}\Delta t)$$
+$$y' = y + \frac{\hat{v}}{\hat{\omega}}\cos\theta - \frac{\hat{v}}{\hat{\omega}}\cos(\theta + \hat{\omega}\Delta t)$$
+$$\theta' = \theta + \hat{\omega}\Delta t + \hat{\gamma}\Delta t$$
+
+주의: $|\hat{\omega}| < \epsilon$이면 위 식이 발산한다. 실제 구현에서는 직선 fallback $x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$로 처리해야 한다.
+
+`sample(b)`는 분산 $b$의 zero-mean 표본을 뽑는 함수이다. 정규 근사: $\frac{b}{6}\sum_{i=1}^{12}\text{rand}(-1,1)$ (중심극한정리 기반, 12개 균등 합).
+
+알고리즘 박스 (PR Table 5.3: `sample_motion_model_velocity`).
+
+```
+Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
+  # 입력: u_t=(v,ω), x_{t-1}=(x,y,θ)
+  # 출력: 샘플 x_t ~ p(x_t | u_t, x_{t-1})
+
+  v̂ = v + sample(α₁|v| + α₂|ω|)
+  ω̂ = ω + sample(α₃|v| + α₄|ω|)
+  γ̂ = sample(α₅|v| + α₆|ω|)
+
+  if |ω̂| < ε:   # 직선 fallback
+    x' = x + v̂·cosθ·Δt
+    y' = y + v̂·sinθ·Δt
+  else:
+    x' = x − (v̂/ω̂)sinθ + (v̂/ω̂)sin(θ + ω̂Δt)
+    y' = y + (v̂/ω̂)cosθ − (v̂/ω̂)cos(θ + ω̂Δt)
+  θ' = θ + ω̂Δt + γ̂Δt
+
+  return (x', y', θ')ᵀ
+```
+
+**Closed-form vs Sampling 용도 차이.** Closed-form(`motion_model_velocity`)은 확률밀도 수치를 반환한다. EKF·UKF의 prediction 단계에서 자코비안과 함께 쓰인다. Sampling(`sample_motion_model_velocity`)은 pose 하나를 생성한다. Particle filter(MCL, §14.7)에서 각 입자를 propagate할 때 직접 호출된다. 두 알고리즘은 같은 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유하지만, 방향이 반대이다: closed-form은 *가설 pose를 평가*하고, sampling은 *다음 pose를 생성*한다.
+
+```python
+import numpy as np
+
+def sample_normal(b):
+    """분산 b의 zero-mean 정규 근사 표본 (12개 균등 합)."""
+    return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+
+def sample_motion_model_velocity(v, omega, x, y, theta, dt,
+                                  alpha, eps=1e-6):
+    """
+    Velocity motion model sampling.
+    alpha: [α₁, α₂, α₃, α₄, α₅, α₆]
+    """
+    v_hat   = v     + sample_normal(alpha[0]*abs(v) + alpha[1]*abs(omega))
+    w_hat   = omega + sample_normal(alpha[2]*abs(v) + alpha[3]*abs(omega))
+    g_hat   =         sample_normal(alpha[4]*abs(v) + alpha[5]*abs(omega))
+
+    if abs(w_hat) < eps:
+        x_new = x + v_hat * np.cos(theta) * dt
+        y_new = y + v_hat * np.sin(theta) * dt
+    else:
+        r = v_hat / w_hat
+        x_new = x - r * np.sin(theta) + r * np.sin(theta + w_hat * dt)
+        y_new = y + r * np.cos(theta) - r * np.cos(theta + w_hat * dt)
+    theta_new = theta + w_hat * dt + g_hat * dt
+
+    return x_new, y_new, theta_new
+```
+
+velocity model 두 버전은 같은 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유한다. 제어 입력이 명령 속도 $(v, \omega)$라는 가정 자체는 두 버전 모두 동일하다. 이 가정을 바꾸면 두 번째 모델 계열이 나온다.
+
+### 4.7.4 Odometry Motion Model — 폐쇄형
+
+**직관.** Velocity model은 명령 속도로부터 모션을 추정한다. Odometry model은 반대로, 실제 바퀴 회전을 인코더로 측정한 두 pose pair $u_t = (\bar{x}_{t-1}, \bar{x}_t)$를 control처럼 다룬다. 이 두 pose의 상대 운동을 세 파라미터 $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$로 분해한다. 목적지 방향으로 먼저 회전한 다음 직진하고, 도착 후 최종 방향 보정이다. 이 분해는 임의의 평면 운동을 항상 표현할 수 있다.
+
+실제 odometry measurement는 엄밀히는 센서 측정값이지만, 여기서는 control처럼 다룬다. 진짜 측정 모델로 취급하면 상태 공간에 속도를 추가해야 해서 차원이 커진다. 실용적 단순화이다.
+
+**수식.** Odometry 측정 $u_t = (\bar{x}_{t-1}, \bar{x}_t)$에서 상대 운동 추출:
+
+$$\delta_{\text{rot1}} = \text{atan2}(\bar{y}' - \bar{y},\ \bar{x}' - \bar{x}) - \bar{\theta}$$
+$$\delta_{\text{trans}} = \sqrt{(\bar{x} - \bar{x}')^2 + (\bar{y} - \bar{y}')^2}$$
+$$\delta_{\text{rot2}} = \bar{\theta}' - \bar{\theta} - \delta_{\text{rot1}}$$
+
+잡음 모델 (파라미터 4개 $\alpha_1..\alpha_4$). `prob()`의 분산 인자는 가설 pose에서 역산한 $(\hat\delta_{\text{rot1}}, \hat\delta_{\text{trans}}, \hat\delta_{\text{rot2}})$에 의존한다:
+
+$$b_{\text{rot1}} = \alpha_1|\hat\delta_{\text{rot1}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
+$$b_{\text{trans}} = \alpha_3|\hat\delta_{\text{trans}}| + \alpha_4(|\hat\delta_{\text{rot1}}| + |\hat\delta_{\text{rot2}}|)$$
+$$b_{\text{rot2}} = \alpha_1|\hat\delta_{\text{rot2}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
+
+$\alpha_1$: 회전이 회전을 흔드는 정도(회전 슬립), $\alpha_2$: 직진이 회전을 흔드는 정도, $\alpha_3$: 직진의 자체 분산, $\alpha_4$: 회전이 직진을 흔드는 정도. Velocity model의 $\alpha_5, \alpha_6$에 해당하는 "최종 회전" trick이 필요 없다. 3개의 독립 노이즈 변수가 자연스럽게 3D 지지를 확보한다.
+
+주의: 각도 차는 반드시 $[-\pi, \pi]$로 wrap해야 한다. 미준수 시 분포가 발산하는 흔한 버그이다.
+
+알고리즘 박스 (PR Table 5.5: `motion_model_odometry`).
+
+```
+Algorithm motion_model_odometry(x_t, u_t, x_{t-1}):
+  # 입력: x_t=(x',y',θ'), u_t=(x̄_{t-1}, x̄_t), x_{t-1}=(x,y,θ)
+  # 출력: p(x_t | u_t, x_{t-1}) 확률밀도
+
+  # odometry 측정에서 (δ_rot1, δ_trans, δ_rot2) 추출
+  δ_rot1  = atan2(ȳ' − ȳ, x̄' − x̄) − θ̄
+  δ_trans = sqrt((x̄ − x̄')² + (ȳ − ȳ')²)
+  δ_rot2  = θ̄' − θ̄ − δ_rot1
+
+  # 가설 pose 쌍에서 같은 분해 (역모델)
+  δ̂_rot1  = atan2(y' − y, x' − x) − θ
+  δ̂_trans = sqrt((x − x')² + (y − y')²)
+  δ̂_rot2  = θ' − θ − δ̂_rot1
+
+  # 세 파라미터 차이를 독립 노이즈로 평가
+  p1 = prob(δ_rot1  − δ̂_rot1,  α₁|δ̂_rot1|  + α₂|δ̂_trans|)
+  p2 = prob(δ_trans − δ̂_trans, α₃|δ̂_trans| + α₄(|δ̂_rot1| + |δ̂_rot2|))
+  p3 = prob(δ_rot2  − δ̂_rot2,  α₁|δ̂_rot2|  + α₂|δ̂_trans|)
+
+  return p1 · p2 · p3
+```
+
+세 파라미터 $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$는 각각 독립 노이즈 변수로 다루어지므로, EKF·UKF의 prediction 단계에서 가설 pose 평가에 바로 쓸 수 있다.
+
+### 4.7.5 Odometry Model — Particle Filter에서의 Sampling
+
+Odometry 폐쇄형은 역모델을 써서 가설 pose를 평가했다. Sampling은 반대 방향이다. Odometry에서 추출한 $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$에 노이즈를 가산하고, perturbed 값으로 forward 합성하여 새 pose를 생성한다. Inverse 모델이 전혀 필요 없어 폐쇄형보다 구현이 훨씬 단순하다.
+
+**수식.** Forward 합성 (PR 식 5.40):
+
+$$\begin{pmatrix}x'\\y'\\\theta'\end{pmatrix} = \begin{pmatrix}x\\y\\\theta\end{pmatrix} + \begin{pmatrix}\hat{\delta}_{\text{trans}}\cos(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{trans}}\sin(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{rot1}} + \hat{\delta}_{\text{rot2}}\end{pmatrix}$$
+
+이것은 원호가 아닌 *직선 + 두 회전*으로 운동을 근사한다. 짧은 $\Delta t$에서 원호의 1차 근사이다. Velocity sampling과 달리 $\omega \to 0$ 분기 처리가 필요 없다는 것이 장점이다.
+
+알고리즘 박스 (PR Table 5.6: `sample_motion_model_odometry`).
+
+```
+Algorithm sample_motion_model_odometry(u_t, x_{t-1}):
+  # 입력: u_t=(x̄_{t-1}, x̄_t), x_{t-1}=(x,y,θ)
+  # 출력: 샘플 x_t ~ p(x_t | u_t, x_{t-1})
+
+  # odometry에서 상대 운동 추출
+  δ_rot1  = atan2(ȳ' − ȳ, x̄' − x̄) − θ̄
+  δ_trans = sqrt((x̄ − x̄')² + (ȳ − ȳ')²)
+  δ_rot2  = θ̄' − θ̄ − δ_rot1
+
+  # 노이즈로 perturb
+  δ̂_rot1  = δ_rot1  − sample(α₁|δ_rot1|  + α₂|δ_trans|)
+  δ̂_trans = δ_trans − sample(α₃|δ_trans| + α₄(|δ_rot1| + |δ_rot2|))
+  δ̂_rot2  = δ_rot2  − sample(α₁|δ_rot2|  + α₂|δ_trans|)
+
+  # forward 합성
+  x' = x + δ̂_trans · cos(θ + δ̂_rot1)
+  y' = y + δ̂_trans · sin(θ + δ̂_rot1)
+  θ' = θ + δ̂_rot1 + δ̂_rot2
+
+  return (x', y', θ')ᵀ
+```
+
+ROS2 Nav2의 `nav2_amcl`은 이 형태를 `differential` motion model로 구현한다. 차륜 AMR localization의 직계 응용이다.
+
+```python
+import numpy as np
+
+def sample_motion_model_odometry(bar_x_prev, bar_x_curr, x, y, theta,
+                                  alpha):
+    """
+    Odometry motion model sampling.
+    bar_x_prev, bar_x_curr: odometry pose pair (x̄,ȳ,θ̄)
+    alpha: [α₁, α₂, α₃, α₄]
+    """
+    bx,  by,  bt  = bar_x_prev
+    bx_, by_, bt_ = bar_x_curr
+
+    d_rot1  = np.arctan2(by_ - by, bx_ - bx) - bt
+    d_trans = np.sqrt((bx - bx_)**2 + (by - by_)**2)
+    d_rot2  = bt_ - bt - d_rot1
+
+    def sample_normal(b):
+        return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+
+    dh_rot1  = d_rot1  - sample_normal(alpha[0]*abs(d_rot1)  + alpha[1]*abs(d_trans))
+    dh_trans = d_trans - sample_normal(alpha[2]*abs(d_trans) + alpha[3]*(abs(d_rot1) + abs(d_rot2)))
+    dh_rot2  = d_rot2  - sample_normal(alpha[0]*abs(d_rot2)  + alpha[1]*abs(d_trans))
+
+    x_new     = x + dh_trans * np.cos(theta + dh_rot1)
+    y_new     = y + dh_trans * np.sin(theta + dh_rot1)
+    theta_new = theta + dh_rot1 + dh_rot2
+
+    return x_new, y_new, theta_new
+```
+
+<!-- DEMO: probabilistic_motion_model.html -->
+
+지금까지 네 알고리즘은 모두 지도 없이 운동만 모델링했다. localization 문제에서는 지도 $m$이 함께 있다.
+
+### 4.7.6 Motion + Map: 지도 조건부 운동 모델
+
+지금까지의 모델은 지도 정보를 무시했다. 그런데 localization에서는 지도 $m$이 있다. 이를 이용하면 물리적으로 불가능한 pose를 걸러낼 수 있다.
+
+**수식.** 지도를 조건에 포함한 전이 분포를 정확히 계산하면 까다롭다. 실용적인 근사 분해:
+
+$$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid m)$$
+
+앞 항 $p(x_t \mid u_t, x_{t-1})$은 §4.7.2~§4.7.5의 운동 모델이다. 뒷 항 $p(x_t \mid m)$은 지도 조건부 확률로, occupancy grid에서 $x_t$가 자유 공간(free cell)이면 1에 가깝고, 벽이나 점유 공간이면 0에 가깝다.
+
+**효과.** Particle filter에서 입자가 벽을 통과하는 현상이 방지된다. 샘플링 후 새 pose를 지도에 조회하여 점유 공간이면 해당 입자의 weight를 0(또는 매우 낮게)으로 설정하는 것이 가장 단순한 구현이다. 정확히는 $p(x_t \mid m)$이 likelihood가 아니라 prior로 작용하는 형태이므로, 이 근사는 운동 모델과 지도 정보가 독립이라고 가정한다는 한계가 있다.
+
+실제 구현에서 occupancy grid는 자유 공간 외에도 unknown 영역을 갖는다. Unknown 영역에 대해 $p(x_t \mid m)$을 어떻게 설정하느냐(1로 보느냐, 중간값으로 보느냐)는 localization 성능에 영향을 준다. ROS2 Nav2의 기본 설정은 unknown 영역을 free로 취급한다.
+
+이 분해의 수학적 근거는 §3.3(베이즈 정리와 조건부 독립, Ch.3 참조)에 있다. 운동 모델과 지도 prior가 독립이라는 가정이 성립할 때만 이 곱 분해가 엄밀하다.
+
+### 4.7.7 무엇이 살아남았나
+
+Velocity model과 Odometry model 모두, 특히 sampling 버전은 ROS2 Nav2 `nav2_amcl`에서 직접 구현되어 차륜 AGV·warehouse robot의 표준으로 자리 잡았다. 창고 AMR, 서비스 로봇, 물류 자동화 장비에서 particle filter localization의 motion prior가 이 모델이다. 1k~10k 입자 규모에서 fps 20-50으로 실시간 동작한다.
+
+휴머노이드, 드론, legged robot은 차체 속도 $(v, \omega)$로 운동을 기술하기 어렵다. 발이 있으면 슬립 모델 자체가 다르고, 드론은 SE(2)가 아닌 SE(3) 위에서 움직인다. 이 플랫폼에서는 IMU preintegration이 motion prior를 제공한다(§14.10). 확률적 운동 모델의 형식적 프레임워크 $p(x_t \mid u_t, x_{t-1})$는 같지만, 내용이 완전히 다르다.
+
+여기서 다룬 모델은 모두 SE(2) 한정이다. Holonomic robot(Mecanum 바퀴)이나 차량 dynamics(횡활 포함)처럼 구동 방식이 다른 경우에는 별도의 모델이 필요하다.
+
+이 운동 모델의 직접 응용은 §14.7 Monte Carlo Localization(MCL)이다. Particle filter의 prediction 단계에서 `sample_motion_model_odometry`가 호출된다(Ch.14 참조). §14.10 IMU preintegration에서는 차륜 odometry 모델과 IMU 모델의 차이를 비교할 수 있다. $p(x_t \mid u_t, x_{t-1})$ 형식 자체는 §3.10·§3.11의 가우시안 필터·비모수 필터에서 prediction 항으로 그대로 쓰인다(Ch.3 참조).
+
+---
+
+결정론적 FK/IK는 "입력 → 출력 한 점"이다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
+
+한 가지 물음을 남긴다. 여기서 다룬 모든 모델은 바퀴가 미끄러지지 않는다는 운동학적 제약 위에 노이즈를 얹는 구조다. 진흙탕이나 경사 주행처럼 그 제약 자체가 무너지는 환경에서 $\alpha_i$ calibration은 어느 정도까지 보상할 수 있을까.
+
+---
+
+## 4.8 추천 자료
 
 기구학과 메카트로닉스를 진지하게 공부하려면 교재 하나를 처음부터 끝까지 풀어보는 것이 가장 효과적이다.
 
 **교재:**
 
-- **Craig, "Introduction to Robotics: Mechanics and Planning"** — DH 파라미터와 기구학의 정석. Modified DH convention을 사용한다. 학부 수준에서 가장 적합하다.
+- Craig, "Introduction to Robotics: Mechanics and Planning" — DH 파라미터와 기구학의 정석. Modified DH convention을 사용한다. 학부 수준에서 가장 적합하다.
 
-- **Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control"** — PoE 기반. 무료 PDF와 Coursera 강의를 제공하여 접근성이 뛰어나다. 수학적으로 더 깔끔하지만 처음 보면 어렵다. https://modernrobotics.org
+- Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control" — PoE 기반. 무료 PDF와 Coursera 강의를 제공하여 접근성이 뛰어나다. 수학적으로 더 깔끔하지만 처음 보면 어렵다. https://modernrobotics.org
 
-- **Corke, "Robotics, Vision and Control"** — MATLAB/Python 코드와 함께 기구학을 실습할 수 있다. robotics-toolbox-python은 이 책의 동반 라이브러리이다. 3판은 Python 기반. https://petercorke.com/rvc/
+- Corke, "Robotics, Vision and Control" — MATLAB/Python 코드와 함께 기구학을 실습할 수 있다. robotics-toolbox-python은 이 책의 동반 라이브러리이다. 3판은 Python 기반. https://petercorke.com/rvc/
 
-- **Siciliano et al., "Robotics: Modelling, Planning and Control"** — 가장 포괄적인 대학원 교과서. 기구학, 동역학, 제어를 모두 다룬다. 두껍지만 그만큼 빠짐없다.
+- Siciliano et al., "Robotics: Modelling, Planning and Control" — 가장 포괄적인 대학원 교과서. 기구학, 동역학, 제어를 모두 다룬다. 두껍지만 그만큼 빠짐없다.
 
 **온라인 강의:**
 

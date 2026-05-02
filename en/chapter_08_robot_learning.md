@@ -31,6 +31,8 @@ The limitations of learning-based methods must be understood clearly.
 
 If a problem can be solved with traditional methods, use traditional methods. Learning is a tool to apply where traditional methods hit their limits. Combining the two appropriately is the most realistic approach in practice.
 
+Where, then, are these limits in concrete terms? *Probabilistic Robotics* (Thrun, Burgard, and Fox) frames the motivation by domain. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a prior model is not realistic. Autonomous helicopter flight contends with aerodynamic nonlinearities and external disturbances large enough that learning-based control has a measurable edge. A Mars rover must make decisions autonomously because of the communication delay with Earth, and no one can hand it a complete terrain model in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
+
 
 ---
 
@@ -53,6 +55,80 @@ J(π) = E[ Σ_{t=0}^{∞} γ^t · r_t ]
 ```
 
 The Markov property is the assumption that "the next state depends only on the current state and action." It means you do not need to look at the entire prior history, but in real robots this assumption can break down (partial observability, i.e., a POMDP situation). In that case, observation history is used as the state, or a recurrent policy is used.
+
+The MDP definition establishes the criterion for what is optimal. How to *compute* that optimal policy when the environment model $p(x'|x,a)$ and reward $r$ are known is the subject of the next section.
+
+### MDP Value Iteration
+
+When the environment model $p(x'|x,a)$ and reward $r$ are **known**, dynamic programming computes the optimal policy directly. Following the notation of *Probabilistic Robotics* (Thrun, Burgard, and Fox), the state is written as $x$ here — the same concept as $s$ in the preceding section.
+
+#### Payoff and Horizon
+
+The reward $r(x, a)$ is called the payoff function: the scalar value received immediately when action $a$ is taken in state $x$. A policy $\pi: x \mapsto a$ maps every state to an action. The quality of a policy is measured by the expected cumulative discounted reward.
+
+$$V^\pi(x_0) = \mathbb{E}\left[\sum_{t=0}^{T} \gamma^t \, r(x_t, \pi(x_t))\right]$$
+
+The horizon $T$ splits into three cases.
+
+- **T=1 (greedy)**: Maximize the reward for the next single step only. Simple, but ignores long-term consequences.
+- **Finite-horizon**: Optimize up to a fixed $T$ steps. The policy must vary with time $t$ (a time-dependent policy), which makes representation more complex.
+- **Infinite-horizon (T=∞)**: When $\gamma < 1$, $V^\pi$ remains finite ($|V^\pi| \leq r_{\max}/(1-\gamma)$), and a time-independent stationary policy exists. Infinite-horizon with discounting is the default setting in robot RL.
+
+The intuition behind $\gamma$: a reward one step away is worth $\gamma$ times as much; two steps away, $\gamma^2$. A lower $\gamma$ makes the robot short-sighted; a higher $\gamma$ makes it plan further ahead. The reason $\gamma = 0.99$ is a common starting point is that it looks far enough ahead to matter while still guaranteeing convergence.
+
+#### Bellman Equation
+
+Under infinite horizon, the optimal value function $V^*(x)$ satisfies the Bellman equation.
+
+$$V^*(x) = \max_a \left[ r(x, a) + \gamma \sum_{x'} p(x' \mid x, a) \, V^*(x') \right]$$
+
+The meaning: the optimal value at state $x$ is the maximum, over all actions $a$, of the immediate reward $r(x,a)$ plus the discounted sum of optimal values of the next states. The structure is recursive.
+
+The optimal policy is extracted greedily from this equation.
+
+$$\pi^*(x) = \arg\max_a \left[ r(x, a) + \gamma \sum_{x'} p(x' \mid x, a) \, V^*(x') \right]$$
+
+Taking the T=1 optimum, extending recursively to T=2, then to $T \to \infty$ derives the Bellman equation above. Each step combines "optimal now plus optimal remainder" — the standard dynamic programming structure.
+
+#### Value Iteration Algorithm
+
+The Bellman equation is a fixed-point equation for $V^*$. Rather than solving it directly, substitute the current estimate $V_k$ on the right-hand side to produce $V_{k+1}$ and repeat. That is Value Iteration.
+
+```
+Algorithm MDP_value_iteration():
+  For all states x:
+    V_0(x) ← 0
+
+  Repeat until convergence:           ε: tolerance (e.g., 1e-6)
+    For all states x:
+      V_{k+1}(x) ← max_a [ r(x, a) + γ · Σ_{x'} p(x'|x, a) · V_k(x') ]
+    if max_x |V_{k+1}(x) - V_k(x)| < ε: break
+
+  Extract optimal policy:
+    π*(x) ← argmax_a [ r(x, a) + γ · Σ_{x'} p(x'|x, a) · V_k(x') ]
+
+  return V_k, π*
+```
+
+Variable summary: $V_k$ is the value estimate at iteration $k$; $V^*$ is the optimal value after convergence; $\pi^*$ is the optimal policy; $r$ is reward; $\gamma$ is the discount factor; $p(x'|x,a)$ is the transition probability.
+
+The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. In a discrete state space, the integral in the formula becomes a sum (Σ).
+
+Convergence guarantee: the Bellman update operator is a contraction mapping with contraction rate $\gamma$, so the iteration converges to the unique fixed point $V^*$. After $k$ iterations, the error is at most $\gamma^k$ times the initial error: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
+
+<!-- DEMO: mdp_value_iteration_grid.html -->
+
+#### 2D Grid World Example
+
+Imagine a $5 \times 5$ grid. Each cell is a state $x$, and the four actions are up, down, left, and right. Reaching the goal cell yields $r = +100$; hitting an obstacle cell yields $r = -10$; all other moves cost $r = -1$. Transitions go in the intended direction with probability 0.8 and in each orthogonal direction with probability 0.1 (stochastic transitions).
+
+Running Value Iteration produces a value function shaped like a contour map — high around the goal cell, low around obstacles. In the early iterations, only the states adjacent to the goal hold positive values; as the iterations proceed, the values propagate outward. After convergence, following the direction of maximum value from any cell yields the optimal path. The path automatically detours around obstacles.
+
+That greedy path is $\pi^*$. No explicit path search (RRT, A*) is needed — following the gradient of the value function is enough.
+
+MDP Value Iteration applies when the environment model $p(x'|x,a)$ and $r$ are *given*. Learning by experience when the model is *unknown* is covered in §8.3 (model-free RL). Planning under *partial observation* is in Ch.7 §7.9 (advanced POMDP).
+
+On real robots, the transition probability $p(x'|x,a)$ is rarely known in advance. A method that improves the policy directly, without a model, is what is needed next.
 
 ### Policy Gradient Intuition
 
