@@ -21,7 +21,7 @@ What sets embodied AI apart from earlier AI is that the model does not stop at c
 
 > **Further reading**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — official blog posts on RT-1, RT-2, PaLM-E, and more
-> - [Brohan et al., "RT-2: Vision-Language-Action Models" (2023)](https://arxiv.org/abs/2307.15818) — the seminal VLA paper
+> - [Brohan et al., "RT-2: Vision-Language-Action Models" (2023)](https://arxiv.org/abs/2307.15818) — an early paper that set the VLA framing
 
 ## 12.2 Key Models and Research
 
@@ -280,7 +280,7 @@ In robotics, designing a reward function properly is very hard. How do you defin
 
 *If you want to become a researcher, start reading from here.*
 
-Diffusion Policy, proposed by Chi et al. (RSS 2023), is a policy representation that is rapidly replacing BC-family methods in robot manipulation. The core idea is to generate an action trajectory through a denoising diffusion process.
+Diffusion Policy, proposed by Chi et al. (RSS 2023), is now common in robot manipulation as an alternative to BC-family methods. The core idea is to generate an action trajectory through a denoising diffusion process.
 
 **Why diffusion?**
 
@@ -385,4 +385,4 @@ Trajectory similarity, contact-force comparisons, and other metrics are sometime
 > - **2020–**: first attempts to combine large language models (LLMs) with vision. Language-based robot control such as CLIPort and SayCan emerges
 > - **2022–**: foundation-model-based robot policies appear, including RT-1, RT-2, and PaLM-E. The Open X-Embodiment dataset is built
 > - **2024–**: open-source VLA models such as OpenVLA and Octo are released. World-model-based planning draws attention in both autonomous driving and manipulation. End-to-end autonomous driving (UniAD, VAD, GenAD) starts to replace modular approaches
-> - **What to watch now**: research applying foundation models to robots has grown rapidly since 2023 (RT-2, OpenVLA, Octo, pi0, etc.). You can fine-tune open-source models like OpenVLA/Octo on your own robot, so hands-on experimentation is recommended.
+> - **What to watch now**: research applying foundation models to robots has expanded since 2023 (RT-2, OpenVLA, Octo, pi0, etc.). You can fine-tune open-source models like OpenVLA/Octo on your own robot, so hands-on experimentation is recommended.

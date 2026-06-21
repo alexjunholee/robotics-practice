@@ -25,7 +25,7 @@ Those with a **classical robotics background who are weak on deep learning** sho
 
 **Someone with a concrete project** goes in reverse. Start by skimming the datasets and benchmarks of Ch.17, pick one or two papers on a similar task, and trace backward only to the chapters those papers depend on. There is no need to read everything.
 
-Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 month, 3 months, 6 months). This chapter only sets the broad direction.
+Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 month, 3 months, 6 months). Here the goal is only to set the broad direction.
 
 ## 22.3 What Not to Do
 

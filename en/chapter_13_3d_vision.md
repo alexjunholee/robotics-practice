@@ -219,7 +219,7 @@ Combining multiple sensors lets each one cover the others' weaknesses. Cameras a
 > **Further reading**
 > - [Qi et al., "PointNet: Deep Learning on Point Sets" (2017)](https://arxiv.org/abs/1612.00593) — the starting point of 3D deep learning.
 > - [Lang et al., "PointPillars" (2019)](https://arxiv.org/abs/1812.05784) — real-time 3D detection.
-> - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — a landmark work in multi-modal fusion.
+> - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — a widely used reference in multi-modal fusion.
 > - [MMDetection3D GitHub](https://github.com/open-mmlab/mmdetection3d) — unified 3D object detection framework.
 
 > **Exercise**: [BEV Projection Visualization](https://alexjunholee.github.io/robotics-practice/app.html#bev_projection)
@@ -377,7 +377,7 @@ If a robot can build photorealistic 3D maps in real time while moving around, ap
 > **Further reading**
 > - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — the original 3DGS paper.
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — improves surface reconstruction quality via 2D Gaussians.
-> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — a landmark for 3DGS + SLAM.
+> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — an early 3DGS + SLAM system.
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — the MonoGS paper.
 > - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — dense 3D reconstruction from image pairs without camera intrinsics/extrinsics. A paradigm shift for 3D reconstruction.
 > - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — adds local feature matching to DUSt3R. Provides reconstruction and precise correspondences simultaneously.
@@ -417,7 +417,7 @@ L_eikonal = E_x[ (||∇f_θ(x)|| - 1)^2 ]
 
 **DeepSDF**
 
-An early landmark work on learning SDFs with neural networks. It uses a decoder-only architecture and represents each object's shape with a latent code `z`.
+An early work on learning SDFs with neural networks. It uses a decoder-only architecture and represents each object's shape with a latent code `z`.
 
 ```
 f_θ(z, x) → SDF value
@@ -462,7 +462,7 @@ The standard method for converting the iso-surface `f(x) = 0` of a learned SDF i
 > - [Wang et al., "NeuS: Learning Neural Implicit Surfaces by Volume Rendering" (NeurIPS 2021)](https://arxiv.org/abs/2106.10689) — the original NeuS paper.
 > - [Yariv et al., "Volume Rendering of Neural Implicit Surfaces" (NeurIPS 2021)](https://arxiv.org/abs/2106.12052) — the VolSDF paper.
 > - [Park et al., "DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation" (CVPR 2019)](https://arxiv.org/abs/1901.05103) — the original DeepSDF paper.
-> - [Mescheder et al., "Occupancy Networks" (CVPR 2019)](https://arxiv.org/abs/1812.03828) — a landmark for occupancy-based approaches.
+> - [Mescheder et al., "Occupancy Networks" (CVPR 2019)](https://arxiv.org/abs/1812.03828) — an early reference for occupancy-based approaches.
 
 ## 13.7 Advanced: Differentiable Rendering
 
@@ -617,4 +617,4 @@ In task planning, natural-language-driven navigation, and human-robot interactio
 > - **2020~**: the arrival of NeRF brings neural rendering into the spotlight. A handful of photos can yield a photorealistic 3D scene, and follow-ups such as Instant-NGP and Mip-NeRF arrive in quick succession.
 > - **2023~**: 3D Gaussian Splatting overcomes NeRF's speed limits. It combines real-time rendering with the advantages of explicit representation, and multi-modal 3D detection such as BEVFusion becomes the reference in autonomous driving.
 > - **2024~**: the combination of 3DGS + SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is opening up a new direction for neural SLAM. Robots can build photorealistic 3D maps in real time as they move.
-> - **Worth watching now**: 3DGS-based methods are rapidly proliferating in SLAM/robotics applications. NeRFStudio lets you experiment with both, so I recommend comparing them directly.
+> - **Worth watching now**: new 3DGS-based methods keep appearing in SLAM/robotics applications. NeRFStudio lets you experiment with both, so I recommend comparing them directly.

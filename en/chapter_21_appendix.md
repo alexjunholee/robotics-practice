@@ -440,7 +440,7 @@ sudo apt-get install libeigen3-dev
 
 ## E. First-Week Survival Guide
 
-When you first join a lab, it is natural to feel lost about what to do. This guide sums up "at minimum, do at least this in your first week".
+When you first join a lab, it is natural to feel lost about what to do. The first week has a minimum set of tasks.
 
 ### Day 1–2: Build the environment
 

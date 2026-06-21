@@ -374,7 +374,7 @@ p2^T F p1 = 0
 
 **8-point algorithm**: estimates F from at least 8 correspondence pairs
 
-To summarize the relation between E and F: F is the version "you can use directly on pixel coordinates", while E is the version "you use when you already know the camera intrinsics". If you have calibrated, use E; if not, use F.
+For the relation between E and F: F is the version "you can use directly on pixel coordinates", while E is the version "you use when you already know the camera intrinsics". If you have calibrated, use E; if not, use F.
 
 ### 9.4.3 Triangulation
 

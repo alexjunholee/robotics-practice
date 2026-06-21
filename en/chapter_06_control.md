@@ -15,7 +15,7 @@ The reasons to learn control are simple:
 - **Disturbances are always present.** The floor is slippery, the wind blows, the payload mass differs from expectation. The sensor-actuator loop must be closed (feedback) to cope with such uncertainty.
 - **Safety is on the line.** When an industrial robot arm works next to a person, the lack of force control can break the person's arm. No exaggeration.
 
-The scope of control theory is broad. This chapter focuses on what is actually used in robotics practice. The flow goes PID, state-space control, MPC, impedance control, and whole-body control.
+Control theory is broad; robotics practice usually needs the path from PID to state-space control, MPC, impedance control, and whole-body control.
 
 One thing upfront: control theory involves a lot of math. If you are not comfortable with linear algebra and differential equations, review at least matrix operations and the eigenvalue concept before reading this chapter.
 
@@ -884,4 +884,4 @@ Frankly, unless writing a paper, adaptive control or sliding mode is rarely used
 
 ---
 
-This chapter selected the core of control theory actually used in robotics. For the mathematical details of each technique, supplement with the further reading. One piece of advice: control theory is hard to understand without simulation. Running the code in this chapter, changing parameters, and observing how the system response changes is the most effective way to learn. Running one simulation beats reading a textbook three times.
+Robotics uses only part of control theory. For the mathematical details of each technique, supplement with the further reading. One piece of advice: control theory is hard to understand without simulation. Run the code, change the parameters, and watch the system response. One simulation beats reading a textbook three times.

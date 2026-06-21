@@ -4,7 +4,7 @@
 
 AI coding agents (Claude, Copilot, ChatGPT, and so on) are powerful tools in general software development. Ask for a single function and you get usable code; paste an error message and they usually pin down the cause. Robotics is different. Hardware, OS, networking, and real-time constraints are tangled together, and "the code is right but it doesn't work" is an everyday situation. AI often gets things wrong in this territory, confidently proposes the wrong direction, or simply gives up.
 
-This chapter is a guide for not getting fooled by AI and for putting it to proper use. Everything here comes from problems encountered in practice. Knowing the patterns where AI goes wrong in advance reduces wasted effort.
+The practical aim is simple: do not get fooled by AI, and use it where it helps. Everything here comes from problems encountered in practice. Knowing the patterns where AI goes wrong in advance reduces wasted effort.
 
 ## 19.2 Things AI Frequently Gets Wrong in ROS
 

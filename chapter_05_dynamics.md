@@ -763,4 +763,4 @@ print("CoM velocity:", data.vcom[0])
 4. 부유 base 시스템에서는 centroidal dynamics가 핵심 도구다.
 5. 직접 구현하지 말고 Pinocchio나 Drake를 써라. 단, 이 라이브러리들이 내부적으로 무엇을 계산하는지는 이해하고 있어야 한다.
 
-다음 장에서는 이 동역학 모델을 기반으로 한 제어 기법 — computed torque control, operational space control, whole-body control — 을 본다.
+이 동역학 모델 위에서 computed torque control, operational space control, whole-body control 같은 제어 기법이 만들어진다.

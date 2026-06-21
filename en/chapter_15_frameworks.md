@@ -1,7 +1,7 @@
 # Ch.15 — Robot Frameworks
 
 
-The moment that trips up most people writing robot software for the first time is realizing that sensor drivers, path planning, and motor control all have to run inside a single program. Frameworks solve this problem structurally. Build a robot without a framework and even "read sensor data → decide → send motor command" forces you to implement thread management, message serialization, and coordinate transforms yourself; if you do not know this, you hit a wall on your first project. This chapter centers on ROS, the de facto industry standard, and covers simulators and surrounding tools broadly.
+The moment that trips up most people writing robot software for the first time is realizing that sensor drivers, path planning, and motor control all have to run inside a single program. Frameworks solve this problem structurally. Build a robot without a framework and even "read sensor data → decide → send motor command" forces you to implement thread management, message serialization, and coordinate transforms yourself; if you do not know this, you hit a wall on your first project. ROS is the de facto industry standard, and simulators and surrounding tools sit around it.
 
 ## 15.1 ROS (Robot Operating System)
 
@@ -156,7 +156,7 @@ The real power of ROS lies in the package ecosystem the community has built. You
 
 Experimenting directly on a real robot can damage the hardware or injure people. Testing thoroughly in a simulator first and then moving to hardware is safer and more efficient. In particular, for learning methods like reinforcement learning that require tens of thousands of episodes, research is effectively impossible without a simulator.
 
-Recently, as **embodied AI** research has grown rapidly, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
+Recently, as **embodied AI** research has expanded, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
 
 ### 15.2.1 Gazebo
 

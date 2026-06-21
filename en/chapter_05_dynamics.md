@@ -781,8 +781,8 @@ Practical takeaways:
 
 1. The manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ` is the starting point for everything.
 2. Use RNEA for inverse dynamics (computing τ) and ABA for forward dynamics (computing q̈). Both are O(n).
-3. Once contact enters, the problem becomes dramatically harder. Simulator choice matters.
+3. Once contact enters, the problem becomes much harder. Simulator choice matters.
 4. In floating-base systems, centroidal dynamics is the key tool.
 5. Do not implement these from scratch; use Pinocchio or Drake. But understand what these libraries compute internally.
 
-The next chapter examines control techniques built on this dynamics model — computed torque control, operational space control, whole-body control.
+This dynamics model leads directly to computed torque control, operational space control, and whole-body control.

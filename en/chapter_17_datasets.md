@@ -1,6 +1,6 @@
 # Ch.17 — Datasets & Benchmarks
 
-In robotics and computer vision research, datasets are as important as algorithms. Without good data you cannot build good models, and without fair benchmarks you cannot prove in a paper that your method is genuinely better. This chapter surveys the structure and characteristics of the major datasets, along with methods for collecting and managing your own data.
+In robotics and computer vision research, datasets are as important as algorithms. Without good data you cannot build good models, and without fair benchmarks you cannot prove in a paper that your method is genuinely better. The useful view is the structure and characteristics of major datasets, plus the methods for collecting and managing your own data.
 
 The share of **synthetic data** has been growing recently. Collecting and labeling real data is costly and time-consuming, so a workflow of pretraining on automatically generated synthetic data from a simulator and then fine-tuning on a small amount of real data has taken hold. NVIDIA Isaac Sim's Domain Randomization and Habitat's large-scale scene generation are representative examples. **Sim-to-Real datasets** — datasets that provide simulator data paired with the corresponding real data — are also being actively constructed.
 

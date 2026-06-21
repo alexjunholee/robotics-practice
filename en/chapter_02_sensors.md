@@ -173,7 +173,7 @@ Event camera papers at CVPR have grown from around 5 in 2019 to over 30 in 2024,
 
 If cameras give "rich but depth-less" data, LiDAR gives "accurate 3D coordinates directly". This precise ranging is exactly why LiDAR became a core sensor in autonomous driving. Depth estimated from cameras alone carries large errors and depends on weather, while LiDAR measures objects over 100m away with centimeter-level accuracy.
 
-A recent trend worth noting: solid-state LiDAR is rapidly replacing spinning (mechanical) LiDAR. No moving parts means higher durability and easier mass production, which fits automotive volume manufacturing. New approaches such as Livox's non-repetitive scan pattern are also emerging, so point cloud processing algorithms need to change as well.
+A recent trend worth noting: solid-state LiDAR has been replacing spinning (mechanical) LiDAR. No moving parts means higher durability and easier mass production, which fits automotive volume manufacturing. New approaches such as Livox's non-repetitive scan pattern are also emerging, so point cloud processing algorithms need to change as well.
 
 ### 2.2.1 2D LiDAR vs. 3D LiDAR
 
@@ -632,5 +632,5 @@ Ch.14 §14.7 shows how `beam_range_finder_model` is called inside MCL and how `i
 > - **~2010**: Centered on 2D LiDAR (SICK, Hokuyo) and monocular cameras. Sensors were expensive and bulky, and processing power was limited. Stereo cameras were hard to run in real time due to computational cost.
 > - **2012~2017**: 3D LiDAR (Velodyne VLP-16) became widespread, and RGB-D cameras (Kinect) reached the mass market. LiDAR prices dropped from tens of thousands to thousands of dollars. Visual-inertial systems (VIO) also began to be used in real systems.
 > - **2018~2022**: Solid-state LiDAR (Livox) appeared, with prices falling to the hundreds of dollars. Event camera research became more active. Multimodal sensor fusion (camera + LiDAR + IMU) became the standard.
-> - **2023~**: Solid-state LiDAR is rapidly replacing the spinning type. Event camera adoption is starting to grow in high-speed/HDR applications. 4D radar (including Doppler velocity) is also emerging as a new auxiliary sensor.
+> - **2023~**: Solid-state LiDAR continues to replace the spinning type. Event camera adoption is starting to grow in high-speed/HDR applications. 4D radar (including Doppler velocity) is also emerging as a new auxiliary sensor.
 > - **Worth watching now**: As solid-state LiDAR goes mainstream, algorithms built on the assumption of spinning LiDAR need to be redesigned. Event cameras are not yet mainstream, but they are being adopted quickly in fields where the limits of conventional cameras are clear, such as high-speed drones and autonomous driving. When sensor hardware changes, algorithm research directions follow.

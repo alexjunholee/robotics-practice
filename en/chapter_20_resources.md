@@ -188,7 +188,7 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 
 The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../research-notes/chapter_34_conference_prep.md`](../../research-notes/chapter_34_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
-This guide focuses on the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
+The focus here is the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
 ## 20.6 Useful GitHub Repositories
 

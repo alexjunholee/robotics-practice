@@ -1,7 +1,7 @@
 # Ch.8 — Robot Learning
 
 
-Robot learning is the field where robots learn behavior from data and experience instead of explicit programming. This chapter covers reinforcement learning (RL) fundamentals, sim-to-real transfer, imitation learning, and recent foundation-model-based approaches.
+Robot learning is the field where robots learn behavior from data and experience instead of explicit programming. The main pieces are reinforcement learning (RL), sim-to-real transfer, imitation learning, and recent foundation-model-based approaches.
 
 ---
 

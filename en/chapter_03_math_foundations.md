@@ -1,6 +1,6 @@
 # Ch.3 — Mathematical Foundations
 
-Understanding Spatial AI properly requires a mathematical foundation. This chapter touches on the core concepts briefly; for deeper study, consult the recommended references.
+Understanding Spatial AI properly requires a mathematical foundation. The core concepts here are brief; for deeper study, use the recommended references.
 
 The urge to skip the math is understandable. But when you read papers, you end up stuck at the equations. A SLAM paper says "optimization on SE(3)" and if you don't know what SE(3) is, you miss the paper's core idea; when a single line says "we derived the Jacobian and solved with Gauss-Newton," if that doesn't parse, the whole methodology is out of reach. The math here is not "math for a math exam" but "math to read and implement robotics papers." A third-year engineering student will have taken linear algebra, so the focus here is on connecting what you learned as an undergraduate to how it gets used in robotics.
 

@@ -104,7 +104,7 @@ From a linear algebra perspective, a convolution is "the inner product of a filt
 Attention(Q, K, V) = softmax(QK^T / √d_k) V
 ```
 
-Once you see the difference from a CNN, it is immediately clear why the Transformer is rising. CNNs exchange information only between "nearby pixels" (local receptive field), but the Transformer's Self-Attention lets "any part of the image reference any other part" (global attention). This is advantageous for grasping the overall context of an object. Since 2020, Transformers have rapidly replaced CNNs in vision.
+Once you see the difference from a CNN, it is immediately clear why the Transformer is rising. CNNs exchange information only between "nearby pixels" (local receptive field), but the Transformer's Self-Attention lets "any part of the image reference any other part" (global attention). This is advantageous for grasping the overall context of an object. Since 2020, Transformers have largely replaced CNNs in vision.
 
 **Vision Transformer (ViT)** splits the image into fixed-size patches such as 16×16, treats each patch like a "word" as in NLP, and feeds them into a Transformer encoder. The idea itself is simple, but by outperforming CNNs on large-scale data, it has recently become the mainstay of vision tasks.
 
@@ -467,7 +467,7 @@ This is the technique of transferring the "knowledge" of a large model (teacher)
 
 **Teacher-Student Structure**:
 
-The student model (small model) is trained to imitate the output of the teacher model (large model, already trained). Crucially, the teacher's soft prediction carries more information than a hard label (ground truth).
+The student model (small model) is trained to imitate the output of the teacher model (large model, already trained). The teacher's soft prediction carries more information than a hard label (ground truth).
 
 For example, for an image of "cat" the hard label is [1, 0, 0], but the teacher's soft prediction might be [0.85, 0.10, 0.05]. This soft prediction contains the information that "cat and dog are somewhat similar," and the student learns that too.
 

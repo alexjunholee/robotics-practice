@@ -37,7 +37,7 @@ Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 �
 
 ## 22.4 장기전의 감각
 
-박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/chapter_07_my_research.md`](../grad-notes/chapter_07_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/chapter_01_phd_decision.md`](../grad-notes/chapter_01_phd_decision.md) (박사 결정의 시간 지평).
+박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/chapter_07_my_research.md`](../grad-notes/chapter_07_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/chapter_01_phd_decision.md`](../grad-notes/chapter_01_phd_decision.md) (박사 결정을 잡는 시간 단위).
 
 로보틱스 실험은 *세팅 3–6개월·실험 사이클 2주*가 흔한 단위다. 첫 논문이 1년 반 걸리는 것도 같은 이유다. 분야의 시간 감각이 박사 운영의 frame과 합쳐지면 매일의 속도에 덜 흔들린다.
 

@@ -3,7 +3,7 @@
 
 Place a single robot arm on a desk. What angle must each of the six motors take so that the fingertip reaches a coffee cup? Kinematics is the discipline that answers this question. And the real-world problem of actually spinning those motors, reading sensors, and running a control loop at 1kHz is mechatronics.
 
-This chapter covers everything from the math to real hardware selection and communication protocols. Equations show up, but the goal is "getting a robot to actually move."
+The path runs from the math to real hardware selection and communication protocols. Equations show up, but the goal is "getting a robot to actually move."
 
 ---
 
@@ -1246,4 +1246,4 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 ---
 
-*The next chapter layers force and mass on top of this kinematics: dynamics and control. The viewpoint shifts from "sending joint angles to a desired value" to "applying a desired torque."*
+*Layering force and mass on top of this kinematics leads to dynamics and control. The viewpoint shifts from "sending joint angles to a desired value" to "applying a desired torque."*

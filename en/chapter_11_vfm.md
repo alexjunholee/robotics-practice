@@ -1,7 +1,7 @@
 # Ch.11 — Vision Foundation Models (VFM)
 
 
-The paradigm of computer vision is shifting. The deep learning models covered so far were specialists trained to do a specific task well on a specific dataset; foundation models are generalists that learn general-purpose visual capabilities from massive data. Once this difference is clear, so is the reason VFM-based perception papers have grown rapidly at ICRA/IROS since 2023.
+The paradigm of computer vision is shifting. The deep learning models covered so far were specialists trained to do a specific task well on a specific dataset; foundation models are generalists that learn general-purpose visual capabilities from massive data. Once this difference is clear, so is the reason VFM-based perception papers have become common at ICRA/IROS since 2023.
 
 ---
 

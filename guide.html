@@ -557,9 +557,9 @@ AI가 코드를 짜고, 논문을 요약하고, 실험을 제안하는 시대에
 
 AI가 코드를 짜주고 논문을 요약해줘도, 위 네 가지는 대신하지 못한다.
 
-## 1.4 이 문서의 활용 방법
+## 1.4 읽는 방법
 
-이 문서는 **참고서(Reference)**로 활용한다:
+참고서(Reference)처럼 활용한다:
 
 1. **처음 읽을 때**: 목차를 훑어보고 전체 그림을 파악
 2. **연구 시작할 때**: 관련 섹션을 깊이 읽고 추천 자료 학습
@@ -2896,7 +2896,7 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 
 ---
 
-*다음 장에서는 이 기구학 위에 힘과 질량을 얹는다: 동역학(Dynamics)과 제어(Control). 관절 각도를 "원하는 값으로 보내는" 것이 아니라, "원하는 토크를 가하는" 관점으로 바뀐다.*
+*기구학 위에 힘과 질량을 얹으면 동역학(Dynamics)과 제어(Control)로 넘어간다. 관절 각도를 "원하는 값으로 보내는" 것이 아니라, "원하는 토크를 가하는" 관점으로 바뀐다.*
 
 
 ---
@@ -3678,7 +3678,7 @@ print("CoM velocity:", data.vcom[0])
 
 ## 정리
 
-이 장에서 다룬 내용을 한 문장으로 요약하면: **동역학은 힘과 운동의 관계를 다루며, 로봇을 제어하고 시뮬레이션하는 데 필수적이다.**
+핵심은 한 문장이다: **동역학은 힘과 운동의 관계를 다루며, 로봇을 제어하고 시뮬레이션하는 데 필수적이다.**
 
 실무적으로 기억해야 할 것:
 
@@ -3688,7 +3688,7 @@ print("CoM velocity:", data.vcom[0])
 4. 부유 base 시스템에서는 centroidal dynamics가 핵심 도구이다.
 5. 직접 구현하지 말고 Pinocchio나 Drake를 써라. 단, 이 라이브러리들이 내부적으로 무엇을 계산하는지는 이해하고 있어야 한다.
 
-다음 장에서는 이 동역학 모델을 기반으로 한 제어 기법 — computed torque control, operational space control, whole-body control — 을 본다.
+이 동역학 모델 위에서 computed torque control, operational space control, whole-body control 같은 제어 기법이 만들어진다.
 
 
 ---
@@ -6712,7 +6712,7 @@ depth = result['depth']
 
 *연구자가 되고 싶다면 여기서부터 읽어라.*
 
-모델 아키텍처만 알면 연구할 수 있을 것 같지만, 실제로 "학습이 잘 되게 하는 것"이 전체 연구 시간의 절반 이상을 차지한다. 같은 모델이라도 learning rate 하나 잘못 잡으면 수렴하지 않고, augmentation 하나 추가하면 정확도가 몇 % 뛸 수 있다. 이 절에서는 실무에서 반복적으로 쓰이는 학습 테크닉을 정리한다.
+모델 아키텍처만 알면 연구할 수 있을 것 같지만, 실제로 "학습이 잘 되게 하는 것"이 전체 연구 시간의 절반 이상을 차지한다. 같은 모델이라도 learning rate 하나 잘못 잡으면 수렴하지 않고, augmentation 하나 추가하면 정확도가 몇 % 뛸 수 있다. 아래는 실무에서 반복적으로 쓰이는 학습 테크닉이다.
 
 **Learning Rate Schedule**:
 
@@ -12280,7 +12280,7 @@ sudo apt-get install libeigen3-dev
 
 ## E. 첫 주 생존 가이드
 
-연구실에 처음 들어왔을 때, 뭘 해야 할지 막막한 건 당연하다. 이 가이드는 "첫 주에 최소한 이것만은 하자"를 정리한 것이다.
+연구실에 처음 들어왔을 때, 뭘 해야 할지 막막한 건 당연하다. 첫 주에는 최소 작업 목록이 필요하다.
 
 ### Day 1-2: 환경 구축
 
@@ -12380,7 +12380,7 @@ Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 �
 
 ## 22.4 장기전의 감각
 
-박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/chapter_07_my_research.md`](../grad-notes/chapter_07_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/chapter_01_phd_decision.md`](../grad-notes/chapter_01_phd_decision.md) (박사 결정의 시간 지평).
+박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/chapter_07_my_research.md`](../grad-notes/chapter_07_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/chapter_01_phd_decision.md`](../grad-notes/chapter_01_phd_decision.md) (박사 결정을 잡는 시간 단위).
 
 로보틱스 실험은 *세팅 3–6개월·실험 사이클 2주*가 흔한 단위다. 첫 논문이 1년 반 걸리는 것도 같은 이유다. 분야의 시간 감각이 박사 운영의 frame과 합쳐지면 매일의 속도에 덜 흔들린다.
 
@@ -12763,7 +12763,7 @@ Event camera papers at CVPR have grown from around 5 in 2019 to over 30 in 2024,
 
 If cameras give "rich but depth-less" data, LiDAR gives "accurate 3D coordinates directly". This precise ranging is exactly why LiDAR became a core sensor in autonomous driving. Depth estimated from cameras alone carries large errors and depends on weather, while LiDAR measures objects over 100m away with centimeter-level accuracy.
 
-A recent trend worth noting: solid-state LiDAR is rapidly replacing spinning (mechanical) LiDAR. No moving parts means higher durability and easier mass production, which fits automotive volume manufacturing. New approaches such as Livox's non-repetitive scan pattern are also emerging, so point cloud processing algorithms need to change as well.
+A recent trend worth noting: solid-state LiDAR has been replacing spinning (mechanical) LiDAR. No moving parts means higher durability and easier mass production, which fits automotive volume manufacturing. New approaches such as Livox's non-repetitive scan pattern are also emerging, so point cloud processing algorithms need to change as well.
 
 ### 2.2.1 2D LiDAR vs. 3D LiDAR
 
@@ -12978,7 +12978,7 @@ Each approach has trade-offs. Early fusion loses less information but is computa
 > - **~2010**: Centered on 2D LiDAR (SICK, Hokuyo) and monocular cameras. Sensors were expensive and bulky, and processing power was limited. Stereo cameras were hard to run in real time due to computational cost.
 > - **2012~2017**: 3D LiDAR (Velodyne VLP-16) became widespread, and RGB-D cameras (Kinect) reached the mass market. LiDAR prices dropped from tens of thousands to thousands of dollars. Visual-inertial systems (VIO) also began to be used in real systems.
 > - **2018~2022**: Solid-state LiDAR (Livox) appeared, with prices falling to the hundreds of dollars. Event camera research became more active. Multimodal sensor fusion (camera + LiDAR + IMU) became the standard.
-> - **2023~**: Solid-state LiDAR is rapidly replacing the spinning type. Event camera adoption is starting to grow in high-speed/HDR applications. 4D radar (including Doppler velocity) is also emerging as a new auxiliary sensor.
+> - **2023~**: Solid-state LiDAR continues to replace the spinning type. Event camera adoption is starting to grow in high-speed/HDR applications. 4D radar (including Doppler velocity) is also emerging as a new auxiliary sensor.
 > - **Worth watching now**: As solid-state LiDAR goes mainstream, algorithms built on the assumption of spinning LiDAR need to be redesigned. Event cameras are not yet mainstream, but they are being adopted quickly in fields where the limits of conventional cameras are clear, such as high-speed drones and autonomous driving. When sensor hardware changes, algorithm research directions follow.
 
 
@@ -12986,7 +12986,7 @@ Each approach has trade-offs. Early fusion loses less information but is computa
 
 # Ch.3 — Mathematical Foundations
 
-Understanding Spatial AI properly requires a mathematical foundation. This chapter touches on the core concepts briefly; for deeper study, consult the recommended references.
+Understanding Spatial AI properly requires a mathematical foundation. The core concepts here are brief; for deeper study, use the recommended references.
 
 The urge to skip the math is understandable. But when you read papers, you end up stuck at the equations. A SLAM paper says "optimization on SE(3)" and if you don't know what SE(3) is, you miss the paper's core idea; when a single line says "we derived the Jacobian and solved with Gauss-Newton," if that doesn't parse, the whole methodology is out of reach. The math here is not "math for a math exam" but "math to read and implement robotics papers." A third-year engineering student will have taken linear algebra, so the focus here is on connecting what you learned as an undergraduate to how it gets used in robotics.
 
@@ -13874,7 +13874,7 @@ Here a is the action, Z_a is the observation obtained through that action, and X
 
 Place a single robot arm on a desk. What angle must each of the six motors take so that the fingertip reaches a coffee cup? Kinematics is the discipline that answers this question. And the real-world problem of actually spinning those motors, reading sensors, and running a control loop at 1kHz is mechatronics.
 
-This chapter covers everything from the math to real hardware selection and communication protocols. Equations show up, but the goal is "getting a robot to actually move."
+The path runs from the math to real hardware selection and communication protocols. Equations show up, but the goal is "getting a robot to actually move."
 
 ---
 
@@ -14813,7 +14813,7 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 ---
 
-*The next chapter layers force and mass on top of this kinematics: dynamics and control. The viewpoint shifts from "sending joint angles to a desired value" to "applying a desired torque."*
+*Layering force and mass on top of this kinematics leads to dynamics and control. The viewpoint shifts from "sending joint angles to a desired value" to "applying a desired torque."*
 
 
 ---
@@ -15601,11 +15601,11 @@ Practical takeaways:
 
 1. The manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ` is the starting point for everything.
 2. Use RNEA for inverse dynamics (computing τ) and ABA for forward dynamics (computing q̈). Both are O(n).
-3. Once contact enters, the problem becomes dramatically harder. Simulator choice matters.
+3. Once contact enters, the problem becomes much harder. Simulator choice matters.
 4. In floating-base systems, centroidal dynamics is the key tool.
 5. Do not implement these from scratch; use Pinocchio or Drake. But understand what these libraries compute internally.
 
-The next chapter examines control techniques built on this dynamics model — computed torque control, operational space control, whole-body control.
+This dynamics model leads directly to computed torque control, operational space control, and whole-body control.
 
 
 ---
@@ -16994,7 +16994,7 @@ Practical limits: LLM-based TAMP is still experimental. Complex geometric constr
 # Ch.8 — Robot Learning
 
 
-Robot learning is the field where robots learn behavior from data and experience instead of explicit programming. This chapter covers reinforcement learning (RL) fundamentals, sim-to-real transfer, imitation learning, and recent foundation-model-based approaches.
+Robot learning is the field where robots learn behavior from data and experience instead of explicit programming. The main pieces are reinforcement learning (RL), sim-to-real transfer, imitation learning, and recent foundation-model-based approaches.
 
 ---
 
@@ -18019,7 +18019,7 @@ p2^T F p1 = 0
 
 **8-point algorithm**: estimates F from at least 8 correspondence pairs
 
-To summarize the relation between E and F: F is the version "you can use directly on pixel coordinates", while E is the version "you use when you already know the camera intrinsics". If you have calibrated, use E; if not, use F.
+For the relation between E and F: F is the version "you can use directly on pixel coordinates", while E is the version "you use when you already know the camera intrinsics". If you have calibrated, use E; if not, use F.
 
 ### 9.4.3 Triangulation
 
@@ -18799,7 +18799,7 @@ This is the technique of transferring the "knowledge" of a large model (teacher)
 
 **Teacher-Student Structure**:
 
-The student model (small model) is trained to imitate the output of the teacher model (large model, already trained). Crucially, the teacher's soft prediction carries more information than a hard label (ground truth).
+The student model (small model) is trained to imitate the output of the teacher model (large model, already trained). The teacher's soft prediction carries more information than a hard label (ground truth).
 
 For example, for an image of "cat" the hard label is [1, 0, 0], but the teacher's soft prediction might be [0.85, 0.10, 0.05]. This soft prediction contains the information that "cat and dog are somewhat similar," and the student learns that too.
 
@@ -18954,7 +18954,7 @@ This combination is currently the most widely used approach to sim-to-real trans
 # Ch.11 — Vision Foundation Models (VFM)
 
 
-The paradigm of computer vision is shifting. The deep learning models covered so far were specialists trained to do a specific task well on a specific dataset; foundation models are generalists that learn general-purpose visual capabilities from massive data. Once this difference is clear, so is the reason VFM-based perception papers have grown rapidly at ICRA/IROS since 2023.
+The paradigm of computer vision is shifting. The deep learning models covered so far were specialists trained to do a specific task well on a specific dataset; foundation models are generalists that learn general-purpose visual capabilities from massive data. Once this difference is clear, so is the reason VFM-based perception papers have become common at ICRA/IROS since 2023.
 
 ---
 
@@ -19383,7 +19383,7 @@ What sets embodied AI apart from earlier AI is that the model does not stop at c
 
 > **Further reading**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — official blog posts on RT-1, RT-2, PaLM-E, and more
-> - [Brohan et al., "RT-2: Vision-Language-Action Models" (2023)](https://arxiv.org/abs/2307.15818) — the seminal VLA paper
+> - [Brohan et al., "RT-2: Vision-Language-Action Models" (2023)](https://arxiv.org/abs/2307.15818) — an early paper that set the VLA framing
 
 ## 12.2 Key Models and Research
 
@@ -19642,7 +19642,7 @@ In robotics, designing a reward function properly is very hard. How do you defin
 
 *If you want to become a researcher, start reading from here.*
 
-Diffusion Policy, proposed by Chi et al. (RSS 2023), is a policy representation that is rapidly replacing BC-family methods in robot manipulation. The core idea is to generate an action trajectory through a denoising diffusion process.
+Diffusion Policy, proposed by Chi et al. (RSS 2023), is now common in robot manipulation as an alternative to BC-family methods. The core idea is to generate an action trajectory through a denoising diffusion process.
 
 **Why diffusion?**
 
@@ -19747,7 +19747,7 @@ Trajectory similarity, contact-force comparisons, and other metrics are sometime
 > - **2020–**: first attempts to combine large language models (LLMs) with vision. Language-based robot control such as CLIPort and SayCan emerges
 > - **2022–**: foundation-model-based robot policies appear, including RT-1, RT-2, and PaLM-E. The Open X-Embodiment dataset is built
 > - **2024–**: open-source VLA models such as OpenVLA and Octo are released. World-model-based planning draws attention in both autonomous driving and manipulation. End-to-end autonomous driving (UniAD, VAD, GenAD) starts to replace modular approaches
-> - **What to watch now**: research applying foundation models to robots has grown rapidly since 2023 (RT-2, OpenVLA, Octo, pi0, etc.). You can fine-tune open-source models like OpenVLA/Octo on your own robot, so hands-on experimentation is recommended.
+> - **What to watch now**: research applying foundation models to robots has expanded since 2023 (RT-2, OpenVLA, Octo, pi0, etc.). You can fine-tune open-source models like OpenVLA/Octo on your own robot, so hands-on experimentation is recommended.
 
 
 ---
@@ -19973,7 +19973,7 @@ Combining multiple sensors lets each one cover the others' weaknesses. Cameras a
 > **Further reading**
 > - [Qi et al., "PointNet: Deep Learning on Point Sets" (2017)](https://arxiv.org/abs/1612.00593) — the starting point of 3D deep learning.
 > - [Lang et al., "PointPillars" (2019)](https://arxiv.org/abs/1812.05784) — real-time 3D detection.
-> - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — a landmark work in multi-modal fusion.
+> - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — a widely used reference in multi-modal fusion.
 > - [MMDetection3D GitHub](https://github.com/open-mmlab/mmdetection3d) — unified 3D object detection framework.
 
 > **Exercise**: [BEV Projection Visualization](https://alexjunholee.github.io/robotics-practice/app.html#bev_projection)
@@ -20131,7 +20131,7 @@ If a robot can build photorealistic 3D maps in real time while moving around, ap
 > **Further reading**
 > - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — the original 3DGS paper.
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — improves surface reconstruction quality via 2D Gaussians.
-> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — a landmark for 3DGS + SLAM.
+> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — an early 3DGS + SLAM system.
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — the MonoGS paper.
 > - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — dense 3D reconstruction from image pairs without camera intrinsics/extrinsics. A paradigm shift for 3D reconstruction.
 > - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — adds local feature matching to DUSt3R. Provides reconstruction and precise correspondences simultaneously.
@@ -20171,7 +20171,7 @@ L_eikonal = E_x[ (||∇f_θ(x)|| - 1)^2 ]
 
 **DeepSDF**
 
-An early landmark work on learning SDFs with neural networks. It uses a decoder-only architecture and represents each object's shape with a latent code `z`.
+An early work on learning SDFs with neural networks. It uses a decoder-only architecture and represents each object's shape with a latent code `z`.
 
 ```
 f_θ(z, x) → SDF value
@@ -20216,7 +20216,7 @@ The standard method for converting the iso-surface `f(x) = 0` of a learned SDF i
 > - [Wang et al., "NeuS: Learning Neural Implicit Surfaces by Volume Rendering" (NeurIPS 2021)](https://arxiv.org/abs/2106.10689) — the original NeuS paper.
 > - [Yariv et al., "Volume Rendering of Neural Implicit Surfaces" (NeurIPS 2021)](https://arxiv.org/abs/2106.12052) — the VolSDF paper.
 > - [Park et al., "DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation" (CVPR 2019)](https://arxiv.org/abs/1901.05103) — the original DeepSDF paper.
-> - [Mescheder et al., "Occupancy Networks" (CVPR 2019)](https://arxiv.org/abs/1812.03828) — a landmark for occupancy-based approaches.
+> - [Mescheder et al., "Occupancy Networks" (CVPR 2019)](https://arxiv.org/abs/1812.03828) — an early reference for occupancy-based approaches.
 
 ## 13.7 Advanced: Differentiable Rendering
 
@@ -20371,7 +20371,7 @@ In task planning, natural-language-driven navigation, and human-robot interactio
 > - **2020~**: the arrival of NeRF brings neural rendering into the spotlight. A handful of photos can yield a photorealistic 3D scene, and follow-ups such as Instant-NGP and Mip-NeRF arrive in quick succession.
 > - **2023~**: 3D Gaussian Splatting overcomes NeRF's speed limits. It combines real-time rendering with the advantages of explicit representation, and multi-modal 3D detection such as BEVFusion becomes the reference in autonomous driving.
 > - **2024~**: the combination of 3DGS + SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is opening up a new direction for neural SLAM. Robots can build photorealistic 3D maps in real time as they move.
-> - **Worth watching now**: 3DGS-based methods are rapidly proliferating in SLAM/robotics applications. NeRFStudio lets you experiment with both, so I recommend comparing them directly.
+> - **Worth watching now**: new 3DGS-based methods keep appearing in SLAM/robotics applications. NeRFStudio lets you experiment with both, so I recommend comparing them directly.
 
 
 ---
@@ -21096,7 +21096,7 @@ When you map the same environment across multiple days, the trajectories of the 
 # Ch.15 — Robot Frameworks
 
 
-The moment that trips up most people writing robot software for the first time is realizing that sensor drivers, path planning, and motor control all have to run inside a single program. Frameworks solve this problem structurally. Build a robot without a framework and even "read sensor data → decide → send motor command" forces you to implement thread management, message serialization, and coordinate transforms yourself; if you do not know this, you hit a wall on your first project. This chapter centers on ROS, the de facto industry standard, and covers simulators and surrounding tools broadly.
+The moment that trips up most people writing robot software for the first time is realizing that sensor drivers, path planning, and motor control all have to run inside a single program. Frameworks solve this problem structurally. Build a robot without a framework and even "read sensor data → decide → send motor command" forces you to implement thread management, message serialization, and coordinate transforms yourself; if you do not know this, you hit a wall on your first project. ROS is the de facto industry standard, and simulators and surrounding tools sit around it.
 
 ## 15.1 ROS (Robot Operating System)
 
@@ -21251,7 +21251,7 @@ The real power of ROS lies in the package ecosystem the community has built. You
 
 Experimenting directly on a real robot can damage the hardware or injure people. Testing thoroughly in a simulator first and then moving to hardware is safer and more efficient. In particular, for learning methods like reinforcement learning that require tens of thousands of episodes, research is effectively impossible without a simulator.
 
-Recently, as **embodied AI** research has grown rapidly, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
+Recently, as **embodied AI** research has expanded, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
 
 ### 15.2.1 Gazebo
 
@@ -22152,7 +22152,7 @@ TEST(MyTest, BasicTest) {
 
 # Ch.17 — Datasets & Benchmarks
 
-In robotics and computer vision research, datasets are as important as algorithms. Without good data you cannot build good models, and without fair benchmarks you cannot prove in a paper that your method is genuinely better. This chapter surveys the structure and characteristics of the major datasets, along with methods for collecting and managing your own data.
+In robotics and computer vision research, datasets are as important as algorithms. Without good data you cannot build good models, and without fair benchmarks you cannot prove in a paper that your method is genuinely better. The useful view is the structure and characteristics of major datasets, plus the methods for collecting and managing your own data.
 
 The share of **synthetic data** has been growing recently. Collecting and labeling real data is costly and time-consuming, so a workflow of pretraining on automatically generated synthetic data from a simulator and then fine-tuning on a small amount of real data has taken hold. NVIDIA Isaac Sim's Domain Randomization and Habitat's large-scale scene generation are representative examples. **Sim-to-Real datasets** — datasets that provide simulator data paired with the corresponding real data — are also being actively constructed.
 
@@ -22779,7 +22779,7 @@ The research topics below are ones our lab is actively working on or could take 
 
 AI coding agents (Claude, Copilot, ChatGPT, and so on) are powerful tools in general software development. Ask for a single function and you get usable code; paste an error message and they usually pin down the cause. Robotics is different. Hardware, OS, networking, and real-time constraints are tangled together, and "the code is right but it doesn't work" is an everyday situation. AI often gets things wrong in this territory, confidently proposes the wrong direction, or simply gives up.
 
-This chapter is a guide for not getting fooled by AI and for putting it to proper use. Everything here comes from problems encountered in practice. Knowing the patterns where AI goes wrong in advance reduces wasted effort.
+The practical aim is simple: do not get fooled by AI, and use it where it helps. Everything here comes from problems encountered in practice. Knowing the patterns where AI goes wrong in advance reduces wasted effort.
 
 ## 19.2 Things AI Frequently Gets Wrong in ROS
 
@@ -23478,7 +23478,7 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 
 The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../research-notes/chapter_34_conference_prep.md`](../../research-notes/chapter_34_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
-This guide focuses on the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
+The focus here is the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
 ## 20.6 Useful GitHub Repositories
 
@@ -24137,7 +24137,7 @@ sudo apt-get install libeigen3-dev
 
 ## E. First-Week Survival Guide
 
-When you first join a lab, it is natural to feel lost about what to do. This guide sums up "at minimum, do at least this in your first week".
+When you first join a lab, it is natural to feel lost about what to do. The first week has a minimum set of tasks.
 
 ### Day 1–2: Build the environment
 
@@ -24219,7 +24219,7 @@ Those with a **classical robotics background who are weak on deep learning** sho
 
 **Someone with a concrete project** goes in reverse. Start by skimming the datasets and benchmarks of Ch.17, pick one or two papers on a similar task, and trace backward only to the chapters those papers depend on. There is no need to read everything.
 
-Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 month, 3 months, 6 months). This chapter only sets the broad direction.
+Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 month, 3 months, 6 months). Here the goal is only to set the broad direction.
 
 ## 22.3 What Not to Do
 
