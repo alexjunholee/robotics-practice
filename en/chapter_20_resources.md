@@ -186,7 +186,7 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 
 ## 20.5 Major Conferences
 
-The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [`../../research-notes/chapter_34_conference_prep.md`](../../research-notes/chapter_34_conference_prep.md), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
+The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [Research Notes Ch.34](../../research-notes/guide.html#ch34-학회-2-3주-전-체크리스트), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
 
 The focus here is the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
 
@@ -356,12 +356,12 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
 | Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/)* |
 | Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/)* |
-| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [`../../research-notes/part2_writing/E_after/`](../../research-notes/part2_writing/E_after/)* |
+| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [Research Notes Ch.32](../../research-notes/guide.html#ch32-revision-rebuttal)* |
 
 **Exercises**:
 - Analyze the code of recent papers — clone from GitHub and run it yourself
 - Experiment with your own improvement ideas — try "what if I change this part?"
-- Attempt paper writing — *the full frame is [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/)*
+- Attempt paper writing — *the full frame is [Research Notes Part 2](../../research-notes/guide.html#ch16-마음가짐)*
 - Read **Chapters 10-13** of this document to track recent research directions
 
 **Milestone**: If you can run an experiment that modifies or improves an existing paper's method and compare the result quantitatively, you have entered the advanced stage. Aim to reach a level where the work could be submitted to a conference workshop.
@@ -389,8 +389,8 @@ The research-skill content of this section — researcher mindset, paper writing
 
 - Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters)
 - Paper reading → [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (7 chapters; see also §20.4 above)
-- Paper writing (structure, sentence craft, revision workflow) → [`../../research-notes/part2_writing/`](../../research-notes/part2_writing/) (workflow · structure · sections · sentence · after-submission)
-- Conference presentations and peer review → [`../../research-notes/part3_presentations/`](../../research-notes/part3_presentations/) (3 chapters; see also §20.5 above)
+- Paper writing (structure, sentence craft, revision workflow) → [Research Notes Part 2](../../research-notes/guide.html#ch16-마음가짐) (workflow · structure · sections · sentence · after-submission)
+- Conference presentations and peer review → [Research Notes Part 4](../../research-notes/guide.html#ch33-학회는-왜-가는가) (3 chapters; see also §20.5 above)
 
 Field-specific notes for SLAM/CV/robotics:
 

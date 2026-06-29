@@ -289,4 +289,4 @@ class GlobalModule:
 
 > 본인 논문의 contribution 절을 읽었을 때 *왜 이 모듈이어야 하는가*에 한 단락이 답해 있는가. 답이 비어 있으면 그 자리는 아직 motivation 단계다. 한 단락이 채워지기 시작하는 자리에서 novelty가 생긴다.
 
-논문 쓰기의 본격 메타 가이드는 [「연구노트」 Ch.23 Introduction](../research-notes/chapter_23_introduction.md) · [Ch.25 Method](../research-notes/chapter_25_method.md)에서 다룬다. 이 절은 *연구 방향 선택* 시점에 그 도약을 미리 의식하게 두는 자리다.
+논문 쓰기의 본격 메타 가이드는 [「연구노트」 Ch.23 Introduction](../research-notes/guide.html#ch23-introduction은-어떻게-좁혀지는가) · [Ch.25 Method](../research-notes/guide.html#ch25-방법-섹션)에서 다룬다. 이 절은 *연구 방향 선택* 시점에 그 도약을 미리 의식하게 두는 자리다.

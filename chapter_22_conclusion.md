@@ -27,17 +27,17 @@
 
 Ch.20.7의 학습 경로에는 시기별(1개월·3개월·6개월) 권고가 더 자세히 있다.
 
-*박사 운영 측면의 프로필별 진입 경로 (학생 단계·연구자 단계 가이드)는 [`../research-notes/README.md`](../research-notes/README.md) 사용법 5 갈래에서 다룬다.*
+*박사 운영 측면의 프로필별 진입 경로 (학생 단계·연구자 단계 가이드)는 [「연구노트」](../research-notes/guide.html) 사용법 5 갈래에서 다룬다.*
 
 ## 22.3 하지 말아야 할 것
 
-신입이 자주 빠지는 함정 4 항목 — *논문 많이 읽기 / 환경 미리 완성 / 직접 짜기 / AI 의존*. 각 항목의 일반론은 [`../research-notes/chapter_06_why_read.md`](../research-notes/chapter_06_why_read.md) (논문 많이의 함정)과 [`../grad-notes/chapter_11_tool_trap.md`](../grad-notes/chapter_11_tool_trap.md) (장비병 — 환경/직접/AI 함정)에서 다룬다.
+신입이 자주 빠지는 함정 4 항목 — *논문 많이 읽기 / 환경 미리 완성 / 직접 짜기 / AI 의존*. 각 항목의 일반론은 [「연구노트」 Ch.6 — 왜 읽는가](../research-notes/guide.html#ch6-왜-읽는가-그리고-무엇을-안-읽을지-정하는-법) (논문 많이의 함정)과 [「대학원노트」 Ch.11 — 도구의 함정](../grad-notes/guide.html#ch11-도구의-함정-장비병과-가짜-진척) (장비병 — 환경/직접/AI 함정)에서 다룬다.
 
 분야 적용으로 한 줄. SLAM/CV에서는 *분야 도구가 깊다* — ORB-SLAM3·Colmap·Gaussian Splatting은 공개 구현이 표준이다. 직접 짜기는 교육 목적이거나 새 기여가 분명할 때만 의미가 있다. 그 외에는 기존 구현을 돌리고 고장 난 부분을 찾는 작업이 연구에 가깝다.
 
 ## 22.4 장기전의 감각
 
-박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [`../grad-notes/chapter_07_my_research.md`](../grad-notes/chapter_07_my_research.md) (내 연구가 생기는 시점), [`../grad-notes/chapter_01_phd_decision.md`](../grad-notes/chapter_01_phd_decision.md) (박사 결정을 잡는 시간 단위).
+박사 시간 단위(첫 해·1년 반·5년)의 frame은 별도 가이드에서 다룬다 — [「대학원노트」 Ch.7 — 내 연구를 갖기](../grad-notes/guide.html#ch7-내-연구를-갖기-0년차-학생에서-5년차-연구자로) (내 연구가 생기는 시점), [「대학원노트」 Ch.1 — 박사를 결정한다는 일](../grad-notes/guide.html#ch1-박사를-결정한다는-일) (박사 결정을 잡는 시간 단위).
 
 로보틱스 실험은 *세팅 3–6개월·실험 사이클 2주*가 흔한 단위다. 첫 논문이 1년 반 걸리는 것도 같은 이유다. 분야의 시간 감각이 박사 운영의 frame과 합쳐지면 매일의 속도에 덜 흔들린다.
 

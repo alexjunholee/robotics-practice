@@ -29,13 +29,13 @@ Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 mon
 
 ## 22.3 What Not to Do
 
-The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [`../../research-notes/chapter_06_why_read.md`](../../research-notes/chapter_06_why_read.md) (the trap of reading-many) and [`../../grad-notes/chapter_11_tool_trap.md`](../../grad-notes/chapter_11_tool_trap.md) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
+The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [Research Notes Ch.6](../../research-notes/guide.html#ch6-왜-읽는가-그리고-무엇을-안-읽을지-정하는-법) (the trap of reading-many) and [Grad Notes Ch.11](../../grad-notes/guide.html#ch11-도구의-함정-장비병과-가짜-진척) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
 
 Field-specific application in one line. SLAM/CV has *deep field tooling* — ORB-SLAM3, Colmap, and Gaussian Splatting are open-source standards. Implementing from scratch is meaningful only for educational purposes or when there is a genuinely new contribution. Otherwise, running an existing implementation and finding where it breaks is closer to research.
 
 ## 22.4 A Sense of the Long Game
 
-The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [`../../grad-notes/chapter_07_my_research.md`](../../grad-notes/chapter_07_my_research.md) (when your own research appears) and [`../../grad-notes/chapter_01_phd_decision.md`](../../grad-notes/chapter_01_phd_decision.md) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
+The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [Grad Notes Ch.7](../../grad-notes/guide.html#ch7-내-연구를-갖기-0년차-학생에서-5년차-연구자로) (when your own research appears) and [Grad Notes Ch.1](../../grad-notes/guide.html#ch1-박사를-결정한다는-일) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
 
 Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cycle* unit. The year-and-a-half first-paper estimate comes from the same place. When the field's time-sense merges with the PhD's operating frame, daily pace shakes you less.
 

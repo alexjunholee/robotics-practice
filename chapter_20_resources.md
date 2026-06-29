@@ -186,7 +186,7 @@
 
 ## 20.5 주요 학회
 
-분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [`../research-notes/chapter_34_conference_prep.md`](../research-notes/chapter_34_conference_prep.md) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
+분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#ch34-학회-2-3주-전-체크리스트) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
 
 본 가이드는 SLAM/CV/로보틱스 분야 본체에 집중한다. 학회 일반론(왜 가는가·발표 opener·첫 마디 화법)과 분야별 표는 위 가이드에서 다룬다.
 
@@ -356,12 +356,12 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
 | 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [`../research-notes/part1_reading/`](../research-notes/part1_reading/)* |
 | 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [`../research-notes/part0_starting/`](../research-notes/part0_starting/)* |
-| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [`../research-notes/part2_writing/E_after/`](../research-notes/part2_writing/E_after/)* |
+| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#ch32-revision-rebuttal)* |
 
 **실습 과제**:
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
 - 자체 개선 아이디어 실험 — 이 부분을 바꾸면 어떻게 될지 직접 시도
-- 논문 작성 시도 — *본격 frame은 [`../research-notes/part2_writing/`](../research-notes/part2_writing/)* 참고
+- 논문 작성 시도 — *본격 frame은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#ch16-마음가짐)* 참고
 - 본 문서의 **10-13장**을 읽으면서 최신 연구 방향을 파악한다
 
 **마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교할 수 있으면 고급 단계에 진입한 것이다. 학회 워크숍에 제출할 수 있는 수준이 되는 것을 목표로 하자.
@@ -389,14 +389,14 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 ### 20.8.0 연구자 마인드셋 (link)
 
-- 방향·엔진·도구 세 layer + 통합 frame → [`gradnotes/p4_ch04_integrated_life.md`](../grad-notes/chapter_17_integrated_life.md) § 5
-- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [`gradnotes/p4_ch01_autonomy_weight.md`](../grad-notes/chapter_14_autonomy_weight.md) § 1
-- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [`gradnotes/p4_ch02_comparison_trap.md`](../grad-notes/chapter_15_comparison_trap.md) § 3
-- 견고한 기초 — *리젝 이유가 없는 논문* frame → [`part2_writing/A_workflow/ch01_mindset.md`](../research-notes/chapter_16_mindset.md) § 1
+- 방향·엔진·도구 세 layer + 통합 frame → [「대학원노트」 Ch.17 — 연구가 삶이 되는 조건](../grad-notes/guide.html#ch17-연구가-삶이-되는-조건-분리하지-않는-통합) § 5
+- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#ch14-자율성의-무게-채점자-없는-만족) § 1
+- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#ch15-비교의-함정-뒤쳐질-권리) § 3
+- 견고한 기초 — *리젝 이유가 없는 논문* frame → [「연구노트」 Ch.16 — 마음가짐](../research-notes/guide.html#ch16-마음가짐) § 1
 
 ### 20.8.1 논문 쓰기 (link)
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [`part2_writing/A_workflow/`](../research-notes/part2_writing/A_workflow/) (mindset·outline·time budget) 및 [`part2_writing/C_sections/ch08_introduction.md`](../research-notes/chapter_23_introduction.md).
+Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#ch16-마음가짐) (mindset·outline·time budget) 및 [「연구노트」 Ch.23 — Introduction](../research-notes/guide.html#ch23-introduction은-어떻게-좁혀지는가).
 
 ### 20.8.2 실험 설계와 Ablation
 
@@ -404,11 +404,11 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 
 ### 20.8.3 학회 발표 (link)
 
-발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [`part3_presentations/`](../research-notes/part3_presentations/).
+발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#ch33-학회는-왜-가는가).
 
 ### 20.8.4 논문 리뷰 — Peer Review (link)
 
-리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [`part1_reading/ch05_reading_for_review.md`](../research-notes/chapter_10_reading_for_review.md) (reviewer로 읽기) + [`part2_writing/E_after/ch17_revision_rebuttal.md`](../research-notes/chapter_32_revision_rebuttal.md) (rebuttal 작성).
+리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [「연구노트」 Ch.10 — Reviewer로 읽기](../research-notes/guide.html#ch10-reviewer로-읽기) (reviewer로 읽기) + [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#ch32-revision-rebuttal) (rebuttal 작성).
 
 ### 20.8.5 도구
 
@@ -419,7 +419,7 @@ Abstract → Introduction → Related Work → Method → Experiments → Conclu
 - 알고리즘: algorithm2e
 - 수식: notation table을 따로 만들어 논문 전체에서 통일
 
-표기법(LaTeX·notation·수식) 자리는 [`part2_writing/D_sentence/ch15_math_and_proofs.md`](../research-notes/chapter_30_math_and_proofs.md) (글쓰기 단위 통일)이 메타 layer로 다룬다.
+표기법(LaTeX·notation·수식) 자리는 [「연구노트」 Ch.30 — 수식·정리·증명 쓰기](../research-notes/guide.html#ch30-수식정리증명-쓰기) (글쓰기 단위 통일)이 메타 layer로 다룬다.
 
 > 추천 자료:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — 논문 쓰기의 고전 강연
