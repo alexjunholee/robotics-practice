@@ -1,6 +1,6 @@
 # Ch.17 — 데이터셋 & 벤치마크
 
-로보틱스와 컴퓨터 비전 연구에서 데이터셋은 알고리즘만큼 중요하다. 좋은 데이터 없이는 좋은 모델을 만들 수 없고, 공정한 벤치마크 없이는 논문에서 자기 방법이 진짜 좋은지 증명할 수 없다. 여기서는 주요 데이터셋의 구성과 특징, 자체 데이터 수집·관리 방법을 본다.
+데이터셋의 센서 구성, 수집 조건, split, annotation은 학습 결과와 비교의 범위를 정한다. 이 장은 주요 벤치마크의 구조를 비교하고, 자체 데이터를 수집·관리하는 절차를 정리한다.
 
 최근 **합성 데이터(Synthetic Data)**의 비중이 높아지고 있다. 실제 데이터 수집과 라벨링은 비용과 시간이 많이 드는데, 시뮬레이터에서 자동 생성한 합성 데이터로 사전학습한 뒤 소량의 실제 데이터로 미세조정(fine-tuning)하는 방식이 자리를 잡았다. NVIDIA Isaac Sim의 Domain Randomization이나 Habitat의 대규모 장면 생성이 대표적이다. **Sim-to-Real 데이터셋** — 시뮬레이터 데이터와 대응하는 실제 데이터를 쌍으로 제공하는 데이터셋 — 도 활발히 구축되고 있다.
 
@@ -10,7 +10,7 @@
 
 자율주행 연구의 시작점이 된 오래된 데이터셋이다.
 
-KITTI는 2012년에 공개된 이후 자율주행·3D 비전 연구의 사실상 표준 벤치마크 역할을 해 왔다. 비록 지금은 더 크고 다양한 데이터셋이 있지만, 2024년 기준으로도 주요 VO·SLAM 논문들이 KITTI 결과를 보고하므로 기준점으로 알아 두어야 한다. 특히 Visual Odometry, Stereo Depth Estimation 분야에서는 아직도 KITTI가 1차 벤치마크이다.
+KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으로 쓰여 왔다. 더 크고 다양한 데이터셋이 나온 뒤에도 VO·SLAM, stereo depth estimation 결과를 과거 연구와 비교할 때 자주 사용된다.
 
 구성:
 - 스테레오 카메라
@@ -77,7 +77,7 @@ nuScenes와 함께 최신 자율주행 연구의 양대 벤치마크이다. 데�
 
 ### 17.1.4 VIO / VINS용 데이터셋
 
-Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은 알아야 한다. VIO·SLAM 논문이 평가셋으로 이 두 데이터셋을 빠뜨리는 경우는 드물다.
+TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰이는 데이터셋이다.
 
 **TUM RGB-D**:
 - RGB-D 카메라 시퀀스
@@ -101,7 +101,7 @@ Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은
 
 이미지 분류의 표준 벤치마크이다.
 
-딥러닝 전환기의 출발점이 된 데이터셋이다. 2012년 AlexNet이 ImageNet에서 압도적 성능을 보여준 이후, 거의 모든 비전 모델이 ImageNet 사전학습(pretrained) 가중치를 쓰기 시작했다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)은 대부분 ImageNet에서 사전학습된 모델을 가져다 쓴다.
+딥러닝 전환기의 출발점이 된 데이터셋이다. 2012년 AlexNet이 ImageNet에서 큰 성능 향상을 보인 뒤 ImageNet 사전학습(pretrained) 가중치는 여러 비전 모델의 표준적인 출발점이 됐다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)에 ImageNet 사전학습 모델이 널리 쓰인다.
 
 - 1000 클래스
 - 120만 학습 이미지
@@ -109,9 +109,9 @@ Visual-Inertial Odometry(VIO)나 SLAM 연구를 한다면 아래 데이터셋은
 
 ### 17.2.2 COCO
 
-객체 탐지, 세그멘테이션의 표준이다.
+COCO는 객체 탐지와 instance segmentation을 함께 평가한다.
 
-Object detection 연구를 한다면 COCO 데이터셋의 평가 메트릭(COCO mAP)은 업계 표준이므로 이해해야 한다. IoU threshold별 AP를 계산하는 방식이 PASCAL VOC와 다르니 주의할 것.
+COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU threshold를 쓰는 PASCAL VOC 방식과 구분해야 한다.
 
 특징:
 - 80 객체 카테고리
@@ -186,7 +186,7 @@ with open('label.txt', 'r') as f:
 
 PyTorch에서 데이터 로딩을 위한 표준 패턴이다.
 
-PyTorch의 `Dataset`과 `DataLoader` 패턴을 모르면 학습 코드를 짤 수 없다. 특히 `__getitem__`에서 데이터를 어떻게 전처리하느냐, `num_workers`를 몇으로 설정하느냐에 따라 학습 속도가 크게 달라질 수 있다.
+PyTorch의 `Dataset`은 샘플 읽기와 전처리를 정의하고, `DataLoader`는 batch 구성과 병렬 로딩을 맡는다. `__getitem__`의 전처리 비용과 `num_workers` 설정은 학습 처리량에 영향을 준다.
 
 ```python
 from torch.utils.data import Dataset, DataLoader

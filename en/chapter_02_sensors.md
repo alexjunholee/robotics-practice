@@ -3,17 +3,17 @@
 
 A robot needs sensors to perceive its environment. Understanding each sensor's characteristics enables proper sensor selection and algorithm design.
 
-No matter how well an algorithm is written, without knowing sensor characteristics you cannot diagnose "why does this algorithm fail here?" For example, when SLAM loses tracking in a particular segment, telling apart rolling shutter, LiDAR reflectance, and IMU bias as the cause requires sensor knowledge. Sensors are the entry point of a robotics system; if you do not understand the data coming in at the entry, everything downstream wobbles.
+Diagnosing whether a SLAM tracking failure began with rolling shutter, LiDAR reflectance, or IMU bias requires the sensor's measurement and error model. That model determines the data received by the downstream perception and estimation algorithms.
 
 ## 2.1 Camera
 
-The camera is the most information-rich sensor. Just as humans understand most of the world through vision, robots also get the most information from cameras. Camera types differ widely in their characteristics, so understanding the trade-offs of each and picking the right one for the task matters.
+A camera measures color and texture at high spatial resolution. Monocular, stereo, RGB-D, and event cameras differ in depth measurement, temporal resolution, and response to illumination, so the task conditions determine which type is appropriate.
 
 ### 2.1.1 Monocular Camera
 
 The most basic visual sensor, capturing a 2D image with a single lens.
 
-A monocular camera is the cheapest and lightest sensor, and it is also the starting point for most vision tasks such as Visual SLAM, object recognition, and semantic understanding. It cannot measure depth directly, and various algorithms (monocular depth estimation, SfM, etc.) have been developed to work around this structural limit. Understanding this limit is also what makes clear why stereo cameras or depth cameras are needed.
+A monocular camera uses one lens to capture color and texture for tasks such as visual SLAM, object recognition, and semantic understanding. Because it does not measure depth directly, monocular depth estimation and SfM infer scene structure from other cues. Stereo and depth cameras address this ambiguity through different measurements.
 
 **Pros**:
 - Cheap and lightweight
@@ -135,7 +135,7 @@ ros2 launch realsense2_camera rs_launch.py
 
 A sensor with a different paradigm from conventional cameras. Instead of capturing frame by frame, each pixel asynchronously outputs an event only when a **brightness change** occurs.
 
-Event camera papers at CVPR have grown from around 5 in 2019 to over 30 in 2024, because they operate without motion blur in high-speed settings (drone high-speed flight, sharp vehicle turns). They are not yet mainstream, but if you plan to work with high-speed (>100 km/h) environments or HDR conditions, look at the Gallego et al. survey (TPAMI 2020) and the rpg_dvs_ros package.
+Event-camera research has continued to expand around high-speed motion and HDR conditions, where frame cameras often struggle. Because an event sensor records per-pixel brightness changes asynchronously, it avoids the motion blur caused by frame exposure. If your work involves fast motion or HDR scenes, start with the Gallego et al. survey (TPAMI 2020) and the rpg_dvs_ros package.
 
 **Event output format**:
 
@@ -171,9 +171,9 @@ Event camera papers at CVPR have grown from around 5 in 2019 to over 30 in 2024,
 
 **LiDAR (Light Detection and Ranging)** is a sensor that measures distance using lasers. It directly produces a 3D point cloud.
 
-If cameras give "rich but depth-less" data, LiDAR gives "accurate 3D coordinates directly". This precise ranging is exactly why LiDAR became a core sensor in autonomous driving. Depth estimated from cameras alone carries large errors and depends on weather, while LiDAR measures objects over 100m away with centimeter-level accuracy.
+Cameras record color and texture, but passive monocular images do not directly determine metric depth. LiDAR measures the range of each return and forms 3D points. Range and error depend on the model, surface reflectivity, incidence angle, atmosphere, sunlight, and return mode; some long-range automotive units specify ranges beyond 100 m under stated reflectivity conditions. This direct range measurement is why LiDAR is used in autonomous-driving systems.
 
-A recent trend worth noting: solid-state LiDAR has been replacing spinning (mechanical) LiDAR. No moving parts means higher durability and easier mass production, which fits automotive volume manufacturing. New approaches such as Livox's non-repetitive scan pattern are also emerging, so point cloud processing algorithms need to change as well.
+Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications. With no moving parts, it offers advantages in durability and mass production for automotive systems. Scan patterns such as Livox's non-repetitive design also differ from those of spinning sensors, and point-cloud processing algorithms must account for those differences.
 
 ### 2.2.1 2D LiDAR vs. 3D LiDAR
 
@@ -189,7 +189,7 @@ A recent trend worth noting: solid-state LiDAR has been replacing spinning (mech
 
 > **Further reading**
 > - [Cyrill Stachniss — LiDAR-based SLAM](https://www.youtube.com/watch?v=vrdlk2p9AZI) — Explains the principles of SLAM using LiDAR data.
-> - [PCL (Point Cloud Library) official tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — The de facto standard library for point cloud processing.
+> - [PCL (Point Cloud Library) official tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — a widely used public point-cloud processing library.
 
 ### 2.2.2 Spinning vs. Solid-State
 
@@ -259,15 +259,9 @@ If you cannot model IMU errors, the entire sensor fusion system wobbles.
 - Integration of angular velocity → accumulated orientation error
 - Trustworthy only for a short time (usually a few seconds)
 
-You feel this immediately in practice: double-integrating acceleration to recover position accumulates noise and bias errors proportionally to time squared. With a consumer-grade IMU (as built into smartphones), position error can reach several meters after only 10 seconds. That is why IMUs are almost never used alone; they are always fused with a camera or LiDAR to correct drift.
+Double-integrating acceleration accumulates noise, bias, scale-factor error, and initial-attitude error. The growth depends on the sensor, motion, calibration, temperature, and initialization, so no single elapsed time characterizes it. Unaided position from a low-cost MEMS IMU can quickly exceed a long-term position-error budget; systems that need sustained position therefore use external observations from a camera, LiDAR, GNSS, or another reference to limit drift.
 
-**IMU grades**:
-| Grade | Use | Price | Examples |
-|------|------|------|------|
-| Consumer | Smartphones, games | $1-10 | MPU6050, BMI160 |
-| Industrial | Robots, drones | $100-1K | VectorNav VN-100, Xsens MTi |
-| Tactical | Autonomous driving, aviation | $1K-10K | KVH 1750 |
-| Navigation | Ships, aircraft | $10K+ | Honeywell HG1700 |
+**IMU grades** are not a single standardized price ladder. Compare bias stability, noise density, scale-factor error, temperature calibration, vibration tolerance, and certification requirements. Consumer MEMS prioritizes size and power; products described as industrial, tactical, or navigation grade generally add long-term stability and calibration. For devices such as the `VN-100`, `MTi`, `KVH 1750`, and `HG1700`, compare current datasheets in common units and confirm them with Allan measurements.
 
 > **Further reading**
 > - [Probabilistic Robotics, Ch.5 — Robot Motion (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — A leading reference on sensor noise modeling and motion models. Covers the theoretical basis of IMU error modeling.
@@ -280,12 +274,9 @@ You feel this immediately in practice: double-integrating acceleration to recove
 
 **GNSS (Global Navigation Satellite System)** is a position measurement system using satellite signals. GPS is the U.S. system, and GNSS is the umbrella term covering GPS, GLONASS (Russia), Galileo (Europe), BeiDou (China), and others.
 
-For outdoor autonomous driving or drones, GNSS is the only sensor that provides "global coordinates". SLAM estimates relative position (how far you have moved from where you started), while GNSS gives absolute position on Earth (latitude, longitude, altitude). Combining these two is the core challenge of outdoor robotics. RTK-GPS's centimeter-level accuracy is also used as ground truth for high-precision autonomous driving localization, so the principles are worth knowing.
+GNSS provides outdoor autonomous vehicles and drones with coordinates in an Earth-fixed frame. SLAM estimates position relative to a starting point, whereas GNSS expresses location as latitude, longitude, and altitude. Outdoor robots combine these frames, and RTK-GPS measurements are also used as ground truth in high-precision localization evaluations.
 
-**Accuracy**:
-- Standard GPS: 2-5m
-- DGPS (Differential): 0.5-2m
-- RTK-GPS (Real-Time Kinematic): 1-2cm
+**Interpreting accuracy**: a standalone code solution is commonly meter-class in open sky, while differential corrections may produce sub-meter or meter-class results depending on the setup. RTK can reach horizontal centimeter-class results when a short baseline, sufficient satellite geometry, low multipath, and fixed ambiguities are maintained. Any quoted number should state the metric (CEP, RMS, or 95%), horizontal versus vertical component, baseline, correction link, and fix state.
 
 **RTK-GPS principle**:
 - A fixed base station provides correction data
@@ -305,7 +296,7 @@ For outdoor autonomous driving or drones, GNSS is the only sensor that provides 
 
 **Radar**
 
-Radar is growing in importance in autonomous driving and robotics. In environments where LiDAR and cameras fail — fog, rain, dust, strong backlight — radar still operates reliably. It is also cheaper than LiDAR.
+Autonomous-driving and robotics systems use radar alongside cameras and LiDAR. Radio waves can be more robust than visible light and some LiDAR wavelengths in fog, rain, dust, and backlight, but rain attenuation, clutter, multipath, wet radomes, and limited angular resolution remain. Prices overlap with LiDAR product families as antenna count, bandwidth, imaging capability, and automotive qualification change, so compare current quotations for the required configuration.
 
 **FMCW (Frequency Modulated Continuous Wave) Radar**:
 - Transmits a frequency modulated over time and uses the frequency difference with the reflected wave to measure both range and velocity simultaneously.
@@ -354,7 +345,7 @@ Classifying these as "other" does not make them unimportant. Radar acts as the s
 
 Since each single sensor has its own limits, multiple sensors are combined to complement each other.
 
-In the real world, perfect perception with a single sensor is impossible. Autonomous vehicles use camera, LiDAR, radar, IMU, and GNSS all at once, and when, where, and how the data from these sensors are combined determines system performance.
+A single sensor cannot cover every combination of illumination, range, occlusion, and drift. Autonomous-vehicle sensor suites vary with the vehicle and operating conditions, combining several of camera, LiDAR, radar, IMU, and GNSS. When, where, and how the selected sensors are fused determines system performance.
 
 **Why is it needed?**
 
@@ -403,14 +394,14 @@ This conditional independence assumption does not fully hold in practice. Adjace
 The map $m$ comes in two forms. A feature-based map is a list of landmarks indexed by ID. A location-based map is an array of occupancy probabilities over grid cells, indexed by coordinate. The four measurement model families each depend on one of these two map types.
 
 The four measurement model families:
-- Beam model: a mixture of physical error channels. Location-based map.
+- Beam model: a mixture that approximates possible causes of a measurement. Location-based map.
 - Likelihood field: endpoint-to-nearest-obstacle distance. Location-based map.
 - Correlation-based (map matching): normalized correlation between local and global map.
 - Feature-based (landmark model): extracted features modeled as (range, bearing, signature). Feature-based map.
 
 ### 2.7.2 Beam Model — Four-Component Mixture
 
-Four physical channels account for why a single beam from a range sensor can give a wrong reading. [Thrun et al. 2005](https://www.probabilistic-robotics.org/) (PR §6.3.1) models each channel as a separate probability distribution and builds the final likelihood as a weighted mixture.
+A range reading is approximated using four hypotheses about how it was produced. [Thrun et al. 2005](https://www.probabilistic-robotics.org/) (PR §6.3.1) assigns a probability distribution to each hypothesis and builds the likelihood as a weighted mixture. These components are terms in an observation model, not independent physical channels inside the sensor.
 
 The most frequent component is **hit** — the beam actually detects the obstacle. A truncated Gaussian centered on the predicted range $z_t^{k*}$ with variance $\sigma_{\text{hit}}^2$ models this. The truncation removes probability mass outside $[0, z_{\max}]$.
 
@@ -459,7 +450,7 @@ Every time the sensor type, environment configuration, or mounting position chan
 
 The four-component mixture has six intrinsic parameters: $z_{\text{hit}}, z_{\text{short}}, z_{\text{max}}, z_{\text{rand}}, \sigma_{\text{hit}}, \lambda_{\text{short}}$. PR §6.3.2 estimates these by maximum likelihood using the EM algorithm on data $\{(z_t^k, z_t^{k*})\}$ collected while the robot navigates a known environment.
 
-The key idea is a correspondence variable. For each measurement $z_t^k$, a latent variable $c_i \in \{\text{hit, short, max, rand}\}$ marks which component generated that value.
+The EM formulation introduces a correspondence variable. For each measurement $z_t^k$, the latent variable $c_i \in \{\text{hit, short, max, rand}\}$ indicates which component generated the value.
 
 **E-step**: Use the current parameter estimates to compute the expected value of $c_i$. For each measurement, compute the posterior probability of each of the four components (PR Eq. 6.15–6.32):
 
@@ -490,7 +481,7 @@ repeat until convergence:
 return params
 ```
 
-The ROS AMCL default parameters `laser_sigma_hit` (default 0.2 m) and `laser_lambda_short` (default 0.1) are the converged values of this EM process — the result of running EM on real environments shortly after PR was published in 2005.
+EM estimates these parameters for the sensor, map, and environment represented in its training data. AMCL implementations expose `sigma_hit`, `lambda_short`, and the mixture weights as configurable values, but package defaults should not be interpreted as universal EM convergence values across environments.
 
 Once parameters are in hand, putting the model to work in a real system needs a few more practical adjustments.
 
@@ -498,7 +489,7 @@ Once parameters are in hand, putting the model to work in a real system needs a 
 
 The main computational bottleneck of the beam model is ray casting. In MCL, running ray casting for every beam of every particle requires (number of particles) × (number of beams) operations.
 
-The first fix is to reduce beam count. Using only a small uniform subsample of the scan (typically 8–50 beams) loses little information, because adjacent beams are highly correlated.
+One option is to reduce the beam count. A uniformly spaced subset lowers computation and removes some redundancy between adjacent beams. The number of beams still needs validation against scan resolution, environment structure, and particle count.
 
 **Exponentiation correction $p^{\alpha}$**: When the conditional independence assumption is violated, the likelihood $p(z_t \mid x_t, m)$ can become overconfident, concentrating too sharply. Replacing it with $p(z_t \mid x_t, m)^{\alpha}$ ($0 < \alpha < 1$) reduces each beam's contribution and flattens the distribution. $\alpha$ is set empirically or by cross-validation.
 
@@ -540,7 +531,7 @@ Output: p(z_t | x_t, m)
 10. return q
 ```
 
-When the map is fixed, the distance transform is computed once and stored as a table, making every $\text{dist}$ lookup $O(1)$. That table is essentially the positive half of an SDF (Signed Distance Field). The likelihood is differentiable with respect to pose $x_t$, which makes it suitable for gradient-based scan matching.
+When the map is fixed, the distance transform can be computed once and stored as a table, making every $\text{dist}$ lookup $O(1)$. The table corresponds to the positive region of an SDF (Signed Distance Field). The likelihood is differentiable with respect to pose $x_t$, which makes it suitable for gradient-based scan matching.
 
 The model has limits. It does not model dynamic obstacles explicitly (no short component). It can "see through walls" — a beam endpoint landing in free space on the far side of a wall produces a large $\text{dist}$, not an impossibility signal. Occlusion is absent. Map uncertainty is ignored.
 
@@ -595,11 +586,11 @@ Assuming conditional independence across features in the full scan, the full sca
 
 <!-- DEMO: landmark_donut.html -->
 
-The reprojection error $\| \pi(K[R|t]\, X_w) - u \|^2_\Sigma$ used throughout visual SLAM is the direct descendant of this landmark model, with pixel coordinates $(u, v)$ replacing range/bearing and ORB/SIFT descriptors replacing signature. (For how EKF uses this likelihood in the update step, see Ch.3 §3.10 and Ch.14 §14.7.) AprilTag and ArUco fiducial markers guarantee correspondence by ID, so the known-correspondence assumption holds exactly and this model applies literally.
+The reprojection residual $\| \pi(K[R|t]\, X_w) - u \|^2_\Sigma$ used in visual SLAM has the same broad structure: predict an observation from pose and landmark, then compare it with the measurement. The pixel reprojection model and the range-bearing model are nevertheless different sensor models, and ORB/SIFT descriptors are normally used for data association rather than as a continuous signature term in the likelihood. AprilTag and ArUco IDs reduce correspondence ambiguity substantially, but they do not rule out false detections or misread IDs.
 
 ### 2.7.8 Practical Summary: Choosing a Model
 
-Comparing the four families:
+The four families can be compared qualitatively as follows. Accuracy and speed depend on the sensor, map resolution, implementation, and parameters.
 
 | Model | Accuracy | Speed | Differentiable | Primary use |
 |------|--------|-----------|------------|-----------|
@@ -608,29 +599,29 @@ Comparing the four families:
 | Correlation-based | Low | Very fast | Low | Loop closure detection |
 | Landmark model | High (feature-dependent) | Fast (low-dimensional) | High | Visual SLAM, fiducial |
 
-One more practical concern when choosing is over-confidence. When the conditional independence assumption is violated, the magnitude of $p(z_t \mid x_t, m)$ can drop far below its true value or become too sharply peaked at a particular pose. The standard mitigation is the exponentiation trick mentioned in §2.7.4: replace the likelihood with $p(z_t \mid x_t, m)^{\alpha}$ ($\alpha < 1$), which reduces each beam's contribution and flattens the distribution.
+One more practical concern is over-confidence. When the conditional independence assumption is violated, $p(z_t \mid x_t, m)$ can become too sharply peaked at a particular pose. Tempering it as $p(z_t \mid x_t, m)^{\alpha}$ ($\alpha < 1$), as in §2.7.4, reduces each scan's influence and flattens the distribution. Beam subsampling, models that account for correlation, and robust likelihoods are alternatives; $\alpha$ must be chosen with calibration or validation data rather than treated as a universal constant.
 
 With the model limits and mitigations understood, the natural next question is which of these models survived into production systems.
 
 ### 2.7.9 What Survived
 
-The four-family models formalized in PR §6 have direct descendants running in real systems as of 2026.
+The four families in PR §6 remain useful for classifying and designing systems. It would be misleading, however, to label every modern scan matcher or visual SLAM method a **direct descendant** of them. Methods can share the broad observation-versus-prediction structure while using different objectives and map representations.
 
-The beam model's four-component mixture and the EM-learned parameters remain in the ROS Navigation Stack's AMCL node. The `amcl` package defaults `laser_sigma_hit = 0.2` and `laser_lambda_short = 0.1` are the converged values from running EM on real environments in the early 2000s. The `beam_skip_*` parameters implement the beam-subsampling idea from §2.7.4.
+The [Nav2 AMCL documentation](https://docs.nav2.org/configuration/packages/configuring-amcl.html) exposes three laser models: `beam`, `likelihood_field`, and `likelihood_field_prob`; its default is `likelihood_field`. `max_beams` selects an evenly spaced subset of a scan. By contrast, the `beam_skip_*` parameters belong to `likelihood_field_prob` and skip beams that disagree with many particles, so they are not ordinary beam subsampling. Defaults such as `sigma_hit` and `lambda_short` are implementation starting points, not universally converged values traceable to one EM experiment.
 
-The likelihood field has spread further. Cartographer, SLAM Toolbox, and hdl_localization all use distance-transform-based likelihood evaluation at the core of 2D LiDAR localization. Recent systems that make SDF/ESDF a central data structure — ESDF-based path planning, NeRF-SLAM — inherit the precomputed-table idea from the likelihood field.
+Other LiDAR systems use distinct matching objectives. Cartographer combines correlative scan matching on a probability grid with nonlinear optimization, while `hdl_localization` uses NDT/GICP-family registration on 3D point clouds. They share the broad idea of comparing an observation against a map, but they do not all implement a likelihood-field distance transform. ESDF planners and neural implicit maps also use distance or implicit fields; similarity in data structure alone does not establish descent from the likelihood-field sensor model.
 
-The landmark model (Eq. 6.41) is the skeleton of visual SLAM as a whole. ORB-SLAM3's reprojection error minimization, bundle adjustment in SfM, and the DBA layer in DROID-SLAM are all generalizations of that equation with camera projection substituted in. In fiducial-based AR and robotics systems, the equation applies verbatim.
+The same distinction applies to landmarks and visual SLAM. The range-bearing model in Eq. 6.41, camera reprojection models, and DROID-SLAM's dense bundle adjustment all predict observations from pose and scene structure and form residuals. Their measurement spaces, association procedures, noise models, and optimization variables differ, so one should not assert a single historical lineage among them. Fiducial IDs simplify association but do not eliminate false detections.
 
-The measurement model's shape is determined by sensor physics. Hit, short, max, and rand are physical channels, not mathematical conveniences. Every model pairs with a map type (location-based vs. feature-based), and computational speed trades off against probabilistic rigor. Fast systems reach for the likelihood field or correlation-based model; when diagnosis is needed, the beam model is there.
+`hit`, `short`, `max`, and `rand` are mixture components that approximate possible causes of a range measurement, not independent physical channels. The choice of components and map representation depends on the sensor, environment, outliers, compute budget, and calibration data. These four families are a starting point for comparison, not a genealogy that covers every modern system.
 
 Ch.14 §14.7 shows how `beam_range_finder_model` is called inside MCL and how `inverse_sensor_model` connects to occupancy mapping — where these models sit in the full pipeline.
 
-> **⚠ Note for AI agents**: When a sensor "is not getting data", the cause is usually not software but a physical connection (cable, IP configuration, power, USB bandwidth). AI tends to suggest reinstalling the driver first, but check the physical connection first with system commands such as `dmesg`, `lsusb`, `ping`.
+> **⚠ Sensor connection check**: When sensor data is missing, inspect the cable, IP configuration, power, and USB bandwidth as well as the driver. Commands such as `dmesg`, `lsusb`, and `ping` record the device and connection state and help narrow the fault.
 
 > **Technical Timeline: sensor technology**
-> - **~2010**: Centered on 2D LiDAR (SICK, Hokuyo) and monocular cameras. Sensors were expensive and bulky, and processing power was limited. Stereo cameras were hard to run in real time due to computational cost.
-> - **2012~2017**: 3D LiDAR (Velodyne VLP-16) became widespread, and RGB-D cameras (Kinect) reached the mass market. LiDAR prices dropped from tens of thousands to thousands of dollars. Visual-inertial systems (VIO) also began to be used in real systems.
-> - **2018~2022**: Solid-state LiDAR (Livox) appeared, with prices falling to the hundreds of dollars. Event camera research became more active. Multimodal sensor fusion (camera + LiDAR + IMU) became the standard.
-> - **2023~**: Solid-state LiDAR continues to replace the spinning type. Event camera adoption is starting to grow in high-speed/HDR applications. 4D radar (including Doppler velocity) is also emerging as a new auxiliary sensor.
-> - **Worth watching now**: As solid-state LiDAR goes mainstream, algorithms built on the assumption of spinning LiDAR need to be redesigned. Event cameras are not yet mainstream, but they are being adopted quickly in fields where the limits of conventional cameras are clear, such as high-speed drones and autonomous driving. When sensor hardware changes, algorithm research directions follow.
+> - **~2010**: 2D LiDAR and frame cameras were common in mobile-robot research. The practical range of real-time stereo depended strongly on the available compute and scene conditions.
+> - **2010s**: RGB-D cameras and compact multi-beam 3D LiDAR broadened the options for indoor 3D perception and outdoor mapping. Camera–IMU VIO also moved beyond research prototypes into several robotics and AR systems.
+> - **Late 2010s to early 2020s**: Non-repetitive scanning, MEMS, and flash architectures appeared under the broad label `solid-state LiDAR`; research in event cameras and automotive imaging radar also expanded. Price and performance trends varied too much across product classes to summarize with one number.
+> - **2020s**: Spinning and solid-state LiDAR coexist because field of view, range, resolution, motion distortion, and cost impose different trade-offs. Adoption of event cameras and Doppler radar is likewise application-dependent, including high-speed, HDR, and adverse-weather settings.
+> - **Design implication**: A change in scan pattern or timestamp structure changes assumptions used by deskewing, calibration, and data association. Inspect the actual sampling geometry and noise characteristics instead of relying on the hardware category name.

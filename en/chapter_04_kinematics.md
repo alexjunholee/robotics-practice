@@ -3,7 +3,7 @@
 
 Place a single robot arm on a desk. What angle must each of the six motors take so that the fingertip reaches a coffee cup? Kinematics is the discipline that answers this question. And the real-world problem of actually spinning those motors, reading sensors, and running a control loop at 1kHz is mechatronics.
 
-The path runs from the math to real hardware selection and communication protocols. Equations show up, but the goal is "getting a robot to actually move."
+The equations connect to hardware selection and communication protocols, and eventually to motion on a physical robot.
 
 ---
 
@@ -18,7 +18,7 @@ The mathematical description of the relationship between these two is **kinemati
 
 This is different from dynamics. Kinematics does not consider forces and masses. It is the question of "where is it," not "what force is required." Dynamics is the subject of the next chapter.
 
-Without kinematics, you get stuck in the following situations:
+Kinematics is used in the following tasks:
 - Robot arm path planning (motion planning)
 - Teleoperation (master-slave mapping in remote control)
 - Calibration (correcting errors between the real robot and the model)
@@ -37,7 +37,7 @@ T = | R  p |
     | 0  1 |
 ```
 
-Here R is a 3×3 rotation matrix and p is a 3×1 position vector. The key point is that this single matrix expresses the position and pose of a rigid body simultaneously, and multiple transformations can be chained through matrix multiplication.
+Here R is a 3×3 rotation matrix and p is a 3×1 position vector. A homogeneous transformation matrix represents a rigid body's position and orientation together, and matrix multiplication chains multiple transformations.
 
 Given a transformation T_01 between two frames and another transformation T_12:
 
@@ -45,12 +45,12 @@ Given a transformation T_01 between two frames and another transformation T_12:
 T_02 = T_01 * T_12
 ```
 
-This is the essence of forward kinematics. Multiply the transformation of each joint in order from the base to the end-effector.
+Forward kinematics applies this composition from the base to the end-effector, multiplying each joint transformation in order.
 
 
 ### 4.2.2 DH Parameters (Denavit-Hartenberg)
 
-A method proposed in 1955 by Denavit and Hartenberg. Seventy years on, it remains the industry standard. Four parameters define the relationship between two adjacent links:
+A convention proposed in 1955 by Denavit and Hartenberg. It remains widely used in robot kinematics, with four parameters defining the relationship between adjacent links:
 
 | Parameter | Meaning |
 |---------|------|
@@ -125,7 +125,7 @@ If this looks overly simple, that is normal. The FK of a real 6-axis arm works o
 
 As an alternative to DH parameters, there is the PoE (Product of Exponentials) method, based on Lie group / Lie algebra. This is the method adopted in Lynch & Park's "Modern Robotics."
 
-Core idea: represent each joint as a twist (screw motion) and compute the transformation via the matrix exponential.
+PoE represents each joint as a twist (screw motion) and computes the transformation via the matrix exponential.
 
 ```
 T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
@@ -148,7 +148,7 @@ Where:
 | Industry adoption | very high | academia-centered, spreading |
 | Textbook | Craig, Siciliano | Lynch & Park |
 
-Practical advice: you must know DH parameters. The parameters that go into a URDF (robot description file) are ultimately DH-based, and all industrial robot manuals provide DH tables. PoE is theoretically cleaner and preferred in research, but not knowing DH in the field will cause trouble. Learn both.
+DH parameters remain common in textbooks and industrial robot manuals, while URDF encodes the equivalent link and joint transformations directly. PoE provides a cleaner Lie-group formulation and is widely used in research. Familiarity with both conventions makes it easier to move between manuals, robot descriptions, and derivations.
 
 ```python
 # Example of DH-based FK with robotics-toolbox-python (Puma 560)
@@ -163,8 +163,8 @@ print(f"RPY angles: {T.rpy()}")  # Roll-Pitch-Yaw
 ```
 
 > **Further reading**
-> - Lynch & Park, *Modern Robotics*, Chapter 4 — the textbook with the best exposition of PoE. Free PDF and Coursera course: https://modernrobotics.org
-> - Craig, *Introduction to Robotics*, Chapter 3 — the standard reference for DH parameters. Uses the Modified DH convention.
+> - Lynch & Park, *Modern Robotics*, Chapter 4 — a PoE-centered treatment with a free PDF and Coursera course: https://modernrobotics.org
+> - Craig, *Introduction to Robotics*, Chapter 3 — a textbook treatment using the Modified DH convention.
 > - Peter Corke, *Robotics, Vision and Control* — lets you practice FK together with Python code: https://github.com/petercorke/robotics-toolbox-python
 
 ---
@@ -184,7 +184,7 @@ Why this problem is hard:
 
 ### 4.3.1 Analytical IK
 
-The method of deriving a closed-form solution. When possible, it is the fastest and most accurate.
+This method derives a closed-form solution. When one exists, candidate solutions can be computed without iterative optimization, but numerical accuracy and runtime still depend on the implementation and singularity handling.
 
 **IK of a 2-link planar arm:**
 
@@ -197,7 +197,7 @@ cos(θ_2) = (x² + y² - L1² - L2²) / (2 * L1 * L2)
 θ_1 = atan2(y, x) - atan2(L2*sin(θ_2), L1 + L2*cos(θ_2))
 ```
 
-The ± shows that there are two solutions (elbow-up, elbow-down). This is the essential difficulty of IK.
+The ± sign reveals two solutions (elbow-up and elbow-down). The existence of multiple solutions is one source of difficulty in IK.
 
 ```python
 def ik_2link(x, y, L1=1.0, L2=1.0, elbow_up=True):
@@ -319,21 +319,21 @@ It is rare to implement IK from scratch. Using a proven solver is the sensible c
 
 | Solver | Method | Notes |
 |------|------|------|
-| **KDL** | Numerical (Newton-Raphson) | ROS default, slow, fragile near singularities |
+| **KDL** | Numerical (Newton-Raphson) | available in the ROS ecosystem; sensitive to joint limits, initialization, and singularities |
 | **IKFast** (OpenRAVE) | Analytical (code generation) | auto-generates C++ code for specific structures. Fast |
-| **TRAC-IK** | KDL + SQP dual | higher success rate than KDL, ROS package available |
+| **TRAC-IK** | KDL + SQP dual | higher solve rate than stock KDL on the paper's tested chains; ROS package available |
 | **MoveIt2 IK** | Integrates the solvers above | ROS2 ecosystem, integrated collision avoidance |
 | **pinocchio** | PoE-based | modern, fast, differentiable |
 
 ```python
-# Why TRAC-IK beats KDL: probability of finding a solution within the time budget
-# Benchmark (Beeson & Ames, 2015):
-#   KDL:     ~50-70% success rate (5ms time limit)
-#   TRAC-IK: ~95-99% success rate (same condition)
+# Beeson & Ames (2015) tested 10,000 reachable poses per robot model
+# on five models, with a 5 ms limit per solve.
+# In that experiment TRAC-IK had a higher solve rate than stock KDL,
+# but the rate varied with the chain, seed, and error tolerance.
 ```
 
 > **Further reading**
-> - Beeson & Ames, "TRAC-IK: An Open-Source Library for Improved Solving of Generic Inverse Kinematics" (2015): https://traclabs.com/projects/trac-ik/
+> - [Beeson & Ames, "TRAC-IK: An Open-Source Library for Improved Solving of Generic Inverse Kinematics" (2015)](https://doi.org/10.1109/HUMANOIDS.2015.7363472) — see the paper's tables for per-model conditions and solve rates
 > - MoveIt2 IK documentation: https://moveit.picknik.ai/main/doc/concepts/inverse_kinematics.html
 > - Pinocchio (rigid body dynamics library): https://github.com/stack-of-tasks/pinocchio
 
@@ -457,7 +457,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 ```
 
 > **Further reading**
-> - Siciliano et al., *Robotics: Modelling, Planning and Control*, Chapter 3 — the most comprehensive treatment of the Jacobian
+> - Siciliano et al., *Robotics: Modelling, Planning and Control*, Chapter 3 — a broad treatment of Jacobians in kinematics and dynamics
 > - Corke, *Robotics, Vision and Control*, Chapter 8 — includes code examples and visualization: https://petercorke.com/rvc/
 > - robotics-toolbox-python documentation: https://github.com/petercorke/robotics-toolbox-python
 
@@ -465,7 +465,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 
 ## 4.5 Mechatronics Basics
 
-The math stops here. Back to reality. "Deciding" joint angles does not make the robot move. There must be motors, there must be sensors, and there must be the electronics and communication that connect them. This is mechatronics.
+Specifying joint angles does not make the robot move. It also needs motors, sensors, and the electronics and communication that connect them. This is mechatronics.
 
 
 ### 4.5.1 Actuators
@@ -474,30 +474,30 @@ The math stops here. Back to reality. "Deciding" joint angles does not make the 
 The most basic actuator. Apply a voltage and it spins. Torque is proportional to current (τ = K_t * i), and back-EMF is proportional to speed (V_emf = K_e * ω). Easy to control and cheap, but the brushes wear.
 
 **BLDC (Brushless DC) motor:**
-Switches current electronically without brushes. Long life, high torque density, good efficiency. The standard for modern robots. With FOC (Field-Oriented Control), torque ripple can be minimized.
+Switches current electronically without brushes. Long life, high torque density, and good efficiency make it a common choice in modern robots. FOC (Field-Oriented Control) is used to reduce torque ripple.
 
 **Servo motors (Dynamixel series):**
-A product that bundles motor + reducer + encoder + controller into a single unit. Robotis's Dynamixel series is the most widely used in research.
+A product that bundles motor + reducer + encoder + controller into a single unit. Robotis's Dynamixel is a widely used servo family on research and educational platforms.
 
-| Model | Torque (Nm) | Communication | Use |
+| Model | Example advertised maximum torque (Nm) | Communication | Use |
 |------|-----------|------|------|
 | XL330 | 0.5 | TTL | small grippers, SO-ARM100, etc. |
 | XM540 | 10.0 | RS-485 | mid-sized robot arms |
 | PH54  | 44.7 | RS-485 | large manipulators, mobile robots |
 
-Dynamixel strengths: daisy-chain wiring, position/velocity/torque control modes, adjustable PID gains, good performance for the price. Weaknesses: a ceiling on communication speed; for advanced control, custom firmware is sometimes required.
+Torque in the table depends on model and supply voltage, so actual selection must use each e-Manual's rated or stall conditions and continuous-duty limits. Dynamixel strengths include daisy-chain wiring, position/velocity/current-based control modes, and adjustable PID gains. Its communication, control-cycle, and thermal limits are product-specific; verify that the required bandwidth and control mode are supported by the stock firmware.
 
 **Quasi-Direct Drive (QDD):**
 
-The approach that drew attention with the MIT Mini Cheetah (2019). The core idea is simple: **lower the gear ratio.**
+The approach drew attention with the MIT Mini Cheetah (2019) and uses a **lower gear ratio**.
 
 Typical robot joint: gear ratio of 100:1 or higher (harmonic drive)
 QDD: gear ratio of 6:1 to 10:1 (planetary gears or belt)
 
 Advantages of a low gear ratio:
-- **High backdrivability**: when external force is applied, the joint follows naturally. Safer under collision and easier for force control.
-- **High transparency**: end-effector force can be estimated from motor current alone, without a torque sensor.
-- **High bandwidth**: with less friction and elasticity in the reducer, fast torque response is possible.
+- **High backdrivability**: the joint yields more readily under external force, which can simplify collision-response and force-control design.
+- **High transparency**: with a suitable friction model, joint torque can be approximated from motor current more readily.
+- **Potential for high bandwidth**: lower reducer friction and compliance leave more room for a fast torque response.
 
 Drawbacks: lower output torque for the same size. For large torques, you must use a larger motor.
 
@@ -512,13 +512,13 @@ Recent systems using QDD:
 # Traditional (gear ratio 100:1, harmonic drive):
 #   reflected inertia = N² × I_motor
 #   → motor inertia 0.001 kg·m² × 100² = 10 kg·m²
-#   → the inertia felt at the end-effector is very large
+#   → motor inertia reflected to the joint output is very large
 #   → precise force control is difficult
 #
 # QDD (gear ratio 8:1):
-#   reflected inertia = 8² × 0.01 = 0.64 kg·m²
-#   → more than 15× lighter
-#   → force control is much easier
+#   with the same motor, reflected inertia = 8² × 0.001 = 0.064 kg·m²
+#   → about 156× smaller in this gear-ratio-only example
+#   → actual force-control performance also depends on link inertia, friction, and control
 ```
 
 
@@ -530,15 +530,11 @@ Recent systems using QDD:
 | Harmonic Drive | 30~320:1 | very low | 65-85% | expensive | industrial robots, precision |
 | Cycloidal | 6~120:1 | low | 85-93% | medium | emerging as a recent alternative |
 
+Gear ratio, efficiency, and backlash vary substantially by design and product. Treat these ranges as a starting point and use the manufacturer's rated-load data for selection.
+
 **Actuator selection criteria:**
 
-Things to consider when selecting the actuator for a robot joint:
-
-1. **Required torque**: static torque (pose holding) + dynamic torque (acceleration). Safety factor of 2-3×.
-2. **Required speed**: the joint's maximum angular velocity. Determine motor RPM accounting for the gear ratio.
-3. **Backdrivability**: QDD for collaborative robots or when force control is needed, otherwise harmonic drive.
-4. **Size and weight**: since the actuator mounts on a link, physical constraints exist.
-5. **Thermal**: check the continuous torque rating. Peak torque is only available for short bursts.
+For a robot joint, combine static torque, dynamic torque, and impact loads, then choose a design margin appropriate to load uncertainty, lifetime, and the consequence of failure. The factor of two in the code below is an illustration, not a universal rule. Convert maximum joint speed to motor RPM through the gear ratio, and evaluate backdrivability, package mass, continuous torque, and thermal limits together. The choice between QDD and a harmonic drive depends on torque density, transparency, precision, and cost requirements.
 
 ```python
 # Simple actuator-sizing example
@@ -581,11 +577,11 @@ print(f"Required motor RPM: {motor_rpm:.0f}")
 
 **Encoder:**
 
-The most basic sensor for measuring joint angle.
+An encoder is the most basic sensor for measuring joint angle.
 
 *Incremental encoder*: counts pulses on two channels (A, B) to measure relative rotation. Loses position when power is cut (requires homing). Cheap, with high resolution (10,000 PPR or higher is common).
 
-*Absolute encoder*: outputs the current position as an absolute value. Knows its position the moment power is applied. Multi-turn absolute encoders remember multiple revolutions. Expensive but no homing required. Standard on industrial robots.
+*Absolute encoder*: outputs the current position as an absolute value. Knows its position the moment power is applied. Multi-turn absolute encoders remember multiple revolutions. They cost more but avoid homing, so they are widely used on industrial robots that must recover position after a restart.
 
 ```
 Resolution example:
@@ -600,7 +596,7 @@ Directly measure joint torque or end-effector force. Most are based on strain ga
 
 *Joint Torque Sensor (JTS)*: mounted on the output side of the reducer. The KUKA LBR iiwa set the benchmark for force control by fitting a JTS to all seven joints.
 
-*Force/Torque sensor (F/T sensor)*: mounted at the end-effector to measure six axes (Fx, Fy, Fz, Tx, Ty, Tz). Sensors from ATI Industrial Automation are the research standard. They are expensive ($3,000–$20,000).
+*Force/Torque sensor (F/T sensor)*: mounted at the end-effector to measure six axes (Fx, Fy, Fz, Tx, Ty, Tz). ATI Industrial Automation and other vendors supply research sensors; select one by measurement range, resolution, overload limit, interface, and a current quotation.
 
 **Inertial sensors (IMU):**
 
@@ -623,7 +619,7 @@ These three are microcontroller-level basics. Robot systems need more robust pro
 
 **CAN Bus:**
 
-Originating in the automotive industry, it has become a standard in robotics as well. Differential signaling makes it noise-resistant, and the multi-master architecture supports priority-based arbitration.
+Originating in the automotive industry, it is also used for motor and sensor networks in robots. Differential signaling makes it noise-resistant, and the multi-master architecture supports priority-based arbitration.
 
 - Speed: up to 1 Mbps (CAN 2.0), 5 Mbps (CAN FD)
 - Distance: up to 1 km (at 125 kbps)
@@ -752,19 +748,14 @@ sudo chrt -f 99 ./my_robot_controller
 
 # 5. Verify performance
 sudo cyclictest -m -p 99 -t 1 -n
-# max latency under 50μs is good
+# compare worst-case latency with the target control period and timing margin
 ```
 
-**Why 1kHz:**
+**Choosing a control period:**
 
-Reasons the standard robot control loop runs at 1kHz (1ms):
+1 kHz (1 ms) is a common design point for torque and impedance control, not a universal standard. Choose the period from closed-loop bandwidth, mechanical resonances, sensor and actuator latency, solver time, and jitter margin. Twice the bandwidth in the Nyquist criterion is only an anti-aliasing lower bound; it does not guarantee control performance. In practice, sample sufficiently faster than the target closed-loop bandwidth and verify the frequency response and delay margins. CAN bandwidth cannot be inferred from motor count alone: include frame size, arbitration, bus load, and feedback rate in the calculation.
 
-1. **Impedance/force control**: the control frequency must be well above the mechanical resonance. Most robot arms have natural frequencies of a few to tens of Hz, so at least 10× higher (→ hundreds of Hz to 1kHz) is needed for stable control.
-2. **Nyquist theorem**: controlling a 100 Hz dynamic phenomenon requires sampling at a minimum of 200 Hz; in practice 5–10× (→ 1kHz) is preferred.
-3. **Communication bandwidth**: CAN bus at 1 Mbps driving ten motors at 1kHz already saturates the link. Anything beyond requires EtherCAT.
-4. **Convention**: after the MIT Cheetah demonstrated dynamic walking with a CAN + 1kHz configuration, QDD + 1kHz became the de facto standard.
-
-When higher-frequency control (5–10 kHz) is needed: very light robots (low inertia), high-speed collision response, some tactile control. These cases call for EtherCAT or FPGA-based control.
+Some lightweight robots, high-speed collision responses, and tactile controllers use multi-kilohertz loops. EtherCAT or an FPGA is not automatically required; choose a fieldbus, MCU, or FPGA according to the required determinism, bandwidth, and I/O structure.
 
 > **Further reading**
 > - FreeRTOS official documentation: https://www.freertos.org/
@@ -777,9 +768,7 @@ When higher-frequency control (5–10 kHz) is needed: very light robots (low ine
 
 ## 4.6 Advanced: Workspace Analysis and Optimal Design
 
-*If you want to become a researcher, start reading from here.*
-
-Kinematics addresses "how to move a given robot," but also "what robot should be designed." This section covers advanced topics related to design optimization.
+Kinematics can also be used to compare robot designs. The following topics relate workspace geometry and manipulability to design optimization.
 
 
 ### 4.6.1 Reachable Workspace vs Dexterous Workspace
@@ -1187,7 +1176,7 @@ The mathematical basis for this factorization is in §3.3 (Bayes' theorem and co
 
 ### 4.7.7 What Survived
 
-**Standard in wheeled AGVs and warehouse robots.** Both the velocity model and the odometry model — especially their sampling variants — are implemented directly in ROS2 Nav2 `nav2_amcl`. They provide the motion prior in particle filter localization for warehouse AMRs, service robots, and logistics automation. At 1k–10k particles the filter runs in real time at 20–50 fps.
+The sampled velocity and odometry formulations describe motion priors for particle-filter localization on wheeled robots. ROS2 Nav2 `nav2_amcl`'s `differential` motion model corresponds to the odometry-based formulation. Choose the particle count and update rate by measurement on the target map, sensor update rate, CPU, beam count, and error parameters.
 
 **Platforms where VIO and IMU preintegration are standard.** Humanoids, drones, and legged robots are hard to describe in terms of body velocity $(v, \omega)$. Legs bring a different slip model entirely, and drones move in SE(3) rather than SE(2). On these platforms, IMU preintegration provides the motion prior. That topic is in §14.10. The formal framework — $p(x_t \mid u_t, x_{t-1})$ — is the same; the content is entirely different.
 
@@ -1209,13 +1198,13 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 **Textbooks:**
 
-- **Craig, "Introduction to Robotics: Mechanics and Planning"** — the canonical text on DH parameters and kinematics. Uses the Modified DH convention. Best suited to the undergraduate level.
+- **Craig, "Introduction to Robotics: Mechanics and Planning"** — covers DH parameters and kinematics using the Modified DH convention. Check its prerequisites and examples against the course in which it will be used.
 
 - **Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control"** — PoE-based. Provides a free PDF and Coursera course, making it highly accessible. Mathematically cleaner but hard on first read. https://modernrobotics.org
 
 - **Corke, "Robotics, Vision and Control"** — practice kinematics alongside MATLAB/Python code. robotics-toolbox-python is the companion library for this book. The 3rd edition is Python-based. https://petercorke.com/rvc/
 
-- **Siciliano et al., "Robotics: Modelling, Planning and Control"** — the most comprehensive graduate textbook. Covers kinematics, dynamics, and control together. Thick, but correspondingly thorough.
+- **Siciliano et al., "Robotics: Modelling, Planning and Control"** — a broad graduate text covering kinematics, dynamics, and control.
 
 **Online courses:**
 
@@ -1235,13 +1224,13 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 ```
 1955 ── DH parameters proposed (Denavit & Hartenberg)
-1969 ── Stanford Arm (first electric computer-controlled robot arm)
+1969 ── Stanford Arm (an early electric, computer-controlled robot arm)
 1985 ── Product of Exponentials formalized
 1998 ── Harmonic Drive adoption spreads in robots
 2019 ── MIT Mini Cheetah: QDD actuator
 2019 ── MoveIt2 (ROS2-based motion planning framework)
 2023 ── ALOHA: low-cost bimanual teleoperation platform
-2024 ── SO-ARM100: open-source 5-axis robot arm (under $200)
+2024 ── SO-ARM100: open-source five-axis arm with a published BOM and assembly documentation
 ```
 
 ---

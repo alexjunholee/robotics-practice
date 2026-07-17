@@ -9,7 +9,7 @@ Robot learning is the field where robots learn behavior from data and experience
 
 **Where traditional methods work well**
 
-Traditional control and planning methods like PID, MPC, and RRT work very well when the dynamics model is accurate and the environment is structured. An industrial robot arm picking and assembling parts at predetermined positions is a representative example. With an accurate model, you get the performance that optimal control theory mathematically guarantees. Learning-based methods have a hard time beating that.
+Traditional control and planning methods such as PID, MPC, and RRT work well when the dynamics model is accurate and the environment is structured. An industrial robot arm picking and assembling parts at predetermined positions is a representative example. Mathematical stability or optimality guarantees hold only under each method's model, constraint, and solver assumptions; on tasks that meet those assumptions, a learned method must establish its additional benefit empirically.
 
 **Where traditional methods struggle**
 
@@ -21,12 +21,10 @@ The problem is that the real world is not clean.
 
 In these situations, learning-based approaches approximate the input-output relation directly from data, so they can operate without an explicit model.
 
-**But it is not a silver bullet**
-
-The limitations of learning-based methods must be understood clearly.
+**Limits of learning-based methods**
 
 - **Sample efficiency**: RL often requires millions of interaction steps. Collecting this data on a real robot is unrealistic in terms of time and cost.
-- **Safety**: During learning, the robot can damage itself or its surroundings. Exploration is inherently dangerous.
+- **Safety**: During learning, the robot can damage itself or its surroundings. Exploration therefore carries physical risk.
 - **Generalization**: Performance often drops sharply when conditions differ even slightly from those seen during training.
 
 If a problem can be solved with traditional methods, use traditional methods. Learning is a tool to apply where traditional methods hit their limits. Combining the two appropriately is the most realistic approach in practice.
@@ -132,7 +130,7 @@ On real robots, the transition probability $p(x'|x,a)$ is rarely known in advanc
 
 ### Policy Gradient Intuition
 
-The core idea of policy gradient is simple.
+Policy gradient improves the policy in three steps.
 
 1. Collect several trajectories with the current policy.
 2. Increase the probability of actions in trajectories with high return.
@@ -170,7 +168,7 @@ In robotics, data collection is costly, so the sample efficiency of off-policy m
 
 ### PPO (Proximal Policy Optimization)
 
-PPO is an on-policy algorithm proposed by Schulman et al. (2017). The core idea is to limit the size of policy updates. If the policy changes too much from the previous one, the change is clipped.
+PPO is an on-policy algorithm proposed by Schulman et al. (2017). It limits the size of policy updates and clips changes that move too far from the previous policy.
 
 ```
 L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
@@ -280,7 +278,7 @@ model.learn(total_timesteps=1_000_000)
 
 ## 8.4 Simulation Environments
 
-In robot RL, simulation is not optional but mandatory, because collecting millions of steps of data on a real robot is unrealistic. The main simulators are summarized below.
+Robot RL usually relies on simulation because collecting millions of interaction steps on physical hardware is costly and can be unsafe. The main simulators differ in contact models, parallelism, and available robot assets.
 
 ### MuJoCo (Multi-Joint dynamics with Contact)
 
@@ -474,13 +472,13 @@ DAgger is a method for addressing compounding error.
 4. Add the new data to the existing dataset and retrain.
 5. Repeat steps 2-4.
 
-The key is to include the expert action at "states the policy actually visits" in the training data. Theoretically, DAgger has a no-regret guarantee.
+DAgger adds the expert action at states that the learned policy actually visits. The original paper's no-regret bound holds under its assumptions about the online learner and expert queries.
 
 The downside is that the expert must label repeatedly. A human has to provide corrections one by one, which is labor-intensive.
 
 ### ACT (Action Chunking with Transformers)
 
-A method proposed in Stanford's ALOHA project. Two core ideas:
+Proposed in Stanford's ALOHA project, ACT combines two mechanisms:
 
 1. **Action chunking**: Instead of predicting one action at a time, predict a sequence of k future action steps at once. This captures temporal correlation and reduces compounding error.
 2. **CVAE (Conditional Variational Autoencoder)**: Models the multimodal distribution of actions. Even in the same situation, there can be multiple valid actions, and a plain MSE loss averages them out, producing mediocre actions.
@@ -512,7 +510,7 @@ Diffusion policy and ACT have become the main baselines for manipulation imitati
 
 ### Data Collection Methods
 
-Imitation learning performance depends decisively on data quality. Main data collection methods:
+Imitation-learning performance depends heavily on data quality. The main data-collection methods are:
 
 - **Teleoperation**: A human remotely controls the robot. ALOHA uses a leader-follower structure and can collect bimanual manipulation data relatively cheaply.
 - **VR controller**: A VR controller specifies end-effector position/orientation. Intuitive, but may lack force feedback in contact-rich tasks.
@@ -526,9 +524,7 @@ The amount of data varies by task and method. The Chi et al. (2023) Diffusion Po
 
 ## 8.7 Advanced: Foundation Models for Robot Control
 
-*If you want to become a researcher, read from here.*
-
-Inspired by the success of LLMs and VLMs, attempts to build large-scale pretrained models (foundation models) continue in robotics. The idea is to train a generalist policy on large quantities of robot data and adapt quickly to new robots or tasks.
+Inspired by the success of LLMs and VLMs, robotics researchers are building large-scale pretrained models (foundation models). They train a generalist policy on large quantities of robot data and then adapt it to new robots or tasks.
 
 ### RT-1, RT-2 (Google DeepMind)
 
@@ -540,9 +536,9 @@ Inspired by the success of LLMs and VLMs, attempts to build large-scale pretrain
 
 An open-source generalist robot policy developed by UC Berkeley and others. It was trained on the Open X-Embodiment dataset (data collected from diverse robots and diverse institutions). It uses a diffusion-based action head and is designed to be fine-tuned to new robots.
 
-### pi0 (Physical Intelligence)
+### π0 (Physical Intelligence)
 
-A diffusion-based generalist robot policy released in 2024. It uses a VLM as backbone and generates actions via flow matching. It achieved state-of-the-art performance on diverse manipulation tasks and also worked on complex long-horizon tasks such as folding laundry.
+The [π0 technical report (2024)](https://arxiv.org/abs/2410.24164) proposes a generalist robot policy that places a flow-matching action expert on a pretrained VLM. The authors train on single-arm, dual-arm, and mobile-manipulator data, then evaluate zero-shot behavior, language following, and fine-tuning; demonstrations include laundry folding, table cleaning, and box assembly. Performance claims should be read within the report's robots, tasks, and baselines.
 
 ### OpenVLA
 
@@ -569,13 +565,11 @@ Foundation models for robotics are still in an early stage. To be honest:
 
 ## 8.8 Advanced: Reward Design and Safe RL
 
-*If you want to become a researcher, read from here.*
-
-It is no exaggeration to say that the success of RL hinges on reward function design. And applying RL to real robots requires addressing safety.
+The reward function shapes what an RL policy learns. Applying RL to a physical robot also requires explicit safety measures.
 
 ### Reward Shaping
 
-**The problem with sparse rewards**: Sparse rewards like "+1 if the goal is reached, 0 otherwise" are easy to define, but the agent has to search randomly until it happens to receive a reward. When the state-action space is large, learning effectively fails.
+**The problem with sparse rewards**: Sparse rewards like "+1 if the goal is reached, 0 otherwise" are easy to define, but the agent has to search randomly until it happens to receive a reward. In a large state-action space, the agent may rarely obtain a learning signal.
 
 **Dense reward**: Add rewards for intermediate progress. For example, in an object-grasping task:
 
@@ -614,7 +608,7 @@ Representative examples:
 - Told to learn to jump, it evolves into an abnormally elongated shape (when combined with morphology optimization)
 
 Countermeasures:
-- Iteratively modify the reward function and review the learned behavior (essentially trial-and-error).
+- Review the learned behavior and adjust the reward function iteratively.
 - Add penalty terms for undesired behavior.
 - Review qualitatively by watching video. This is a part that is difficult to automate.
 
@@ -648,7 +642,7 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
 
 > **Sutton & Barto, "Reinforcement Learning: An Introduction" (2nd edition)**
 > http://incompleteideas.net/book/the-book-2nd.html
-> The essential RL textbook. Free PDF available. Required reading to build foundations from MDPs to policy gradients. If you do not have time to read it all, prioritize Ch.1-6 and Ch.13.
+> A standard textbook covering topics from MDPs to policy gradients, with a free PDF. Ch.1-6 and Ch.13 provide a focused starting path through the foundations.
 
 > **Sergey Levine, CS285: Deep Reinforcement Learning**
 > https://rail.eecs.berkeley.edu/deeprlcourse/
@@ -687,7 +681,7 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
 
 ```
 1992 ── REINFORCE algorithm (Williams)
-         The first policy gradient method. Convergence is proven but variance is high.
+         An influential early Monte Carlo policy-gradient method whose score-function estimator has high variance.
 
 2013 ── DQN (Mnih et al., Atari)
          The beginning of Deep RL. Stable training via replay buffer + target network.

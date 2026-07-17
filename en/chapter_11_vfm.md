@@ -1,7 +1,7 @@
 # Ch.11 — Vision Foundation Models (VFM)
 
 
-The paradigm of computer vision is shifting. The deep learning models covered so far were specialists trained to do a specific task well on a specific dataset; foundation models are generalists that learn general-purpose visual capabilities from massive data. Once this difference is clear, so is the reason VFM-based perception papers have become common at ICRA/IROS since 2023.
+The models in the previous chapter were trained mainly for a specific dataset and task. A vision foundation model instead pretrains a representation on a larger corpus and adapts it across several tasks. Since 2023, more ICRA and IROS papers have applied these representations to robot perception.
 
 ---
 
@@ -9,7 +9,7 @@ The paradigm of computer vision is shifting. The deep learning models covered so
 
 A **foundation model** is a model pretrained on large-scale data and applicable to a wide range of downstream tasks.
 
-Consider the conventional approach. It required repeating the cycle "new environment → data collection → labeling → training". When the factory changed, or when the objects the robot had to recognize changed, everything had to be redone from scratch. Foundation models break this cycle. A model trained once works on objects it has never seen, in environments it has never seen. It is the most promising approach for solving the generalization problem in robotics.
+Task-specific models often require new data collection, labeling, and training when the environment or target objects change. Foundation models aim to reduce that cost by reusing a large pretrained representation. Transfer to unseen objects and environments still varies by model and target domain, so zero-shot results should be distinguished from results after adaptation.
 
 **Characteristics**:
 - **Scale**: hundreds of millions to billions of parameters
@@ -17,12 +17,9 @@ Consider the conventional approach. It required repeating the cycle "new environ
 - **Zero-shot / Few-shot**: performs new tasks with no training or only a few examples
 - **Transfer**: transfers to diverse domains
 
-**Why it matters**:
-- generalization to new environments
-- usable without annotations for a specific dataset
-- a core role in the lab's Global Module
+Reusing a pretrained representation can reduce the need to build labels from scratch for each environment. Actual generalization still has to be evaluated separately for the target domain and adaptation setting.
 
-Here the concept of the scaling law is important. It is the empirical law that performance improves as a power law when model size, data size, and compute are scaled up. Recent large models such as GPT, CLIP, and SAM all exploit this law. "Bigger is better" holds within a certain range (Kaplan et al., 2020; Zhai et al., 2022 for ViT). However, as Hoffmann et al. (2022, Chinchilla) showed, balancing data and compute matters more than simply scaling model size.
+Scaling laws describe empirical power-law relationships between performance and model size, data, or compute. They have informed the development of large models such as GPT, CLIP, and SAM. Gains from scale depend on how these resources are balanced: Hoffmann et al. (2022), for example, showed that increasing model size alone can be less effective than allocating data and compute together.
 
 > **Further reading**
 > - [Bommasani et al., "On the Opportunities and Risks of Foundation Models" (2021)](https://arxiv.org/abs/2108.07258) — Stanford report that defined the term "foundation model".
@@ -33,7 +30,7 @@ Here the concept of the scaling law is important. It is the empirical law that p
 
 ## 11.2 Major VFMs
 
-We look at the vision foundation models most commonly used in robotics. The focus is on what problem each model solves, why it matters in robotics, and how to use it.
+This section compares DINOv2, SAM, CLIP, and Depth Anything through representation learning, segmentation, image-text alignment, and monocular depth estimation.
 
 ### 11.2.1 DINOv2
 
@@ -70,7 +67,7 @@ The first token of `last_hidden_state` is the [CLS] token summarizing the whole 
 > - [Oquab et al., "DINOv2: Learning Robust Visual Features without Supervision" (2023)](https://arxiv.org/abs/2304.07193) — the original DINOv2 paper.
 > - [DINOv2 GitHub](https://github.com/facebookresearch/dinov2) — official code and pretrained models.
 > - [HuggingFace — DINOv2](https://huggingface.co/docs/transformers/model_doc/dinov2) — ready to use on HuggingFace.
-> - [Yannic Kilcher — DINO explained](https://www.youtube.com/watch?v=h3ij3F3cPIk) — explains the core idea of self-distillation (based on DINOv1, but essential for understanding DINOv2).
+> - [Yannic Kilcher — DINO explained](https://www.youtube.com/watch?v=h3ij3F3cPIk) — explains self-distillation in DINOv1 and also helps with understanding DINOv2.
 
 ### 11.2.2 SAM (Segment Anything Model)
 
@@ -85,7 +82,7 @@ Conventional segmentation models could only segment the classes used during trai
 
 **SAM2**: video support, higher speed
 
-SAM2 works not only on single images but also on videos. Specify an object with a point or box on the first frame, and it is automatically tracked and segmented in subsequent frames. This applies directly to scenarios in which a robot tracks and manipulates objects in real time.
+SAM2 extends prompt-based segmentation from individual images to video. A point or box in the first frame identifies an object that the model then tracks and segments in later frames. This capability can support robots that must maintain an object mask while the camera or object moves.
 
 ```python
 from segment_anything import sam_model_registry, SamPredictor
@@ -155,14 +152,14 @@ with torch.no_grad():
 
 **Monocular depth foundation model**: estimates relative depth from a single image.
 
-Section 10.7 covered depth estimation; Depth Anything raises it to the level of a foundation model. By leveraging 1.5M labeled images plus 62M unlabeled images, it estimates depth stably indoors (NYU), outdoors (KITTI), and in zero-shot domains. Accuracy can drop, though, in domains that differ greatly from the training data (endoscopy, underwater, etc.). Its advantage is that a robot deployed to a new environment can obtain depth information immediately without additional training.
+Depth Anything is a monocular depth model trained with 1.5M labeled and 62M unlabeled images. It has been evaluated indoors (NYU), outdoors (KITTI), and in zero-shot domains, but accuracy can drop in settings far from its training data, such as endoscopic or underwater imagery. Results without additional training should therefore be distinguished from results adapted to the target environment.
 
 **Characteristics**:
 - trained on 1.5M labeled + 62M unlabeled images
 - robust across diverse domains
-- V2: more accurate absolute depth
+- V2: metric-depth models available
 
-Depth Anything V2 goes a step beyond V1 and also provides a version that estimates metric depth (absolute depth). In robotics, "exactly how many meters away" often matters more than relative depth, so the metric version of V2 deserves attention.
+Depth Anything V2 also provides a model for metric, or absolute, depth. This variant is useful when a robotics system needs distances in physical units rather than only relative ordering.
 
 > **Further reading**
 > - [Yang et al., "Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data" (2024)](https://arxiv.org/abs/2401.10891) — the original Depth Anything paper.
@@ -177,7 +174,7 @@ Depth Anything V2 goes a step beyond V1 and also provides a version that estimat
 
 **Open-vocabulary object detection**: detects arbitrary objects from text prompts.
 
-Conventional detection models (YOLO, Faster R-CNN, etc.) could only detect the classes used during training. Trained on "person, car, dog", they cannot find "coffee mug". Like CLIP, GroundingDINO can specify and detect any object with text. Give a robot a natural-language instruction such as "find the red cup over there", and it can locate the cup immediately without training.
+Closed-set detectors such as standard YOLO and Faster R-CNN models predict a fixed label set. GroundingDINO instead accepts text queries and returns boxes for image regions that match them. A phrase such as "red cup" can therefore be used as the detection query without training a new class-specific output head.
 
 ```
 Input: image + "person. car. traffic light."
@@ -187,7 +184,7 @@ Output: bounding boxes for the corresponding objects
 **Grounded-SAM**: GroundingDINO + SAM combined
 → text-prompted object detection + segmentation
 
-Grounded-SAM is a practical combination for robotics. Feed in the text "red cup", and GroundingDINO finds the bounding box, then SAM produces a precise mask inside it. Because arbitrary objects can be detected and segmented without separate training, it is widely used in manipulation pipelines.
+In Grounded-SAM, GroundingDINO finds a box for a query such as "red cup", and SAM produces a mask within that box. This composition supplies text-conditioned regions and masks to a manipulation pipeline.
 
 > **Further reading**
 > - [Liu et al., "Grounding DINO: Marrying DINO with Grounded Pre-Training for Open-Set Object Detection" (2023)](https://arxiv.org/abs/2303.05499) — the original GroundingDINO paper.
@@ -218,7 +215,7 @@ For robots to operate in real environments, they cannot rely on a predetermined 
 - matching is possible even in textureless regions
 - recent work: DROID-SLAM + DINOv2
 
-This is directly tied to problems encountered in the field. Classical SLAM relies on keypoints such as ORB and SIFT, but on textureless walls or floors, keypoints are hard to obtain. DINOv2's dense features carry semantic information, so even on a white wall one part can be distinguished from another. This is why SLAM robustness improves.
+Classical SLAM relies on keypoints such as ORB and SIFT, which are difficult to obtain on textureless walls and floors. DINOv2's dense features carry semantic information and can distinguish locations even within such regions. SLAM systems can use these features for matching to reduce tracking failures in textureless environments.
 
 **3D scene understanding**:
 - lift 2D VFM features into 3D
@@ -269,7 +266,7 @@ torch.onnx.export(model, dummy_input, "model.onnx")
 # trtexec --onnx=model.onnx --saveEngine=model.trt --fp16
 ```
 
-If you are using NVIDIA Jetson, TensorRT is almost mandatory. FP16 conversion alone yields a 2-3x speedup with almost no accuracy loss. Going to INT8 is faster still, but calibration data is required.
+On NVIDIA Jetson, TensorRT is one available inference backend. FP16 or INT8 latency, memory use, and task-metric changes depend on the model graph, input size, batch, Jetson power mode, and TensorRT/CUDA versions. Benchmark against an FP32 baseline on the target device and the same validation set; INT8 also needs representative calibration data and a fresh accuracy check.
 
 > **Further reading**
 > - [NVIDIA TensorRT documentation](https://docs.nvidia.com/deeplearning/tensorrt/) — TensorRT usage and optimization guide.
@@ -281,8 +278,6 @@ If you are using NVIDIA Jetson, TensorRT is almost mandatory. FP16 conversion al
 ---
 
 ## 11.5 Advanced: VFM Fine-tuning and Adaptation
-
-*If you want to become a researcher, start reading from here.*
 
 Using a VFM as-is yields zero-shot performance, but performance drops in specific domains (medical, satellite, underwater, etc.). Fine-tuning is needed, but training all of its hundreds of millions of parameters is costly. Parameter-efficient fine-tuning (PEFT) trains only a tiny fraction of the model's parameters while achieving performance close to full fine-tuning.
 
@@ -298,7 +293,7 @@ Using a VFM as-is yields zero-shot performance, but performance drops in specifi
 
 **LoRA (Low-Rank Adaptation)**:
 
-Core idea: add a low-rank update to a pretrained weight matrix $\mathbf{W}$.
+LoRA adds a low-rank update to a pretrained weight matrix $\mathbf{W}$.
 
 $$\mathbf{W}' = \mathbf{W} + \Delta\mathbf{W} = \mathbf{W} + \mathbf{B}\mathbf{A}$$
 
@@ -378,7 +373,7 @@ for param in sam.mask_decoder.parameters():
 
 **Evaluation methodology**:
 
-The standard protocol for comparison in VFM adaptation research is the following.
+The following protocol matrix can be used to compare VFM adaptation methods.
 
 | Protocol | Description | Purpose of comparison |
 |---------|------|----------|
@@ -397,9 +392,9 @@ For fair comparison, the same backbone, the same data split, and the same augmen
 ---
 
 > **Technical Timeline: Vision Foundation Models**
-> - **2021**: CLIP (OpenAI) released. A shared image-text embedding opens up zero-shot recognition. Trained on 400M image-text pairs. The beginning of the open-vocabulary era.
+> - **2021**: CLIP (OpenAI) released. It trained a shared embedding on 400M image-text pairs and demonstrated zero-shot classification.
 > - **2022**: Self-supervised pretraining methods such as Masked Autoencoders (MAE) begin to draw attention. DINO demonstrates the potential of self-supervised ViTs.
 > - **2023**: SAM (Segment Anything Model) released. Trained on 11M images and 1.1B masks. Achieves foundation-model-level generality with "segment anything". DINOv2 released the same year — a new standard for self-supervised vision features.
 > - **2024**: Rapid evolution of VFMs including SAM2 (extension to video segmentation), Depth Anything V2 (metric depth support), and Florence-2 (unified vision model). Lightweight modeling and edge deployment become active.
 > - **2025~**: 3D extensions of VFMs and multimodal unification accelerate. The direction is a single foundation model that jointly handles detection, segmentation, depth, and tracking. In robotics, VFMs are on course to become the standard perception backbone.
-> - **What to watch now**: The core value of a foundation model is its **zero-shot ability**. Working in new environments and on new objects without additional training raises a robot's generalization. The CLIP+SAM+DINOv2 combination is used as a representative pipeline for open-vocabulary robot perception in NLMap, ConceptGraphs, and others. Making it lightweight (FastSAM, MobileSAM) and putting it on an actual robot completes the pipeline.
+> - **Recent direction**: Zero-shot transfer is one reason to use foundation models in robot perception. Systems such as NLMap and ConceptGraphs combine representations from CLIP, SAM, and DINOv2 for open-vocabulary perception. On a physical robot, lightweight variants such as FastSAM and MobileSAM must be evaluated for both latency and accuracy.

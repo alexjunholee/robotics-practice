@@ -1,6 +1,6 @@
 # Ch.20 — 추천 자료
 
-로보틱스 연구를 시작할 때 도움이 될 교과서, 강의, 논문, 학습 경로를 정리했다. 자료가 너무 많아서 뭘 봐야 할지 모르겠다면, 맨 아래 **학습 경로** 섹션을 먼저 보자.
+교과서, 강의, 논문을 주제별로 묶고, 맨 아래 **학습 경로**에서 선수지식에 따른 읽기 순서를 제시한다.
 
 ## 20.1 교과서
 
@@ -9,14 +9,14 @@
 **Multiple View Geometry in Computer Vision** (Hartley & Zisserman)
 - 다시점 기하학의 핵심 교재
 - 카메라 모델, Epipolar Geometry, 3D 복원
-- 수학적으로 엄밀 — 솔직히 처음부터 끝까지 읽기는 고통스럽지만, 필요한 챕터만 발췌해서 읽으면 된다
+- 수학적으로 엄밀하며, 필요한 주제의 장을 골라 참고하기 좋음
 - 링크: [Cambridge University Press](https://www.cambridge.org/core/books/multiple-view-geometry-in-computer-vision/0B6F289C78B2B23F596CAA76D3D43F7A)
 - 저자 홈페이지에서 일부 챕터 PDF 제공: https://www.robots.ox.ac.uk/~vgg/hzbook/
 
 **Computer Vision: Algorithms and Applications** (Szeliski)
 - 포괄적인 CV 교과서
 - 최신 버전 (2022)에 딥러닝 포함
-- 무료 PDF 제공 — 학생에게는 축복
+- 무료 PDF 제공
 - 무료 PDF: https://szeliski.org/Book/
 
 ### Robotics
@@ -64,7 +64,7 @@
 ### Computer Vision
 
 **CS231n: Convolutional Neural Networks for Visual Recognition** (Stanford)
-- 딥러닝 비전의 기초 — 이 분야를 시작하는 거의 모든 사람이 보는 강의
+- 딥러닝 비전의 기초를 다루는 강의
 - 무료 강의 자료, 영상
 - 강의 영상: https://www.youtube.com/playlist?list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv
 - 강의 노트: https://cs231n.github.io/
@@ -108,17 +108,17 @@
 
 **Neural Networks: Zero to Hero** (Andrej Karpathy)
 - 신경망을 밑바닥부터 구현하면서 배우기
-- 설명이 매우 직관적이고, 코드와 함께 진행
+- 설명과 코드를 함께 진행
 - YouTube: https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ
 
 ## 20.3 유튜브 채널 추천
 
-교과서나 강의보다 가볍게 볼 수 있는 유튜브 채널들이다. 이동 중이나 쉬는 시간에 틀어놓으면 감각이 쌓인다.
+교과서나 전체 강의보다 짧게 나누어 볼 수 있는 유튜브 채널들이다.
 
 | 채널 | 주제 | 특징 |
 | --- | --- | --- |
-| **Cyrill Stachniss** | SLAM, Robotics | SLAM의 정석 강의. 학부 수업 수준의 체계적 설명 |
-| **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | Columbia 교수가 CV 기초를 하나하나 설명. 정말 친절 |
+| **Cyrill Stachniss** | SLAM, Robotics | 학부 수업 수준으로 SLAM을 체계적으로 설명 |
+| **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | CV 기초를 개념별로 설명 |
 | **Andrej Karpathy** | Deep Learning, AI | Tesla AI Director 출신. Neural Net을 밑바닥부터 구현 |
 | **Yannic Kilcher** | 논문 리뷰 | 최신 ML/AI 논문을 매주 리뷰. 논문 읽는 법을 배울 수 있다 |
 | **Two Minute Papers** | AI 연구 트렌드 | 최신 연구를 2-3분 영상으로 소개. "What a time to be alive!" |
@@ -142,7 +142,7 @@
 
 ### 어떻게 읽을 것인가?
 
-논문 읽기는 별도 가이드에서 본격적으로 다룬다. 왜 읽는가, Keshav 3-pass, 5 Cs, reviewer 시점, CCC 렌즈, 독자 기대 진단까지 일곱 챕터에 걸쳐 [`../research-notes/part1_reading/`](../research-notes/part1_reading/) (ch01–ch07)에 정리되어 있다.
+논문을 고르는 기준과 Keshav의 3-pass, 5 Cs, reviewer 관점, CCC 렌즈는 [「연구노트」 Ch.6–12 — 읽기 묶음](../research-notes/guide.html#chapter-6)에서 자세히 다룬다.
 
 ### 필독 논문 리스트
 
@@ -176,7 +176,7 @@
 ### 논문 작성 도구
 
 > **추천 자료**
-> - [Overleaf](https://www.overleaf.com/) — 온라인 LaTeX 에디터. 논문 공동 작성의 사실상 표준
+> - [Overleaf](https://www.overleaf.com/) — 공동 작성 기능을 제공하는 온라인 LaTeX 에디터
 > - [Mathpix](https://mathpix.com/) — 수식 스크린샷을 LaTeX 코드로 변환
 > - [Detexify](http://detexify.kirelabs.org/classify.html) — 손으로 그려서 LaTeX 기호를 검색
 > - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 테이블 생성기
@@ -186,9 +186,9 @@
 
 ## 20.5 주요 학회
 
-분야별 학회 reference 표는 별도 가이드에 정리되어 있다 — [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#ch34-학회-2-3주-전-체크리스트) 끝의 *분야별 학회 reference* 섹션이 CV·로보틱스·자율주행 학회 일정과 성격을 다룬다.
+CV·로보틱스·자율주행 학회의 일정과 성격은 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)의 *분야별 학회 reference* 표에 정리되어 있다.
 
-본 가이드는 SLAM/CV/로보틱스 분야 본체에 집중한다. 학회 일반론(왜 가는가·발표 opener·첫 마디 화법)과 분야별 표는 위 가이드에서 다룬다.
+학회에 참석하는 목적과 발표를 시작하는 방법도 같은 장에서 확인할 수 있다.
 
 ## 20.6 유용한 GitHub 저장소
 
@@ -354,14 +354,14 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | --- | --- | --- |
 | VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10-11장 + 논문 직접 읽기 |
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
-| 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [`../research-notes/part1_reading/`](../research-notes/part1_reading/)* |
-| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [`../research-notes/part0_starting/`](../research-notes/part0_starting/)* |
-| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#ch32-revision-rebuttal)* |
+| 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)* |
+| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [「연구노트」 Ch.1–5 — 시작하기](../research-notes/guide.html#chapter-1)* |
+| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#chapter-32)* |
 
 **실습 과제**:
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
 - 자체 개선 아이디어 실험 — 이 부분을 바꾸면 어떻게 될지 직접 시도
-- 논문 작성 시도 — *본격 frame은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#ch16-마음가짐)* 참고
+- 논문 작성 시도 — *본격 frame은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)* 참고
 - 본 문서의 **10-13장**을 읽으면서 최신 연구 방향을 파악한다
 
 **마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교할 수 있으면 고급 단계에 진입한 것이다. 학회 워크숍에 제출할 수 있는 수준이 되는 것을 목표로 하자.
@@ -381,45 +381,45 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
  "코드를 돌릴 수 있다"          "논문을 읽고 재현한다"           "새 아이디어를 실험한다"
 ```
 
-## 20.8 연구 실전 mindset (link)
+## 20.8 연구 실전
 
-*대학원 수준.* 연구자 마인드셋과 논문 쓰기·실험 설계·학회 발표·리뷰 같은 메타 운영은 별도 가이드 [research-notes](../research-notes/)·[grad-notes](../grad-notes/)에서 본격적으로 다룬다. 본 챕터에서는 분야 instantiation에 해당하는 자리만 짧게 남기고 메타 자리는 link로 안내한다.
+*대학원 수준.* 논문 읽기·쓰기, 실험 설계, 학회 발표, peer review는 [research-notes](../research-notes/guide.html)에서, 박사과정의 장기 운영은 [grad-notes](../grad-notes/guide.html)에서 자세히 다룬다. 여기서는 SLAM·CV·로보틱스에 직접 적용되는 항목을 연결한다.
 
-엔지니어는 정체성이고, 연구는 *방향·엔진·도구* 세 layer로 굴러간다 — 도구만 갈고닦으면 5년 후 *날카로운 칼 + 빈 방향*에 도착한다.
+연구를 운영할 때는 방향, 지속 가능한 작업 방식, 도구를 함께 살펴야 한다.
 
-### 20.8.0 연구자 마인드셋 (link)
+### 20.8.0 연구자 마인드셋
 
-- 방향·엔진·도구 세 layer + 통합 frame → [「대학원노트」 Ch.17 — 연구가 삶이 되는 조건](../grad-notes/guide.html#ch17-연구가-삶이-되는-조건-분리하지-않는-통합) § 5
-- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#ch14-자율성의-무게-채점자-없는-만족) § 1
-- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#ch15-비교의-함정-뒤쳐질-권리) § 3
-- 견고한 기초 — *리젝 이유가 없는 논문* frame → [「연구노트」 Ch.16 — 마음가짐](../research-notes/guide.html#ch16-마음가짐) § 1
+- 방향·엔진·도구 세 layer + 통합 frame → [「대학원노트」 Ch.17 — 연구가 삶이 되는 조건](../grad-notes/guide.html#chapter-17) § 5
+- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#chapter-14) § 1
+- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#chapter-15) § 3
+- 견고한 기초 — *리젝 이유가 없는 논문* frame → [「연구노트」 Ch.16 — 마음가짐](../research-notes/guide.html#chapter-16) § 1
 
-### 20.8.1 논문 쓰기 (link)
+### 20.8.1 논문 쓰기
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조, Intro 4단 (문제 정의·기존 한계·접근·contribution), figure/table 먼저 그리기 — 본격 가이드는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#ch16-마음가짐) (mindset·outline·time budget) 및 [「연구노트」 Ch.23 — Introduction](../research-notes/guide.html#ch23-introduction은-어떻게-좁혀지는가).
+Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조와 Introduction의 문제 정의·기존 한계·접근·contribution 구성은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)와 [「연구노트」 Ch.23 — Introduction](../research-notes/guide.html#chapter-23)에서 다룬다.
 
 ### 20.8.2 실험 설계와 Ablation
 
-분야 본체 자리이므로 한 줄로 정리한다 — *Ablation·변인 통제·통계 유의성(최소 3회 반복)·공정 비교(같은 데이터·split·하드웨어)*는 분야 표준 작업 단위다. baseline 숫자를 다른 논문에서 그대로 가져오면 조건이 달라 reject 사유가 잡힌다.
+SLAM·CV 실험에서는 ablation, 변인 통제, 반복 실험, 같은 데이터·split·하드웨어에서의 비교가 필요하다. 다른 논문의 baseline 숫자를 그대로 가져오면 조건 차이 때문에 공정한 비교가 되지 않을 수 있다.
 
-### 20.8.3 학회 발표 (link)
+### 20.8.3 학회 발표
 
-발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#ch33-학회는-왜-가는가).
+발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#chapter-33).
 
-### 20.8.4 논문 리뷰 — Peer Review (link)
+### 20.8.4 논문 리뷰 — Peer Review
 
-리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [「연구노트」 Ch.10 — Reviewer로 읽기](../research-notes/guide.html#ch10-reviewer로-읽기) (reviewer로 읽기) + [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#ch32-revision-rebuttal) (rebuttal 작성).
+리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [「연구노트」 Ch.10 — Reviewer로 읽기](../research-notes/guide.html#chapter-10) (reviewer로 읽기) + [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#chapter-32) (rebuttal 작성).
 
 ### 20.8.5 도구
 
 - LaTeX: Overleaf 또는 로컬 (texlive + vscode)
-- 참고 문헌: PDF 리더 + AI 조합이 효율적 — Acrobat 형광펜 + Claude/GPT로 요약·BibTeX 생성·related work 비교, Google Scholar Cite 버튼, Zotero + Better BibTeX는 100편 이상에서 유용
+- 참고 문헌: PDF 리더에서 원문을 표시하고 Zotero + Better BibTeX로 서지 정보를 관리한다. AI 요약·related work 비교·BibTeX 초안은 원문과 DOI 메타데이터를 대조한 뒤 사용한다.
 - 파이프라인 그림: TikZ (정밀), draw.io (빠른 제작), Inkscape (SVG)
 - 테이블: booktabs (\toprule, \midrule, \bottomrule)
 - 알고리즘: algorithm2e
 - 수식: notation table을 따로 만들어 논문 전체에서 통일
 
-표기법(LaTeX·notation·수식) 자리는 [「연구노트」 Ch.30 — 수식·정리·증명 쓰기](../research-notes/guide.html#ch30-수식정리증명-쓰기) (글쓰기 단위 통일)이 메타 layer로 다룬다.
+LaTeX 표기와 notation table, 수식 설명을 통일하는 방법은 [「연구노트」 Ch.30 — 수식·정리·증명 쓰기](../research-notes/guide.html#chapter-30)에서 다룬다.
 
 > 추천 자료:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — 논문 쓰기의 고전 강연

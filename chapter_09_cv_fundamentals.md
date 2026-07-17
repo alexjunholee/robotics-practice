@@ -1,19 +1,19 @@
 # Ch.9 — 컴퓨터 비전 기초 (Computer Vision Fundamentals)
 
 
-로봇이 카메라로 들어오는 원시 데이터를 의미 있는 정보로 바꾸는 모든 과정의 뿌리가 여기에 있다. SLAM을 하든 물체를 집든, 이 기초가 흔들리면 "왜 안 되지?"에서 한참을 헤매게 된다.
+컴퓨터 비전은 카메라의 원시 데이터를 로봇이 사용할 수 있는 정보로 바꾼다. 이미지 처리와 카메라 기하를 이해해야 SLAM이나 물체 조작 파이프라인에서 생긴 오류를 추적할 수 있다.
 
 ---
 
 ## 9.1 이미지 처리 기초 (Image Processing)
 
-카메라에서 들어오는 raw 이미지는 노이즈가 많고 정보가 정리되지 않은 상태다. 어떤 알고리즘이든 그 위에서 동작하려면 먼저 이미지를 정제해야 한다. 필터링, 에지 검출, 형태학적 연산이 전처리의 기본 도구다. 이걸 모르면 후속 파이프라인에서 결과가 왜 이상한지 잡을 수 없다.
+카메라의 raw 이미지에는 노이즈와 불필요한 변화가 섞여 있다. 필터링, 에지 검출, 형태학적 연산으로 입력을 정리하면 후속 파이프라인의 이상이 전처리에서 생겼는지 구분할 수 있다.
 
 ### 9.1.1 OpenCV 소개
 
-OpenCV(Open Source Computer Vision Library)는 가장 널리 사용되는 CV 라이브러리이다.
+OpenCV(Open Source Computer Vision Library)는 널리 쓰이는 공개 CV 라이브러리이다.
 
-논문의 알고리즘을 직접 구현하든, 빠르게 프로토타입을 만들든, OpenCV는 거의 항상 거치게 되는 도구다. C++/Python 바인딩이 모두 있어서 연구에서 프로덕션까지 커버한다.
+OpenCV는 C++와 Python 바인딩을 제공하며, 영상 입출력부터 필터링·특징 추출·기하 계산까지 자주 쓰는 연산을 묶어 둔다.
 
 설치:
 
@@ -39,7 +39,7 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 ```
 
-주의: OpenCV는 BGR 순서를 사용한다 (RGB 아님). Matplotlib이나 다른 라이브러리와 섞어 쓸 때 색이 뒤집히는 원인이 여기에 있다. `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`를 습관처럼 쓰자.
+주의: OpenCV는 RGB가 아니라 BGR 순서를 사용한다. Matplotlib처럼 RGB를 쓰는 라이브러리에 이미지를 넘길 때는 `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`로 채널 순서를 바꾼다.
 
 > 추천 자료
 > - [OpenCV 공식 튜토리얼](https://docs.opencv.org/4.x/d9/df8/tutorial_root.html) — Python/C++ 예제가 잘 정리되어 있다
@@ -49,7 +49,7 @@ cv2.destroyAllWindows()
 
 ### 9.1.2 필터링 (Filtering)
 
-이미지에서 원하는 정보를 뽑아내거나, 원치 않는 노이즈를 제거하는 가장 기본적인 도구가 필터링이다. 필터링을 모르면 에지 검출 결과가 지저분해도 원인을 모르고, segmentation 전처리에서 왜 blur를 거치는지 감이 안 온다.
+필터링은 이미지에서 원하는 정보를 남기고 노이즈를 줄인다. 에지 검출이나 segmentation에 앞서 blur를 적용하는 이유도 입력의 고주파 변동을 줄이기 위해서다.
 
 Blur (흐림):
 
@@ -72,7 +72,7 @@ sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
 sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 ```
 
-에지는 이미지에서 정보량이 가장 많은 부분이다. 사람이 물체를 인식할 때 가장 먼저 보는 것도 에지다. Canny는 가장 널리 쓰이는 에지 검출기인데, threshold 값에 따라 결과가 크게 달라지므로 직접 파라미터를 바꿔가며 실험해봐야 한다.
+에지는 물체의 윤곽과 밝기 변화가 큰 경계를 드러낸다. Canny 검출 결과는 threshold 값에 민감하므로, 같은 이미지에서 값을 바꾸며 누락되는 경계와 남는 노이즈를 비교한다.
 
 > 추천 자료
 > - [First Principles of Computer Vision — Edge Detection](https://www.youtube.com/playlist?list=PL2zRqk16wsdoCCLpouGuRbcJFBVVJlvgr) — 에지 검출의 수학적 원리를 시각적으로 설명
@@ -87,7 +87,7 @@ sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 
 ### 9.1.3 Morphology
 
-이진 이미지(binary image)를 다룰 때 필수적인 도구이다. 예를 들어, segmentation 결과에서 작은 노이즈 점들을 제거하거나, 끊어진 영역을 이어 붙이거나 할 때 morphology를 쓴다. 이걸 모르면 이진화 결과를 후처리할 때 막막하다.
+Morphology는 이진 이미지(binary image)의 형태를 다듬는다. Segmentation 결과에서 작은 노이즈 점을 제거하거나 끊어진 영역을 잇는 데 쓴다.
 
 ```python
 kernel = np.ones((5, 5), np.uint8)
@@ -105,7 +105,7 @@ opening = cv2.morphologyEx(binary_img, cv2.MORPH_OPEN, kernel)
 closing = cv2.morphologyEx(binary_img, cv2.MORPH_CLOSE, kernel)
 ```
 
-Opening과 Closing의 순서를 헷갈리는 사람이 많은데 — Opening은 "먼저 깎고(erosion) 다시 키우는(dilation)" 것이라 작은 돌기나 노이즈가 사라지고, Closing은 "먼저 키우고 다시 깎는" 것이라 작은 구멍이 메워진다. 직관적으로 기억하자.
+Opening은 먼저 깎고(erosion) 다시 키우므로(dilation) 작은 돌기와 노이즈를 없앤다. Closing은 먼저 키우고 다시 깎아 작은 구멍을 메운다.
 
 > 추천 자료
 > - [OpenCV Morphological Operations](https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html) — 시각적 예제와 함께 설명
@@ -171,14 +171,14 @@ Tangential distortion (접선 왜곡): 렌즈가 이미지 센서와 완벽하�
 # 단순 보정 (매 프레임 계산 — 느림)
 undistorted = cv2.undistort(distorted, K, dist_coeffs)
 
-# 보정 맵 미리 계산 후 재사용 (빠름 — SLAM 파이프라인 표준)
+# 보정 맵 미리 계산 후 재사용 (SLAM 파이프라인의 일반적 패턴)
 map1, map2 = cv2.initUndistortRectifyMap(K, dist_coeffs, None, K, (w, h), cv2.CV_32FC1)
 undistorted = cv2.remap(distorted, map1, map2, cv2.INTER_LINEAR)
 ```
 
-`cv2.undistort()`는 매 프레임마다 호출하면 느리다. `initUndistortRectifyMap()`으로 맵을 계산해두고 `cv2.remap()`으로 적용하는 것이 실시간 시스템의 표준이다.
+고정된 카메라 파라미터라면 매 프레임 `cv2.undistort()`를 호출하는 대신 `initUndistortRectifyMap()`으로 맵을 미리 계산하고 `cv2.remap()`으로 재사용할 수 있다. 실시간 파이프라인에서 계산을 줄이는 일반적인 구현 패턴이다.
 
-**어안 렌즈 (Fisheye)**: 일반 핀홀 왜곡 모델로는 보정이 안 된다. 어안 렌즈는 빛의 입사각 θ에 대해 왜곡을 모델링한다 (equidistant model: r = f·θ). OpenCV의 `cv2.fisheye` 모듈을 별도로 사용해야 한다. 혼동하면 보정 결과가 오히려 나빠지니 주의.
+**어안 렌즈 (Fisheye)**: 저차 radial-tangential 핀홀 모델은 광각 렌즈의 투영을 충분히 표현하지 못할 수 있다. 어안 모델은 빛의 입사각 θ에 대한 투영을 사용하며, equidistant ideal은 r = f·θ다. OpenCV는 이에 맞는 `cv2.fisheye` routine을 제공한다. FoV의 단일 경계값이 아니라 렌즈 투영과 별도 검증 영상의 재투영 잔차로 모델을 고른다.
 
 (참고: [다크 프로그래머 — 카메라 왜곡보정](https://darkpgmr.tistory.com/31), [정진용 블로그 — Camera Models and Distortion](https://jinyongjeong.github.io/2020/06/15/Camera_and_distortion_model/))
 
@@ -210,19 +210,15 @@ ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
 )
 ```
 
-팁: 캘리브레이션 퀄리티를 높이려면 (1) 다양한 각도에서 20장 이상 촬영하고, (2) 체커보드가 이미지 전체를 고르게 커버하게 하고, (3) reprojection error가 0.5 픽셀 이하인지 확인하자.
-
-캘리브레이션이 하는 일을 직관적으로 이해하기
+캘리브레이션 영상은 장수보다 관측 가능성으로 평가한다. 타겟이 이미지 중앙과 가장자리를 덮고, 거리와 여러 축의 기울기가 달라지도록 촬영한다. 전체 RMS 하나뿐 아니라 이미지별·위치별 잔차와 별도 검증 영상의 오차를 확인한다.
 
 카메라 캘리브레이션은 결국 "이 카메라가 3D 세상을 2D 이미지로 어떻게 변환하는지"의 파라미터를 알아내는 것이다. 체커보드 패턴을 여러 각도에서 촬영하면, 체커보드의 3D 좌표(알고 있음)와 이미지의 2D 좌표(검출함)의 대응 쌍이 수십~수백 개 생긴다. 이 대응 쌍으로부터:
 
-1. Intrinsic parameters (fx, fy, cx, cy): 렌즈의 초점거리와 이미지 중심. 카메라 고유 속성이므로 한 번 구하면 렌즈를 바꾸지 않는 한 변하지 않는다.
-2. Distortion coefficients (k1, k2, p1, p2, k3): 렌즈의 왜곡 정도. 저가 렌즈일수록 크다.
+1. Intrinsic parameters (fx, fy, cx, cy): 초점거리와 주점. 초점·줌·해상도·crop, 온도와 기계적 조립이 바뀌면 다시 확인한다.
+2. Distortion coefficients (k1, k2, p1, p2, k3): 선택한 투영 모델에서 렌즈와 조립의 왜곡을 근사하는 계수다. 가격만으로 크기를 예측할 수 없다.
 3. Extrinsic parameters (R, t): 각 촬영 위치에서의 카메라 자세. 캘리브레이션 자체에서는 부산물이지만, hand-eye calibration 등에서 별도로 쓰인다.
 
-체커보드를 최소 10장 이상, 다양한 각도와 거리에서 촬영해야 한다. 한쪽으로 치우치면 해당 영역의 왜곡만 보정되고 나머지는 부정확하다. 이미지 전체에 걸쳐 체커보드가 고르게 분포하도록 촬영하는 것이 핵심이다.
-
-reprojection error가 0.5 픽셀 이하면 양호, 0.1 이하면 매우 좋다. 1.0 이상이면 촬영을 다시 하거나 outlier 이미지를 제거해야 한다.
+체커보드를 다양한 각도와 거리에서 촬영하고 이미지 전체에 관측을 분포시킨다. 필요한 장수는 parameter uncertainty와 conditioning, 검출 품질에 따라 달라진다. Reprojection error의 기대 범위도 해상도, 렌즈 모델, 타겟, corner detector에 의존하므로 고정된 pixel 등급표를 쓰지 않는다. 큰 residual 이미지는 자동 삭제하기 전에 blur·반사·검출 실패를 확인하고, 제외 전후의 parameter 안정성과 held-out error를 비교한다.
 
 (참고: [다크 프로그래머 — 카메라 캘리브레이션](https://darkpgmr.tistory.com/32))
 
@@ -233,7 +229,7 @@ Kalibr: 멀티 카메라, Camera-IMU 캘리브레이션 도구
 
 > 추천 자료
 > - [OpenCV 카메라 캘리브레이션 튜토리얼](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — 체커보드 캘리브레이션 step-by-step
-> - [Kalibr 공식 Wiki](https://github.com/ethz-asl/kalibr/wiki) — Camera-IMU 캘리브레이션의 사실상 표준 도구
+> - [Kalibr 공식 Wiki](https://github.com/ethz-asl/kalibr/wiki) — 널리 쓰이는 공개 Camera-IMU 캘리브레이션 도구
 > - [Zhang, "A Flexible New Technique for Camera Calibration" (2000)](https://www.microsoft.com/en-us/research/publication/a-flexible-new-technique-for-camera-calibration/) — 현재 OpenCV 캘리브레이션의 기반이 되는 논문
 > - [Tangram Vision Blog](https://www.tangramvision.com/blog) — 카메라 캘리브레이션, 센서 퓨전 등 실전 엔지니어링 글 모음
 
@@ -243,7 +239,7 @@ Kalibr: 멀티 카메라, Camera-IMU 캘리브레이션 도구
 
 이미지에서 구별 가능한 점(keypoint)과 그 주변을 설명하는 벡터(descriptor)이다.
 
-SLAM을 이해하려면 특징점을 먼저 알아야 한다. 로봇이 카메라를 움직이면서 "지금 보는 장면이 아까 봤던 그곳인지"를 판단하려면 이미지 간에 같은 점을 찾아야 한다. 특징점은 그 대응점을 안정적으로 찾기 위한 핵심 도구다. SLAM과 Visual Odometry는 물론 거의 모든 시각 기반 로보틱스 알고리즘이 특징점에 의존한다.
+SLAM과 Visual Odometry는 카메라가 움직이는 동안 이미지 사이에서 같은 점을 찾아야 한다. 특징점은 그 대응점을 안정적으로 찾는 수단이다.
 
 ### 9.3.1 Keypoint Detection
 
@@ -261,14 +257,14 @@ ORB (Oriented FAST and Rotated BRIEF):
 - 특허 무료
 - 실시간 SLAM에서 널리 사용
 
-ORB는 ORB-SLAM 시리즈의 핵심이다. 특허 무료라서 상업적으로도 자유롭게 쓸 수 있고, 속도가 빨라 실시간 시스템에 적합하다. 로보틱스에서 가장 먼저 접하게 될 feature이다.
+ORB-SLAM 시리즈는 ORB를 사용한다. ORB는 특허 제약이 없고 계산이 빨라 실시간 시스템에 적합하다.
 
 SIFT (Scale-Invariant Feature Transform):
 - 스케일, 회전 불변
 - 높은 반복성
 - 계산 비용 높음 (과거 특허 문제, 현재 해제)
 
-SIFT는 2004년 Lowe가 발표한 알고리즘으로, CV 분야에서 가장 많이 인용된 논문 중 하나다. 스케일과 회전에 불변하는 특징점 추출 원리를 이해하면, 이후 나온 SURF, ORB가 SIFT를 어떻게 개선했는지 자연스럽게 보인다.
+Lowe는 2004년에 SIFT를 발표했다. 스케일과 회전에 불변하는 특징점 추출 원리는 이후 나온 SURF와 ORB를 비교하는 기준이 된다.
 
 SuperPoint (딥러닝 기반):
 - Self-supervised 학습
@@ -276,7 +272,7 @@ SuperPoint (딥러닝 기반):
 - GPU 필요
 
 > 추천 자료
-> - [Lowe, "Distinctive Image Features from Scale-Invariant Keypoints" (2004)](https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf) — SIFT 원논문. 한 번쯤은 읽어볼 가치가 있다
+> - [Lowe, "Distinctive Image Features from Scale-Invariant Keypoints" (2004)](https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf) — SIFT 원논문
 > - [Rublee et al., "ORB: An efficient alternative to SIFT or SURF" (2011)](https://ieeexplore.ieee.org/document/6126544) — ORB 원논문
 > - [First Principles of CV — Feature Detection](https://www.youtube.com/playlist?list=PL2zRqk16wsdqXEMpHrc4Qnb5rA1Cylrhx) — 특징점 검출의 원리를 시각적으로
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — 딥러닝 기반 특징점의 시작
@@ -308,7 +304,7 @@ SuperGlue (딥러닝 기반):
 
 ### 9.3.3 Feature Matching
 
-SLAM에서 카메라가 움직일 때 이전 프레임과 현재 프레임에서 같은 점을 찾아야 한다. feature matching이 바로 이 과정이고, 제대로 이해하지 못하면 왜 SLAM이 tracking lost를 뱉는지 감이 안 온다.
+SLAM은 카메라가 움직일 때 이전 프레임과 현재 프레임에서 같은 점을 찾아야 한다. Feature matching 결과를 보면 `tracking lost`가 대응점 부족에서 시작됐는지, 잘못된 대응에서 시작됐는지 구분할 수 있다.
 
 ```python
 # ORB 특징점 및 디스크립터 추출
@@ -326,7 +322,7 @@ matches = bf.knnMatch(des1, des2, k=2)
 good = [m for m, n in matches if m.distance < 0.75 * n.distance]
 ```
 
-Lowe's ratio test가 핵심이다. kNN으로 가장 가까운 2개의 매치를 찾고, 1등과 2등의 거리 비가 일정 threshold 이하인 것만 "좋은 매치"로 남긴다. 이렇게 하면 애매한 매치(1등과 2등 거리가 비슷한)를 걸러낼 수 있다. 0.75라는 값은 Lowe가 원논문에서 제안한 것인데, 상황에 따라 0.6~0.8 사이에서 조절하면 된다.
+Lowe's ratio test는 kNN으로 가장 가까운 매치 두 개를 찾고, 첫째와 둘째 거리의 비가 threshold 이하인 것만 남긴다. 두 거리가 비슷한 애매한 매치를 이 과정에서 걸러낸다. Lowe는 원논문에서 0.75를 제안했으며, 상황에 따라 0.6~0.8 사이에서 조절할 수 있다.
 
 > 추천 자료
 > - [OpenCV Feature Matching](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — BFMatcher, FLANN, Ratio Test 예제
@@ -447,8 +443,6 @@ flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5
 
 ## 9.6 심화: PnP 문제
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 **Perspective-n-Point (PnP)**은 3D 공간의 점과 2D 이미지의 대응점이 주어졌을 때 카메라 포즈(회전 R + 이동 t)를 추정하는 문제다. SLAM에서 매 프레임 카메라 tracking이 곧 PnP 문제이며, AR에서 마커 기반 위치 추정도 PnP로 푼다.
 
 문제 정의: n개의 3D-2D 대응 {(X_i, x_i)}가 주어졌을 때, 카메라 외부 파라미터 [R|t]를 추정한다.
@@ -534,8 +528,6 @@ Rodrigues 벡터의 방향이 회전축, 크기(norm)가 회전 각도다. 3장�
 
 ## 9.7 심화: RANSAC 변종
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 3장의 robust estimation에서 RANSAC을 소개했다. 실제 연구에서는 vanilla RANSAC을 그대로 쓰는 경우가 드물다. 수렴 속도와 정확도를 개선한 여러 변종이 존재하며, 어떤 것을 쓰느냐에 따라 결과가 크게 달라질 수 있다.
 
 주요 변종:
@@ -548,7 +540,7 @@ Rodrigues 벡터의 방향이 회전축, 크기(norm)가 회전 각도다. 3장�
 
 Lo-RANSAC (Locally Optimized RANSAC):
 - 좋은 모델을 찾으면, 그 모델의 inlier들로 다시 모델을 추정(local optimization)한다.
-- 단순한 아이디어지만 효과가 크다. 특히 inlier ratio가 낮을 때 유용하다.
+- 찾은 모델을 inlier로 다시 추정하므로, 특히 inlier ratio가 낮을 때 유용하다.
 
 PROSAC (Progressive Sample Consensus):
 - 매칭 스코어가 높은 대응점부터 우선적으로 샘플링한다.
@@ -557,7 +549,7 @@ PROSAC (Progressive Sample Consensus):
 MAGSAC++ (Marginalizing Sample Consensus):
 - 가장 골치 아픈 하이퍼파라미터인 inlier threshold σ를 marginalize한다.
 - Threshold를 고정하지 않고 여러 σ 값에 대해 적분하므로, 수동 튜닝이 거의 필요 없다.
-- 현재 OpenCV에서 권장하는 방법이다.
+- OpenCV에서는 `USAC_MAGSAC` 옵션으로 사용할 수 있다.
 
 OpenCV에서 MAGSAC++ 사용:
 
@@ -583,8 +575,8 @@ H, mask = cv2.findHomography(
 
 실무 팁:
 - Iteration 수: `confidence` 파라미터로 제어한다. 0.999면 "99.9% 확률로 올바른 모델을 찾겠다"는 의미. inlier ratio가 낮을수록 필요한 iteration이 기하급수적으로 증가한다.
-- Threshold: MAGSAC++를 쓰면 threshold에 덜 민감하지만, 초기값은 여전히 줘야 한다. Fundamental matrix는 1.0~3.0 pixel, Homography는 3.0~5.0 pixel이 일반적이다.
-- 속도가 중요하면 PROSAC, 정확도가 중요하면 MAGSAC++를 쓴다.
+- Threshold: MAGSAC++를 쓰면 threshold에 덜 민감하지만, 초기값은 여전히 줘야 한다. 예시 코드의 값은 시작점일 뿐이며 영상 해상도와 노이즈에 맞춰 검증해야 한다.
+- PROSAC과 MAGSAC++의 속도·정확도 관계는 매칭 점수의 품질, outlier 비율, 구현에 따라 달라진다. 같은 데이터와 시간 예산으로 비교해 고른다.
 
 > 추천 자료
 > - [Barath et al., "MAGSAC++, a Fast, Reliable and Accurate Robust Estimator" (2020)](https://arxiv.org/abs/1912.05909) — MAGSAC++ 원논문
@@ -594,8 +586,6 @@ H, mask = cv2.findHomography(
 ---
 
 ## 9.8 심화: 학습 기반 특징 매칭
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 ORB, SIFT 같은 hand-crafted feature는 수십 년간 잘 작동해왔지만 반복 패턴, 텍스처 부족, 극단적 조명 변화 등에서 실패한다. 2018년 이후 딥러닝 기반 특징 추출과 매칭이 고전 방법을 넘어서기 시작했다.
 
@@ -609,17 +599,17 @@ SuperPoint (2018) → SuperGlue (2020) → LightGlue (2023)
 SuperPoint:
 - 자기지도 학습으로 키포인트 검출기와 디스크립터를 동시에 학습한다.
 - Homographic adaptation: 합성 변환을 적용하고 역변환해 pseudo ground truth를 생성한다.
-- 반복 패턴에 강하고 고전 방법 대비 repeatability가 높다.
+- 원 논문의 평가 조건에서는 여러 고전 방법보다 높은 repeatability를 보였다.
 
 SuperGlue:
 - 두 이미지의 키포인트를 그래프로 보고, attention mechanism으로 매칭한다.
 - Self-attention으로 같은 이미지 내 키포인트 관계를 학습하고, cross-attention으로 두 이미지 간 매칭을 수행한다.
 - Sinkhorn algorithm으로 최적 할당(optimal assignment) 문제를 푼다.
-- 정확도는 매우 높지만 속도가 느리다 (GPU 필수).
+- 원 논문의 평가에서는 강한 매칭 성능을 보였지만, 연산량과 지연은 입력 특징 수와 하드웨어에 따라 달라진다.
 
 LightGlue:
 - SuperGlue의 경량 버전. Adaptive early stopping으로 쉬운 이미지 쌍은 빨리, 어려운 쌍은 더 많은 layer를 통과시킨다.
-- SuperGlue 대비 속도가 수 배 빠르면서 정확도는 유사하다.
+- 원 논문의 평가에서는 adaptive depth·point pruning을 사용해 SuperGlue보다 낮은 지연으로 유사한 정확도를 보였다. 배수는 하드웨어와 설정에 따라 달라진다.
 
 LoFTR (Detector-Free Local Feature Matching):
 - 키포인트 검출 단계 자체를 제거한다. 이미지 전체에서 dense matching을 수행한다.
@@ -666,7 +656,7 @@ with torch.no_grad():
 dists, match_idxs = matcher(feats0["descriptors"], feats1["descriptors"])
 ```
 
-GPU가 있으면 SuperPoint+LightGlue 조합이 가장 균형이 좋다. GPU 없이 embedded에서 돌려야 하면 여전히 ORB가 현실적이다.
+SuperPoint+LightGlue는 GPU를 사용할 수 있고 학습 기반 매칭의 강건성이 필요한 경우 검토할 수 있다. GPU가 없거나 지연·전력 예산이 작다면 ORB 같은 고전 특징이 더 단순한 기준선이 된다. 최종 선택은 목표 데이터에서 정확도, 지연, 메모리를 함께 측정해 결정한다.
 
 > 추천 자료
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — SuperPoint 원논문
@@ -680,4 +670,4 @@ GPU가 있으면 SuperPoint+LightGlue 조합이 가장 균형이 좋다. GPU 없
 > - **2006~2011**: 실시간을 위한 경량화. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) 등이 등장. 특허 문제와 속도 문제를 해결하면서 실시간 SLAM이 가능해짐
 > - **2015~2019**: 딥러닝의 침투. SuperPoint (2018), SuperGlue (2020) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
 > - **2020~**: Geometry + Learning의 융합. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
-> - **지금 주목할 것**: 딥러닝이 front-end(특징점 추출, 매칭)를 대체하는 추세이지만, back-end의 수학은 그대로이다. 고전 기하학(epipolar geometry, triangulation)과 학습 기반 방법, 둘 다 필요하다
+> - **최근 흐름**: 학습 기반 특징점과 매칭이 front-end에 도입되고 있지만, back-end에서는 여전히 epipolar geometry와 triangulation을 사용한다. 두 계열은 한 시스템 안에서 함께 쓰인다.

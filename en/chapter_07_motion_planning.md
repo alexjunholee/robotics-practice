@@ -1,6 +1,6 @@
 # Ch.7 — Motion Planning & Trajectory Optimization
 
-For a robot to go from A to B, it needs a path. You might think a straight line is enough, but obstacles, joint limits, and dynamic constraints apply at once. Finding a path that satisfies all of these is motion planning; following that path optimally over time is trajectory optimization.
+A robot moving from A to B needs a path that satisfies obstacle, joint-limit, and dynamic constraints. Finding such a path is motion planning; following it optimally over time is trajectory optimization.
 
 ---
 
@@ -35,11 +35,11 @@ The most classical approach: discretize the C-space and find a path with a graph
 
 ### Dijkstra's Algorithm
 
-Finds the shortest path in a weighted graph. It explores every edge, so it guarantees the optimum. Time complexity O((V + E) log V).
+Finds shortest paths in a graph with nonnegative edge weights. With a binary heap and adjacency lists, its time complexity is $O((V+E)\log V)$; a single-goal search may stop once the goal is settled rather than processing every edge.
 
 ### A* Algorithm
 
-Dijkstra plus a heuristic. An estimated distance to the goal (heuristic) guides the search direction. If the heuristic is admissible (no greater than the true distance), A* guarantees the optimum while running faster than Dijkstra.
+Dijkstra plus a heuristic. An estimated distance to the goal guides the search direction. Graph-search A* returns an optimal path when the heuristic is admissible and consistent. A useful heuristic can reduce node expansions, but A* is not guaranteed to run faster than Dijkstra on every graph.
 
 ```python
 import heapq
@@ -86,7 +86,7 @@ def astar_2d(grid, start, goal):
 
 ### Pros and Cons
 
-Grid-based planning guarantees **completeness** — if a solution exists, it is found. But it suffers from the **curse of dimensionality**. Discretizing the C-space of a 6-DOF robot arm into 100 cells per axis gives 100^6 = 10^12 cells. Effectively impossible.
+An algorithm that searches every reachable cell in a finite grid is complete for that **discrete problem**. Grid resolution can still miss a narrow passage in the continuous space, and the method suffers from the **curse of dimensionality**. Discretizing the C-space of a 6-DOF robot arm into 100 cells per axis gives 100^6 = 10^12 cells.
 
 Sampling-based planners emerged to address this.
 
@@ -94,7 +94,7 @@ Sampling-based planners emerged to address this.
 
 ## 7.4 Sampling-Based Planners
 
-Rather than discretizing the C-space, sample it randomly and search for a path. In high-dimensional C-spaces this is the only practical approach.
+Rather than covering the C-space with a uniform fixed grid, draw samples and search for a path. This is an important option in high-dimensional spaces and is also combined with optimization-based planning and search.
 
 ### RRT (Rapidly-exploring Random Tree)
 
@@ -188,7 +188,7 @@ When many path queries are needed in the same environment (e.g., an industrial r
 
 ### RRT-Connect
 
-Kuffner & LaValle (2000). Grow trees from the start and the goal at the same time, and connect the paths when the two trees meet. The most widely used variant in practice; MoveIt2's default planner is also RRT-Connect (via OMPL).
+Kuffner & LaValle (2000). Grow trees from the start and goal and connect them when they meet. It is widely used for finding an initial path quickly, and several MoveIt2 OMPL example configurations select `RRTConnect` as the default planner config. The actual default depends on the distribution and user configuration.
 
 ### The OMPL Library
 
@@ -262,11 +262,11 @@ Cons: struggles with narrow passages, local optima.
 
 ### TrajOpt
 
-Schulman et al. (2014). Based on sequential convex optimization: at each iteration the nonlinear problem is replaced by a linear/quadratic approximation solved as a QP, and a trust region ensures convergence. Collision avoidance uses a signed distance function to yield a continuous gradient.
+Schulman et al. (2014). Based on sequential convex optimization: each iteration solves a linear or quadratic approximation, while a trust region limits where that approximation is trusted. Because the original problem is non-convex, this does not guarantee a global optimum. Collision avoidance uses a signed-distance-based cost so that gradients are available.
 
 ### Trajectory Optimization with CasADi
 
-CasADi is a framework that combines symbolic computation, automatic differentiation, and connections to NLP solvers. It is the de facto standard tool for trajectory optimization.
+CasADi is a widely used framework combining symbolic computation, automatic differentiation, and connections to NLP solvers. For trajectory optimization it is one option alongside Drake, direct solver APIs, and JAX-based implementations.
 
 ```python
 import casadi as ca
@@ -319,21 +319,21 @@ print(f"Max force: {np.max(np.abs(u_opt)):.4f} N")
 
 > **Further reading**
 > - [Matthew Kelly, "An Introduction to Trajectory Optimization" (SIAM Review 2017)](https://www.matthewpeterkelly.com/research/MatthewKelly_IntroTrajectoryOptimization_SIAM_Review_2017.pdf) — solid tutorial comparing collocation and shooting.
-> - [CasADi](https://web.casadi.org/) — standard tool for NLP implementation.
+> - [CasADi](https://web.casadi.org/) — automatic differentiation and NLP-solver integration.
 > - [Drake Trajectory Optimization](https://drake.mit.edu/) — includes direct collocation examples.
 
 ---
 
 ## 7.6 MoveIt2: Motion Planning in Practice
 
-MoveIt2 is a ROS2-based motion planning framework. It is the most widely used robot arm planning tool in industry and research alike.
+MoveIt2 is a public ROS2-based motion-planning framework widely used in robot-arm research and applications.
 
 **Architecture:**
 - **Planning Scene**: manages the 3D model of the robot plus the environment (obstacles). The basis for collision checking.
 - **Planning Pipeline**: call a planner such as OMPL → validate the path → time parameterization.
 - **Move Group Interface**: the user-facing API. Abstracts goal setting, planning, and execution.
 
-**OMPL integration**: MoveIt2 uses OMPL as its default planning backend. Planner type and parameters are set in `ompl_planning.yaml`.
+**OMPL integration**: OMPL is a representative planning-pipeline plugin available in MoveIt2. Planner type and parameters are set in `ompl_planning.yaml`, and other pipelines can also be selected.
 
 ```yaml
 # ompl_planning.yaml example
@@ -361,8 +361,6 @@ At every stage, MoveIt2 handles collision avoidance and joint limits automatical
 ---
 
 ## 7.7 Advanced: Optimization-Based Planning
-
-*If you want to become a researcher, start reading here.*
 
 ### Constrained Nonlinear Optimization
 
@@ -405,8 +403,6 @@ The difference: motion-planning trajectory optimization usually computes the ful
 
 ## 7.8 Advanced: Task and Motion Planning (TAMP)
 
-*If you want to become a researcher, start reading here.*
-
 To carry out "place the cup on the shelf":
 
 1. Recognize where the cup is.
@@ -435,8 +431,6 @@ TAMP assumes the environment dynamics and actions are deterministic. When both d
 ---
 
 ## 7.9 Advanced: Decision-Making Under Uncertainty (POMDP and Belief Space Planning)
-
-*If you want to become a researcher, start reading here.*
 
 §7.1–§7.8 assumed the robot knows its own state and the environment exactly. Real robots observe only partial information through noisy sensors. A robot that does not know which side of a symmetric corridor it is on, a situation where it is uncertain whether a door is open or closed — planning from the "current best-estimate state" fails in these cases. The plan must be built directly over the belief (the posterior distribution). Thrun, Burgard, and Fox's *Probabilistic Robotics* §15.2 and §16 address this problem.
 
@@ -672,7 +666,7 @@ The outer loop either holds a static belief database or generates beliefs natura
 
 ### 7.9.8 Experiments: Heaven/Hell and Find-and-Fetch
 
-**Heaven/Hell problem**: in a T-shaped corridor, one end is heaven (+1) and the other is hell (−1). Only a priest near the entrance knows which is which. The robot must first ask the priest (information gathering), then head in the correct direction. The POMDP planner automatically learns a policy that detours to the priest. Going directly on the shortest path reaches hell 50% of the time; consulting the priest guarantees the right direction.
+**Heaven/Hell problem**: in a T-shaped corridor, one end is heaven (+1) and the other is hell (−1). Only a priest near the entrance knows which is which. The robot must first ask the priest (information gathering), then head in the correct direction. In this toy model, the POMDP planner learns a policy that detours to the priest. Under the experiment's assumed reliable observation, going directly reaches hell half the time whereas consulting the priest reveals the correct direction.
 
 **Find-and-Fetch (monocular camera)**: the robot must find and retrieve a target object using a monocular camera. The camera gives the object's direction but not its distance. MC-POMDP learns a policy that actively changes viewpoint to reduce distance uncertainty, observing the object from multiple angles to narrow down its position before approaching.
 
@@ -751,7 +745,7 @@ Point-based value iteration (SARSOP, HSVI, PBVI) performs alpha-vector backup on
 
 **Deep POMDP**: DRQN (Recurrent Q-network), DVRL (Igl et al.). The RNN's hidden state serves as an implicit belief. MC-POMDP's nearest-neighbor function approximation replaced by neural function approximation.
 
-AMDP's core idea lives on under other names. Bayes-adaptive MDP (BAMDP) uses the posterior distribution over model parameters as an augmented state. Active SLAM includes the variance of the position belief in the cost function. In NeRF-based active perception, entropy-augmented planning has become a standard tool.
+The same principle appears in other methods. Bayes-adaptive MDP (BAMDP) uses the posterior distribution over model parameters as an augmented state. Active SLAM includes the variance of the position belief in the cost function, and NeRF-based active perception also uses entropy-augmented planning.
 
 Ch.8 §8.3's deep RL methods (PPO, SAC) learn from experience and need no model (transition probabilities, observation model). POMDP planning computes the optimal policy when the model is known. Without a model, MC-POMDP does not run either. MC-POMDP sits at the intersection: belief tracked with the model, Q-values learned from experience.
 
@@ -800,13 +794,13 @@ Value iteration over belief is mathematically clean but scales doubly exponentia
 ```
 1979 ── Visibility graph-based path planning
 1996 ── PRM (Kavraki et al.) — the start of sampling-based planning
-1998 ── RRT (LaValle) — the standard for single-query planning
-2000 ── RRT-Connect (Kuffner & LaValle) — the most widely used variant in practice
+1998 ── RRT (LaValle) — an influential single-query sampling planner
+2000 ── RRT-Connect (Kuffner & LaValle) — a variant widely provided by practical motion-planning libraries
 2009 ── CHOMP (Ratliff et al.) — gradient-based trajectory optimization
 2011 ── RRT* (Karaman & Frazzoli) — asymptotic optimality guarantee
 2012 ── OMPL 1.0 released — unified library of sampling-based planners
 2014 ── TrajOpt (Schulman et al.) — sequential convex optimization
-2019 ── MoveIt2 (ROS2) — industrial/research standard framework
+2019 ── MoveIt2 (ROS2) — an open motion-planning framework used in research and industry
 2022 ── SayCan (Google) — LLM + motion planning
 2023 ── Contact-implicit trajectory optimization becomes practical
 2024 ── LLM-based TAMP research spreads

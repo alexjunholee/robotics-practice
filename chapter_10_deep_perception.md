@@ -1,22 +1,22 @@
 # Ch.10 — 딥러닝 기반 인식 (Deep Learning for Perception)
 
-로봇이 "무엇을 보고 있는지"를 이해하는 핵심 기술들이다. 고전 CV가 "이미지를 어떻게 처리하고, 기하학적 관계를 어떻게 추출하는가"에 집중했다면, 여기서는 "이미지 안에 뭐가 있는지"를 인식하는 데 집중한다. 물체 탐지, 분류, 분할이 그 대상이다. 로봇이 "저기 빨간 컵이 있으니 집어" 같은 명령을 수행하려면, 이 기술들이 필요하다.
+고전 CV가 영상 처리와 기하 관계를 직접 설계했다면, 학습 기반 인식은 데이터에서 표현을 학습해 물체의 클래스, 위치, 영역을 예측한다. 분류, 물체 탐지, 분할은 로봇이 장면의 대상을 찾아 조작하는 데 필요한 서로 다른 출력을 만든다.
 
 ---
 
 ## 10.1 프레임워크 선택
 
-어떤 딥러닝 프레임워크를 쓸지는 생각보다 중요한 결정이다. 연구 코드를 읽고 재현하려면 그 코드가 쓰는 프레임워크를 알아야 하고, 자기 모델을 만들려면 하나는 제대로 알아야 한다.
+프레임워크 선택은 기존 연구 코드와 사전학습 모델을 실행할 수 있는지에 영향을 준다. 하나의 프레임워크에서 모델 정의, 학습, 추론, 디버깅 흐름을 익히면 다른 코드베이스도 비교하기 쉽다.
 
 ### 10.1.1 PyTorch (권장)
 
 **장점**:
 - 직관적인 동적 그래프 (eager execution)
 - 디버깅 용이
-- 연구 커뮤니티에서 표준
+- 연구 코드와 사전학습 모델 생태계가 큼
 - 풍부한 사전학습 모델 (torchvision, timm)
 
-현실적인 이유가 있다. 2024년 기준 NeurIPS, CVPR, ICLR 등 주요 학회에서 발표되는 논문의 코드 공개 중 80% 이상이 PyTorch이다. 최신 논문을 읽고 코드를 돌려보고 수정하려면, PyTorch를 모르면 사실상 진행이 안 된다.
+실용적인 이유도 있다. 많은 공개 연구 코드와 사전학습 모델이 PyTorch를 제공하므로, PyTorch에 익숙하면 최신 논문의 구현을 실행하고 수정하기 쉽다. 다만 특정 학회 코드의 사용 비율은 집계 방식에 따라 달라지므로 고정된 수치로 일반화하지 않는다.
 
 **설치**:
 
@@ -62,13 +62,13 @@ x = x.to(device)
 
 ## 10.2 딥러닝 기초 개념
 
-이 섹션의 개념들을 모르면 "왜 딥러닝이 이미지 인식에서 고전 방법을 압도하는가"를 이해할 수 없다. CNN의 구조를 모르면 ResNet이 왜 중요한지 모르고, Transformer를 모르면 ViT와 DETR이 기존 접근을 왜 대체하는지도 모른다.
+CNN의 합성곱 구조는 ResNet의 배경이 되고, Transformer의 attention 구조는 ViT와 DETR이 기존 convolution 기반 접근과 어떻게 다른지 설명한다.
 
 ### 10.2.1 CNN (Convolutional Neural Network)
 
-이미지에서 공간적 특징을 추출하는 핵심 구조이다.
+CNN은 학습된 필터를 영상 전체에 적용해 공간 특징을 추출한다.
 
-CNN은 "이미지의 지역적 패턴(에지, 코너, 텍스처)을 자동으로 학습"하는 구조이다. 앞서 배운 고전 CV에서는 SIFT, ORB 같은 특징을 사람이 설계(hand-craft)했다. CNN은 데이터에서 최적의 특징을 스스로 배운다. 딥러닝의 전환점이 여기다.
+CNN은 에지, 코너, 텍스처 같은 지역 패턴을 데이터에서 학습한다. 앞서 본 SIFT와 ORB가 사람이 설계한 특징이라면, CNN의 필터는 학습 목적함수와 함께 최적화된다.
 
 **주요 구성 요소**:
 - Convolution Layer: 필터로 특징 추출
@@ -104,9 +104,9 @@ Convolution은 선형대수적으로 보면 "필터(kernel)와 이미지 패치�
 Attention(Q, K, V) = softmax(QK^T / √d_k) V
 ```
 
-CNN과의 차이를 알면 왜 Transformer가 뜨는지 바로 이해된다. CNN은 "가까운 픽셀끼리만" 정보를 교환하지만 (local receptive field), Transformer의 Self-Attention은 "이미지의 어떤 부분이든 서로 참조"할 수 있다 (global attention). 이 덕분에 물체의 전체적인 맥락을 파악하는 데 유리하다. 2020년 이후 비전 분야에서 Transformer가 CNN을 빠르게 대체하는 추세이다.
+CNN의 convolution은 한 층에서 국소 이웃을 모으고, 층을 쌓으며 receptive field를 넓힌다. Transformer의 self-attention은 한 층에서 떨어진 위치 사이의 관계도 계산한다. 2020년 이후 비전 모델은 pure Transformer와 CNN-Transformer hybrid를 분류·탐지·분할에 함께 사용해 왔다.
 
-**Vision Transformer (ViT)**는 이미지를 16×16 같은 고정 크기 패치로 나누고, 각 패치를 NLP에서 "단어"처럼 취급해서 Transformer encoder에 넣는다. 아이디어 자체는 단순하지만, 대규모 데이터에서 CNN을 넘어서는 성능을 보여주면서 최근 비전 태스크의 주력이 되었다.
+**Vision Transformer (ViT)**는 이미지를 16×16 같은 고정 크기 패치로 나누고, 각 패치를 NLP의 token처럼 취급해 Transformer encoder에 넣는다. 원 논문은 대규모 사전학습 조건에서 비교 CNN보다 높은 image-classification 성능을 보고했고, 이후 Transformer 계열은 여러 비전 태스크의 주요 선택지가 되었다.
 
 > **추천 자료**
 > - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — Transformer 원논문
@@ -118,7 +118,7 @@ CNN과의 차이를 알면 왜 Transformer가 뜨는지 바로 이해된다. CNN
 
 ## 10.3 Image Classification
 
-분류(classification)는 "이 이미지에 뭐가 있는가?"라는 가장 기본적인 질문이다. 복잡한 detection, segmentation 모델도 내부적으로 분류기를 포함하고 있으므로, 분류 모델을 이해하는 것이 기본 중의 기본이다. 사전학습된 분류 모델의 backbone (ResNet, ViT 등)은 다른 태스크의 feature extractor로 널리 쓰인다.
+분류(classification)는 이미지에 무엇이 있는지 묻는 기본 태스크다. Detection과 segmentation 모델도 내부에 분류기를 포함한다. 사전학습된 분류 모델의 backbone(ResNet, ViT 등)은 다른 태스크의 feature extractor로 쓰인다.
 
 **대표 모델**:
 
@@ -129,7 +129,7 @@ CNN과의 차이를 알면 왜 Transformer가 뜨는지 바로 이해된다. CNN
 | ViT | Transformer 기반 | 대규모 데이터, 고성능 |
 | ConvNeXt | CNN의 현대화 | ViT와 경쟁 |
 
-ResNet의 Residual Connection은 "입력을 출력에 더해주는" 단순한 아이디어인데, 이 하나가 수십 층 깊은 네트워크의 학습을 가능하게 만들었다. 2015년 발표 이후 거의 모든 딥러닝 아키텍처의 기본 빌딩 블록이 되었다.
+ResNet의 residual connection은 블록의 입력을 출력에 더해 깊은 네트워크의 학습을 안정시킨다. 2015년 발표 이후 여러 딥러닝 아키텍처가 이 구조를 채택했다.
 
 **사전학습 모델 사용**:
 
@@ -144,19 +144,19 @@ model.fc = nn.Identity()  # 마지막 FC 제거
 features = model(x)  # (batch, 2048)
 ```
 
-이 패턴은 매우 자주 쓰인다. ImageNet으로 사전학습된 모델의 마지막 분류 레이어만 제거하고, 그 전까지의 출력을 "feature"로 사용하는 것이다. 이를 transfer learning이라 하고, 로보틱스에서 새로운 물체를 인식시킬 때 거의 항상 이 방식을 쓴다.
+ImageNet으로 사전학습된 모델의 마지막 분류 레이어를 제거하고, 앞단의 출력을 feature로 재사용할 수 있다. 이 transfer learning 패턴은 새 데이터가 제한된 인식 문제에서 초기 표현을 제공한다.
 
 > **추천 자료**
-> - [He et al., "Deep Residual Learning for Image Recognition" (2015)](https://arxiv.org/abs/1512.03385) — ResNet 원논문. 딥러닝 역사상 가장 많이 인용된 논문 중 하나
-> - [Papers With Code — Image Classification](https://paperswithcode.com/task/image-classification) — 최신 벤치마크와 SOTA 모델 확인
-> - [timm (PyTorch Image Models) 라이브러리](https://github.com/huggingface/pytorch-image-models) — 수백 개의 사전학습 모델을 한 줄로 로드. 실무에서 매우 유용
+> - [He et al., "Deep Residual Learning for Image Recognition" (2015)](https://arxiv.org/abs/1512.03385) — ResNet 원논문이자 후속 비전 모델에 큰 영향을 준 연구
+> - [Papers With Code — Image Classification](https://paperswithcode.com/task/image-classification) — 공개 구현과 과거 leaderboard를 찾는 출발점. 최신 수치와 protocol은 벤치마크 공식 페이지와 원 논문에서 다시 확인
+> - [timm (PyTorch Image Models) 라이브러리](https://github.com/huggingface/pytorch-image-models) — 수백 개의 사전학습 모델을 한 줄로 로드
 > - [Stanford CS231n — Training Neural Networks](https://www.youtube.com/playlist?list=PLoROMvodv4rMFqRtEuo6SGjY4XbRIVRd4) — 학습 기법과 트릭
 
 ---
 
 ## 10.4 Object Detection
 
-로봇이 "저 테이블 위에 컵이 어디 있지?"를 알려면, 단순 분류가 아니라 "어디에 뭐가 있는지"를 알아야 한다. 그것이 object detection이다. Bounding box로 물체의 위치와 클래스를 동시에 예측하는 태스크이며, 로봇 manipulation, 자율주행 등 거의 모든 응용에서 쓰인다.
+분류가 컵의 존재를 알려준다면, manipulation에는 컵의 위치도 필요하다. Object detection은 물체의 클래스와 bounding box를 함께 예측하며, 로봇 manipulation과 자율주행 등에 쓰인다.
 
 ### 10.4.1 Two-Stage Detectors
 
@@ -177,7 +177,7 @@ Faster R-CNN은 two-stage detection의 대표작이고, 정확도가 중요한 �
 - 실시간 처리 가능 (30+ FPS)
 - 버전: YOLOv5, YOLOv8, YOLOv11 (Ultralytics)
 
-YOLO는 이름 그대로 "한 번만 본다" — 이미지 전체를 한 번에 처리해서 모든 물체를 탐지한다. 로봇 시스템에서 실시간성이 중요할 때 가장 먼저 고려하는 모델이다. Ultralytics의 YOLOv8/v11은 설치와 사용이 매우 간편해서 프로토타이핑에 최적이다.
+YOLO는 two-stage 방식처럼 후보 영역을 먼저 만들지 않고 이미지 전체를 한 번에 처리한다. 실시간 처리가 필요한 로봇 시스템에서 사용할 수 있다. Ultralytics의 YOLOv8/v11은 설치와 사용 절차가 짧아 프로토타이핑에 적합하다.
 
 ```python
 from ultralytics import YOLO
@@ -197,7 +197,7 @@ results[0].show()
 > **추천 자료**
 > - [Redmon et al., "You Only Look Once: Unified, Real-Time Object Detection" (2016)](https://arxiv.org/abs/1506.02640) — YOLO 원논문. 간결하고 읽기 좋다
 > - [Ultralytics YOLOv8 문서](https://docs.ultralytics.com/) — 설치부터 커스텀 학습까지 잘 정리
-> - [Papers With Code — Object Detection](https://paperswithcode.com/task/object-detection) — 최신 SOTA 확인
+> - [Papers With Code — Object Detection](https://paperswithcode.com/task/object-detection) — 공개 구현과 과거 leaderboard를 찾는 출발점. 최신 수치와 protocol은 벤치마크 공식 페이지와 원 논문에서 다시 확인
 > - [다크 프로그래머 — precision, recall의 이해](https://darkpgmr.tistory.com/162) — detection 평가 지표를 직관적으로 설명
 
 ### 10.4.3 Transformer-based
@@ -208,7 +208,7 @@ results[0].show()
 > - [Carion et al., "End-to-End Object Detection with Transformers" (2020)](https://arxiv.org/abs/2005.12872) — DETR 원논문
 > - [Yannic Kilcher — DETR 설명](https://www.youtube.com/watch?v=T35ba_VXkMY) — 논문을 잘 풀어서 설명
 > - [HuggingFace — Object Detection 가이드](https://huggingface.co/docs/transformers/tasks/object_detection) — Transformers 라이브러리로 DETR 사용하기
-> - [Zhao et al., "DETRs Beat YOLOs on Real-time Object Detection" (RT-DETR, CVPR 2024, arXiv:2304.08069)](https://arxiv.org/abs/2304.08069) — DETR 계열 최초로 YOLO급 실시간 속도 달성. 실시간 detection의 새로운 방향
+> - [Zhao et al., "DETRs Beat YOLOs on Real-time Object Detection" (RT-DETR, CVPR 2024, arXiv:2304.08069)](https://arxiv.org/abs/2304.08069) — 논문의 비교 설정에서 실시간 DETR의 속도·정확도 개선을 보고
 > - [Cheng et al., "YOLO-World: Real-Time Open-Vocabulary Object Detection" (CVPR 2024, arXiv:2401.17270)](https://arxiv.org/abs/2401.17270) — YOLO에 텍스트 프롬프트 기반 open-vocabulary detection 추가. 로보틱스에서 임의 물체 탐지에 실용적
 
 ---
@@ -217,13 +217,13 @@ results[0].show()
 
 픽셀 단위로 클래스를 예측하는 태스크이다.
 
-로봇 manipulation을 생각하면 차이가 바로 보인다. detection은 bounding box로 대략적인 위치만 알려주지만, segmentation은 물체의 정확한 경계를 알려준다. 로봇이 물체를 잡으려면 bounding box가 아니라 정확한 윤곽이 필요하고, 자율주행에서 도로/인도/차선을 구분하려면 픽셀 단위의 분류가 필수이다.
+로봇 manipulation을 생각하면 차이가 바로 보인다. detection은 bounding box를 예측하지만, semantic segmentation은 각 픽셀의 class를 예측해 물체와 배경의 경계를 더 세밀하게 표현한다. 예측 경계가 실제 윤곽과 정확히 일치하는 것은 아니므로 grasping에는 depth·instance 분리·불확실성도 함께 확인해야 한다. 자율주행의 도로·인도·차선 구분에도 픽셀 단위 분류가 쓰인다.
 
 **대표 모델**:
 
 | 모델 | 특징 |
 | --- | --- |
-| FCN | 최초의 end-to-end segmentation |
+| FCN | fully convolutional end-to-end segmentation의 초기 대표 모델 |
 | U-Net | Encoder-Decoder 구조, 의료 영상에서 시작 |
 | DeepLab v3+ | Atrous convolution, 다중 스케일 |
 | SegFormer | Transformer 기반, 경량 디코더 |
@@ -295,13 +295,11 @@ depth = result['depth']
 
 ## 10.8 심화: 학습 레시피
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-모델 아키텍처만 알면 연구할 수 있을 것 같지만, 실제로 "학습이 잘 되게 하는 것"이 전체 연구 시간의 절반 이상을 차지한다. 같은 모델이라도 learning rate 하나 잘못 잡으면 수렴하지 않고, augmentation 하나 추가하면 정확도가 몇 % 뛸 수 있다. 아래는 실무에서 반복적으로 쓰이는 학습 테크닉이다.
+모델 아키텍처만으로는 재현 가능한 결과를 얻기 어렵다. 같은 모델도 learning rate와 augmentation 설정에 따라 수렴과 성능이 달라진다. 아래는 실무에서 반복적으로 쓰이는 학습 기법이다.
 
 **Learning Rate Schedule**:
 
-- Cosine Annealing with Warm-up: 가장 널리 쓰이는 스케줄. 초기 몇 epoch 동안 learning rate를 0에서 목표값까지 선형으로 올리고(warm-up), 이후 cosine 곡선으로 감쇠한다.
+- Cosine Annealing with Warm-up: 자주 쓰이는 선택지 중 하나다. 초기 몇 epoch 동안 learning rate를 0에서 목표값까지 선형으로 올리고(warm-up), 이후 cosine 곡선으로 감쇠한다.
 
 $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(\frac{t \cdot \pi}{T}\right)\right)$$
 
@@ -459,11 +457,11 @@ class MyClassifier(nn.Module):
 
 ## 10.10 심화: Knowledge Distillation
 
-큰 모델(teacher)의 "지식"을 작은 모델(student)에 전달하는 기법이다. 로보틱스에서 특히 중요한 이유는, VFM 같은 거대 모델을 edge device에서 돌려야 하기 때문이다. SAM을 Jetson에서 실시간으로 돌리고 싶다면, distillation이 거의 유일한 방법이다.
+큰 모델(teacher)의 "지식"을 작은 모델(student)에 전달하는 기법이다. 로보틱스에서는 VFM 같은 거대 모델을 edge device에서 실행하려고 distillation을 쓴다. SAM을 Jetson에서 실시간으로 실행할 때도 distillation을 적용한다.
 
 **Teacher-Student 구조**:
 
-Teacher 모델(큰 모델, 이미 학습됨)의 출력을 student 모델(작은 모델)이 모방하도록 학습한다. Hard label(정답)보다 teacher의 soft prediction이 더 많은 정보를 담고 있다는 점이 핵심이다.
+Teacher 모델(큰 모델, 이미 학습됨)의 출력을 student 모델(작은 모델)이 모방하도록 학습한다. Teacher의 soft prediction은 hard label(정답)보다 더 많은 정보를 담는다.
 
 예를 들어, "고양이" 이미지에 대해 hard label은 [1, 0, 0]이지만, teacher의 soft prediction은 [0.85, 0.10, 0.05]일 수 있다. 이 soft prediction에는 "고양이와 개가 어느 정도 유사하다"는 정보가 담겨 있고, student는 이 정보까지 학습한다.
 
@@ -471,7 +469,7 @@ Teacher 모델(큰 모델, 이미 학습됨)의 출력을 student 모델(작은 
 
 $$\mathcal{L}_{KD} = \text{KL}\left(\sigma\left(\frac{z_t}{\tau}\right) \| \sigma\left(\frac{z_s}{\tau}\right)\right)$$
 
-여기서 z_t, z_s는 각각 teacher, student의 logits이고, τ는 temperature이다. τ > 1이면 probability distribution이 더 "부드러워"져서 클래스 간 관계 정보가 더 많이 전달된다. 일반적으로 τ = 3~5를 사용한다.
+여기서 z_t, z_s는 각각 teacher, student의 logits이고, τ는 temperature이다. τ > 1이면 probability distribution이 더 "부드러워"져서 클래스 간 관계 정보가 더 많이 전달된다. τ = 3~5를 사용한다.
 
 전체 loss는 hard label loss와 distillation loss의 가중 합이다:
 
@@ -566,7 +564,7 @@ $$\mathcal{L} = \mathcal{L}_{task}(D_s) - \lambda \cdot \mathcal{L}_{domain}(D_s
 - CoTTA: continual TTA. 시간에 따라 distribution이 변하는 경우에도 적응한다.
 
 ```python
-# TENT 핵심 아이디어 (간략화)
+# TENT 업데이트 과정 (간략화)
 model.eval()
 # BN의 affine parameter만 학습 가능하게
 for m in model.modules():
@@ -587,12 +585,12 @@ for batch in test_loader:
 
 **Sim-to-Real Gap과의 연결**:
 
-실제 로보틱스에서는 이 기법들을 조합한다:
+실제 로보틱스에서는 목표와 가용 데이터에 따라 이 기법들을 조합할 수 있다:
 1. 시뮬레이터에서 domain randomization으로 다양한 데이터를 생성한다.
 2. 실제 환경의 소량 데이터로 adversarial adaptation을 수행한다.
 3. 배포 후 TTA로 환경 변화에 지속 적응한다.
 
-이 조합이 현재 sim-to-real transfer에서 가장 널리 쓰이는 접근법이다.
+이 세 단계를 항상 함께 쓰는 것이 표준은 아니다. Domain randomization만 쓰거나, 실제 데이터 fine-tuning을 추가하거나, 배포 중 adaptation을 금지하는 등 안전성과 계산 예산에 맞춰 조합을 정한다.
 
 > **추천 자료**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — Domain randomization 원논문
@@ -606,6 +604,6 @@ for batch in test_loader:
 > - 2012: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. hand-crafted feature 시대의 전환점
 > - 2014~2015: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
 > - 2017: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
-> - 2020~2021: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 새 패러다임. DETR로 detection에도 Transformer 적용. Swin Transformer가 다양한 비전 태스크에서 SOTA 달성
+> - 2020~2021: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 접근이 확산됐고 DETR은 detection에 Transformer를 적용했다. Swin Transformer 원 논문은 당시 여러 공개 비전 benchmark에서 비교 모델보다 높은 점수를 보고했다.
 > - 2022~: ConvNeXt가 CNN 기반 모델도 여전히 경쟁력이 있음을 보였다. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. 이후 depth estimation, 3D scene understanding이 딥러닝의 다음 영역으로 부상
-> - 지금 주목할 것: 단일 태스크 모델에서 foundation model로의 전환. DINOv2 하나로 detection, segmentation, depth feature를 모두 추출하는 파이프라인이 실험적으로 등장하고 있다
+> - **최근 흐름**: 하나의 foundation model 표현을 detection, segmentation, depth estimation에 함께 사용하는 파이프라인이 연구되고 있다. DINOv2 특징을 여러 downstream task에 재사용하는 방식이 한 예다.

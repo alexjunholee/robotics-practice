@@ -1,6 +1,6 @@
 # Ch.1 — Introduction: What Is Spatial AI?
 
-Sketch the full map of the Spatial AI field in your head first. Only then do the individual techniques in later chapters feel necessary, and you see how they connect to each other.
+Begin with a map of the Spatial AI field. It provides the context needed to see why the techniques in later chapters matter and how they connect.
 
 ## 1.1 Defining Spatial AI
 
@@ -24,12 +24,12 @@ All of these techniques face a common obstacle: uncertainty. Thrun, Burgard, Fox
 
 > **Further reading**
 > - [Andrew Davison — From SLAM to Spatial AI (MIT Robotics)](https://www.youtube.com/watch?v=BRRtlR0C_CY) — Prof. Andrew Davison's talk laying out the vision for Spatial AI. Worth watching to orient yourself in this field.
-> - [FutureMapping paper (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — The paper that first systematized the Spatial AI concept.
+> - [FutureMapping paper (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — A 2018 paper proposing a Spatial AI system that combines object-level mapping with prediction of future states.
 > - [Cyrill Stachniss — Introduction to Mobile Robotics](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — Prof. Cyrill Stachniss's mobile robotics lectures at the University of Bonn. A well-organized treatment of the foundational concepts behind Spatial AI.
 
 ## 1.2 Why It Matters
 
-The techniques you need to dig into depend on which domain you want to work in. For autonomous driving, focus on LiDAR and sensor fusion; for AR/VR, dig into visual-inertial systems. Knowing the full application landscape is what lets you build your own roadmap.
+The techniques to study in depth depend on the application domain. Autonomous driving places more emphasis on LiDAR and sensor fusion, whereas AR/VR relies heavily on visual-inertial systems. A view of the broader application landscape helps readers choose an appropriate learning path.
 
 Spatial AI is the core technology in the following fields:
 
@@ -43,18 +43,16 @@ Spatial AI is the core technology in the following fields:
 
 ## 1.3 Why Robotics Is Hard
 
-"Won't robotics be solved once AI advances?" — a question I hear often. It won't. What AI improves and what makes robotics hard are different things.
+"Won't advances in AI solve every problem in robotics?" The answer is no: AI improves some parts of a robotic system, while many of the field's difficulties arise elsewhere.
 
-Most of the difficulty in robotics arises at the interface with the physical world:
+Many of the difficulties in robotics arise at the interface with the physical world:
 
-- **No undo.** A code bug that triggers a robot collision damages equipment or injures people. There is no rollback.
-- **Iteration is slow.** Edit code → upload → reset the environment → ensure safety → run → physically verify. One cycle takes minutes to tens of minutes.
-- **Sensor data is always dirty.** Backlight, motion blur, drift, frame drops. "Works well on clean data" is meaningless in robotics.
-- **Real-time constraints apply.** If obstacle avoidance is 200 ms late, you collide. High accuracy is useless without speed.
-- **Edge cases are fatal.** An LLM that is wrong 5 times out of 100 is still useful. An autonomous vehicle that is wrong once in a million is an accident.
-- **There is a sim-to-real gap.** A simulator's friction coefficients, inertia, and noise are approximations. When those errors accumulate, behavior on the real robot diverges.
-
-In summary:
+- A code bug that causes a collision can damage equipment or injure a person, so the outcome cannot be rolled back like a software deployment.
+- Each experiment may require editing, uploading, resetting the environment, establishing safety, running, and physical inspection. One cycle can take minutes or tens of minutes.
+- Sensor data contains backlight, motion blur, drift, and dropped frames. Performance on clean data alone does not predict behavior in the field.
+- Functions such as obstacle avoidance must satisfy response-time requirements as well as accuracy requirements.
+- A rare edge case can still lead to a collision or safety incident.
+- A simulator approximates friction, inertia, and noise, and accumulated modeling error can change the behavior of a physical robot.
 
 | General software | Robotics |
 |---|---|
@@ -65,17 +63,15 @@ In summary:
 | Response lag → inconvenience | Response lag → accident |
 | Same input → same output | Same code, different results depending on environment |
 
-There are clearly areas that AI advances will improve: recognition accuracy, decision quality, natural language command understanding, and so on. But the right column of the table above — iteration speed, sensor noise, real-time constraints, breakage risk — belongs to the domain of physical law. Scaling models doesn't solve it.
-
-This is why this document covers math, sensors, SLAM, and calibration. Training one AI model alone won't make a robot work.
+Advances in AI improve areas such as recognition accuracy and natural-language command understanding. The problems in the right column of the table—iteration speed, sensor noise, real-time constraints, and risk of damage—arise from interaction with the physical world. Increasing model scale alone does not resolve them, and training a single AI model does not produce a working robotic system.
 
 ### What Roboticists Do in the AI Era
 
 In an era where AI writes code, summarizes papers, and proposes experiments, where does a roboticist's value lie?
 
-- **Problem definition**: tell AI to "solve this problem" and it solves it, but it cannot judge "which problem should be solved". Which sensor combination suits this environment, which accuracy is sufficient for this application, which trade-offs are acceptable — only someone who knows the domain can judge these. (*The general frame for problem definition is covered in [Research Notes Ch.1](../../research-notes/guide.html#ch1-리뷰-논문에서-시작하라) and [Research Notes Ch.2](../../research-notes/guide.html#ch2-문제-정의는-답보다-먼저-좁혀진다) *(Korean; English version planned)*.*)
+- **Problem definition**: AI can help solve a stated problem, but it cannot determine which problem deserves attention. Choosing a sensor suite for an environment, deciding what accuracy an application requires, and accepting the right trade-offs all demand domain knowledge. (*The general framework for problem definition is covered in [Research Notes Ch.1](../../research-notes/guide.html#chapter-1) and [Research Notes Ch.2](../../research-notes/guide.html#chapter-2) (Korean only).*)
 - **System integration**: Turning perception modules, control modules, communication stacks, and hardware into a single working system. AI can write code for each module, but designing the interfaces, timing, and exception handling between modules is the engineer's job.
-- **Interface with the physical world**: Whether a cable came loose, whether dust settled on a sensor lens, whether a motor overheated — AI cannot solve problems it cannot reach via ssh. You need someone standing in front of the robot, touching it with their hands.
+- **Interface with the physical world**: A loose cable, dust on a sensor lens, or an overheating motor can be difficult to diagnose through a remote connection alone. Someone must inspect the robot and its hardware directly.
 - **Judging reliability**: Even when AI reports "99% accuracy", whether that 1% leads to a safety incident is something an engineer must judge. 99% is not enough in autonomous driving, but 99% may be enough for an indoor serving robot.
 
 Even when AI writes the code and summarizes the papers, it can't do these four things for you.
@@ -94,15 +90,15 @@ Use this document as a **reference**:
 Mathematical foundations → Sensors → Computer vision basics → SLAM → Deep learning → VFM/VLA → Lab direction
 ```
 
-Read a SLAM paper without the math and you get stuck on the equations; without knowing sensor characteristics, you cannot understand why an algorithm fails in particular situations. Building up from the fundamentals in order is ultimately the fast path.
+The mathematics explains the equations in a SLAM paper, while sensor characteristics explain why an algorithm fails under particular conditions. Studying these foundations in sequence reduces the gaps that otherwise appear in later chapters.
 
 ### Staged Learning Path
 
 Below is a more concrete staged roadmap. Adjust the pace to your background, but don't skip any stage.
 
-**Entry stage — getting tools under your fingers**
+**Entry stage — learning the tools**
 
-The goal of this stage is to handle the basic tools research requires with full fluency. You should be able to read code, run it, and interpret the results.
+The goal of this stage is to become comfortable with the basic tools used in research. You should be able to read code, run it, and interpret the results.
 
 **What to learn**:
 1. **Reading C++ code** — the lab's core code (SLAM, ROS packages) is in C++. You don't need to write it from scratch at first, but you need to be able to read and modify its structure.
@@ -116,14 +112,14 @@ The goal of this stage is to handle the basic tools research requires with full 
 - Write a simple ROS2 node (publisher/subscriber)
 - Perform a camera calibration (using a chessboard pattern)
 
-**Intermediate stage — internalizing the core techniques**
+**Intermediate stage — practicing the core techniques**
 
 At this stage, you should be able to run the core Spatial AI algorithms yourself and analyze the results. It is also the stage where you start reading papers.
 
 **What to learn**:
 1. **Deep learning basics (PyTorch)** — tensors, autodiff, training loops, model design. In research, PyTorch dominates over TensorFlow.
 2. **Object Detection (YOLO family)** — bounding boxes, NMS, mAP, and other basic concepts of a recognition pipeline.
-3. **Understanding Visual SLAM (ORB-SLAM3)** — the flagship algorithm for feature-based SLAM. Run it and tear into the code.
+3. **Understanding Visual SLAM (ORB-SLAM3)** — a representative feature-based SLAM system. Run it and inspect the code.
 4. **Point cloud processing (Open3D)** — how to handle 3D data. Filtering, registration, visualization.
 5. **Understanding and using VFMs (DINOv2, SAM)** — understanding how foundation models reshape existing pipelines.
 
@@ -186,7 +182,7 @@ Before starting research, check the following items. Each entry also notes why i
 > - **2007~2015**: The rise of real-time Visual SLAM — MonoSLAM (2007), PTAM (2007), ORB-SLAM (2015). Real-time localization and map generation became possible with a camera alone.
 > - **2012~2018**: The deep learning revolution — starting with AlexNet (2012), recognition performance surged with ResNet (2015), Faster R-CNN (2015), and others. Learning-based methods started entering Spatial AI as well.
 > - **2020~2023**: The foundation model era — CLIP (2021), SAM (2023), DINOv2 (2023), and other large-scale pretrained models appeared. Previously, every new environment required repeated data collection → labeling → training; the tasks that can be handled zero-shot have grown sharply.
-> - **2024~**: End-to-end systems and embodied AI — VLA (vision-language-action) models, world models, 3D Gaussian Splatting + SLAM, and more. Attempts to unify perception, planning, and control in a single model are emerging, but as of 2026 most deployed systems remain modular.
-> - **What to watch now**: Research grafting foundation models onto robot perception (e.g., open-vocabulary SLAM, VFM-based scene understanding) grew noticeably at CVPR/ICRA 2025. The thread of combining classical geometry with learning-based methods also continues.
+> - **2024~**: End-to-end systems and embodied AI — VLA models, world models, 3D Gaussian Splatting + SLAM, and related work reduce the boundaries between perception, planning, and control. Physical systems compare end-to-end and modular designs according to safety, latency, and verification requirements.
+> - **Recent direction**: Work continues on open-vocabulary SLAM, VFM-based scene understanding, and systems that combine classical geometry with learned components.
 
 > **Interactive materials**: Interactive exercises for the key concepts in this document are available [here](https://alexjunholee.github.io/robotics-practice/).

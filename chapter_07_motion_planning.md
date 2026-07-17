@@ -1,6 +1,6 @@
 # Ch.7 — 모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)
 
-로봇이 A에서 B로 가려면 경로가 필요하다. 단순히 직선으로 가면 되지 않냐고 생각할 수 있지만, 장애물·관절 한계·동역학 제약이 동시에 걸려 있다. 이 조건들을 모두 만족하는 경로를 찾는 것이 모션 플래닝이고, 그 경로를 시간에 따라 최적으로 추종하는 것이 궤적 최적화다.
+로봇이 A에서 B로 가려면 장애물·관절 한계·동역학 제약을 모두 만족하는 경로가 필요하다. 이런 경로를 찾는 과정이 모션 플래닝이고, 경로를 시간에 따라 최적으로 추종하도록 만드는 과정이 궤적 최적화다.
 
 ---
 
@@ -35,11 +35,11 @@ C-space를 이산화(discretize)하고 그래프 탐색 알고리즘으로 경�
 
 ### Dijkstra 알고리즘
 
-가중 그래프에서 최단 경로를 찾는다. 모든 간선을 탐색하므로 최적해를 보장한다. 시간 복잡도 O((V + E) log V).
+음이 아닌 간선 가중치를 가진 그래프에서 최단 경로를 찾는다. binary heap과 adjacency list를 쓰면 시간 복잡도는 $O((V+E)\log V)$이며, 목표 노드가 확정되면 전체 간선을 모두 처리하기 전에 멈출 수 있다.
 
 ### A* 알고리즘
 
-Dijkstra에 휴리스틱을 추가한 것이다. 목표까지의 추정 거리(heuristic)를 이용하여 탐색 방향을 유도한다. 휴리스틱이 admissible(실제 거리 이하)이면 최적해를 보장하면서 Dijkstra보다 빠르다.
+Dijkstra에 휴리스틱을 추가한 것이다. 목표까지의 추정 거리(heuristic)를 이용하여 탐색 방향을 유도한다. graph-search A*는 admissible하면서 consistent한 휴리스틱에서 최적해를 찾는다. 좋은 휴리스틱은 탐색 노드를 줄일 수 있지만, 실행 시간이 항상 Dijkstra보다 짧은 것은 아니다.
 
 ```python
 import heapq
@@ -86,13 +86,13 @@ def astar_2d(grid, start, goal):
 
 ### 장단점
 
-격자 기반 플래닝은 **완전성(completeness)**을 보장한다 — 해가 존재하면 반드시 찾는다. 하지만 **차원의 저주(curse of dimensionality)**에 시달린다. 6-DOF 로봇 팔의 C-space를 각 축 100개로 이산화하면 100^6 = 10^12개의 셀이 된다. 사실상 불가능하다. 이 한계 때문에 샘플링 기반 플래너가 등장했다.
+유한 격자에서 모든 도달 가능한 셀을 탐색하는 알고리즘은 그 **이산 문제**에 대해 완전하다. 그러나 격자 해상도 때문에 연속 공간의 좁은 통로를 놓칠 수 있고, **차원의 저주(curse of dimensionality)**에도 시달린다. 6-DOF 로봇 팔의 C-space를 각 축 100개로 이산화하면 100^6 = 10^12개의 셀이 된다. 이 한계 때문에 샘플링 기반 플래너가 등장했다.
 
 ---
 
 ## 7.4 샘플링 기반 플래너
 
-C-space를 이산화하지 않고, 무작위로 샘플링하여 경로를 탐색한다. 고차원 C-space에서 실용적인 유일한 방법이다.
+C-space를 균일한 고정 격자로 모두 나누지 않고 표본을 뽑아 경로를 탐색한다. 고차원 C-space에서 중요한 선택지이며, optimization-based planning이나 search와 결합하기도 한다.
 
 ### RRT (Rapidly-exploring Random Tree)
 
@@ -186,7 +186,7 @@ Kavraki et al. (1996). RRT가 single-query(한 번에 하나의 start-goal 쌍)�
 
 ### RRT-Connect
 
-Kuffner & LaValle (2000). 시작점과 목표점에서 동시에 트리를 성장시키고, 두 트리가 만나면 경로를 연결한다. 실무에서 가장 많이 쓰이는 변종으로, MoveIt2의 기본 플래너도 RRT-Connect(OMPL 내장)다.
+Kuffner & LaValle (2000). 시작점과 목표점에서 동시에 트리를 성장시키고, 두 트리가 만나면 경로를 연결한다. 빠르게 초기 경로를 찾는 용도로 널리 쓰이며, MoveIt2의 여러 OMPL 설정 예시에서도 `RRTConnect`를 기본 planner config로 지정한다. 실제 기본값은 배포판과 사용자 설정에 따라 달라진다.
 
 ### OMPL 라이브러리
 
@@ -260,11 +260,11 @@ Ratliff et al. (2009). 초기 궤적(보통 직선 보간)에서 시작하여, �
 
 ### TrajOpt
 
-Schulman et al. (2014). Sequential convex optimization 기반으로, 매 반복에서 비선형 문제를 선형/이차 근사로 바꿔서 QP로 풀고, trust region으로 수렴을 보장한다. 충돌 회피를 signed distance function으로 처리하여 연속적인 gradient를 얻는다.
+Schulman et al. (2014). Sequential convex optimization 기반으로, 매 반복에서 비선형 문제를 선형/이차 근사로 바꿔서 풀고 trust region으로 근사의 유효 범위를 제한한다. 비볼록 문제이므로 전역 최적해는 보장하지 않는다. 충돌 회피를 signed distance 기반 비용으로 다뤄 gradient를 사용한다.
 
 ### CasADi를 이용한 Trajectory Optimization
 
-CasADi는 symbolic computation + automatic differentiation + NLP solver 연결을 제공하는 프레임워크다. Trajectory optimization의 사실상 표준 도구이다.
+CasADi는 symbolic computation, automatic differentiation, NLP solver 연결을 제공하는 널리 쓰이는 프레임워크다. Trajectory optimization에서는 Drake, direct solver API, JAX 기반 구현 등과 함께 선택지 중 하나다.
 
 ```python
 import casadi as ca
@@ -317,21 +317,21 @@ print(f"최대 힘: {np.max(np.abs(u_opt)):.4f} N")
 
 > **추천 자료**
 > - [Matthew Kelly, "An Introduction to Trajectory Optimization" (SIAM Review 2017)](https://www.matthewpeterkelly.com/research/MatthewKelly_IntroTrajectoryOptimization_SIAM_Review_2017.pdf) — collocation과 shooting을 비교하는 좋은 튜토리얼
-> - [CasADi](https://web.casadi.org/) — NLP 구현 표준 도구
+> - [CasADi](https://web.casadi.org/) — automatic differentiation과 NLP solver 연결 도구
 > - [Drake Trajectory Optimization](https://drake.mit.edu/) — direct collocation 예제 포함
 
 ---
 
 ## 7.6 MoveIt2: 실전 모션 플래닝
 
-MoveIt2는 ROS2 기반의 모션 플래닝 프레임워크이다. 산업/연구 양쪽에서 가장 널리 쓰이는 로봇 팔 플래닝 도구다.
+MoveIt2는 ROS2 기반의 공개 모션 플래닝 프레임워크로, 로봇 팔 연구와 응용에서 널리 쓰인다.
 
 **아키텍처:**
 - **Planning Scene**: 로봇 + 환경(장애물)의 3D 모델 관리. 충돌 검사의 기반.
 - **Planning Pipeline**: OMPL 등 플래너 호출 → 경로 검증 → 시간 매개변수화(time parameterization)
 - **Move Group Interface**: 사용자 API. 목표 설정, 플래닝, 실행을 추상화.
 
-**OMPL 통합**: MoveIt2는 OMPL을 기본 플래닝 백엔드로 사용한다. `ompl_planning.yaml`에서 플래너 종류와 파라미터를 설정한다.
+**OMPL 통합**: OMPL은 MoveIt2에서 사용할 수 있는 대표적인 planning pipeline plugin이다. `ompl_planning.yaml`에서 플래너 종류와 파라미터를 설정하며, 다른 pipeline도 구성할 수 있다.
 
 ```yaml
 # ompl_planning.yaml 예시
@@ -359,8 +359,6 @@ manipulator:
 ---
 
 ## 7.7 심화: Optimization-Based Planning
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 ### Constrained Nonlinear Optimization
 
@@ -401,8 +399,6 @@ Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
 
 ## 7.8 심화: Task and Motion Planning (TAMP)
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 "컵을 선반 위에 놓아라"라는 명령을 수행하려면:
 
 1. 컵이 어디 있는지 인식
@@ -431,8 +427,6 @@ TAMP는 환경과 행동이 결정론적이라고 가정한다. 환경 동역학
 ---
 
 ## 7.9 심화: 불확실성 하 의사결정 (POMDP와 belief space planning)
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 §7.1~§7.8은 로봇이 자신의 상태와 환경을 정확히 안다고 가정했다. 하지만 실제 로봇은 노이즈 있는 센서로 부분적인 정보만 관측한다. 대칭 복도에서 어느 쪽에 있는지 모르는 로봇, 문이 열려 있는지 닫혀 있는지 불확실한 상황 — 이럴 때 "현재 최선 추정 상태"에서 계획하면 틀린다. belief(사후 분포) 위에서 직접 계획해야 한다. 이 절의 내용은 Thrun, Burgard, Fox의 *Probabilistic Robotics* §15.2·§16을 기반으로 한다.
 
@@ -747,7 +741,7 @@ Point-based value iteration(SARSOP, HSVI, PBVI)은 belief 공간 전체가 아�
 
 **Deep POMDP**: DRQN(Recurrent Q-network), DVRL(Igl et al.). RNN의 hidden state가 implicit belief 역할을 한다. MC-POMDP의 nearest-neighbor 함수 근사가 neural function approximation으로 대체된 형태다.
 
-AMDP의 아이디어는 다른 이름으로 살아있다. Bayes-adaptive MDP(BAMDP)는 모델 파라미터 사후 분포를 증강 상태로 쓰고, Active SLAM은 위치 belief의 분산을 비용 함수에 포함시킨다. NeRF 기반 능동 인식에서도 entropy-augmented planning이 표준 도구가 되었다.
+AMDP에서 사용한 원리는 다른 방법에도 나타난다. Bayes-adaptive MDP(BAMDP)는 모델 파라미터의 사후 분포를 증강 상태로 쓰고, Active SLAM은 위치 belief의 분산을 비용 함수에 포함한다. NeRF 기반 능동 인식에서도 entropy-augmented planning을 사용한다.
 
 ch.8 §8.3의 PPO·SAC 등 deep RL은 경험에서 학습하고, 모델(전이 확률, 관측 모델)을 알 필요가 없다. POMDP planning은 모델을 알 때 최적 정책을 계산한다. 모델이 없으면 MC-POMDP도 돌아가지 않는다. MC-POMDP는 그 교집합에 있다 — belief는 모델로 추적하고, Q값은 경험에서 학습한다.
 
@@ -796,13 +790,13 @@ belief 위의 가치 반복은 상태 수에 이중지수적으로 폭발하기 
 ```
 1979 ── Visibility graph 기반 path planning
 1996 ── PRM (Kavraki et al.) — 샘플링 기반 플래닝의 시작
-1998 ── RRT (LaValle) — single-query 플래닝의 표준
-2000 ── RRT-Connect (Kuffner & LaValle) — 실무에서 가장 많이 쓰이는 변종
+1998 ── RRT (LaValle) — 영향력 큰 single-query sampling planner
+2000 ── RRT-Connect (Kuffner & LaValle) — 실무 motion-planning 라이브러리에서 널리 제공되는 변종
 2009 ── CHOMP (Ratliff et al.) — gradient 기반 궤적 최적화
 2011 ── RRT* (Karaman & Frazzoli) — 점근적 최적성 보장
 2012 ── OMPL 1.0 공개 — 샘플링 기반 플래너 통합 라이브러리
 2014 ── TrajOpt (Schulman et al.) — sequential convex optimization
-2019 ── MoveIt2 (ROS2) — 산업/연구 표준 프레임워크
+2019 ── MoveIt2 (ROS2) — 산업·연구에서 쓰이는 공개 motion-planning framework
 2022 ── SayCan (Google) — LLM + motion planning
 2023 ── Contact-implicit trajectory optimization 실용화
 2024 ── LLM 기반 TAMP 연구 확산

@@ -1,10 +1,10 @@
 # Ch.16 — 개발 환경 & 도구
 
-로봇 연구를 하다 보면, 알고리즘 자체보다 "환경 세팅"에 시간을 더 많이 쓰는 경우가 흔하다. CUDA 버전이 안 맞아서 하루를 날리거나, 다른 사람 코드를 클론했는데 파이썬 버전 차이로 안 돌아가는 경험을 한 번쯤 하게 된다. 여기서 다루는 도구들은 그런 삽질을 줄여 준다.
+로봇 연구 코드는 CUDA, Python, ROS, 시스템 라이브러리의 버전 조합에 민감하다. 이 장은 실행 환경을 분리하고 재현하는 데 쓰는 언어 도구, 패키지 환경, Docker를 다룬다.
 
 ## 16.1 프로그래밍 언어
 
-AI 코딩 에이전트가 코드 작성을 상당 부분 대신해 주는 시대이다. 이제 중요한 건 기존 코드를 읽고 이해하는 능력이다. 다른 사람의 연구 코드를 클론해서 구조를 파악하고, AI가 생성한 코드를 검증하고, 문제가 생겼을 때 어디를 고쳐야 하는지 판단할 수 있어야 한다.
+AI 코딩 에이전트가 코드 작성의 상당 부분을 돕더라도, 기존 코드를 읽고 이해하는 능력은 여전히 필요하다. 다른 사람의 연구 코드를 클론해 구조를 파악하고, AI가 생성한 코드를 검증하며, 문제가 생겼을 때 수정할 위치를 판단할 수 있어야 한다.
 
 ### 16.1.1 C++
 
@@ -40,13 +40,13 @@ auto func = [&](int x) { return x * 2; };
 > - [The Cherno - C++ Playlist](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) — C++ 기초부터 고급까지 영상 시리즈
 > - [Modernes C++](https://www.modernescpp.com/index.php) — 모던 C++ (C++17/20/23) 기능을 체계적으로 정리한 블로그
 
-> **⚠ AI 에이전트 주의**: AI가 생성한 C++ 코드가 x86에서는 빌드되지만 Jetson(ARM)에서 실패하는 경우가 많다. 크로스 컴파일 환경이나 타겟 아키텍처를 알려줘라.
+> **⚠ 타겟 환경 점검**: C++ 코드를 요청할 때 x86인지 Jetson(ARM)인지, 크로스 컴파일을 사용하는지 함께 적는다. 생성된 의존성과 build flag가 타겟 아키텍처를 지원하는지도 확인한다.
 
 ### 16.1.2 Python
 
 **용도**: 프로토타이핑, 딥러닝 학습/추론, 데이터 분석, 시각화
 
-PyTorch 학습 스크립트나 데이터 전처리 같은 작업에 쓴다. 연구에서 자주 마주치긴 하지만, AI 에이전트가 가장 잘 다루는 언어이기도 해서 직접 작성하는 비중은 줄어들고 있다. 읽고 이해할 수 있으면 충분하다.
+PyTorch 학습 스크립트와 데이터 전처리 같은 작업에 널리 쓴다. 에이전트로 초안을 만들기 좋지만, 생성된 코드를 읽고 실행 결과와 성능 병목을 직접 확인할 수 있어야 한다.
 
 **자주 쓰는 라이브러리**:
 
@@ -65,7 +65,7 @@ pip install transformers  # HuggingFace
 
 ### 16.2.1 Ubuntu
 
-로보틱스 개발은 사실상 Ubuntu에서 한다. ROS가 Ubuntu를 1차 지원 플랫폼으로 삼고 있고, GPU 드라이버·CUDA·cuDNN 등의 호환성도 Ubuntu에서 가장 잘 검증됐기 때문이다. macOS나 Windows에서도 일부 개발이 가능하지만, 결국 실제 로봇에 올릴 때는 Ubuntu로 돌아오게 된다.
+Ubuntu는 ROS의 1차 지원 플랫폼이며 GPU 드라이버, CUDA, cuDNN 조합에 관한 문서와 사례도 많다. macOS와 Windows에서도 일부 개발이 가능하지만, ROS 배포판과 실제 로봇의 운영체제에 맞춰 개발 환경을 선택해야 한다.
 
 **권장 버전**:
 - Ubuntu 22.04 LTS (ROS2 Humble)
@@ -91,7 +91,7 @@ sudo apt install -y vim tmux htop
 
 ### 16.2.2 CUDA / cuDNN
 
-딥러닝 모델 학습은 CPU로는 현실적으로 불가능하다. GPU 가속을 위해 CUDA가 필요한데, PyTorch와 CUDA 버전이 안 맞으면 `import torch` 한 줄에서부터 에러가 난다. 로보틱스 연구자가 가장 많이 겪는 환경 문제 중 하나이다.
+딥러닝 모델 학습에는 대개 GPU 가속을 쓴다. NVIDIA GPU를 쓰는 환경에서는 CUDA와 PyTorch의 호환 버전이 맞지 않으면 `import torch` 단계부터 오류가 날 수 있다.
 
 **설치 확인**:
 
@@ -221,7 +221,7 @@ pip install -r requirements.txt
 
 ### 16.3.1 왜 Docker인가?
 
-연구실에서 코드를 공유할 때 가장 많이 듣는 말이 "내 컴퓨터에선 돌아가는데..."이다. Docker는 그 문제를 해결한다. OS, 라이브러리, 환경 설정을 통째로 패키징해서 어디서든 동일한 실행 환경을 보장하기 때문이다. 논문 코드를 재현할 때도 Docker 이미지가 제공되면 훨씬 수월하다.
+Docker는 OS 사용자 공간, 라이브러리, 환경 설정을 이미지로 묶는다. 같은 이미지를 사용하면 개발자 사이의 의존성 차이를 줄일 수 있고, 논문 코드의 실행 환경도 함께 전달할 수 있다.
 
 ### 16.3.2 기본 사용법
 
@@ -260,9 +260,9 @@ WORKDIR /workspace
 
 ### 16.3.3 NVIDIA Container Toolkit
 
-일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산을 하려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그를 사용해야 한다. 로보틱스 연구에서 Docker를 쓴다면 사실상 필수다.
+일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산에는 nvidia-container-toolkit과 `--gpus all` 플래그가 필요하다.
 
-참고: 과거에 쓰던 `nvidia-docker2`는 deprecated됐다. 현재는 `nvidia-container-toolkit`이 표준이고, `--runtime=nvidia` 대신 `--gpus all`을 쓴다.
+참고: NVIDIA의 현재 문서는 `nvidia-container-toolkit`을 사용한다. 현대 Docker에서는 과거의 `--runtime=nvidia` 방식 대신 `--gpus all`로 GPU 접근을 요청한다.
 
 ```bash
 # nvidia-container-toolkit 설치 (Ubuntu 22.04/24.04)
@@ -283,9 +283,9 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 
 ### 16.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
 
-로보틱스에서 Docker를 쓸 때는 GPU, GUI(RViz/Gazebo), USB 센서를 동시에 써야 하는 경우가 대부분이다. 이걸 하나씩 붙이면 충돌하기 쉽고, 한 번에 설정하는 게 낫다.
+로보틱스용 컨테이너는 GPU, GUI(RViz/Gazebo), USB 센서 접근을 함께 요구할 수 있다. 아래 레시피는 세 권한과 실행 환경을 한곳에서 설정한다.
 
-[turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)가 이 조합을 잘 정리해둔 프로젝트이니 참고할 것. 아래는 그 구조를 기반으로 현재 환경(nvidia-container-toolkit + ROS2 Humble)에 맞춘 레시피다.
+아래 레시피는 [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)의 구조를 nvidia-container-toolkit과 ROS2 Humble 환경에 맞춘 것이다.
 
 **1단계: X11 포워딩 준비 (호스트)**
 
@@ -377,17 +377,17 @@ CMD ["bash"]
 > - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — 공식 설치 가이드
 > - [OSRF Docker Images](https://hub.docker.com/r/osrf/ros) — ROS 공식 Docker 이미지. `humble-desktop`이 GUI 포함 버전
 
-> **AI 에이전트 주의**: AI에게 Docker 설정을 물어볼 때는 "ROS2 + GPU + USB 센서 + GUI 시각화"를 동시에 쓸 건지 한 번에 알려줘라. 각각을 따로 물어보면 서로 충돌하는 설정을 준다. 특히 `QT_X11_NO_MITSHM=1`과 `ROS_DOMAIN_ID`는 AI가 빠뜨리는 대표적인 항목이다.
+> **Docker 요구사항 점검**: 설정을 요청할 때 ROS2, GPU, USB 센서, GUI 시각화를 함께 쓸지 한 번에 적는다. 따로 만든 설정을 합치면 권한과 네트워크 옵션이 충돌할 수 있다. 완성된 명령에는 `QT_X11_NO_MITSHM`, `ROS_DOMAIN_ID`, device mapping이 필요한지 확인한다.
 
 ## 16.4 원격 관리: Git, SSH, 파일 전송
 
-연구실 서버에 SSH로 접속해서 실험을 돌리고, 코드는 Git으로 관리하고, 데이터는 서버 간에 주고받는 것이 일상이다.
+원격 실험 환경은 SSH 접속, Git 변경 이력, 서버 간 파일 전송으로 관리한다.
 
 ### 16.4.1 Git/GitHub
 
 ### 16.4.1.1 기본 워크플로우
 
-코드를 관리하지 않으면, "어제 돌아가던 코드가 오늘은 왜 안 되지?"라는 상황이 반복된다. Git은 모든 변경 이력을 추적해 주므로, 언제든 과거 상태로 돌아갈 수 있다. 연구 코드라도 Git으로 관리하는 습관을 들이자.
+Git은 코드 변경과 실험 시점의 상태를 기록한다. 실행에 사용한 commit을 결과와 함께 남기면 이전 상태를 재현하거나 변경 원인을 비교할 수 있다.
 
 ```bash
 # 저장소 클론
@@ -421,7 +421,7 @@ git push origin main
 - `main`: 항상 배포 가능
 - `feature-branch`: 기능별 브랜치 → PR → Merge
 
-연구실에서 여러 사람이 같은 코드를 수정할 때 브랜치 전략 없이 `main`에 직접 push하면 충돌이 끊이질 않는다. 연구 코드라면 GitHub Flow 정도면 충분하다. 기능 하나당 브랜치 하나를 만들고, PR을 통해 머지하는 습관을 들이자.
+여러 사람이 같은 코드를 수정할 때는 기능별 branch에서 변경을 분리하고 PR에서 검토한 뒤 `main`에 합칠 수 있다. 단순한 GitHub Flow만으로도 충돌 범위와 변경 목적을 구분하기 쉽다.
 
 ### 16.4.1.3 협업
 
@@ -678,10 +678,10 @@ TEST(MyTest, BasicTest) {
   │       오픈소스 협업의 중심지가 됨
   │
 2010 ─── Conda (Anaconda) 등장
-  │       Python 환경 관리 표준으로 자리 잡음
+  │       데이터 과학에서 널리 쓰이는 Python 환경 관리 도구가 됨
   │
 2013 ─── Docker 공개
-  │       컨테이너 기반 가상화로 재현성 문제 해결
+  │       컨테이너 이미지로 사용자 공간 의존성 재현이 쉬워짐
   │
 2015 ─── TensorBoard (TensorFlow와 함께 공개)
   │       딥러닝 학습 시각화의 시작

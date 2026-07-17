@@ -1,19 +1,19 @@
 # Ch.9 — Computer Vision Fundamentals
 
 
-The root of every process that turns raw camera data into meaningful information is here. Whether you are doing SLAM, picking objects, or driving autonomously — if this foundation is shaky, you will spend ages stuck on "why isn't this working?"
+Computer vision turns raw camera data into information a robot can use. Understanding image processing and camera geometry makes it possible to trace failures in SLAM and manipulation pipelines.
 
 ---
 
 ## 9.1 Image Processing
 
-Raw images from a camera are noisy and unorganized. Before any algorithm can run on top of them, the image has to be cleaned up. Filtering, edge detection, morphological operations — these are the basic preprocessing tools, and without knowing them you cannot diagnose why the downstream pipeline produces strange results.
+Raw camera images contain noise and irrelevant variation. Filtering, edge detection, and morphological operations prepare the input and help determine whether an error in a downstream pipeline began during preprocessing.
 
 ### 9.1.1 Introduction to OpenCV
 
-**OpenCV (Open Source Computer Vision Library)** is the most widely used CV library.
+**OpenCV (Open Source Computer Vision Library)** is a widely used public CV library.
 
-Whether you are implementing a paper's algorithm directly or prototyping quickly, OpenCV is almost always on the path. With both C++ and Python bindings, it covers everything from research to production.
+OpenCV provides C++ and Python bindings for common operations ranging from image I/O and filtering to feature extraction and geometric computation.
 
 **Installation**:
 
@@ -39,7 +39,7 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 ```
 
-**Caveat**: OpenCV uses BGR order (not RGB). This is why colors get flipped when mixing it with Matplotlib or other libraries. Make `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)` a habit.
+**Caveat**: OpenCV uses BGR rather than RGB channel order. Before passing an image to an RGB-based library such as Matplotlib, convert it with `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`.
 
 > **Further reading**
 > - [OpenCV official tutorials](https://docs.opencv.org/4.x/d9/df8/tutorial_root.html) — Python/C++ examples, well organized.
@@ -49,7 +49,7 @@ cv2.destroyAllWindows()
 
 ### 9.1.2 Filtering
 
-Filtering is the most basic tool for extracting desired information from an image or removing unwanted noise. Without knowing it, you cannot explain why edge detection output is noisy, or why blur is applied as preprocessing for segmentation.
+Filtering retains selected image structure while reducing unwanted noise. Blur is often applied before edge detection or segmentation to suppress high-frequency variation in the input.
 
 **Blur**:
 
@@ -72,7 +72,7 @@ sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
 sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
 ```
 
-Edges carry the most information in an image. Object contours, structure, boundaries — edges are also what people look at first when recognizing an object. Canny is the most widely used edge detector, and its output changes a lot with the threshold values, so you have to experiment with the parameters yourself.
+Edges highlight object contours and locations with large intensity changes. Canny output is sensitive to its thresholds, so compare which boundaries disappear and which noise remains as the values change.
 
 > **Further reading**
 > - [First Principles of Computer Vision — Edge Detection](https://www.youtube.com/playlist?list=PL2zRqk16wsdoCCLpouGuRbcJFBVVJlvgr) — Visual explanation of the mathematics of edge detection.
@@ -87,7 +87,7 @@ Edges carry the most information in an image. Object contours, structure, bounda
 
 ### 9.1.3 Morphology
 
-An essential tool when dealing with binary images. For example, morphology is used to remove small noise specks in a segmentation output, or to reconnect broken regions. Without knowing it, post-processing a binarization result feels hopeless.
+Morphological operations modify the shape of regions in a binary image. They can remove small noise specks from a segmentation output or reconnect broken regions.
 
 ```python
 kernel = np.ones((5, 5), np.uint8)
@@ -105,7 +105,7 @@ opening = cv2.morphologyEx(binary_img, cv2.MORPH_OPEN, kernel)
 closing = cv2.morphologyEx(binary_img, cv2.MORPH_CLOSE, kernel)
 ```
 
-Many people confuse the order of Opening and Closing — Opening "shrinks first (erosion), then grows back (dilation)", so small bumps or noise vanish; Closing "grows first, then shrinks back", so small holes get filled. Keep this intuition.
+Opening first erodes and then dilates, removing small protrusions and noise. Closing first dilates and then erodes, filling small holes.
 
 > **Further reading**
 > - [OpenCV Morphological Operations](https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html) — Explained with visual examples.
@@ -119,7 +119,7 @@ If you do not understand how a camera reads the world, recovering 3D from a 2D i
 
 ### 9.2.1 Pinhole Model
 
-An idealized camera model that projects a 3D point onto a 2D image.
+The pinhole model is an idealized camera model that projects a 3D point onto a 2D image.
 
 To invert the projection and recover a real-world 3D position from a pixel coordinate (u, v), you need to know this projection relation precisely. The Pinhole Model expresses this relation as equations.
 
@@ -171,14 +171,14 @@ Camera lenses are not perfect pinholes. Light bends as it passes through the len
 # Simple correction (computed per frame - slow)
 undistorted = cv2.undistort(distorted, K, dist_coeffs)
 
-# Precompute correction maps and reuse (fast - SLAM pipeline standard)
+# Precompute correction maps and reuse (a common SLAM pipeline pattern)
 map1, map2 = cv2.initUndistortRectifyMap(K, dist_coeffs, None, K, (w, h), cv2.CV_32FC1)
 undistorted = cv2.remap(distorted, map1, map2, cv2.INTER_LINEAR)
 ```
 
-Calling `cv2.undistort()` every frame is slow. The standard in real-time systems is to precompute the maps with `initUndistortRectifyMap()` and apply them via `cv2.remap()`.
+With fixed camera parameters, precomputing maps through `initUndistortRectifyMap()` and reusing them with `cv2.remap()` avoids rebuilding the mapping every frame. This is a common way to reduce work in a real-time pipeline.
 
-**Fisheye lenses**: cannot be corrected with the standard pinhole distortion model. Fisheye lenses model distortion as a function of the incidence angle θ (equidistant model: r = f·θ). You must use OpenCV's separate `cv2.fisheye` module. Mixing them up can actually make the correction worse, so be careful.
+**Fisheye lenses**: a low-order radial-tangential pinhole model may not represent a wide-angle lens adequately. Fisheye models express projection as a function of incidence angle θ (the equidistant ideal is r = f·θ); OpenCV provides matching routines in `cv2.fisheye`. Select the model from the lens projection and held-out reprojection residuals rather than from a single FoV cutoff.
 
 (See: [Dark Programmer — Camera distortion correction](https://darkpgmr.tistory.com/31), [Jinyong Jeong blog — Camera Models and Distortion](https://jinyongjeong.github.io/2020/06/15/Camera_and_distortion_model/))
 
@@ -191,7 +191,7 @@ Calling `cv2.undistort()` every frame is slow. The standard in real-time systems
 
 ### 9.2.3 Calibration
 
-The process of estimating a camera's intrinsic and extrinsic parameters.
+Calibration is the process of estimating a camera's intrinsic and extrinsic parameters.
 
 You can only use the camera model once you actually know K (the intrinsic matrix) and the distortion coefficients. If calibration is inaccurate, everything built on top of it — SLAM, stereo depth estimation, hand-eye calibration — loses accuracy. A textbook case of "garbage in, garbage out".
 
@@ -210,19 +210,15 @@ ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
 )
 ```
 
-Tip: to improve calibration quality, (1) capture at least 20 images from various angles, (2) make the checkerboard cover the whole image evenly, and (3) check that the reprojection error is below 0.5 pixels.
+Evaluate a calibration set by observability rather than image count. Cover the center and edges of the image and vary range and tilt about several axes. Inspect per-image and image-space residuals and error on held-out views, not only one global RMS value.
 
-**Understanding what calibration does, intuitively**
+Camera calibration estimates the parameters that map points in the 3D world to positions in a 2D image. Capturing a checkerboard from several angles produces dozens to hundreds of correspondences between its known 3D coordinates and the detected 2D image points. From these pairs, calibration estimates:
 
-Camera calibration is ultimately about figuring out the parameters of "how this camera converts the 3D world into a 2D image". When you capture a checkerboard pattern from several angles, you obtain dozens to hundreds of correspondence pairs between the known 3D coordinates of the checkerboard and the detected 2D coordinates in the image. From these pairs:
-
-1. **Intrinsic parameters** (fx, fy, cx, cy): the focal length and image center of the lens. These are camera-specific, so once you estimate them they do not change unless you swap the lens.
-2. **Distortion coefficients** (k1, k2, p1, p2, k3): the amount of lens distortion. Cheaper lenses have larger values.
+1. **Intrinsic parameters** (fx, fy, cx, cy): focal length and principal point. Recheck them when focus, zoom, resolution, crop, temperature, or mechanical assembly changes.
+2. **Distortion coefficients** (k1, k2, p1, p2, k3): coefficients that approximate lens and assembly distortion under the chosen projection model. Price alone does not predict their magnitude.
 3. **Extrinsic parameters** (R, t): the camera pose at each capture position. These are a byproduct of calibration itself, but are used separately in settings like hand-eye calibration.
 
-You need to capture at least 10 images of the checkerboard from various angles and distances. If they are biased to one side, only that region's distortion gets corrected and the rest remain inaccurate. The key is to spread the checkerboard evenly across the whole image.
-
-A reprojection error below 0.5 pixels is acceptable; below 0.1 is very good. Above 1.0, recapture or remove outlier images.
+Capture the checkerboard at several angles and distances, with observations spread across the image. The required count depends on parameter uncertainty, conditioning, and detection quality. Expected reprojection error also depends on resolution, lens model, target, and corner detector, so a universal pixel grading table is inappropriate. Before removing a high-residual image, inspect blur, glare, and detection failure; compare parameter stability and held-out error before and after exclusion.
 
 (See: [Dark Programmer — Camera calibration](https://darkpgmr.tistory.com/32))
 
@@ -233,7 +229,7 @@ A reprojection error below 0.5 pixels is acceptable; below 0.1 is very good. Abo
 
 > **Further reading**
 > - [OpenCV camera calibration tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — Step-by-step checkerboard calibration.
-> - [Kalibr official Wiki](https://github.com/ethz-asl/kalibr/wiki) — The de facto standard tool for Camera-IMU calibration.
+> - [Kalibr official Wiki](https://github.com/ethz-asl/kalibr/wiki) — a widely used public Camera-IMU calibration tool.
 > - [Zhang, "A Flexible New Technique for Camera Calibration" (2000)](https://www.microsoft.com/en-us/research/publication/a-flexible-new-technique-for-camera-calibration/) — The paper behind OpenCV's current calibration.
 > - [Tangram Vision Blog](https://www.tangramvision.com/blog) — Practical engineering posts on camera calibration, sensor fusion, and more.
 
@@ -243,7 +239,7 @@ A reprojection error below 0.5 pixels is acceptable; below 0.1 is very good. Abo
 
 A distinguishable point (keypoint) in an image together with a vector (descriptor) describing its surroundings.
 
-To understand SLAM, you need to understand features first. As the robot moves its camera, deciding "is what I see now the same place I saw earlier?" requires finding the same point across images. Features are the core tool for finding those correspondences reliably. SLAM, Visual Odometry, Object Recognition — nearly every vision-based robotics algorithm relies on features.
+SLAM and Visual Odometry must find the same points across images as the camera moves. Features provide a repeatable way to establish those correspondences.
 
 ### 9.3.1 Keypoint Detection
 
@@ -261,14 +257,14 @@ To understand SLAM, you need to understand features first. As the robot moves it
 - Patent-free
 - Widely used in real-time SLAM
 
-ORB is at the core of the ORB-SLAM family. Being patent-free means you can use it commercially without issue, and its speed makes it suitable for real-time systems. It is the first keypoint you will encounter in robotics.
+The ORB-SLAM family uses ORB. It carries no patent restriction, and its speed suits real-time systems.
 
 **SIFT (Scale-Invariant Feature Transform)**:
 - Scale- and rotation-invariant
 - High repeatability
 - High computational cost (previously patented, now released)
 
-SIFT is the algorithm Lowe published in 2004, and its paper is among the most cited in CV. Once you understand the principles behind extracting scale- and rotation-invariant keypoints, it becomes natural to see how later methods like SURF and ORB improved upon SIFT.
+Lowe published SIFT in 2004. Its scale- and rotation-invariant keypoints provide a useful reference for comparing later methods such as SURF and ORB.
 
 **SuperPoint** (deep-learning-based):
 - Self-supervised training
@@ -276,7 +272,7 @@ SIFT is the algorithm Lowe published in 2004, and its paper is among the most ci
 - Requires GPU
 
 > **Further reading**
-> - [Lowe, "Distinctive Image Features from Scale-Invariant Keypoints" (2004)](https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf) — The original SIFT paper. Worth reading at least once.
+> - [Lowe, "Distinctive Image Features from Scale-Invariant Keypoints" (2004)](https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf) — The original SIFT paper.
 > - [Rublee et al., "ORB: An efficient alternative to SIFT or SURF" (2011)](https://ieeexplore.ieee.org/document/6126544) — The original ORB paper.
 > - [First Principles of CV — Feature Detection](https://www.youtube.com/playlist?list=PL2zRqk16wsdqXEMpHrc4Qnb5rA1Cylrhx) — Principles of keypoint detection, visually.
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — The starting point of deep-learning-based features.
@@ -308,7 +304,7 @@ The advantage of binary descriptors is matching speed. Because the distance betw
 
 ### 9.3.3 Feature Matching
 
-In SLAM, as the camera moves you need to find the same point between the previous and current frames. This is feature matching, and without a proper grasp of it you cannot tell why SLAM throws a tracking-lost error.
+As the camera moves, SLAM must find the same points in the previous and current frames. Inspecting the feature matches helps distinguish tracking loss caused by too few correspondences from loss caused by incorrect ones.
 
 ```python
 # Extract ORB keypoints and descriptors
@@ -326,7 +322,7 @@ matches = bf.knnMatch(des1, des2, k=2)
 good = [m for m, n in matches if m.distance < 0.75 * n.distance]
 ```
 
-Lowe's ratio test is the key. kNN finds the two nearest matches, and only those whose ratio of first-to-second distance is below a threshold are kept as "good matches". This filters out ambiguous matches (where the first and second are roughly the same distance). The 0.75 value is what Lowe proposed in the original paper; tune it between 0.6 and 0.8 depending on the situation.
+Lowe's ratio test uses kNN to find the two nearest matches and keeps a match only when the ratio of the first distance to the second falls below a threshold. This removes ambiguous cases in which the two distances are similar. Lowe proposed 0.75 in the original paper; the threshold can be adjusted between 0.6 and 0.8 for the application.
 
 > **Further reading**
 > - [OpenCV Feature Matching](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — Examples of BFMatcher, FLANN, and ratio test.
@@ -339,7 +335,7 @@ Lowe's ratio test is the key. kNN finds the two nearest matches, and only those 
 
 ## 9.4 Epipolar Geometry
 
-Deals with the geometric relation between two camera viewpoints.
+Epipolar geometry deals with the geometric relation between two camera viewpoints.
 
 Given two photos of the same object, the goal is to recover how the camera moved (relative pose) and from there reconstruct the 3D structure. This is the mathematical foundation of Visual Odometry and Structure from Motion (SfM). It is also where SVD and eigenvalue decomposition from linear algebra are directly used.
 
@@ -378,7 +374,7 @@ For the relation between E and F: F is the version "you can use directly on pixe
 
 ### 9.4.3 Triangulation
 
-Given the same point observed from two viewpoints, compute its 3D position.
+Triangulation computes the 3D position of a point observed from two viewpoints.
 
 It is the same principle as how you perceive depth with two eyes. Observing the same point from two cameras (or one camera after it has moved) allows you to compute its 3D position geometrically.
 
@@ -403,7 +399,7 @@ Caveat: if the baseline (distance between the two cameras) is too small, triangu
 
 ## 9.5 Optical Flow
 
-Estimates pixel motion between consecutive frames.
+Optical flow estimates pixel motion between consecutive frames.
 
 As a robot sees the world through its camera while moving, knowing where each pixel goes in the next frame is useful. It is used directly in Visual Odometry pose estimation, dynamic object detection, collision avoidance, and so on. While feature matching only handles sparse points, dense optical flow estimates the motion of every pixel.
 
@@ -432,7 +428,7 @@ In "PyrLK", "Pyr" stands for Pyramid. It uses an image pyramid to capture large 
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-Recently, RAFT (Recurrent All-Pairs Field Transforms) has become the de facto standard for dense optical flow. It is deep-learning-based but much more accurate, so when accuracy matters RAFT is the common choice.
+RAFT (Recurrent All-Pairs Field Transforms) is a common learned baseline for dense optical flow. Its paper reports strong benchmark accuracy, but latency and accuracy relative to newer methods depend on resolution, hardware, training data, and evaluation protocol.
 
 > **Further reading**
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — Mathematical principles of optical flow.
@@ -446,8 +442,6 @@ Recently, RAFT (Recurrent All-Pairs Field Transforms) has become the de facto st
 ---
 
 ## 9.6 Advanced: PnP Problem
-
-*If you want to become a researcher, read from here on.*
 
 **Perspective-n-Point (PnP)** is the problem of estimating the camera pose (rotation R and translation t) given 3D points in space and their 2D correspondences in the image. In SLAM, per-frame camera tracking is precisely a PnP problem, and in AR, marker-based localization is also solved with PnP.
 
@@ -534,8 +528,6 @@ The direction of the Rodrigues vector is the rotation axis, and its magnitude (n
 
 ## 9.7 Advanced: RANSAC Variants
 
-*If you want to become a researcher, read from here on.*
-
 RANSAC was introduced in the robust estimation section of Ch.3. In actual research, vanilla RANSAC is rarely used as is. There are several variants that improve convergence speed and accuracy, and which one you pick can change the result a lot.
 
 **Main variants**:
@@ -557,7 +549,7 @@ RANSAC was introduced in the robust estimation section of Ch.3. In actual resear
 **MAGSAC++ (Marginalizing Sample Consensus)**:
 - Marginalizes the most troublesome hyperparameter, the inlier threshold σ.
 - Instead of fixing the threshold, it integrates over multiple σ values, so manual tuning is almost unnecessary.
-- This is the currently recommended method in OpenCV.
+- OpenCV exposes it through the `USAC_MAGSAC` option.
 
 **Using MAGSAC++ in OpenCV**:
 
@@ -583,8 +575,8 @@ H, mask = cv2.findHomography(
 
 **Practical tips**:
 - Iteration count: controlled by the `confidence` parameter. 0.999 means "find the correct model with 99.9% probability". The lower the inlier ratio, the more iterations are needed, growing exponentially.
-- Threshold: with MAGSAC++ you are less sensitive to the threshold, but you still need to provide an initial value. Typical choices are 1.0-3.0 pixels for the fundamental matrix and 3.0-5.0 pixels for homography.
-- If speed matters, use PROSAC; if accuracy matters, use MAGSAC++.
+- Threshold: with MAGSAC++ you are less sensitive to the threshold, but you still need to provide an initial value. The values in the example are starting points and should be validated for the image resolution and noise level.
+- The speed-accuracy relationship between PROSAC and MAGSAC++ depends on match-score quality, outlier ratio, and implementation. Compare them on the same data and time budget.
 
 > **Further reading**
 > - [Barath et al., "MAGSAC++, a Fast, Reliable and Accurate Robust Estimator" (2020)](https://arxiv.org/abs/1912.05909) — The original MAGSAC++ paper.
@@ -594,8 +586,6 @@ H, mask = cv2.findHomography(
 ---
 
 ## 9.8 Advanced: Learning-Based Feature Matching
-
-*If you want to become a researcher, read from here on.*
 
 Hand-crafted features like ORB and SIFT have worked well for decades, but they fail on repetitive patterns, lack of texture, or extreme illumination changes. Since 2018, deep-learning-based feature extraction and matching have started to surpass classical methods.
 
@@ -609,17 +599,17 @@ SuperPoint (2018) -> SuperGlue (2020) -> LightGlue (2023)
 **SuperPoint**:
 - Trains a keypoint detector and descriptor jointly via self-supervised learning.
 - Homographic adaptation: applies synthetic transforms and inverts them to generate pseudo ground truth.
-- Robust on repetitive patterns, and has higher repeatability than classical methods.
+- In the paper's evaluation, it achieved higher repeatability than several classical baselines.
 
 **SuperGlue**:
 - Treats the keypoints of two images as a graph and matches them via an attention mechanism.
 - Self-attention learns keypoint relations within the same image, and cross-attention performs matching between the two images.
 - Solves the optimal assignment problem with the Sinkhorn algorithm.
-- Very high accuracy but slow (GPU required).
+- It achieved strong matching results in the paper's evaluation, while its compute cost and latency depend on feature count and hardware.
 
 **LightGlue**:
 - A lightweight version of SuperGlue. Adaptive early stopping pushes easy image pairs through quickly, while harder pairs go through more layers.
-- Several times faster than SuperGlue at comparable accuracy.
+- In the paper's evaluation, adaptive depth and point pruning reduced latency relative to SuperGlue at comparable accuracy. The ratio depends on hardware and configuration.
 
 **LoFTR (Detector-Free Local Feature Matching)**:
 - Removes the keypoint detection step altogether. Performs dense matching across the whole image.
@@ -666,7 +656,7 @@ with torch.no_grad():
 dists, match_idxs = matcher(feats0["descriptors"], feats1["descriptors"])
 ```
 
-With a GPU, the SuperPoint+LightGlue combination is the most balanced choice. Without a GPU, on embedded platforms, ORB is still the realistic option.
+SuperPoint+LightGlue is worth evaluating when a GPU is available and learned-matching robustness matters. When there is no GPU or the latency and power budgets are tight, a classical feature such as ORB is a simpler baseline. Make the final choice by measuring accuracy, latency, and memory on the target data.
 
 > **Further reading**
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — The original SuperPoint paper.
@@ -680,4 +670,4 @@ With a GPU, the SuperPoint+LightGlue combination is the most balanced choice. Wi
 > - **2006~2011**: lightweighting for real time. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) arrive. Patent and speed issues get resolved, and real-time SLAM becomes feasible.
 > - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) and SuperGlue (2020) begin to surpass classical methods in performance.
 > - **2020~**: fusion of geometry and learning. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
-> - **What to watch now**: classical geometry (epipolar geometry, triangulation) is not going away. Deep learning is replacing the front-end (feature extraction, matching), but the back-end mathematics stays the same. Knowing both is what real skill means.
+> - **Recent direction**: learned features and matchers are entering the front-end, while the back-end still uses epipolar geometry and triangulation. The two families therefore coexist in the same systems.

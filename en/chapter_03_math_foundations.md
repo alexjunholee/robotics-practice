@@ -1,14 +1,12 @@
 # Ch.3 — Mathematical Foundations
 
-Understanding Spatial AI properly requires a mathematical foundation. The core concepts here are brief; for deeper study, use the recommended references.
+Reading and implementing Spatial AI papers requires a mathematical foundation. If "optimization on SE(3)" is unfamiliar, the main argument of a SLAM paper may be lost; if a sentence such as "we derived the Jacobian and solved the system with Gauss-Newton" is unclear, the methodology becomes hard to reconstruct. The mathematics here is a working toolkit for robotics, connecting undergraduate linear algebra to its use in research papers and code.
 
-The urge to skip the math is understandable. But when you read papers, you end up stuck at the equations. A SLAM paper says "optimization on SE(3)" and if you don't know what SE(3) is, you miss the paper's core idea; when a single line says "we derived the Jacobian and solved with Gauss-Newton," if that doesn't parse, the whole methodology is out of reach. The math here is not "math for a math exam" but "math to read and implement robotics papers." A third-year engineering student will have taken linear algebra, so the focus here is on connecting what you learned as an undergraduate to how it gets used in robotics.
-
-Classical mathematical tools are still central, but Differentiable Programming and Auto-Differentiation are changing how we approach optimization problems. Jacobians used to be derived by hand; now auto-diff in PyTorch or JAX computes gradients for complex pipelines automatically. This is the background that made end-to-end learning-based SLAM and Differentiable Rendering (NeRF, 3D Gaussian Splatting) possible. To understand what auto-diff does internally, you still need the fundamentals covered here.
+Differentiable Programming and Auto-Differentiation have changed how classical mathematical tools enter an optimization pipeline. PyTorch and JAX can compute Jacobians and gradients that were once derived by hand, enabling systems such as end-to-end learned SLAM and differentiable rendering with NeRF or 3D Gaussian Splatting. Interpreting those derivatives and debugging the pipeline still requires the linear algebra and optimization developed here.
 
 ## 3.1 Linear Algebra
 
-Linear algebra is the base tool across Spatial AI. Coordinate transformations, camera models, optimization, deep learning — all are expressed with matrices and vectors. "I took linear algebra as an undergrad" and "I can apply linear algebra to robotics" are different levels. This section covers the concepts used most in robotics.
+Linear algebra is the common language of coordinate transformations, camera models, optimization, and deep learning. This section connects undergraduate definitions to the calculations used in robotics.
 
 ### 3.1.1 Vectors and Matrices
 
@@ -29,7 +27,7 @@ In robotics, vectors represent points in 3D space, forces, velocities, and so on
 Coordinate transformation, rotation, and projection are all expressed as matrix multiplications. A camera projecting a 3D point to a 2D image, a robot transforming between coordinate frames — all of it is matrix multiplication.
 
 > **Further reading**
-> - [3Blue1Brown — Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) — If you haven't watched this series, watch it. It shows visually what matrix multiplication means geometrically and why eigenvalues matter. It helps you understand linear algebra as "transformation" rather than "computation."
+> - [3Blue1Brown — Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) — Visualizes matrix multiplication and eigenvalues geometrically. It presents linear algebra as transformations of space rather than only calculation rules.
 > - [Introduction to Applied Linear Algebra (Boyd & Vandenberghe) — free PDF](https://web.stanford.edu/~boyd/vmls/) — Applied linear algebra textbook by Stanford's Professor Boyd. Practical perspective, includes Python examples.
 > - [Dark Programmer — Linear Algebra series (6 posts: basic formulas to PCA)](https://darkpgmr.tistory.com/103) — Summarizes key terms, inverse, eigenvalues, SVD, linear systems, and PCA in Korean.
 > - [Dark Programmer — Vector and Matrix Calculus](https://darkpgmr.tistory.com/141) — Rules for vector/matrix differentiation. Foundation needed for Jacobian computation.
@@ -74,13 +72,13 @@ SVD shows up constantly in robotics. It is the most numerically stable way to co
 
 ## 3.2 3D Geometry
 
-3D geometry is at the heart of Spatial AI. It expresses mathematically "where is the robot in 3D space, where is the camera looking, and where is that object?" Without this part, the first page of a SLAM paper is already a wall.
+3D geometry expresses the positions and orientations of robots, cameras, and objects in one mathematical language. SLAM uses this representation to connect observations across viewpoints.
 
 ### 3.2.1 Coordinate Frames
 
 In Spatial AI you move between multiple coordinate frames. The **World Frame (W)** is the globally fixed frame, the **Camera Frame (C)** is centered on the camera, the **Body Frame (B)** is centered on the robot, and the **IMU Frame (I)** is the IMU sensor's frame.
 
-Once you build a robot system yourself, this becomes tangible. A single piece of data has to pass through several frames before it is meaningful. "The location of the object the camera sees" is expressed in the camera frame, but for the robot to approach the object, that position must be transformed into the robot or world frame. Each sensor has its own frame, and sensor fusion is possible only when you know the transformation between them accurately (extrinsic calibration).
+An object observed by a camera is located in the camera frame. Before a robot can use that position, it must transform the coordinates into the body or world frame. Because each sensor has its own frame, sensor fusion uses the extrinsic calibration between them.
 
 **Coordinate transformation**:
 
@@ -91,22 +89,22 @@ p_W = T_WC × p_C
 T_WC: Camera → World transformation matrix (4×4).
 
 > **Further reading**
-> - [State Estimation for Robotics, Ch.6 — Coordinate Frames (Tim Barfoot) — free PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — The best robotics-oriented treatment of coordinate frame transformations.
+> - [State Estimation for Robotics, Ch.6 — Coordinate Frames (Tim Barfoot) — free PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — A treatment of coordinate-frame transformations from the perspective of robotics state estimation.
 > - [Stanford CS231A — Camera Models](https://web.stanford.edu/class/cs231a/) — The part of Stanford's CV course that covers camera frames and projection models.
 
 ### 3.2.2 Rotation Representations
 
-Multiple rotation representations exist because each has different strengths and weaknesses. In SLAM optimization, the choice of representation affects convergence speed and stability. Without this, you can't tell "why does this code use quaternions while that code uses a rotation matrix?"
+Rotation matrices, Euler angles, quaternions, and axis-angle representations differ in parameter count, constraints, singularities, and interpolation. SLAM code chooses among them according to these properties and the optimization method.
 
 **Rotation Matrix R** is a 3×3 orthogonal matrix (det(R) = 1, R^T = R^(-1)) with 9 parameters and 6 constraints, giving 3 actual degrees of freedom.
 
 **Euler Angles** express rotation with three angles: Roll (φ), Pitch (θ), Yaw (ψ). Intuitive, but has the **Gimbal Lock** problem, and results depend on the application order (ZYX, XYZ, etc.).
 
-**Quaternion q = [w, x, y, z]** (||q|| = 1) expresses 3 DoF with 4 parameters. It has no Gimbal Lock and supports smooth interpolation (Slerp), so it is the most widely used.
+**Quaternion q = [w, x, y, z]** (||q|| = 1) expresses 3 DoF with 4 parameters. It has no Gimbal Lock and supports smooth interpolation (Slerp), so it is widely used for attitude representation in robotics.
 
 **Axis-Angle** combines a rotation axis n and angle θ into a 3-parameter representation. It converts to a rotation matrix via Rodrigues' formula.
 
-Practical tips: ROS uses quaternions as the default rotation representation, OpenCV mostly uses Rodrigues vectors (axis-angle), and optimization libraries (Ceres, GTSAM) often use Lie group-based representations (so(3) → SO(3) mapping). You need to convert between them freely.
+ROS uses quaternions as its default rotation representation, OpenCV provides Rodrigues vectors (axis-angle), and optimization libraries such as Ceres and GTSAM support Lie-group representations. Check component order and normalization when connecting these interfaces.
 
 > **Further reading**
 > - [3Blue1Brown — Quaternions and 3D Rotation](https://www.youtube.com/watch?v=zjMuIxRvygQ) — Visualizes the geometric meaning of quaternions. An intuitive answer to why four dimensions are needed for 3D rotation.
@@ -137,7 +135,7 @@ Why use homogeneous coordinates: rotation and translation can be expressed as on
 SE(3) and SO(3) are **Lie groups**. When optimizing, you need to "update while satisfying the rotation matrix constraints (orthogonality, determinant 1)," and Lie group theory solves this elegantly. You optimize without constraints on the corresponding **Lie algebra** (se(3), so(3)) and then map back to the Lie group via the exponential map. This concept is central to pose graph optimization in SLAM.
 
 > **Further reading**
-> - [State Estimation for Robotics, Ch.7 (Tim Barfoot) — free PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — The best robotics-oriented treatment of SE(3), SO(3), and Lie groups/algebras. Essential reading if you dig into this area.
+> - [State Estimation for Robotics, Ch.7 (Tim Barfoot) — free PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — A treatment of SE(3), SO(3), and Lie groups and algebras from the perspective of robotics state estimation.
 > - [Sola — A Micro Lie Theory for State Estimation in Robotics (arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — A paper that summarizes Lie group theory just as far as state estimation in robotics requires. Very practical.
 
 ## 3.3 Probability & Statistics
@@ -192,7 +190,7 @@ Use in SLAM: for data association, Mahalanobis distance decides "did this observ
 P(A|B) = P(B|A) × P(A) / P(B)
 ```
 
-Bayes' rule is the mathematical basis of state estimation. It is the formula answering "given the sensor measurement, what is the robot's actual state?" Without it, you cannot understand Kalman filters, particle filters, or factor graph-based SLAM.
+Bayes' rule updates the probability of a state given a sensor measurement. Kalman and particle filters implement this update with different distribution representations and approximations.
 
 **Recursive state estimation**:
 
@@ -203,7 +201,7 @@ P(x_t | z_{1:t}) ∝ P(z_t | x_t) × P(x_t | z_{1:t-1})
 - P(z_t | x_t): measurement model — "given the robot is at this pose, what is the probability the sensor outputs this value?"
 - P(x_t | z_{1:t-1}): prior — "based on all prior information, what is the probability the robot is here?"
 
-Once you see this recursive structure, the Kalman filter follows immediately. Every time new sensor data arrives, update the existing belief (prior) to get a more accurate estimate (posterior). The Kalman filter's predict-update cycle is exactly this structure.
+Each new measurement combines the prior with the measurement likelihood to form a posterior. Under linear-Gaussian assumptions, the Kalman filter's predict-update cycle implements this recursion.
 
 > **Further reading**
 > - [3Blue1Brown — Bayes' Theorem](https://www.youtube.com/watch?v=HZGCoVF3YvM) — A good visual introduction to Bayes' theorem.
@@ -218,7 +216,7 @@ Once you see this recursive structure, the Kalman filter follows immediately. Ev
 x* = argmax P(z | x)
 ```
 
-The parameter most likely given the data.
+MLE finds the parameter most likely given the data.
 
 **MAP (Maximum A Posteriori)**:
 
@@ -226,7 +224,7 @@ The parameter most likely given the data.
 x* = argmax P(x | z) = argmax P(z | x) × P(x)
 ```
 
-An estimate that takes the prior into account.
+MAP incorporates the prior into the estimate.
 
 The difference in SLAM is between "find the optimal position from observations alone (MLE)" and "find the optimal position using prior position information too (MAP)." Real SLAM systems mostly use MAP. A prior makes estimation stable even with noisy observations. Mathematically, taking the log of MAP turns it into "sum of squared observation errors + regularization term," which is the same form as regularized least squares from an optimization standpoint.
 
@@ -248,7 +246,7 @@ In SLAM: multiply the likelihood of odometry measurements by the likelihood of s
 
 ## 3.4 Optimization Basics
 
-Optimization is the final stage of Spatial AI algorithms. SLAM bundle adjustment, camera calibration, and deep-learning training are all optimization problems. Without this section you can run the code but cannot debug why it fails to converge or why the result is wrong.
+SLAM bundle adjustment, camera calibration, and deep-learning training all minimize objective functions. Distinguishing the residual, Jacobian, and update rule helps locate convergence failures in the model, initialization, or solver.
 
 ### 3.4.1 Least Squares
 
@@ -292,8 +290,6 @@ Gradient descent is used daily in deep learning, but it is also the baseline for
 
 **Relationships between gradient, Jacobian, and Hessian**
 
-Three easily confused concepts, laid out:
-
 The **gradient** ∇f is the first derivative of a scalar function f and outputs an n×1 vector. It tells you "in which direction does f increase fastest?" The **Jacobian** J extends this to a vector function f: R^n → R^m as an m×n matrix. It holds the partial derivatives of each output with respect to each input. The **Hessian** H is the second derivative of a scalar function f, an n×n symmetric matrix that carries curvature information and is used in Newton's method.
 
 Relationships:
@@ -334,9 +330,9 @@ A hybrid of Gauss-Newton and gradient descent:
 - small λ → Gauss-Newton (fast convergence)
 - large λ → gradient descent (stable)
 
-The core algorithm for bundle adjustment and pose graph optimization in SLAM.
+Used for bundle adjustment and pose graph optimization in SLAM.
 
-Why LM dominates in practice: Gauss-Newton converges very quickly with a good initial value but can diverge with a bad one. LM adjusts λ automatically, starting safely like gradient descent early on and converging quickly like Gauss-Newton once near the solution. Ceres Solver, g2o, and GTSAM all adopt it as the default algorithm for robotics optimization libraries.
+Gauss-Newton can converge quickly from a good initial value but may diverge otherwise. LM adjusts λ so that large damping produces a gradient-descent-like update and small damping approaches Gauss-Newton. Optimization libraries such as Ceres Solver, g2o, and GTSAM provide this method.
 
 > **Further reading**
 > - [Cyrill Stachniss — Gauss-Newton and Levenberg-Marquardt for SLAM](https://www.youtube.com/watch?v=hRyL5KwFLAE) — Step-by-step explanation of how Gauss-Newton and LM are used in SLAM.
@@ -355,8 +351,6 @@ Small λ is close to Gauss-Newton and converges fast near the solution; large λ
 (See: [Dark Programmer — Summary of Function Optimization Methods (LM, etc.)](https://darkpgmr.tistory.com/142))
 
 ## 3.5 Advanced: Lie Group and Lie Algebra
-
-*If you want to become a researcher, read from here.*
 
 One of the most frequent mathematical hurdles in robotics is "how do you optimize rotations?" Lie groups and Lie algebras provide a systematic framework for handling rotations and rigid-body transformations. They are essential for understanding SLAM back-ends, visual-inertial odometry, and bundle adjustment.
 
@@ -405,7 +399,7 @@ Intuitively, an element w of so(3) encodes "rotation axis direction" and "rotati
 
 **Exponential map**: so(3) -> SO(3)
 
-The map that sends an element (vector) of the Lie algebra to an element (rotation matrix) of the Lie group. Let's derive where it comes from.
+The exponential map sends an element (vector) of the Lie algebra to an element (rotation matrix) of the Lie group.
 
 Suppose we have a matrix R(t) that rotates continuously over time (R(0) = I). R(t) is always in SO(3), so `R(t) R(t)^T = I`. Differentiating both sides with respect to t:
 
@@ -458,7 +452,7 @@ Special handling is needed near theta = 0 (identity rotation) or theta = pi (180
 
 ### 3.5.4 SE(3): The 3D Rigid-Body Transformation Group
 
-A robot's pose includes not only rotation but also translation. SE(3) handles this.
+A robot's pose combines rotation and translation; SE(3) represents both in one rigid-body transformation.
 
 **Definition:**
 ```
@@ -496,7 +490,7 @@ Here J is the left Jacobian of SO(3):
 J = I + ((1 - cos(theta)) / theta^2) [w]x + ((theta - sin(theta)) / theta^3) [w]x^2
 ```
 
-**Key point**: a 6-DoF pose (3 rotation + 3 translation) can be parameterized by a 6D vector xi in R^6. Run optimization in unconstrained 6D Euclidean space and lift the result onto the SE(3) manifold via the exponential map. This is why Lie groups are used in SLAM optimization.
+A 6-DoF pose (3 rotation + 3 translation) can be parameterized by a 6D vector xi in R^6. Optimization is performed in unconstrained 6D Euclidean space, after which the exponential map lifts the result onto the SE(3) manifold. This is why SLAM optimization uses Lie groups.
 
 > **Exercise**: [SE(3) Pose Composition](https://alexjunholee.github.io/robotics-practice/app.html#pose_composition_3d)
 > Manipulate the composition of SE(3) transformations in 3D and see how combined rotation-and-translation rigid-body transformations chain together.
@@ -527,8 +521,6 @@ de/d(d_xi) = lim_{d_xi->0}  (e(exp(d_xi^) * T) - e(T)) / d_xi     (for left pert
 
 This Jacobian is a 6-column matrix (error dimension x 6).
 
-**Why this matters:**
-
 In ordinary optimization the update is `x <- x + dx` (Euclidean addition). But on SE(3), addition is not defined. Instead:
 
 1. Compute d_xi in R^6 (the tangent space) via Gauss-Newton: `d_xi = -(J^T J)^{-1} J^T e`.
@@ -536,7 +528,7 @@ In ordinary optimization the update is `x <- x + dx` (Euclidean addition). But o
 
 This guarantees that T remains a valid SE(3) element after the update. No separate constraint handling is needed.
 
-**Practical note**: g2o, GTSAM, and Ceres (with local parameterization / manifold) use this approach internally. GTSAM's `Pose3` implements SE(3) directly and provides `Pose3::Expmap()` and `Pose3::Logmap()`. In Ceres, the same concept is implemented through `LocalParameterization` (or `Manifold` in the newer API).
+g2o, GTSAM, and Ceres (with local parameterization / manifold) use this approach internally. GTSAM's `Pose3` implements SE(3) directly and provides `Pose3::Expmap()` and `Pose3::Logmap()`. In Ceres, the same concept is implemented through `LocalParameterization` (or `Manifold` in the newer API).
 
 ### 3.5.6 Adjoint Representation
 
@@ -592,15 +584,13 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 
 > **Further reading**
 > - [State Estimation for Robotics, Ch.7-8 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — The key reference for Lie groups in robotics state estimation.
-> - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Summarizes the essentials of Lie groups in 20 pages. Read this before the papers.
+> - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — A 20-page summary of the essentials of Lie groups.
 > - [TUM Multiple View Geometry, Ch.2 -- Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) — Lectures by Professor Daniel Cremers. Visual explanation of SO(3) and SE(3).
 > - [Sophus GitHub](https://github.com/strasdat/Sophus) — C++ Lie group library. Reading the code accelerates understanding.
 > - [Jinyong Jeong's blog — SE(3) and SO(3) transformation](https://jinyongjeong.github.io/2016/06/07/se3_so3_transformation/) — Korean-language summary of SE(3) and SO(3) transformations. Explains systematically starting from GL(3) and O(3).
 > - [T-Robotics: Lie Group Formulation for Robot Mechanics](http://t-robotics.blogspot.com/2015/07/lie-group-formulation-for-robot.html) — Korean-language explanation of Lie groups. Summarizes the use of Lie groups in robot dynamics.
 
 ## 3.6 Advanced: Factor Graph
-
-*If you want to become a researcher, read from here.*
 
 Factor graph is the framework for systematically defining and efficiently solving SLAM problems. The back-end of modern SLAM systems is almost without exception based on factor graphs.
 
@@ -629,7 +619,7 @@ e_i is the error function and Sigma_i is the covariance (uncertainty weighting) 
 
 ### 3.6.2 Expressing SLAM as a Factor Graph
 
-Factor types commonly used in SLAM:
+Representative factor types in SLAM:
 
 | Factor | Role |
 |---|---|
@@ -769,8 +759,6 @@ ceres::Solve(options, &problem, &summary);
 
 ## 3.7 Advanced: Robust Estimation
 
-*If you want to become a researcher, read from here.*
-
 Real-world data is not clean. False data associations, dynamic objects, and sensor failures produce outliers, and outliers seriously distort optimization results. Robust estimation is the set of techniques for producing sensible estimates even in such situations.
 
 ### 3.7.1 Why It's Needed
@@ -789,7 +777,7 @@ An M-estimator uses a different cost function rho instead of `rho(r) = r^2` to r
 | M-Estimator | rho(r) | Characteristics |
 |---|---|---|
 | **L2 (standard)** | r^2 | Vulnerable to outliers |
-| **Huber** | r^2 (abs(r) <= k), 2k*abs(r) - k^2 (abs(r) > k) | L2 for small residuals, L1 for large ones. Most widely used |
+| **Huber** | r^2 (abs(r) <= k), 2k*abs(r) - k^2 (abs(r) > k) | L2 for small residuals, L1 for large ones. Supported by many optimization libraries |
 | **Cauchy** | c^2 * log(1 + (r/c)^2) | Suppresses outliers more strongly than Huber |
 | **Geman-McClure** | r^2 / (1 + r^2) | Effectively ignores extreme outliers |
 
@@ -833,9 +821,7 @@ In OpenCV, you can use MAGSAC++ via the `cv::USAC_MAGSAC` flag in functions like
 
 ## 3.8 Advanced: Information Theory Basics
 
-*If you want to become a researcher, read from here.*
-
-Information-theoretic concepts are used in active SLAM, exploration, and uncertainty-based decision making. Just the essentials.
+Information-theoretic concepts are used in active SLAM, exploration, and uncertainty-based decision making.
 
 **Shannon entropy**: measures the uncertainty of a random variable X.
 
@@ -876,7 +862,7 @@ Here a is the action, Z_a is the observation obtained through that action, and X
 > **Technical Timeline: robotics math and optimization**
 > - **~2005**: State estimation centered on the Kalman filter (EKF). Linear-approximation-based, suited to small-scale problems. Real-time processing was difficult, which constrained problem size.
 > - **2006~2015**: Factor graph-based optimization (iSAM, g2o, GTSAM) emerged. Sparse matrix structure made large-scale SLAM efficient. Lie groups/algebras became standard tools in the SLAM community.
-> - **2016~2020**: Real-time large-scale optimization became practical. Incremental optimization enabled per-frame real-time updates. Ceres Solver became an industry standard.
+> - **2016~2020**: Real-time large-scale optimization became practical. Incremental optimization enabled per-frame updates. Open nonlinear least-squares libraries such as Ceres Solver became widely used in research and industrial applications.
 > - **2021~**: The era of differentiable programming. End-to-end optimization using auto-differentiation (Auto-Diff) in PyTorch/JAX. With the rise of differentiable rendering such as NeRF and 3D Gaussian Splatting, Jacobians that used to be derived by hand were replaced by auto-diff. Differentiable optimization libraries like Theseus (Meta) also appeared.
 > - **Now**: Classical math (Lie groups, probability, optimization) is still essential. Differentiable programming is changing how we approach optimization problems, but understanding what auto-diff does internally still requires the foundations covered here. Knowing only the tools means you can't debug.
 
@@ -888,7 +874,7 @@ Source: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.2 (Recursive Sta
 
 §3.8 information theory gave us a tool to *measure* uncertainty. The question now is how to *update* that uncertainty as new observations accumulate over time. Running the Bayes' rule of §3.3.2 recursively along the time axis produces the structure that answers "where is the robot right now?" Where the factor graph of §3.6 assembled spatial constraints into a graph, the Bayes filter extends that estimation structure along the time direction.
 
-"Where is the robot right now?" is not a single-shot estimation problem but a **recursive estimation** problem. The Bayes filter is the most general form of that recursive structure; the Kalman filter and particle filter both operate within this framework.
+Estimating the robot's current location is a **recursive estimation** problem because each new state depends on the previous belief and the latest observation. The Bayes filter gives the general form of this recursion, and both the Kalman filter and particle filter implement it under different representations.
 
 ### 3.9.1 State and the Markov Assumption
 
@@ -1004,7 +990,7 @@ $$\text{bel}(X_2 = \text{open}) \approx 0.983, \quad \text{bel}(X_2 = \text{clos
 | After $u_2$ | 0.950 | 0.050 |
 | After $z_2$ | 0.983 | 0.017 |
 
-Even with substantial sensor noise (60% / 20%) and nondeterministic control, accumulated measurements and controls drive belief rapidly toward one hypothesis. Whether 0.983 is a sufficient threshold for autonomous decision-making is a question this example deliberately leaves open.
+Even with substantial sensor noise (60% / 20%) and nondeterministic control, accumulated measurements and controls drive the belief rapidly toward one hypothesis. This example alone, however, cannot determine whether 0.983 is a sufficient threshold for autonomous decision-making.
 
 ### 3.9.7 Mathematical Derivation
 
@@ -1102,7 +1088,7 @@ Visualizing each step of the KF in a 1D position estimation problem makes the in
 - **After correction**: multiplying the two Gaussians produces a result narrower than either one — the effect of information combination. The mean sits at the weighted average of the two Gaussians.
 - Next motion: variance grows again. Next measurement: variance shrinks again.
 
-Core intuition: **measurements shrink variance; motion grows it.** This alternation is the essence of state estimation. The same intuition carries through §3.10.2 EKF, §3.11.3 particle filter, Ch.14 §14.7 EKF localization, and §14.10 IMU preintegration.
+In this example, **measurements shrink variance, while motion grows it.** Their alternation forms the basic estimation cycle. The same interpretation applies to the EKF in §3.10.2, the particle filter in §3.11.3, EKF localization in Ch.14 §14.7, and IMU preintegration in §14.10.
 
 <!-- DEMO: kalman_1d_illustration.html -->
 
@@ -1126,7 +1112,7 @@ The brevity of the five KF lines rests on the linear Gaussian assumption. Relaxi
 
 #### Extension to Nonlinear Systems
 
-Real robot systems are not linear. The motion model $g$ for a robot rotating while moving, and the measurement model $h$ for a range sensor, are both inherently nonlinear.
+Real robotic systems are not linear. The motion model $g$ for a robot that rotates while moving and the measurement model $h$ for a range sensor are both nonlinear.
 
 $$x_t = g(u_t, x_{t-1}) + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
 $$z_t = h(x_t) + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
@@ -1250,11 +1236,11 @@ As with the EKF, replacing linear $g, h$ with Jacobians $G_t, H_t$ for nonlinear
 
 #### Additivity and the SLAM Connection
 
-The additivity of the measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$ is a powerful property. One measurement = one term added to $\Omega$. When multiple robots fuse independent measurements, $\Omega_{\text{total}} = \sum_i \Omega_i$ and $\xi_{\text{total}} = \sum_i \xi_i$ combine directly.
+The measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$ adds one term to $\Omega$ for each measurement. Independent measurements from several robots can likewise be combined as $\Omega_{\text{total}} = \sum_i \Omega_i$ and $\xi_{\text{total}} = \sum_i \xi_i$.
 
 This additivity generalizes in §3.6 factor graphs to "one measurement factor = one term $H^T Q^{-1} H$ and one term $H^T Q^{-1} z$ added." The reason factor graphs solve efficiently via sparse Cholesky, and the reason the information matrices in GTSAM and iSAM2 are sparse, both trace back to this additive structure.
 
-The additivity of the information form is the direct foundation of the SLAM information-form representation in EIF SLAM and SEIF — the historical details are in Ch.14 §14.16.
+EIF-SLAM and SEIF use this information-form additivity in their SLAM representations. Ch.14 §14.16 traces the historical connection.
 
 > **Further reading**
 > - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.3 is the primary source. KF, EKF, and IF derivations appear side by side.
@@ -1350,7 +1336,7 @@ The log-odds update equation is applied cell by cell in Ch.14 Occupancy Grid Map
 
 ### 3.11.3 Particle Filter
 
-#### Core Idea of Nonparametric Representation
+#### Principle of Nonparametric Representation
 
 The histogram filter's grid grows exponentially with dimension. The particle filter sidesteps this by approximating the distribution with samples instead of a grid.
 

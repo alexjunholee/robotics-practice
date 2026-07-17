@@ -17,31 +17,31 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 │  │ • 실시간 Geometry    │     │ • VFM 기반 이해             │ │
 │  │ • Odometry          │     │ • Semantic Scene Graph      │ │
 │  │ • Local Obstacle    │     │ • Long-term Memory          │ │
-│  │ • 10-100 Hz         │     │ • 1-10 Hz                   │ │
+│  │ • 제어 예산 기반 rate│     │ • 태스크 예산 기반 rate      │ │
 │  └─────────────────────┘     └─────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**왜 두 모듈인가? — 직관적으로 이해하기**
+### 두 모듈로 나누는 이유
 
-"그냥 좋은 컴퓨터 하나 올리면 안 되나요?"라고 생각할 수 있다. 솔직히 그게 가능하면 그렇게 하고 싶다. 하지만 현실은 그렇지 않다.
+온보드 컴퓨터 하나에서 모든 기능을 처리하기에는 무게와 전력, 응답 시간의 제약이 크다.
 
-먼저 **물리적 제약**을 생각해 보자. 로봇은 움직여야 한다. NVIDIA A100 GPU 서버를 드론에 올릴 수는 없다 — 무게만 해도 수십 kg이고, 전력도 수백 와트를 먹는다. 배터리로 돌아가는 로봇에게는 비현실적이다. 그래서 로봇에 실제로 탑재할 수 있는 컴퓨터는 Jetson Orin 같은 임베디드 보드인데, 이 보드로는 DINOv2나 SAM 같은 대형 모델을 실시간으로 돌릴 수 없다.
+**물리적 제약**부터 보자. NVIDIA A100 GPU 서버는 무게가 수십 kg이고 전력도 수백 와트를 사용하므로 배터리로 움직이는 드론에 실을 수 없다. 로봇에는 대개 Jetson Orin 같은 임베디드 보드를 탑재하지만, 이 장치에서 DINOv2나 SAM 같은 대형 모델을 실시간으로 실행하기는 어렵다.
 
-다음으로 **시간 제약**이 있다. 로봇이 복도를 걸어가고 있는데, 벽에 부딪히기 0.1초 전에 "잠깐, 서버 응답 기다리는 중..."이면 안 된다. 장애물 회피처럼 "지금 당장" 반응해야 하는 것과, "저 물체가 뭔지 이해하기"처럼 좀 느려도 괜찮은 것은 다른 종류의 문제다.
+**시간 제약**도 다르다. 장애물 회피는 수십 ms 안에 반응해야 하지만, 물체의 의미를 해석하는 작업은 그보다 느리게 처리해도 된다. 전자는 서버 응답을 기다릴 수 없고, 후자는 더 큰 모델을 사용할 여지가 있다.
 
-그래서 우리는 이렇게 나눈다:
+두 모듈은 이 차이에 맞춰 역할을 나눈다.
 
 1. **계산 자원의 현실**: 로봇 온보드 컴퓨터(Jetson 등)는 대형 모델을 돌릴 여력이 없다
-2. **실시간 요구사항**: 장애물 회피는 즉각 반응 필요 — 0.1초가 생사를 가른다
-3. **깊은 이해**: VFM/VLA는 높은 계산량 필요 — "저건 깨진 유리컵이니 조심해" 같은 판단
-4. **상호 보완**: 기하학적 정밀함(Local) + 의미론적 이해(Global) = 진짜 똑똑한 로봇
+2. **실시간 요구사항**: 장애물 회피에는 수십 ms 단위의 응답이 필요하다.
+3. **의미 이해**: VFM/VLA로 "깨진 유리컵"처럼 물체의 종류와 상태를 구분한다.
+4. **상호 보완**: Local의 기하학적 정밀도와 Global의 의미론적 이해를 결합한다.
 
 > 비유하자면, Local Module은 로봇의 **반사 신경**이고, Global Module은 로봇의 **대뇌 피질**이다. 뜨거운 냄비를 만지면 손을 먼저 떼고(반사), 그다음에 "아, 불이 켜져 있었구나"라고 이해한다(인지). 로봇도 마찬가지다.
 
 ## 18.2 Local Module: Lightweight Geometry
 
-로봇에 직접 탑재되어 실시간으로 동작하는 모듈이다. 로봇이 "지금 이 순간" 안전하게 움직이기 위해 필요한 최소한의 정보를 처리한다.
+Local Module은 로봇에 직접 탑재되어 실시간으로 동작하며, 안전한 이동에 필요한 정보를 처리한다.
 
 ### 18.2.1 목표
 
@@ -49,11 +49,11 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 - **Obstacle Detection**: 즉각적인 장애물 감지 — "앞에 뭔가 있다, 피해!"
 - **Local Mapping**: 주변 환경의 기하학적 지도 — "내 주변 3m 이내는 이렇게 생겼다"
 
-**실제 시나리오**: 배달 로봇이 아파트 복도를 지나가고 있다고 하자. 갑자기 아이가 뛰어나온다. 이때 Local Module은 depth 센서로 즉시 장애물을 감지하고, odometry로 자기 위치를 파악해서, 0.05초 안에 회피 경로를 계산한다. "아이인지 강아지인지"는 몰라도 된다 — 그건 Global Module의 일이다. Local Module은 "앞에 뭔가 있으니 피하자"만 알면 된다.
+**운영 예**: 아파트 복도를 지나던 배달 로봇 앞에 아이가 갑자기 뛰어나오면, Local Module은 depth 센서로 장애물을 감지하고 odometry로 위치를 추정해 제어·안전 분석에서 정한 deadline 안에 회피 경로를 계산한다. 이 단계에서는 장애물의 종류보다 충돌 가능성을 먼저 판단한다. 물체의 의미는 Global Module이 별도로 해석한다.
 
 ### 18.2.2 특징
 
-10-100 Hz로 동작하고(10~100ms마다 한 번), 전력은 Jetson 기준 15~30W다. 가장 중요한 성질은 확정적 응답 시간 — 부하 상태와 무관하게 최악의 경우에도 50ms 안에 답이 나와야 한다.
+Local Module의 update rate와 latency deadline은 플랫폼 속도, braking distance, control bandwidth와 sensor rate에서 유도한다. 전력 한도도 선택한 embedded module과 power mode, 냉각 조건으로 정한다. 평균 FPS뿐 아니라 worst-case latency, jitter와 deadline miss를 target hardware에서 측정해야 한다.
 
 ### 18.2.3 기술 스택
 
@@ -65,7 +65,7 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 **경량 학습 모델**:
 - 경량 depth estimation — MobileNet 기반으로 압축 (→ 10장 참고)
 - 압축된 segmentation 모델 — knowledge distillation 적용 (→ 10장, 11장 참고)
-- TensorRT 최적화 — NVIDIA GPU에서 2-5배 속도 향상
+- TensorRT 최적화 — NVIDIA GPU용 graph·kernel·precision 최적화 후보
 
 **Edge 배포**:
 
@@ -74,7 +74,7 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --workspace=4096
 ```
 
-> TensorRT가 뭐냐면, PyTorch로 학습한 모델을 NVIDIA GPU에 최적화된 형태로 변환해주는 도구다. FP16(반정밀도)으로 바꾸면 모델 크기가 절반이 되면서도 정확도는 거의 유지된다. Jetson에서 YOLO를 돌릴 때 TensorRT 없이는 5 FPS, 있으면 30 FPS — 이 차이가 실제 로봇에서는 "쓸 수 있다 vs 없다"의 차이다.
+> TensorRT는 NVIDIA GPU용 inference engine을 만든다. FP16이 memory와 latency를 줄일 수 있지만 이득과 task metric 변화는 model, input, batch, power mode와 software version에 따라 달라진다. Target Jetson에서 end-to-end latency와 validation metric을 함께 비교해 채택 여부를 정한다.
 
 ### 18.2.4 예시 구현
 
@@ -99,11 +99,11 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**시나리오로 읽기**: 위 코드에서 `process()`는 센서 데이터가 들어올 때마다 호출된다. IMU 데이터는 100Hz(초당 100번)로 오고, 카메라 이미지는 30Hz로 온다. 매 프레임마다 "나 지금 어디?" (odometry)와 "앞에 뭐 있어?" (obstacle)를 계산하고, 중요한 순간(키프레임)에만 Global Module에 데이터를 보낸다. 모든 프레임을 보내면 네트워크가 터지니까.
+**실행 시나리오**: 위 코드에서 `process()`는 센서 데이터가 들어올 때마다 호출된다. IMU 데이터는 100Hz(초당 100번), 카메라 이미지는 30Hz로 들어온다. 매 프레임마다 "나 지금 어디?"(odometry)와 "앞에 뭐 있어?"(obstacle)를 계산하고, 중요한 순간인 키프레임만 Global Module에 보낸다. 모든 프레임을 전송하면 네트워크 대역폭을 초과할 수 있기 때문이다.
 
 ## 18.3 Global Module: VFM-based Understanding
 
-서버 또는 클라우드에서 동작하는 고수준 이해 모듈이다. Local Module이 "앞에 뭔가 있다"까지만 알면, Global Module은 "저건 깨진 유리잔이고, 주인이 거실에서 떨어뜨린 것 같다"까지 이해한다.
+Global Module은 서버나 cloud에서 동작하며 물체의 종류와 관계를 해석한다. Local Module이 앞의 장애물을 감지하면, Global Module은 이를 깨진 유리잔으로 분류하고 scene graph의 위치 정보와 연결할 수 있다.
 
 ### 18.3.1 목표
 
@@ -115,13 +115,13 @@ class LocalModule:
 
 ### 18.3.2 특징
 
-DINOv2, SAM2 같은 수십억 파라미터 모델을 쓰므로 RTX 4090·A100 수준의 GPU가 필요하다. Local Module과 대비되는 핵심은 **비실시간 허용** — 1-10 Hz, 즉 1초에 한 번 업데이트해도 된다.
+DINOv2와 SAM2에는 크기가 다른 model variant가 있고 모두 수십억 parameter인 것은 아니다. Global Module의 hardware와 update period는 variant, input resolution, precision, scene 수와 허용 응답 시간으로 정한다. Local control deadline과 분리할 수 있는 task도 있지만, 사용자 상호작용이나 변화 감지처럼 end-to-end latency 요구가 있는 경우에는 별도 budget이 필요하다.
 
 ### 18.3.3 기술 스택
 
 **Vision Foundation Models** (→ 11장 참고):
 - DINOv2: Dense feature extraction — 이미지의 모든 픽셀에 대해 의미 있는 feature 벡터 생성
-- SAM2: Open-vocabulary segmentation — "아무 물체나" 지정하면 정확하게 분리
+- SAM2: promptable image/video segmentation — point·box·mask prompt로 대상 mask를 추적
 - GroundingDINO: Text-guided detection — "빨간 컵"이라고 말하면 찾아줌
 
 **3D Understanding** (→ 11장, 13장 참고):
@@ -209,7 +209,7 @@ class GlobalModule:
    - 컵 근처에서 정밀 접근
 ```
 
-**다른 시나리오 — 통신 불안정 상황**: 로봇이 지하 주차장에서 작업 중인데 WiFi가 끊어졌다. 이 경우 Local Module만으로 동작해야 한다. Odometry로 위치를 추정하고, 장애물을 피하면서 마지막으로 받은 waypoint까지 이동한다. WiFi가 복구되면 그동안의 데이터를 Global에 한꺼번에 보내고, 업데이트된 계획을 받는다. 이런 **graceful degradation**이 실제 로봇에서는 매우 중요하다.
+**다른 시나리오 — 통신 불안정 상황**: 로봇이 지하 주차장에서 작업 중인데 WiFi가 끊어졌다. 이 경우 Local Module만으로 동작해야 한다. Odometry로 위치를 추정하고, 장애물을 피하면서 마지막으로 받은 waypoint까지 이동한다. WiFi가 복구되면 그동안의 데이터를 Global에 한꺼번에 보내고, 업데이트된 계획을 받는다. 실제 로봇은 이런 **graceful degradation**이 필요하다.
 
 ### 18.4.3 통신 및 동기화
 
@@ -226,9 +226,14 @@ class GlobalModule:
 
 ### Local Module 연구
 
-1. **더 가벼운 SLAM**: 신경망 기반 경량 VO로 기존 VO를 대체하되 Jetson에서 돌아가야 한다. 이벤트 카메라는 저전력·초고속이라 극한 환경에서 선택지가 된다. 선행 학습: 9장(카메라 모델), 14장(Visual Odometry, SLAM) 필수, 3장(최적화) 권장.
+1. **더 가벼운 SLAM**
+    - 신경망 기반 경량 VO — 기존 VO를 대체하되 Jetson에서 동작하도록 설계
+    - 이벤트 카메라 활용 — 저전력·초고속 센서로 극한 환경의 SLAM을 구성
+    - 하드웨어 가속(FPGA) — SLAM의 핵심 연산을 전용 하드웨어로 구현
+    - 선행 학습: 9장(카메라 모델), 14장(Visual Odometry, SLAM) 필수, 3장(최적화) 권장
 2. **효율적 장애물 인식**
     - Depth-only obstacle detection — RGB 없이 depth 정보만으로 장애물 감지
+    - 시간적 일관성 — 물체가 프레임마다 나타났다 사라지는 깜빡임을 억제
     - Uncertainty-aware — "이게 장애물인지 확실하지 않다"는 불확실성 정보도 회피 결정에 반영
     - 선행 학습: 10장(Depth Estimation, Object Detection) 필수, 3장(좌표 변환) 중요
 3. **센서 융합 최적화**
@@ -241,52 +246,56 @@ class GlobalModule:
 1. **VFM의 3D 확장**
     - DINOv2 features in 3D — 2D feature를 3D 공간에 올려서 활용
     - Semantic Gaussian Splatting — 3D 재구성에 의미 정보를 같이 넣기
+    - 3D scene understanding — "이 공간이 어떤 구조인지" 이해하기
     - 선행 학습: 10장(Depth), 13장(3D 표현), 11장(VFM) 필수, 9장(카메라 모델) 기본
 2. **VLA 통합**
     - Open-vocabulary manipulation — "저 빨간 거 집어" 같은 자연어 명령으로 로봇팔 제어
+    - 언어 기반 내비게이션 — 자연어 명령에 따라 이동
     - 상황 인식 행동 — "아이가 있으니 천천히"처럼 맥락을 행동 제약으로 변환
     - 선행 학습: 11장(VFM 활용), 12장(VLA) 필수, 10장(Detection)도 알면 좋다
 3. **Scalability**: 아파트 단지·캠퍼스 전체를 단일 지도로 표현하고, 수 GB짜리 지도를 압축·갱신하며, 여러 로봇이 함께 만든 지도를 공유하는 문제다. 선행 학습: 14장(SLAM), 3장(최적화), 11장(VFM) 필수.
 
 ### Integration 연구
 
-1. **효율적 통신**: 무엇을 언제 보낼 것인가가 핵심이다. 모든 프레임을 보내면 대역폭이 터지고, 키프레임만 보내면 Global이 현실을 놓친다. 5G가 끊기거나 WiFi가 느릴 때의 열화 전략도 여기서 함께 설계한다. 선행 학습: 14장(SLAM, 키프레임 선택), Local/Global 모듈 이해.
+1. **효율적 통신**: 무엇을 언제 보낼지 정해야 한다. 모든 프레임을 보내면 대역폭을 소진하고, 키프레임만 보내면 Global이 환경 변화를 놓칠 수 있다. 5G가 끊기거나 WiFi가 느릴 때의 열화 전략도 함께 설계한다. 선행 학습: 14장(SLAM, 키프레임 선택), Local/Global 모듈 이해.
 2. **Fallback 전략**
     - 통신 끊김 시 Local-only 동작 — 서버 연결 없이도 기본 임무 수행
     - Graceful degradation — 기능이 점진적으로 줄어들되, 갑자기 멈추지는 않기
     - 선행 학습: 시스템 전체 이해 필요. 최소 3~14장은 읽고 오자
 3. **일관성 유지**: Local이 "여기 빈 공간"이라 보고, Global이 "거기 의자 있음"이라 기억하면 로봇은 어느 쪽을 믿어야 할지 모른다. 두 지도를 동기화하고, 의미 정보("저건 의자"가 나중에 "테이블"로 바뀌는 일)를 억제하는 문제다. 선행 학습: 3장(최적화), 14장(SLAM, 맵 관리) 필수.
 
-## 18.6 Motivation ≠ Novelty — 명작 논문 3편에서 배우는 도약
+## 18.6 Motivation과 Novelty를 가르는 질문
 
-연구 방향을 잡을 때 가장 자주 막히는 자리가 motivation과 novelty의 구분이다. 신입생이 자기 첫 글을 검토할 때 가장 먼저 부딪히는 벽이기도 하다.
+Motivation은 왜 이 문제를 풀어야 하는지 설명하고, novelty는 기존 방법에서 무엇을 어떻게 바꾸었는지 특정한다. 둘은 연구 방향을 잡거나 첫 논문을 쓸 때 자주 뒤섞인다.
 
-**핵심 명제.** "기존이 X를 못한다 → 우리가 모듈을 붙였다"는 **motivation**이지 **novelty**가 아니다. Top-tier 논문은 "왜 그 모듈이 그 형태여야 하는가"에 원리적으로 답한다. 같은 문제를 풀더라도 2티어 논문은 motivation 단계에서 멈추고, top-tier 논문은 한 걸음 더 나아간다.
+"기존 방법이 X를 하지 못하므로 모듈을 붙였다"는 문장만으로는 motivation을 넘어가기 어렵다. 그 모듈이 왜 필요한지, 왜 그 형태여야 하는지까지 설명해야 novelty가 구체화된다.
 
-아래 세 편이 그 도약의 모양을 보여준다. 각 사례에서 motivation은 분야의 누구나 적을 수 있는 한 줄이지만, novelty는 그 한 줄이 *왜 그 형태로* 해결되어야 하는가에 대한 원리적 답이다.
+아래 세 논문은 문제 제기와 설계 기여의 차이를 보여준다.
 
-### Case 1 — ORB-SLAM (Mur-Artal et al. 2015)
+### Case 1 — ORB-SLAM2 (Mur-Artal & Tardós 2017)
 
-- **Motivation**: 기존 SLAM이 mono / stereo / RGB-D를 각각 별도로 처리 → 통합이 필요하다
-- **2티어 답**: stereo branch · RGB-D branch · mono branch을 추가한 시스템 한 편
-- **Novelty (top-tier)**: 모든 modality가 같은 factor-graph 백본을 공유하도록 frontend를 재정의. 차이는 frontend 측정 함수에 한정되고, backend는 동일한 bundle adjustment formulation으로 통합
-- **도약의 한 줄**: backend와 frontend의 *분리* 자체가 modality 일반화의 충분조건이라는 원리적 답
+- **Motivation**: 단안용 ORB-SLAM의 map reuse·loop closing·relocalization 구조를 stereo와 RGB-D 입력에도 적용한다.
+- **직접적 확장**: 입력 modality마다 별도의 SLAM 시스템을 만든다.
+- **논문의 설계**: 세 modality가 tracking·local mapping·loop closing의 시스템 구조와 ORB 특징을 공유하되, stereo/RGB-D 관측은 disparity에서 얻은 depth와 metric-scale bundle adjustment에 반영한다.
+- **설계 원리**: 공통 시스템 구조는 유지하고, modality별 차이를 관측 생성과 bundle-adjustment 잔차에 둔다.
+
+원 논문은 [*ORB-SLAM2: An Open-Source SLAM System for Monocular, Stereo and RGB-D Cameras*](https://doi.org/10.1109/TRO.2017.2705103)다. 2015년 ORB-SLAM은 단안 시스템이므로 이 사례의 세 modality 통합 근거로 사용할 수 없다.
 
 ### Case 2 — 3D Gaussian Splatting (Kerbl et al. 2023)
 
 - **Motivation**: NeRF가 너무 느리다 → 빠르게 만들어야 한다
-- **2티어 답**: NeRF 위에 sparse sampling · pruning · distillation 같은 가속 모듈 한 층
-- **Novelty (top-tier)**: ray-marching이라는 비효율의 원천을 탐색 자체로 진단하고, 그 자리를 명시적 primitive(3D Gaussian)로 교체. Primitive를 직접 rasterization 가능한 형태로 설계
-- **도약의 한 줄**: "암시적 표현 + ray-marching"이라는 NeRF의 근본 형식이 속도 한계의 원인이라는 진단, 그 자리에 직접 rasterization을 허용하는 primitive를 두는 *형식의 교체*
+- **직접적 확장**: NeRF 위에 sparse sampling · pruning · distillation 같은 가속 모듈을 추가
+- **논문의 설계**: ray-marching의 탐색 비용을 병목으로 보고, 명시적 primitive인 3D Gaussian으로 표현을 교체. Primitive는 직접 rasterization할 수 있게 설계
+- **설계 원리**: 속도 한계의 원인을 개별 연산이 아니라 표현과 rendering 방식의 조합에서 찾는다.
 
 ### Case 3 — DUSt3R (Wang et al. 2024)
 
-기존 SfM이 brittle하고 camera intrinsics가 필요하다는 문제 제기는 누구나 했다. 2티어 논문은 matching이나 triangulation 단계 하나를 NN으로 교체하는 데 그쳤다. Wang et al.이 선택한 자리는 달랐다 — 출력 형식 자체를 바꿨다. 2-view 입력을 받아 양쪽 view의 pointmap을 직접 예측하면, intrinsics · correspondence · structure가 한꺼번에 나온다. Camera intrinsics는 별도 추정 대상이 아니라 pointmap에서 유도되는 부산물이 된다. SfM의 단계별 분해를 버리고 *공통 좌표계의 pointmap*을 출력 형식으로 둔 것 — 그것이 형식의 재구성이다.
+기존 SfM은 camera intrinsics가 필요하고 단계별 오차에 민감하다. Matching이나 triangulation 한 단계만 신경망으로 교체할 수도 있지만, Wang et al.은 출력 형식 자체를 바꿨다. 두 view를 입력받아 공통 좌표계의 pointmap을 직접 예측하면 intrinsics, correspondence, structure를 함께 얻을 수 있다. Camera intrinsics는 별도의 입력이 아니라 pointmap에서 유도되는 값이 된다. DUSt3R의 기여는 이처럼 SfM의 단계별 분해를 pointmap 예측 문제로 다시 정식화한 데 있다.
 
-### 도약의 공통 패턴
+### 세 논문이 공유하는 설계 질문
 
-세 편 모두에서 motivation은 1년차 학생도 쓸 수 있는 한 줄이다. Novelty가 다르다. 세 편이 공유하는 질문의 모양은 같다 — *왜 그 모듈이 그 형태여야 하는가*. 그리고 세 편 모두 그 답을 모듈을 *더하는* 자리가 아닌, 형식 자체를 *다르게 놓는* 자리에서 찾았다.
+세 논문은 모두 *왜 이 모듈이 이 형태여야 하는가*를 묻는다. 답은 모듈의 수보다 인터페이스, 표현, 출력 형식을 어떻게 정했는지에 있다.
 
-> 본인 논문의 contribution 절을 읽었을 때 *왜 이 모듈이어야 하는가*에 한 단락이 답해 있는가. 답이 비어 있으면 그 자리는 아직 motivation 단계다. 한 단락이 채워지기 시작하는 자리에서 novelty가 생긴다.
+> Contribution 절에는 *왜 이 모듈이어야 하는가*에 대한 답이 있어야 한다. 문제의 필요성만 설명한다면 motivation에 머물고, 설계 선택의 근거까지 제시해야 novelty가 드러난다.
 
-논문 쓰기의 본격 메타 가이드는 [「연구노트」 Ch.23 Introduction](../research-notes/guide.html#ch23-introduction은-어떻게-좁혀지는가) · [Ch.25 Method](../research-notes/guide.html#ch25-방법-섹션)에서 다룬다. 이 절은 *연구 방향 선택* 시점에 그 도약을 미리 의식하게 두는 자리다.
+논문에서 motivation과 method를 전개하는 방법은 [「연구노트」 Ch.23 Introduction](../research-notes/guide.html#chapter-23)과 [Ch.25 Method](../research-notes/guide.html#chapter-25)에서 자세히 다룬다.

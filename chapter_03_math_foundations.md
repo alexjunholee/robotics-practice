@@ -1,14 +1,12 @@
 # Ch.3 — 수학적 기초 (Mathematical Foundations)
 
-Spatial AI를 제대로 이해하려면 수학적 기초가 필요하다. 여기서는 핵심 개념만 간략히 짚고, 깊은 학습은 추천 자료를 참고하자.
+Spatial AI 논문을 읽고 구현하려면 수학적 기초가 필요하다. SLAM 논문의 "SE(3) 위의 최적화"나 "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 문장을 해석하지 못하면 방법론을 따라가기 어렵다. 여기서 쓰는 수학은 시험을 위한 이론이 아니라 로봇 논문을 이해하고 구현하기 위한 도구다. 학부 선형대수에서 배운 개념이 로보틱스에서 어떻게 쓰이는지 연결하는 데 초점을 둔다.
 
-수학 파트를 건너뛰고 싶은 마음은 이해한다. 하지만 논문을 읽다 보면 결국 수식에서 막힌다. SLAM 논문에서 "SE(3) 위의 최적화"라는 말이 나오는데 SE(3)이 뭔지 모르면 논문의 핵심 아이디어를 놓치게 되고, "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 한 줄이 이해가 안 되면 그 논문의 방법론 전체를 이해할 수 없다. 여기서 다루는 수학은 로봇 논문을 읽고 구현하기 위한 수학이다. 공대 3학년이면 선형대수를 들었을 테니, 여기서는 학부 때 배운 것이 로보틱스에서 어떻게 쓰이는지 연결하는 데 집중한다.
-
-고전적인 수학 도구가 여전히 핵심이지만, Differentiable Programming과 Auto-Differentiation(자동 미분)이 최적화 문제 접근 방식을 바꾸고 있다. 예전에는 Jacobian을 손으로 유도해야 했지만, 이제는 PyTorch나 JAX의 자동 미분으로 복잡한 파이프라인의 gradient를 계산할 수 있다. End-to-End 학습 기반 SLAM, Differentiable Rendering(NeRF, 3D Gaussian Splatting) 등이 가능해진 배경이다. 자동 미분이 내부적으로 무엇을 하는지 이해하려면 결국 여기서 다루는 기초가 필요하다.
+Differentiable Programming과 Auto-Differentiation(자동 미분)은 고전적인 수학 도구를 계산 파이프라인 안에 넣는 방식을 바꿨다. PyTorch나 JAX는 손으로 유도하던 Jacobian과 복잡한 파이프라인의 gradient를 자동으로 계산한다. 이 기능은 End-to-End 학습 기반 SLAM과 Differentiable Rendering(NeRF, 3D Gaussian Splatting)의 기반이 된다. 다만 자동 미분이 계산하는 내용을 해석하고 오류를 찾으려면 이 장에서 다루는 선형대수와 최적화가 필요하다.
 
 ## 3.1 선형대수 (Linear Algebra)
 
-선형대수는 Spatial AI 전반에서 쓰이는 기본 도구이다. 좌표 변환, 카메라 모델, 최적화, 딥러닝까지 전부 행렬과 벡터로 표현된다. "학부 때 선형대수를 들었다"와 "선형대수를 로보틱스에 활용할 수 있다"는 다른 레벨이다. 여기서는 로보틱스에서 가장 많이 쓰이는 개념을 짚는다.
+선형대수는 Spatial AI 전반에서 쓰이는 기본 도구다. 좌표 변환, 카메라 모델, 최적화, 딥러닝은 모두 행렬과 벡터로 표현된다. 이 절은 학부에서 배운 정의를 로보틱스의 계산에 연결한다.
 
 ### 3.1.1 벡터와 행렬
 
@@ -29,7 +27,7 @@ v = [v_x, v_y, v_z]^T  (열 벡터)
 좌표 변환, 회전, 투영(projection) 전부 행렬 곱으로 표현된다. 카메라가 3D 점을 2D 이미지로 투영하는 것도, 로봇의 좌표계를 변환하는 것도 전부 행렬 곱이다.
 
 > **추천 자료**
-> - [3Blue1Brown — Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) — 이 시리즈를 안 봤다면 보는 걸 권한다. 행렬 곱셈이 기하학적으로 무엇을 의미하는지, 고유값이 왜 중요한지를 시각적으로 보여준다. 선형대수를 "계산"이 아닌 "변환"으로 이해하는 데 도움이 된다.
+> - [3Blue1Brown — Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) — 행렬 곱셈과 고유값을 기하학적으로 시각화한다. 선형대수를 계산 규칙보다 공간 변환으로 이해하는 데 유용하다.
 > - [Introduction to Applied Linear Algebra (Boyd & Vandenberghe) — 무료 PDF](https://web.stanford.edu/~boyd/vmls/) — Stanford의 Boyd 교수가 쓴 응용 선형대수 교재. 실용적 관점, Python 예제 포함.
 > - [다크 프로그래머 — 선형대수학 시리즈 (6편: 기본공식~PCA)](https://darkpgmr.tistory.com/103) — 주요용어, 역행렬, 고유값, SVD, 연립방정식, PCA를 한글로 정리
 > - [다크 프로그래머 — 벡터 미분과 행렬 미분](https://darkpgmr.tistory.com/141) — 벡터/행렬 미분 규칙 정리. Jacobian 계산에 필요한 기초
@@ -74,13 +72,13 @@ SVD는 로보틱스에서 반복적으로 나온다. 과결정(overdetermined) �
 
 ## 3.2 3D 기하학 (3D Geometry)
 
-3D 기하학은 Spatial AI의 핵심이다. "3D 공간에서 로봇은 어디에 있고, 카메라는 어디를 보고 있으며, 저 물체는 어디에 있는가?"를 수학적으로 표현한다. 이 파트를 모르면 SLAM 논문의 첫 페이지부터 막힌다.
+3D 기하학은 로봇, 카메라, 물체의 위치와 방향을 같은 수학적 언어로 표현한다. SLAM은 이 표현 위에서 여러 시점의 관측을 연결한다.
 
 ### 3.2.1 좌표계 (Coordinate Frames)
 
 Spatial AI에서는 여러 좌표계를 오가며 작업한다. World Frame(W)은 전역 고정 좌표계이고, Camera Frame(C)은 카메라 중심, Body Frame(B)은 로봇 중심, IMU Frame(I)은 IMU 센서 기준 좌표계다.
 
-직접 로봇 시스템을 만들어보면 바로 체감한다. 하나의 데이터가 여러 좌표계를 거쳐야 의미가 있기 때문이다. "카메라가 본 물체의 위치"는 카메라 좌표계에서 표현되어 있지만, 로봇이 물체에 접근하려면 그 위치를 로봇 좌표계 또는 월드 좌표계로 변환해야 한다. 센서마다 자기만의 좌표계가 있고, 이들 사이의 변환을 정확히 알아야(extrinsic calibration) 센서 퓨전이 가능하다.
+카메라가 관측한 물체 위치는 camera frame에 표현된다. 로봇이 그 위치를 사용하려면 body frame이나 world frame으로 변환해야 한다. 센서마다 좌표계가 다르므로, sensor fusion은 좌표계 사이의 extrinsic calibration을 사용한다.
 
 **좌표 변환**:
 
@@ -91,22 +89,22 @@ p_W = T_WC × p_C
 T_WC: Camera → World 변환 행렬 (4×4)
 
 > **추천 자료**
-> - [State Estimation for Robotics, Ch.6 — Coordinate Frames (Tim Barfoot) — 무료 PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 좌표계 변환을 로보틱스 관점에서 가장 잘 정리한 교재
+> - [State Estimation for Robotics, Ch.6 — Coordinate Frames (Tim Barfoot) — 무료 PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 좌표계 변환을 로보틱스 상태 추정 관점에서 정리한 교재
 > - [Stanford CS231A — Camera Models](https://web.stanford.edu/class/cs231a/) — Stanford의 CV 강의에서 카메라 좌표계와 투영 모델을 다루는 부분
 
 ### 3.2.2 회전 표현 (Rotation Representations)
 
-회전 표현이 여러 가지인 이유는 각각 장단점이 다르기 때문이다. SLAM 최적화에서는 어떤 표현을 쓰느냐에 따라 수렴 속도와 안정성이 달라진다. 이 내용을 모르면 "왜 이 코드에서는 쿼터니언을 쓰고, 저 코드에서는 Rotation Matrix를 쓰는지" 이해할 수 없다.
+회전 행렬, Euler angle, quaternion, axis-angle은 파라미터 수, 제약, 특이점, 보간 방식이 다르다. SLAM 코드가 표현을 고르는 이유는 이 차이와 최적화 방식에 있다.
 
 **Rotation Matrix R**은 3×3 직교행렬(det(R) = 1, R^T = R^(-1))로, 9개 파라미터에 6개 제약이 걸려 실제 자유도는 3이다.
 
 **Euler Angles**은 Roll(φ), Pitch(θ), Yaw(ψ) 세 각도로 회전을 표현한다. 직관적이지만 Gimbal Lock 문제가 있고, 적용 순서(ZYX, XYZ 등)에 따라 결과가 달라진다.
 
-**Quaternion q = [w, x, y, z]**(||q|| = 1)는 4개 파라미터로 3 DoF를 표현한다. Gimbal Lock이 없고 보간(Slerp)이 용이해 가장 널리 쓰인다.
+**Quaternion q = [w, x, y, z]**(||q|| = 1)는 4개 파라미터로 3 DoF를 표현한다. Gimbal Lock이 없고 보간(Slerp)이 용이해 로보틱스의 자세 표현에 널리 쓰인다.
 
 **Axis-Angle**은 회전축 n과 회전각 θ를 조합한 3개 파라미터 표현이다. Rodrigues formula를 통해 Rotation Matrix로 변환된다.
 
-실전에서의 팁: ROS에서는 Quaternion이 기본 회전 표현이고, OpenCV에서는 Rodrigues 벡터(Axis-Angle)를 주로 사용하며, 최적화 라이브러리(Ceres, GTSAM)에서는 Lie Group 기반 표현(so(3) → SO(3) 매핑)을 사용한다. 이들 사이의 변환을 자유자재로 할 수 있어야 한다.
+ROS는 quaternion을 기본 회전 표현으로 쓰고, OpenCV는 Rodrigues vector(axis-angle)를 제공하며, Ceres와 GTSAM 같은 최적화 라이브러리는 Lie group 기반 표현을 지원한다. 인터페이스를 연결할 때는 각 표현의 좌표 순서와 정규화 조건을 확인한다.
 
 > **추천 자료**
 > - [3Blue1Brown — Quaternions and 3D Rotation](https://www.youtube.com/watch?v=zjMuIxRvygQ) — 쿼터니언의 기하학적 의미를 시각화한 영상. 4차원이 왜 3D 회전에 필요한지 직관적으로 이해할 수 있다.
@@ -137,7 +135,7 @@ Homogeneous Coordinates를 쓰는 이유: 회전과 이동(translation)을 하�
 SE(3)와 SO(3)는 **Lie Group**이다. 최적화를 할 때 "회전 행렬의 제약조건(직교, 행렬식 1)을 만족하면서 업데이트"해야 하는데, Lie Group 이론이 이를 우아하게 해결한다. 대응되는 **Lie Algebra** (se(3), so(3))에서 제약 없이 최적화한 후 Exponential Map으로 다시 Lie Group으로 매핑하는 방식이다. SLAM의 Pose Graph Optimization에서 이 개념이 핵심으로 쓰인다.
 
 > **추천 자료**
-> - [State Estimation for Robotics, Ch.7 (Tim Barfoot) — 무료 PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — SE(3), SO(3), Lie Group/Algebra를 로보틱스 관점에서 가장 잘 풀어낸 교재. 이 분야를 판다면 꼭 읽자.
+> - [State Estimation for Robotics, Ch.7 (Tim Barfoot) — 무료 PDF](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — SE(3), SO(3), Lie group·algebra를 로보틱스 상태 추정 관점에서 설명한 교재
 > - [Sola — A Micro Lie Theory for State Estimation in Robotics (arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Lie Group 이론을 로보틱스 상태 추정에 필요한 만큼만 간결하게 정리한 논문. 매우 실용적.
 
 ## 3.3 확률 및 통계 (Probability & Statistics)
@@ -192,7 +190,7 @@ SLAM에서의 활용: 데이터 연관(data association) 시 "이 관측이 이 
 P(A|B) = P(B|A) × P(A) / P(B)
 ```
 
-베이즈 정리는 상태 추정의 수학적 기반이다. "센서 측정값이 주어졌을 때, 로봇의 실제 상태는 무엇인가?"라는 질문에 답하는 공식이다. 베이즈 정리를 모르면 칼만 필터, 파티클 필터, Factor Graph 기반 SLAM 전부 이해할 수 없다.
+베이즈 정리는 센서 측정이 주어졌을 때 상태에 대한 확률을 갱신한다. 칼만 필터와 파티클 필터는 이 갱신을 서로 다른 분포 표현과 근사로 구현한다.
 
 **재귀적 상태 추정**:
 
@@ -203,7 +201,7 @@ P(x_t | z_{1:t}) ∝ P(z_t | x_t) × P(x_t | z_{1:t-1})
 - P(z_t | x_t): Measurement model (관측 모델) — "로봇이 이 위치에 있다면, 센서가 이 값을 출력할 확률은?"
 - P(x_t | z_{1:t-1}): Prior (이전 상태 기반 예측) — "이전까지의 정보로 볼 때 로봇이 여기 있을 확률은?"
 
-이 재귀적 구조를 이해하면 칼만 필터가 바로 이해된다. 새로운 센서 데이터가 들어올 때마다 기존 믿음(prior)을 업데이트하여 더 정확한 추정(posterior)을 얻는다. 칼만 필터의 predict-update 사이클이 바로 이 구조의 구현이다.
+새 센서 데이터가 들어올 때마다 prior를 measurement likelihood와 결합해 posterior를 구한다. 칼만 필터의 predict-update cycle은 선형 Gaussian 조건에서 이 재귀를 구현한다.
 
 베이즈 정리를 시간에 대해 *재귀적으로* 적용하면 §3.9의 베이즈 필터가 된다.
 
@@ -220,7 +218,7 @@ P(x_t | z_{1:t}) ∝ P(z_t | x_t) × P(x_t | z_{1:t-1})
 x* = argmax P(z | x)
 ```
 
-데이터가 주어졌을 때 가장 가능성 높은 파라미터
+데이터가 주어졌을 때 가장 가능성 높은 파라미터를 구한다.
 
 **MAP (Maximum A Posteriori)**:
 
@@ -228,7 +226,7 @@ x* = argmax P(z | x)
 x* = argmax P(x | z) = argmax P(z | x) × P(x)
 ```
 
-사전 확률(prior)을 고려한 추정
+사전 확률(prior)을 고려해 추정한다.
 
 SLAM에서 "관측 데이터만 보고 최적 위치를 구하는 것(MLE)"과 "이전 위치 정보도 함께 고려하여 최적 위치를 구하는 것(MAP)"의 차이다. 실제 SLAM 시스템은 대부분 MAP 추정을 쓴다. Prior를 넣으면 노이즈가 심한 관측에도 안정적으로 추정할 수 있기 때문이다. 수학적으로는 MAP의 로그를 취하면 "관측 오차의 제곱합 + 정규화 항"이 되어, 최적화 관점에서 Regularized Least Squares와 같은 형태가 된다.
 
@@ -250,7 +248,7 @@ SLAM에서: odometry 측정값의 likelihood와 센서 관측의 likelihood를 �
 
 ## 3.4 최적화 기초 (Optimization Basics)
 
-최적화는 Spatial AI 알고리즘의 마지막 단계다. SLAM의 Bundle Adjustment, 카메라 캘리브레이션, 딥러닝 학습 전부 최적화 문제다. 이 섹션의 내용을 모르면 코드를 돌릴 수는 있어도, 왜 수렴하지 않는지, 왜 결과가 이상한지 디버깅할 수 없다.
+SLAM의 bundle adjustment, 카메라 calibration, 딥러닝 학습은 모두 목적함수를 최소화한다. 잔차, Jacobian, 갱신 규칙을 구분하면 수렴 실패가 모델·초기값·solver 가운데 어디에서 생겼는지 추적할 수 있다.
 
 ### 3.4.1 Least Squares
 
@@ -334,9 +332,9 @@ Gauss-Newton과 Gradient Descent의 결합:
 - λ 작음 → Gauss-Newton (빠른 수렴)
 - λ 큼 → Gradient Descent (안정적)
 
-SLAM의 Bundle Adjustment, Pose Graph Optimization에서 핵심 알고리즘으로 쓰인다.
+SLAM의 bundle adjustment와 pose graph optimization에 쓰인다.
 
-LM이 실전에서 가장 많이 쓰이는 이유: Gauss-Newton은 초기값이 좋으면 매우 빠르게 수렴하지만, 초기값이 나쁘면 발산할 수 있다. LM은 λ를 자동으로 조절하여, 초기에는 Gradient Descent처럼 안정적으로 시작하고, 해에 가까워지면 Gauss-Newton처럼 빠르게 수렴한다. Ceres Solver, g2o, GTSAM 같은 로보틱스 최적화 라이브러리에서 기본 알고리즘으로 채택하고 있다.
+Gauss-Newton은 초기값이 좋을 때 빠르게 수렴하지만, 그렇지 않으면 발산할 수 있다. LM은 λ를 조절해 큰 damping에서는 gradient descent에 가까운 갱신을, 작은 damping에서는 Gauss-Newton에 가까운 갱신을 만든다. Ceres Solver, g2o, GTSAM 같은 최적화 라이브러리가 이 방식을 제공한다.
 
 > **추천 자료**
 > - [Cyrill Stachniss — Gauss-Newton and Levenberg-Marquardt for SLAM](https://www.youtube.com/watch?v=hRyL5KwFLAE) — SLAM에서 Gauss-Newton과 LM이 어떻게 사용되는지 단계별로 설명
@@ -355,8 +353,6 @@ LM이 실전에서 가장 많이 쓰이는 이유: Gauss-Newton은 초기값이 
 (참고: [다크 프로그래머 — 함수최적화 기법 정리 (LM 방법 등)](https://darkpgmr.tistory.com/142))
 
 ## 3.5 심화: Lie Group과 Lie Algebra
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 로보틱스에서 가장 자주 마주치는 수학적 난관 중 하나는 "회전을 어떻게 최적화할 것인가"이다. Lie group과 Lie algebra는 회전과 강체 변환을 체계적으로 다루는 틀을 제공한다. SLAM 백엔드, Visual-Inertial Odometry, Bundle Adjustment를 이해하려면 이 내용이 필수다.
 
@@ -496,7 +492,7 @@ exp(xi^) = [ exp([w]x)   J rho ]   in SE(3)
 J = I + ((1 - cos(theta)) / theta^2) [w]x + ((theta - sin(theta)) / theta^3) [w]x^2
 ```
 
-**핵심**: 6-DoF 포즈(3 회전 + 3 이동)를 6차원 벡터 xi in R^6으로 매개변수화할 수 있다. 제약 조건 없는 6차원 유클리드 공간에서 최적화를 수행하고, exponential map으로 결과를 SE(3) manifold 위로 올릴 수 있다. 이것이 SLAM 최적화에서 Lie group을 쓰는 이유다.
+6-DoF 포즈(3 회전 + 3 이동)는 6차원 벡터 xi in R^6으로 매개변수화할 수 있다. 제약 조건이 없는 6차원 유클리드 공간에서 최적화한 뒤, exponential map으로 결과를 SE(3) manifold 위에 올린다. SLAM 최적화에서 Lie group을 쓰는 이유가 여기에 있다.
 
 > **실습**: [SE(3) Pose Composition](https://alexjunholee.github.io/robotics-practice/app.html#pose_composition_3d)
 > SE(3) 변환의 합성을 3D로 직접 조작하며, 회전과 이동이 결합된 강체 변환이 어떻게 연쇄되는지 확인할 수 있다.
@@ -590,15 +586,13 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 
 > **추천 자료**
 > - [State Estimation for Robotics, Ch.7-8 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Lie group을 로보틱스 상태 추정 관점에서 다루는 핵심 레퍼런스
-> - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Lie group의 핵심만 20페이지로 요약. 논문 읽기 전에 이것부터
+> - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Lie group 핵심을 20페이지로 요약한 글
 > - [TUM Multiple View Geometry, Ch.2 -- Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) — Daniel Cremers 교수의 강의. SO(3), SE(3)를 시각적으로 설명
 > - [Sophus GitHub](https://github.com/strasdat/Sophus) — C++ Lie group 라이브러리. 코드를 읽으면 이해가 빨라진다
 > - [정진용 블로그 — SE(3) and SO(3) transformation](https://jinyongjeong.github.io/2016/06/07/se3_so3_transformation/) — SE(3), SO(3) 변환의 한글 정리. GL(3), O(3)부터 체계적으로 설명
 > - [T-Robotics: Lie Group Formulation for Robot Mechanics](http://t-robotics.blogspot.com/2015/07/lie-group-formulation-for-robot.html) — 한국어로 작성된 Lie Group 설명. 로봇 역학에서의 Lie Group 활용을 정리
 
 ## 3.6 심화: Factor Graph
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 Factor graph는 SLAM 문제를 체계적으로 정의하고 효율적으로 푸는 프레임워크다. 현대 SLAM 시스템의 백엔드는 거의 예외 없이 factor graph 기반이다.
 
@@ -627,7 +621,7 @@ e_i는 에러 함수, Sigma_i는 해당 측정의 공분산(불확실성 가중�
 
 ### 3.6.2 SLAM을 Factor Graph로 표현
 
-SLAM에서 흔히 사용되는 팩터 유형들:
+SLAM에서 사용하는 대표적 팩터:
 
 | 팩터 | 역할 |
 |---|---|
@@ -769,8 +763,6 @@ ceres::Solve(options, &problem, &summary);
 
 ## 3.7 심화: Robust Estimation
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 현실 세계의 데이터는 깨끗하지 않다. 잘못된 데이터 연관(false match), 동적 물체, 센서 고장이 outlier를 만들고, outlier는 최적화 결과를 심각하게 왜곡한다. Robust estimation은 이런 상황에서도 합리적인 추정을 내놓기 위한 기법이다.
 
 ### 3.7.1 왜 필요한가
@@ -789,7 +781,7 @@ M-estimator는 `rho(r) = r^2` 대신 다른 비용 함수 rho를 사용하여 ou
 | M-Estimator | rho(r) | 특성 |
 |---|---|---|
 | **L2 (표준)** | r^2 | Outlier에 취약 |
-| **Huber** | r^2 (abs(r) <= k), 2k*abs(r) - k^2 (abs(r) > k) | 작은 잔차는 L2, 큰 잔차는 L1. 가장 널리 쓰임 |
+| **Huber** | r^2 (abs(r) <= k), 2k*abs(r) - k^2 (abs(r) > k) | 작은 잔차는 L2, 큰 잔차는 L1. 여러 최적화 라이브러리가 지원 |
 | **Cauchy** | c^2 * log(1 + (r/c)^2) | Huber보다 outlier 억제가 강함 |
 | **Geman-McClure** | r^2 / (1 + r^2) | 극단적 outlier를 사실상 무시 |
 
@@ -833,9 +825,7 @@ OpenCV의 `cv::findHomography`, `cv::findFundamentalMat` 등에서 `cv::USAC_MAG
 
 ## 3.8 심화: 정보 이론 기초
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-Active SLAM, exploration, 불확실성 기반 의사결정에서 정보 이론 개념이 쓰인다. 핵심만 짚는다.
+Active SLAM, exploration, 불확실성 기반 의사결정에서 정보 이론 개념이 쓰인다.
 
 **Shannon entropy**: 확률 변수 X의 불확실성을 측정한다.
 
@@ -876,7 +866,7 @@ a* = argmax_a  I(X; Z_a)  =  argmax_a  [ H(Z_a) - H(Z_a | X) ]
 > **기술 흐름: 로보틱스 수학 및 최적화**
 > - **~2005**: 칼만 필터(EKF) 중심의 상태 추정. 선형 근사 기반, 소규모 문제에 적합. 실시간 처리가 어려워 문제 크기에 제약이 있었다.
 > - **2006~2015**: Factor Graph 기반 최적화(iSAM, g2o, GTSAM) 등장. 스파스 행렬 구조를 활용해 대규모 SLAM 문제를 효율적으로 풀었다. Lie Group/Algebra가 SLAM 커뮤니티에서 표준 도구로 자리잡았다.
-> - **2016~2020**: 실시간 대규모 최적화 실용화. 증분적 최적화(incremental optimization)로 매 프레임 실시간 업데이트가 가능해졌다. Ceres Solver가 산업계 표준으로 자리잡았다.
+> - **2016~2020**: 실시간 대규모 최적화 실용화. 증분적 최적화(incremental optimization)로 매 프레임 업데이트가 가능해졌다. Ceres Solver 같은 공개 비선형 최소제곱 라이브러리가 연구와 산업 응용에 널리 쓰였다.
 > - **2021~**: Differentiable Programming 시대. PyTorch/JAX의 자동 미분(Auto-Diff)을 활용한 End-to-End 최적화. NeRF, 3D Gaussian Splatting 등 미분 가능 렌더링이 등장하면서, 기존에 손으로 유도하던 Jacobian을 자동 미분으로 대체했다. Theseus(Meta) 같은 미분 가능 최적화 라이브러리도 나왔다.
 > - **지금**: 고전적 수학(Lie Group, 확률, 최적화)은 여전히 필수다. Differentiable Programming이 최적화 문제 접근 방식을 바꾸고 있지만, 자동 미분이 내부에서 무엇을 하는지 이해하려면 여기서 다룬 기초가 필요하다. 도구만 쓸 줄 알면 디버깅할 수 없다.
 
@@ -938,7 +928,7 @@ $x_{t-1}$이 과거 모든 데이터의 충분 통계량이므로, 다음 상태
 
 ### 3.9.5 베이즈 필터 일반형
 
-모든 belief 계산기의 가장 일반적 형태다. **prediction** 단계와 **correction** 단계를 반복한다.
+베이즈 필터는 동적 상태 추정을 재귀적으로 쓰는 일반적인 틀이다. **prediction** 단계와 **correction** 단계를 반복한다.
 
 $$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t-1})\, dx_{t-1} \tag{prediction}$$
 
@@ -1005,7 +995,7 @@ $$\text{bel}(X_2 = \text{open}) \approx 0.983, \quad \text{bel}(X_2 = \text{clos
 | $u_2$ 적용 후 | 0.950 | 0.050 |
 | $z_2$ 반영 후 | 0.983 | 0.017 |
 
-센서 잡음이 상당히 크고(60% / 20%) 제어도 비결정적이어도, 측정과 제어가 누적되면 belief가 빠르게 한 가설로 수렴한다. 0.983이 자율주행 의사결정 기준으로 충분한가 — 라는 질문을 이 예제는 열어둔다.
+센서 잡음이 상당히 크고(60% / 20%) 제어도 비결정적이어도, 측정과 제어가 누적되면 belief는 빠르게 한 가설로 수렴한다. 다만 0.983이 자율주행의 의사결정 기준으로 충분한지는 이 예제만으로 판단할 수 없다.
 
 ### 3.9.7 수학적 유도
 
@@ -1104,7 +1094,7 @@ return μ_t, Σ_t
 - **Correction 후**: 두 가우시안을 곱하면 분산이 둘 다보다 좁아진다 — 정보 결합 효과다. 평균은 두 가우시안의 가중 평균에 위치한다.
 - 그 다음 모션: 다시 분산 증가. 그 다음 측정: 다시 분산 감소.
 
-핵심 직관: **측정은 분산을 줄이고, 모션은 분산을 키운다.** 이 반복이 상태 추정의 본질이다. 이 직관은 §3.10.2 EKF, §3.11.3 입자 필터, ch.14 §14.7 EKF localization, §14.10 IMU preintegration에서도 그대로 유효하다.
+이 예에서 **측정은 분산을 줄이고, 모션은 분산을 키운다.** 두 과정의 반복이 상태 추정의 기본 구조를 이룬다. 같은 해석은 §3.10.2 EKF, §3.11.3 입자 필터, ch.14 §14.7 EKF localization, §14.10 IMU preintegration에도 적용된다.
 
 <!-- DEMO: kalman_1d_illustration.html -->
 
@@ -1128,7 +1118,7 @@ KF 5줄이 이렇게 짧아진 배경에는 선형 가우시안 가정이 있다
 
 #### 비선형 시스템으로의 확장
 
-실제 로봇 시스템은 선형이 아니다. 로봇이 회전하면서 이동하는 모션 모델 $g$, 거리 센서의 측정 모델 $h$는 본질적으로 비선형이다.
+실제 로봇 시스템은 선형이 아니다. 로봇이 회전하며 이동하는 모션 모델 $g$와 거리 센서의 측정 모델 $h$는 모두 비선형이다.
 
 $$x_t = g(u_t, x_{t-1}) + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
 $$z_t = h(x_t) + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
@@ -1252,11 +1242,11 @@ EKF와 마찬가지로, 비선형 $g, h$에 대해 Jacobian $G_t, H_t$를 사용
 
 #### 정보형의 중요성: 가산성과 SLAM 연결
 
-정보 필터의 measurement update 가산성 $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$는 매우 강력한 성질이다. 측정 한 번 = $\Omega$에 한 항 추가. 여러 로봇이 독립 측정을 취합할 때 $\Omega_{\text{total}} = \sum_i \Omega_i$, $\xi_{\text{total}} = \sum_i \xi_i$로 직접 합산할 수 있다.
+정보 필터의 measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$는 측정마다 $\Omega$에 한 항을 더한다. 여러 로봇의 독립 측정도 $\Omega_{\text{total}} = \sum_i \Omega_i$, $\xi_{\text{total}} = \sum_i \xi_i$로 합산할 수 있다.
 
 이 가산성은 §3.6 factor graph에서 "측정 factor 하나 = $H^T Q^{-1} H$와 $H^T Q^{-1} z$ 한 항 추가"로 일반화된다. Factor graph가 sparse Cholesky로 풀리는 이유, GTSAM·iSAM2의 정보 행렬이 sparse한 이유가 모두 이 가산 구조에서 비롯된다.
 
-정보형의 가산성은 EIF SLAM·SEIF에서 SLAM 정보형 표현의 직계 토대가 된다 — 자세한 역사는 ch.14 §14.16 심화 참조.
+EIF-SLAM과 SEIF는 이 정보형 가산성을 SLAM 표현에 사용한다. 역사적 연결은 Ch.14 §14.16에서 다룬다.
 
 > **추천 자료**
 > - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.3이 이 절의 원전. KF·EKF·IF 세 알고리즘의 유도가 나란히 서술되어 있다.
@@ -1353,7 +1343,7 @@ log-odds 갱신식은 ch.14 Occupancy Grid Mapping에서 그대로 셀별로 적
 
 ### 3.11.3 입자 필터 (Particle Filter)
 
-#### 비모수 표현의 핵심 아이디어
+#### 비모수 표현의 원리
 
 히스토그램 필터의 격자는 차원이 늘면 지수적으로 커진다. 입자 필터는 격자 대신 표본으로 분포를 근사해 이 문제를 우회한다.
 

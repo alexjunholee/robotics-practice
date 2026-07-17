@@ -78,7 +78,7 @@
 
 **Q: Should I learn Python or C++ first?**
 
-A: The core of lab code is C++. SLAM, ROS packages, and real-time control modules are all written in C++, and you will frequently read and modify this code. Python is used for deep-learning scripts and data preprocessing, but AI coding agents handle this area well, so the need to master it yourself has diminished. For both, "the ability to read and understand code" is the core, and writing can be done in collaboration with AI.
+A: C++ is common in SLAM, ROS packages, and real-time control modules, so researchers need it to read and modify lab code. Python is used mainly for deep-learning scripts and data preprocessing. AI coding agents can assist with writing either language, but researchers must still understand existing code and verify its behavior.
 
 **Q: Can I do research without a GPU?**
 
@@ -102,73 +102,66 @@ A: Read the Limitations section of recent conference papers. You can get ideas f
 
 **Q: Which GPU should I buy?**
 
-A: The most important spec in GPU selection is **VRAM**. If the model does not fit in VRAM, you cannot run it at all. Next is compute speed (TFLOPS), which directly affects training time.
+A: First measure whether the model, optimizer state, activations, and batch fit in **VRAM** under the intended configuration. Then consider precision support, memory bandwidth, power, framework compatibility, and an application-level benchmark. The table narrows candidates by memory class; it is not a purchase ranking.
 
 **Personal (desktop)**
 
-| VRAM | Card | FP32 TFLOPS | FP16 TFLOPS | Use case |
-|------|------|-------------|-------------|------|
-| 8GB | RTX 4060 | 15.1 | 15.1 | YOLOv8, ResNet training, small-scale fine-tuning |
-| 8GB | RTX 5060 Ti 8GB | ~30 | ~30 | 4070-class compute, but 8GB VRAM is tight for VFMs |
-| 12GB | RTX 3060 12GB | 12.7 | 12.7 | Compute is slow, but 12GB VRAM is unique at this price point. Cheap on the used market. Student entry-level |
-| 12GB | RTX 4070 | 29.1 | 29.1 | Depth Anything, SegFormer. SAM is just barely possible at batch 1 |
-| 16GB | RTX 5060 Ti 16GB | ~30 | ~30 | SAM, DINOv2 inference. Mid-scale training. **Best value recommendation** |
-| 16GB | RTX 4070 Ti Super | 44.1 | 44.1 | Same VRAM as above, 1.5× compute speed |
-| 24GB | RTX 3090 (used) | 35.6 | 35.6 | Cheapest way to secure 24GB of VRAM. Training works, just slow |
-| 24GB | RTX 4090 | 82.6 | 82.6 | Top of the personal tier. VLA fine-tuning, large 3DGS scenes |
-| 32GB | RTX 5090 | 104.8 | 209.6 | Maximum VRAM for personal use. 2.5× the 4090 in FP16 |
+| VRAM | Example cards | Role to evaluate | Check before buying |
+|------|---------------|------------------|---------------------|
+| 8GB | RTX 4060, RTX 5060 Ti 8GB | Small-CNN training, inference with a limited batch | Peak memory of the intended model; VFM fine-tuning may not fit |
+| 12GB | RTX 3060 12GB, RTX 4070 | Mid-sized inference and training experiments | Generation-specific runtime and used-card condition |
+| 16GB | RTX 5060 Ti 16GB, RTX 4070 Ti Super | Larger batches, VFM inference, mid-scale training | Model-specific activation and optimizer memory |
+| 24GB | RTX 3090, RTX 4090 | Training that fits within 24GB, 3DGS and VLA experiments | Power, cooling, used warranty, and runtime differences |
+| 32GB | RTX 5090 | Local experiments that exceed 24GB | Power, case, PSU, and software support |
 
 **Server/lab (data center)**
 
-| VRAM | Card | FP32 TFLOPS | TF32 TFLOPS | BF16 TFLOPS | Characteristics |
-|------|------|-------------|-------------|-------------|------|
-| 16/32GB | V100 SXM2 | 15.7 | — | — | 1st-gen Tensor Cores. No TF32. Still active in many labs. Can be bought cheaply used |
-| 24GB | A10 | 31.2 | 62.5 | 125.0 | For inference servers. Slow for training |
-| 40/80GB | A100 SXM | 19.5 | 156 | 312 | FP32 is slow, but overwhelming in TF32/BF16. Multi-GPU scaling via NVLink |
-| 80GB | H100 SXM | 66.9 | 989 | 1979 | 6× A100 in TF32, 6× in BF16. Transformer Engine support |
-| 80GB | H200 SXM | 66.9 | 989 | 1979 | Same compute as H100, 1.5× memory bandwidth via HBM3e |
-| 141GB | B200 | 90 | 2250 | 4500 | Latest. Can train 70B+ models on a single GPU |
+| GPU memory | Card | Characteristics | Official specifications |
+|------------|------|-----------------|-------------------------|
+| 16/32GB | V100 SXM2 | First-generation Tensor Cores; no TF32 or BF16 | [V100 data center GPU](https://www.nvidia.com/en-us/data-center/v100/) |
+| 24GB | A10 | PCIe inference and graphics family | [A10 datasheet](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a10/pdf/a10-datasheet.pdf) |
+| 40/80GB | A100 | TF32, BF16, MIG, PCIe/SXM variants | [A100 specifications](https://www.nvidia.com/en-us/data-center/a100/) |
+| 80GB | H100 SXM | Hopper, Transformer Engine, NVLink | [H100 specifications](https://www.nvidia.com/en-us/data-center/h100/) |
+| 141GB | H200 SXM | 141GB HBM3e and 4.8TB/s memory bandwidth | [H200 specifications](https://www.nvidia.com/en-us/data-center/h200/) |
+| 180GB | B200 | Blackwell and 180GB HBM3e; delivered in server configurations | [DGX B200 specifications](https://www.nvidia.com/en-us/data-center/dgx-b200/) |
 
-How to read the numbers:
-- **FP32**: Traditional floating point. Used in OpenCV, classical SLAM, etc. For personal GPUs, this number reflects actual performance.
-- **TF32/BF16**: Applied when using `torch.cuda.amp` (mixed precision) in PyTorch. Training speed increases 2–6×. Data-center GPUs (A100, H100) show their true strength in this mode, so do not look only at FP32 TFLOPS and conclude "A100 is slower than a 4090?".
-- **TFLOPS**: Tera Floating Point Operations Per Second. Higher is faster.
+TFLOPS denotes trillions of floating-point operations per second at a stated precision; it is a theoretical peak, not an application benchmark. FP32 is the conventional 32-bit format, while TF32, BF16, FP16, and FP8 trade precision and range differently for accelerated tensor operations. When reading specifications, distinguish precision, CUDA cores from Tensor Cores, dense from structured-sparsity figures, and PCIe from SXM variants. Equal peak TFLOPS does not imply equal training time because memory bandwidth, kernels, batch size, and data loading differ. The benefit of `torch.amp` is also model- and hardware-dependent, so compare cards with a short run of the same repository, batch, and precision.
 
 **Notes**:
-- The RTX 5060 Ti comes in 8GB and 16GB versions. Be sure to buy the 16GB. The 8GB runs out of VRAM and hits a wall quickly.
-- AMD GPUs (RX 7900 XTX, etc.) have improving ROCm support, but compatibility issues with the CUDA ecosystem remain. If you do not want to spend time troubleshooting, buy NVIDIA.
-- If the lab server has an A100/H100, your personal GPU is for debugging/prototyping. Check the server specs first.
-- Used RTX 3090 (24GB) offers the best price per VRAM. The high power draw (350W) and loud noise have to be factored in.
-- You can also use an A100 by the hour on Google Colab Pro (\$10/month). Worth trying before buying a GPU.
+- For cards such as the RTX 5060 Ti that come with 8GB and 16GB options, estimate the VRAM required by the intended model and batch. Eight gigabytes can be restrictive for local VFM work.
+- When considering an AMD GPU, check whether the required frameworks and libraries support ROCm. CUDA-only dependencies add migration cost.
+- If the lab server has an A100 or H100, a personal GPU may serve mainly for debugging and prototyping. Check the server specifications and availability before purchasing.
+- A used RTX 3090 is a 24GB option, but price, warranty, and cooling condition vary by listing. Check rated power and the PSU and case requirements.
+- Colab and cloud-GPU prices, assigned GPU types, and usage limits change. Benchmark the real workload on a rented GPU before buying, but verify the current price and quota on the provider page.
 
 **Q: How many papers should I read per day?**
 
-A: A standard like "N papers per day" is meaningless. At the start, *thoroughly* understanding 1 paper per week is far better. Follow the three-pass method from §20.4 and dig deeply into a single paper. After about 6 months, even glancing at the abstract will give you a sense of "ah, this is that kind of paper". From then on the pace picks up. For reference, reading a paper for a lab-meeting presentation and reading one for your own research are different in depth. The latter requires analyzing the code too.
+A: The purpose and depth of the reading matter more than a daily paper count. At first, reading one paper carefully each week with the three-pass method in §20.4 can be more useful. With experience, the abstract alone becomes enough to judge a paper's type and relevance. Reading for a lab meeting also differs from reading for one's own research, which may extend to code analysis.
 
 **Q: I am not good at coding — can I still do research?**
 
-A: As of 2026, the ability to *make good use of coding agents (Claude, Copilot, etc.)* has become more important than the ability to write code line by line yourself. Tell the agent "build me a KITTI dataset loader" or "add wandb logging to this training loop" and the code appears. Time spent typing directly has dropped sharply.
+A: Coding agents such as Claude and Copilot can quickly draft requests such as "build a KITTI dataset loader" or "add wandb logging to this training loop." They reduce the time spent typing, but the output still needs review.
 
-That said, to judge whether the agent's code is right or wrong, you need domain knowledge. "Why this DataLoader is slow when num_workers is 0", "why this loss is coming out NaN", "why the coordinate frame in this SLAM code is flipped" — the agent cannot catch these on its own (see Ch.14). In the end, you need the eye to distinguish why good code is good and why bad code is bad, and that eye comes from reading a lot of good code.
+Judging generated code still requires domain knowledge. An agent may not reliably identify why a DataLoader is slow with `num_workers=0`, why a loss becomes NaN, or where a coordinate frame is reversed in SLAM code (see Ch.14). Run the code and compare it with existing implementations before accepting the result.
 
-Recommended approach: Read the code of well-known open source (ORB-SLAM3, Ultralytics, HuggingFace Transformers, etc.) and understand "why it was written this way". Coding skill is not typing speed but the ability to read code and make judgments.
+Reading projects such as ORB-SLAM3, Ultralytics, and HuggingFace Transformers and tracing their design choices helps develop code-review skills.
 
 **Q: How do I prepare a conference presentation?**
 
-A: Conference presentations are largely divided into **oral presentations** and **poster presentations**.
+A: Conference presentations are largely divided into **oral presentations** and **poster presentations**. Talk length, poster dimensions, and presentation language vary by venue, so the official presenter instructions take precedence.
 
-- **Poster**: Most first presentations are posters. You summarize the research on an A0-size sheet. The key is big figures, little text. A passerby should become interested within 3 seconds. For practice, rehearse in front of lab colleagues at least 3 times.
-- **Oral**: Usually 15–20 minutes. Keep slides under 20, one message per slide. A demo video is a plus. Prepare supplementary slides for questions.
-- Common: Most presentations are in English, so write a script and practice, but do not memorize it. Content delivery matters more than natural English.
+- **Poster**: A0 is a common size, but check the venue's specification. Use large figures and little text so a passerby can locate the topic and result quickly. Rehearse in front of lab colleagues.
+- **Oral**: Fifteen to twenty minutes is a common example, not a rule; the session limit comes first. Set the slide count from that limit and keep one message per slide. Prepare a demo video and supplementary slides when they help.
+- **Common**: Confirm the presentation language, then rehearse from a script while prioritizing delivery and timing over memorization.
 
 **Q: Reading English papers is too hard — what do I do?**
 
-A: This really is something time resolves. A few tips:
+A: Repeated reading and accumulated domain knowledge reduce the burden. A few practical steps help:
 
-- **Grasp the structure first**: Most papers follow Introduction → Related Work → Method → Experiments → Conclusion. Only the Method is genuinely new; the rest follow similar patterns.
-- **Learn field-specific vocabulary first**: Expressions like "ablation study", "state-of-the-art", "we empirically show" repeat. After reading about the first 20 papers, you get used to them.
+- **Grasp the structure first**: Many experimental papers use Introduction → Related Work → Method → Experiments → Conclusion, but contributions can also lie in problem formulation, data, evaluation, or analysis. Use the title and headings to identify the paper's actual structure.
+- **Learn field-specific vocabulary first**: Expressions like "ablation study", "state-of-the-art", and "we empirically show" recur. The number of papers needed for familiarity depends on the reader's background and field.
 - **Do not be embarrassed to use translation tools**: Translating unknown sentences with DeepL or Google Translate is not embarrassing at all. That said, if you rely only on translation, your English will not improve. Read in the order "original → check translation → back to original".
-- **Use the highlighter in your PDF reader**: Coloring key sentences while reading raises concentration. Use whatever tool you prefer — Adobe Acrobat, Zotero's built-in viewer, etc.
+- **Use the highlighter in your PDF reader**: Marking important sentences makes them easier to find again. Use whichever tool is comfortable, such as Adobe Acrobat or Zotero's built-in viewer.
 
 ## C. Troubleshooting Guide
 
@@ -429,7 +422,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 Research tools
 
-*The full list of research tools has been absorbed into [Research Notes Part 2](../../research-notes/guide.html#ch16-마음가짐) and [Research Notes Ch.34](../../research-notes/guide.html#ch34-학회-2-3주-전-체크리스트) *(Korean; English version planned)*. Field-specific application: see §20.4 "Paper-writing tools" and §20.7 recommended learning roadmap.*
+See [Research Notes Part 2](../../research-notes/guide.html#chapter-16) for tools used in reading and writing papers, and [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) for conference preparation *(Korean only)*. Sections 20.4 and 20.7 cover tools and learning paths specific to Spatial AI.
 
 ### D.4 Dataset preparation
 
@@ -440,7 +433,7 @@ sudo apt-get install libeigen3-dev
 
 ## E. First-Week Survival Guide
 
-When you first join a lab, it is natural to feel lost about what to do. The first week has a minimum set of tasks.
+The first week needs a minimum task list for preparing accounts and the execution environment, then locating the code, data, and documents for the research topic. The Day 1–7 allocation below is an example; reorder it around account provisioning, equipment schedules, and the lab's onboarding process.
 
 ### Day 1–2: Build the environment
 
@@ -454,7 +447,7 @@ When you first join a lab, it is natural to feel lost about what to do. The firs
 [ ] Join the Slack/Discord channel
 ```
 
-> Tip: If you get stuck setting up the server environment, ask a senior. Say "I tried X, but got an unexpected result Y", and they will help you almost 100% of the time. If you ask without having tried anything... they may just tell you to figure it out.
+> Tip: When asking a senior about the server environment, include the command you tried, the expected result, and the actual output. This information makes the problem much faster to narrow down.
 
 ### Day 3–4: Get to know the existing code
 
@@ -466,28 +459,34 @@ When you first join a lab, it is natural to feel lost about what to do. The firs
 [ ] Run a simple demo
 ```
 
-> Tip: It is normal for the code not to run. Environments differ, paths differ, versions differ. Copy the error message and search Google — most of the time the answer is on Stack Overflow.
+> Tip: Code often fails on its first run because environments, paths, and versions differ. Use the error message to check the official documentation and issue tracker before changing the setup.
 
 ### Day 5: Start reading papers
 
-*The meta-skill operations of Day 5 and Day 6–7 (asking for paper recommendations, getting the research direction, preparing a self-introduction) are treated in depth in [Grad Notes Ch.4](../../grad-notes/guide.html#ch4-관계는-양방향) (Day 5) and [Grad Notes Ch.7](../../grad-notes/guide.html#ch7-내-연구를-갖기-0년차-학생에서-5년차-연구자로) (the Day 1–7 sequence) *(Korean; English version planned)*.*
+[Grad Notes Ch.4](../../grad-notes/guide.html#chapter-4) discusses how to ask for a first paper recommendation and talk with lab members, while [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) covers setting a research direction during the first week *(Korean only)*.
 
 > Tip: It is normal not to understand a paper on the first read. Even grasping just "what problem is this paper trying to solve?" is enough for the first week.
 
 ### Day 6–7: Get the research direction
 
-*See the link above. Field-specific one-liner: skim Ch.18 of this document (the lab's research directions) and map the lab's recent papers/projects to the seniors' topics.*
+Read Ch.18 and classify the lab's recent papers and projects by research topic. Mark where they overlap with the work of senior lab members.
 
 ### Things you do not need to do in the first week
 
 - Understand papers perfectly — time will take care of this
 - Grasp every latest research trend — gradually
 - Write code from scratch — start by modifying existing code
-- Set up the GPU server perfectly — copy a senior's environment
-- Come up with research ideas — expect at least 1–2 months of learning time
+- Set up the GPU server perfectly — begin from an environment file, container, or installation procedure the lab has already verified
+- Produce a fully formed research idea — it is fine to learn the lab's problems and tools first
 
 ### Mindset for survival
 
-The general survival mindset (not-knowing is normal, leveraging seniors, writing it down, starting small, not comparing) is treated in the meta-skill guide — see [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters on entering research) *(Korean; English version planned)*.
+Research Notes and Grad Notes discuss the habits needed at the beginning of a project. The individual links preserve the five decisions summarized in the Korean edition *(linked chapters are Korean only)*.
 
-Field-specific application: in SLAM/CV/robotics labs the *senior code* is the highest-leverage starting point — copy the senior's environment, run their pipeline first, and only then begin modifying. Setup pain in robotics is high (CUDA · ROS · simulator versions); the time saved by not reinventing it goes straight into reading papers.
+- *Not knowing at first is expected* → [Grad Notes Ch.14 — The Weight of Autonomy](../../grad-notes/guide.html#chapter-14), §2
+- *"It does not work" is not a report; give prediction, attempt, and result* → [Grad Notes Ch.10 — One Question per Email](../../grad-notes/guide.html#chapter-10), §3
+- *Keep records that let your future self reconstruct the work* → [Grad Notes Ch.8 — Using Time](../../grad-notes/guide.html#chapter-8), §5
+- *Start from a small code path* → [Grad Notes Ch.11 — The Tool Trap](../../grad-notes/guide.html#chapter-11), §1
+- *Compare against your past work, not a peer's current position* → [Grad Notes Ch.15 — The Comparison Trap](../../grad-notes/guide.html#chapter-15), §3
+
+In a SLAM, CV, or robotics lab, begin with an existing project from a senior member. Reproduce its environment and run the pipeline before modifying it. Reusing a known CUDA, ROS, and simulator configuration reduces setup time and leaves more time for understanding the method.

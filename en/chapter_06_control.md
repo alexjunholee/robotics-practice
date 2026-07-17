@@ -1,29 +1,29 @@
 # Ch.6 — Control Theory
 
 
-Perceiving the world and actually affecting it are two entirely different problems for a robot. No matter how sophisticated the perception pipeline, a single miscalculated motor current makes the robot tip over, break things, or injure people. Control theory is the discipline of "how to actually realize a desired motion."
+Perception estimates the robot's state and environment; control uses that information to produce the desired motion. An incorrect control input can make a robot unstable or cause a collision, so the system needs an appropriate model and feedback.
 
 ---
 
 ## 6.1 Why Learn Control
 
-If perception is "understanding the world," then control is "affecting the world." Without both, a robot is just a pile of sensors or a pile of motors.
+Perception estimates the environment and state, whereas control computes actuator inputs that move the robot toward a target state.
 
-The reasons to learn control are simple:
+Control is needed for three practical reasons:
 
-- **Motors are dumber than expected.** Command "send the joint to 30 degrees," and the motor slams in maximum current, overshoots 30 degrees, and oscillates. Smoothly bringing it to the desired position is control.
-- **Disturbances are always present.** The floor is slippery, the wind blows, the payload mass differs from expectation. The sensor-actuator loop must be closed (feedback) to cope with such uncertainty.
-- **Safety is on the line.** When an industrial robot arm works next to a person, the lack of force control can break the person's arm. No exaggeration.
+- **Accurate position tracking**: Without feedback, a large current can drive a joint past its target angle and produce oscillation. A controller adjusts the input to reduce the error and reach the target smoothly.
+- **Disturbance rejection**: Slippery floors, wind, and unexpected payloads introduce changes not captured by the model. Closing the sensor-actuator loop lets the system respond to them.
+- **Safe contact**: An industrial robot working near people must limit contact forces as well as position error.
 
 Control theory is broad; robotics practice usually needs the path from PID to state-space control, MPC, impedance control, and whole-body control.
 
-One thing upfront: control theory involves a lot of math. If you are not comfortable with linear algebra and differential equations, review at least matrix operations and the eigenvalue concept before reading this chapter.
+This chapter assumes familiarity with matrix operations, eigenvalues, and differential equations.
 
 ---
 
 ## 6.2 PID Control
 
-PID (Proportional-Integral-Derivative), proposed by Minorsky in 1922 for a ship steering system, has been the most widely used controller in industry for over 100 years. Every control engineer in the world learns it first and keeps using it until retirement.
+PID (Proportional-Integral-Derivative), proposed by Minorsky in 1922 for a ship steering system, has remained widely used in industrial control. Its simple structure and interpretable terms also make it a common first controller in control courses.
 
 ### Basic Structure
 
@@ -127,27 +127,27 @@ PI:   Kp = 0.45 * Ku,  Ki = 1.2 * Kp / Tu
 P:    Kp = 0.5 * Ku
 ```
 
-Frankly, Ziegler-Nichols tuning produces fairly large overshoot. Fine as a starting point, but manual fine-tuning is essential afterward.
+Ziegler-Nichols tuning can produce substantial overshoot. It is best used to obtain initial gains, followed by adjustment based on the measured response.
 
-**Empirical tuning in practice**: most people do it like this.
+**Empirical tuning in practice**: the following sequence adjusts the gains empirically.
 
 1. Set D and I to 0.
 2. Raise P. Stop at the point where the system reacts quickly but does not oscillate.
 3. If a steady-state error remains, raise I little by little. Watch out for wind-up.
 4. If overshoot is large, add a little D. Check the noise filter.
 
-A professor would not like to hear that this is done "by feel," but in the field it is done this way most of the time. If the system model is accurate, tuning first in simulation and then applying on the real hardware is far more efficient.
+When an adequate system model is available, tune the gains in simulation first and then transfer them to the hardware.
 
 ### Limits of PID
 
 PID is powerful but has clear limits:
 
 - **It is SISO (Single-Input Single-Output) only.** In systems with inter-joint coupling like a 6-axis robot arm, applying independent PID to each joint degrades performance. The motion of one joint acts as a disturbance on the others.
-- **It is weak on nonlinear systems.** PID is fundamentally a linear controller. Robot dynamics are nonlinear. It only performs well near an operating point.
+- **It is weak on nonlinear systems.** PID is a linear controller, whereas robot dynamics are nonlinear. It performs well only near an operating point.
 - **It cannot handle constraints.** Within the PID structure there is no way to explicitly handle physical constraints such as torque limits, joint angle limits, or velocity limits.
 - **It does not predict the future.** It reacts only to the current error. Without feedforward, tracking performance is limited.
 
-The reason PID is still in use after 100 years is simple: easy to implement, easy to understand, and works "reasonably well" on most systems. If the plant is simple and the performance requirements are not extreme, PID is enough. Per-joint servo control on industrial robots is still mostly PID-based today.
+PID is comparatively simple to implement and analyze. It can be sufficient when plant coupling is weak and the performance requirements are met, and PID-family controllers are also used for industrial robot joint servos.
 
 ---
 
@@ -183,7 +183,7 @@ D = [[0]]
 
 ### Relationship to Transfer Functions
 
-The transfer function is G(s) = C * (sI - A)^(-1) * B + D. Transfer functions are convenient for SISO systems, but for MIMO (Multi-Input Multi-Output) systems state-space is much more natural. Robots are almost always MIMO systems, so state-space is the standard representation.
+The transfer function is G(s) = C * (sI - A)^(-1) * B + D. Transfer functions are convenient for SISO systems, while state-space models expose coupling directly when robot controllers handle several inputs and outputs. The system's input-output structure and the purpose of the analysis determine which representation to use.
 
 ### Controllability
 
@@ -265,7 +265,7 @@ J = integral_0^inf (x(t)^T * Q * x(t) + u(t)^T * R * u(t)) dt
 - Q (n x n, positive semi-definite): penalty on state error. "How much is the state departing from zero disliked."
 - R (m x m, positive definite): penalty on the control input. "How much is control energy to be saved."
 
-Increasing Q makes the state converge to zero quickly, but the control input grows. Increasing R makes the control input smaller, but state convergence slows down. This is the essential trade-off of LQR.
+Increasing Q makes the state converge to zero quickly, but the control input grows. Increasing R reduces the control input at the cost of slower state convergence. LQR adjusts the balance between the two.
 
 ### Tuning Q and R
 
@@ -297,7 +297,7 @@ Optimal state feedback gain: K = R^(-1) * B^T * P
 
 Control law: u(t) = -K * x(t)
 
-The key point of this result is that all eigenvalues of the closed-loop system (A - BK) are guaranteed to lie in the left half-plane. That is, stability is mathematically proven.
+All eigenvalues of the closed-loop system (A - BK) are guaranteed to lie in the left half-plane. The result therefore provides a mathematical guarantee of stability.
 
 ### Python Implementation
 
@@ -373,7 +373,7 @@ MPC emerges to overcome these limits.
 
 ## 6.5 MPC (Model Predictive Control)
 
-MPC (Model Predictive Control) is a method that solves a finite-horizon optimization problem at every control cycle to compute the control input. It is one of the most widely used control techniques in robotics in the 2020s.
+MPC (Model Predictive Control) solves a finite-horizon optimization problem repeatedly to compute control inputs. Its ability to represent constraints directly makes it widely studied and applied in robot control.
 
 ### Basic Concept
 
@@ -387,24 +387,24 @@ At every time step k, perform the following:
 
 This is the "receding horizon" strategy. Since the optimization is re-solved each time, feedback effects against model error and disturbances arise naturally.
 
-### Why MPC Dominates in Robotics
+### Why MPC Is Useful in Robotics
 
-- **Constraint handling**: torque limits, joint angle limits, velocity limits, collision avoidance — all go directly into the optimization as constraints. Impossible with PID or LQR.
+- **Constraint handling**: torque limits, joint angle limits, velocity limits, and collision avoidance can be represented directly in the optimization. Basic PID and LQR do not include such constraints, although saturation handling, reference governors, and constrained-LQR extensions exist.
 - **Nonlinear models**: Nonlinear MPC uses the nonlinear dynamics model as-is.
 - **Future prediction**: rather than reacting to the current error, MPC predicts the future trajectory and responds proactively. A legged robot shifting its center of mass before taking the next step is based on this principle.
 - **Multi-objective optimization**: multiple objectives fit into the cost function simultaneously. "Track the target trajectory while saving energy and respecting torque limits."
 
 ### Linear MPC vs Nonlinear MPC
 
-**Linear MPC**: uses a linear model (x(k+1) = A*x(k) + B*u(k)). When the cost function is quadratic and the constraints are linear, the problem becomes a QP (Quadratic Program). QP is convex, so the global optimum is found quickly. Suitable for real-time control.
+**Linear MPC**: uses a linear model (x(k+1) = A*x(k) + B*u(k)). When the cost is quadratic and the constraints are linear, the problem becomes a QP. A feasible convex QP has a global optimum; actual solve time depends on problem size, sparsity, solver, and hardware.
 
-**Nonlinear MPC (NMPC)**: uses a nonlinear dynamics model. The problem becomes non-convex, making it hard to solve with no guarantee of the global optimum. However, it reflects robot dynamics accurately and performs well. CasADi + IPOPT is the standard toolkit.
+**Nonlinear MPC (NMPC)**: uses a nonlinear dynamics model. The problem is generally non-convex and does not guarantee a global optimum. CasADi + IPOPT is one widely used combination of automatic differentiation and a general NLP solver; alternatives include acados, FORCESPRO, and SNOPT.
 
 Choice in practice: if the system is sufficiently close to linear or the control period is very short, Linear MPC; if the nonlinearity is large and there is slack in the control period, NMPC.
 
 ### Real-Time Issues
 
-The greatest obstacle of MPC is that optimization must be solved every control cycle. A legged robot controlled at 1 kHz must solve a QP within 1 ms.
+A central challenge in MPC is repeatedly solving the optimization within a time budget. If MPC runs synchronously at the same 1 kHz rate as an inner loop, state handling and the QP must finish within 1 ms. Many systems instead run MPC as a slower outer loop with a faster tracking controller.
 
 Major QP solvers:
 - **OSQP** (https://osqp.org/): operator splitting based, strong on sparse QPs. First choice for most Linear MPC setups.
@@ -412,10 +412,10 @@ Major QP solvers:
 - **ECOS/Clarabel**: handles up to second-order cone programming.
 
 For NMPC:
-- **CasADi** + **IPOPT**: automatic differentiation + interior-point method. The de facto standard for NMPC implementation.
+- **CasADi** + **IPOPT**: a combination of automatic-differentiation modeling and a general interior-point NLP solver.
 - **acados** (https://docs.acados.org/): CasADi-based but optimized for real time. Generates C code.
 
-Solver speed determines the control rate. A solver taking 5 ms caps throughput at 200 Hz. This is why MPC engineers care so much about the solver.
+A synchronous solve that takes 5 ms cannot nominally complete more than 200 updates per second. End-to-end control timing also includes preprocessing, communication, and jitter; asynchronous solves or a separate inner loop change the architecture.
 
 ### Linear MPC Python Example
 
@@ -556,7 +556,7 @@ The control techniques covered so far focus mostly on "sending the position to a
 
 ### Virtual Spring-Damper Model
 
-Core idea of impedance control:
+Impedance control expresses the desired mass-spring-damper relationship as:
 
 ```
 F = M_d * (x_ddot_d - x_ddot) + D_d * (x_dot_d - x_dot) + K_d * (x_d - x)
@@ -572,7 +572,7 @@ F = K_d * (x_d - x) + D_d * (x_dot_d - x_dot)
 - D_d: virtual damping. Suppresses oscillation.
 - M_d: virtual inertia. Usually hard to tune, so the inertia term is often omitted.
 
-The key is tuning K_d and D_d for the task:
+The task determines the appropriate stiffness K_d and damping D_d:
 - Picking up a glass: low K_d (gentle), high D_d (stable).
 - Tightening a bolt: high K_d (precise).
 - Collaborating with a person: very low K_d (safe).
@@ -660,8 +660,6 @@ On research robots with torque control (such as Franka Emika Panda), impedance c
 
 ## 6.7 Advanced: Whole-Body Control
 
-*If you want to become a researcher, read from here.*
-
 Humanoid and quadruped robots have dozens of joints, must manage multiple contact points (feet, hands) simultaneously, and must maintain balance. In such systems, "put a PID on each joint" is practically meaningless. Integrated control at the whole-body level is required.
 
 ### Task-Space vs Joint-Space
@@ -672,7 +670,7 @@ Humanoid and quadruped robots have dozens of joints, must manage multiple contac
 
 ### Operational Space Control (Khatib, 1987)
 
-Khatib's Operational Space Framework is the foundation of task-space control. Core idea: derive the dynamics directly in the task space.
+Khatib's Operational Space Framework underpins task-space control. It derives the dynamics directly in task space.
 
 Joint-space dynamics:
 
@@ -764,8 +762,6 @@ print(f"Friction cone constraint matrix shape: {A_friction.shape}")
 
 ## 6.8 Advanced: Lyapunov Stability and Adaptive Control
 
-*If you want to become a researcher, read from here.*
-
 Once a controller has been designed, "does this controller really make the system stable?" must be proven. Working in simulation and mathematically guaranteed stability are entirely different matters. Lyapunov theory is the central tool for this proof.
 
 ### Lyapunov Stability
@@ -827,7 +823,7 @@ Used when there is model uncertainty but the bound is known.
 | Safety certification required | Lyapunov-based proofs | "It worked in simulation so OK" |
 | Rapid prototyping | PID + feedforward | H-infinity from the start |
 
-Frankly, unless writing a paper, adaptive control or sliding mode is rarely used on real systems. MPC is powerful and intuitive enough. But when "why is this controller stable?" has to be explained, Lyapunov theory is unavoidable. Especially in safety-critical systems (medical robots, autonomous driving), mathematical stability proofs are essential.
+Adaptive control and sliding mode are selected according to the structure of the uncertainty and the required guarantees. A stability claim requires a Lyapunov function or comparable mathematical argument, and systems subject to safety certification treat that argument as a design condition.
 
 ---
 
@@ -835,14 +831,14 @@ Frankly, unless writing a paper, adaptive control or sliding mode is rarely used
 
 > **Åström & Murray, "Feedback Systems: An Introduction for Scientists and Engineers"**
 > https://fbswiki.org/
-> Free PDF available. The most suitable introduction to control theory. Hits the core accurately without going overboard on math. Covers PID, state-space, and frequency response. Undergraduates should start here.
+> Free PDF. An introductory text that connects PID, state-space methods, and frequency response.
 
 > **Steve Brunton, "Control Bootcamp" (YouTube)**
 > https://www.youtube.com/playlist?list=PLMrJAkhIeNNR20Mz-VpzgfQs5zrYi085m
-> Explains state-space, controllability, observability, and LQR intuitively. Each video is around 15 minutes, short and dense. Watching before reading a textbook makes understanding much faster.
+> Explains state-space, controllability, observability, and LQR in videos of roughly 15 minutes each. Useful for orienting the concepts before following a textbook derivation.
 
 > **Slotine & Li, "Applied Nonlinear Control"**
-> The standard text on nonlinear control, Lyapunov stability, and adaptive control. The book for studying the content of Section 6.8 seriously. Out of print, but PDFs are around (find it yourself).
+> A textbook on nonlinear control, Lyapunov stability, and adaptive control. It extends the material in Section 6.8 and is currently out of print.
 
 > **Russ Tedrake, "Underactuated Robotics" (MIT OCW)**
 > https://underactuated.csail.mit.edu/
@@ -854,7 +850,7 @@ Frankly, unless writing a paper, adaptive control or sliding mode is rarely used
 
 > **CasADi**
 > https://web.casadi.org/
-> The de facto standard tool for implementing Nonlinear MPC. Supports automatic differentiation and multiple NLP solvers (IPOPT, SNOPT). Offers Python, MATLAB, and C++ interfaces.
+> A widely used framework connecting automatic differentiation to NLP solvers such as IPOPT and SNOPT. It offers Python, MATLAB, and C++ interfaces.
 
 > **OSQP (Operator Splitting Quadratic Program)**
 > https://osqp.org/
@@ -884,4 +880,4 @@ Frankly, unless writing a paper, adaptive control or sliding mode is rarely used
 
 ---
 
-Robotics uses only part of control theory. For the mathematical details of each technique, supplement with the further reading. One piece of advice: control theory is hard to understand without simulation. Run the code, change the parameters, and watch the system response. One simulation beats reading a textbook three times.
+The further reading develops the mathematical details of each technique. Run the code and change its parameters to observe how the system response changes.

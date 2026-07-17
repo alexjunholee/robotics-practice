@@ -1,13 +1,13 @@
 # Ch.15 — 로봇 프레임워크 (Robot Frameworks)
 
 
-로봇 소프트웨어를 처음 짜는 사람이 가장 당황하는 순간은, 센서 드라이버·경로 계획·모터 제어를 하나의 프로그램 안에서 전부 돌려야 한다는 걸 깨달을 때이다. 프레임워크는 이 문제를 구조적으로 해결해 준다. 프레임워크 없이 로봇을 만들면 "센서 데이터 받기 → 판단하기 → 모터 명령 보내기"만 해도 스레드 관리·메시지 직렬화·좌표 변환을 전부 직접 구현해야 하는데, 이걸 모르면 첫 프로젝트에서 벽에 부딪힌다. 여기서는 사실상 업계 표준인 ROS를 중심으로, 시뮬레이터와 주변 도구까지 폭넓게 본다.
+로봇 소프트웨어는 센서 드라이버, 경로 계획, 모터 제어를 동시에 실행하고 그 사이의 통신을 관리해야 한다. 프레임워크는 스레드 관리, 메시지 직렬화, 좌표 변환처럼 여러 모듈이 공유하는 기능을 제공한다. 이 장은 ROS의 통신 구조와 패키지 체계를 먼저 보고, 시뮬레이터와 주변 도구로 이어진다.
 
 ## 15.1 ROS (Robot Operating System)
 
 ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이다. 운영체제가 아닌 **미들웨어**로, 프로세스 간 통신, 패키지 관리, 도구 등을 제공한다.
 
-로봇은 카메라·LiDAR·모터·제어기 같은 수십 가지 모듈이 동시에 돌아가야 하는데, 이 모듈들이 서로 데이터를 주고받는 방법을 통일해 주는 것이 ROS의 핵심 역할이다. ROS 없이 이 작업을 하면 소켓 프로그래밍부터 시작해야 하는데, 연구 시간의 대부분이 인프라 구축에 날아간다.
+로봇에서는 카메라·LiDAR·모터·제어기 같은 모듈이 동시에 실행된다. ROS는 이 모듈의 통신 방식과 메시지 형식을 통일해 각 기능을 별도 노드로 나누어 개발할 수 있게 한다.
 
 ### 15.1.1 ROS1 vs ROS2
 
@@ -21,20 +21,20 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크이�
 | Master | 필요 (roscore) | 불필요 |
 | Python | 2/3 | 3 only |
 
-현재 권장: ROS2 (Humble)
+현재 권장: 새 장기 프로젝트는 ROS2 Jazzy LTS를 우선 검토한다. Ubuntu 22.04나 기존 package 제약 때문에 Humble을 유지하는 프로젝트도 있다.
 
-하지만 많은 패키지가 아직 ROS1만 지원하므로 상황에 따라 선택.
+다만 사용하는 robot driver와 package의 지원 distribution, Ubuntu 버전, EOL 날짜를 함께 확인해 선택한다. ROS1 Noetic은 2025년 5월에 공식 지원이 끝났다.
 
-ROS1 Noetic의 공식 지원은 2024년에 종료(EOL)되었다. 새 프로젝트라면 특별한 이유가 없는 한 ROS2로 시작한다. 기존 ROS1 패키지를 써야 한다면 `ros1_bridge`로 두 노드를 동시에 운용할 수 있다. Nav2, MoveIt2 등 핵심 패키지의 ROS2 포팅이 완료된 상태이므로, 대부분의 로봇 개발에서는 ROS2만으로 충분하다.
+새 프로젝트라면 특별한 이유가 없는 한 ROS2로 시작한다. 기존 ROS1 package가 필요하면 지원되는 조합에서 `ros1_bridge`를 검토할 수 있지만, ROS1·ROS2·Ubuntu 버전 제약을 먼저 확인해야 한다. Nav2와 MoveIt 2는 ROS2용으로 제공된다.
 
 > **추천 자료**
-> - [ROS2 공식 튜토리얼](https://docs.ros.org/en/humble/Tutorials.html) — ROS2 Humble 기준 공식 단계별 가이드. 처음이라면 "Beginner: CLI tools"부터 시작
+> - [ROS2 공식 튜토리얼](https://docs.ros.org/en/jazzy/Tutorials.html) — ROS2 Jazzy LTS 기준 공식 단계별 가이드. 처음이라면 "Beginner: CLI tools"부터 시작
 > - [The Construct - ROS2 Basics](https://www.youtube.com/@TheConstruct) — ROS 전문 교육 채널. 시뮬레이터 내에서 실습 가능
-> - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/humble/How-To-Guides/Migrating-from-ROS1.html) — 기존 ROS1 코드 이전 공식 가이드
+> - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/jazzy/How-To-Guides/Migrating-from-ROS1.html) — 기존 ROS1 코드 이전 공식 가이드
 
 ### 15.1.2 핵심 개념
 
-이 개념들은 ROS의 뼈대이다. Topic, Service, Action의 차이를 정확히 모르면 "센서 데이터를 어떤 방식으로 보내야 하지?" 하는 질문에서 매번 막히게 된다.
+Topic, Service, Action은 통신 시점과 응답 방식이 다르다. 센서 스트림, 짧은 요청-응답, 오래 걸리며 중간 상태가 필요한 작업을 각각 다른 인터페이스로 표현한다.
 
 **Node (노드)**:
 - 실행 가능한 프로세스
@@ -74,13 +74,13 @@ class MinimalPublisher(Node):
 - 취소 가능
 - 예: 네비게이션, 조작
 
-정리하면, Topic은 카메라 영상처럼 계속 흘러가는 데이터에, Service는 "지금 배터리 잔량 알려줘"처럼 한 번 물어보고 답 받는 상황에, Action은 "저기까지 가"처럼 시간이 걸리는 작업에 쓰인다. 이 세 가지를 구분하지 못하면 시스템 설계에서 계속 꼬인다.
+Topic은 카메라 영상처럼 계속 흐르는 데이터에 쓴다. Service는 "지금 배터리 잔량 알려줘"처럼 한 번 요청하고 응답을 받는 상황에, Action은 "저기까지 가"처럼 시간이 걸리는 작업에 알맞다. 이 차이를 구분해야 통신 구조를 제대로 설계할 수 있다.
 
 **Parameter (파라미터)**:
 - 노드 설정값
 - 런타임 변경 가능
 
-> **⚠ AI 에이전트 주의**: AI에게 ROS2 코드를 짜달라고 할 때는 QoS 설정을 명시하라. AI는 기본적으로 QoS를 빠뜨리고, 센서 토픽이 조용히 안 들어와서 한참 헤매게 된다.
+> **⚠ 생성된 코드 점검**: ROS2 코드를 요청할 때는 센서 토픽의 QoS를 함께 제공한다. 생성된 subscriber가 publisher와 같은 reliability와 durability 설정을 쓰는지 확인해야, 오류 메시지 없이 데이터가 끊기는 상황을 피할 수 있다.
 
 > **추천 자료**
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — 공식 개념 문서
@@ -137,7 +137,7 @@ transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Ti
 
 ### 15.1.4 주요 패키지
 
-ROS의 진짜 힘은 커뮤니티가 만들어 놓은 패키지 생태계에 있다. 아래 패키지들은 거의 모든 로봇 프로젝트에서 한 번은 쓰게 되니, 이름이라도 기억해 두자.
+아래 패키지는 표준 메시지, 영상·포인트 클라우드 변환, 내비게이션 기능을 제공한다.
 
 | 패키지 | 용도 |
 | --- | --- |
@@ -154,13 +154,13 @@ ROS의 진짜 힘은 커뮤니티가 만들어 놓은 패키지 생태계에 있
 
 ## 15.2 시뮬레이션
 
-실물 로봇으로 바로 실험하면 하드웨어가 망가지거나, 사람이 다칠 수 있다. 시뮬레이터에서 먼저 충분히 테스트하고 실물로 넘어가는 것이 안전하고 효율적이다. 특히 강화학습처럼 수만 번의 에피소드가 필요한 학습 방법론에서는 시뮬레이터 없이는 사실상 연구가 불가능하다.
+실물 로봇에서 바로 실험하면 하드웨어가 손상되거나 사람이 다칠 수 있다. 시뮬레이터는 동작 범위와 실패 조건을 먼저 확인하고, 강화학습에 필요한 많은 에피소드를 반복하는 환경을 제공한다.
 
 최근에는 **Embodied AI** 연구가 빠르게 늘면서, 로봇이 가상 환경에서 자율적으로 학습하는 시뮬레이터의 역할도 커졌다. NVIDIA Isaac Sim, AI2-THOR, Habitat 같은 플랫폼이 이 흐름을 이끌고 있으며, 시뮬레이터에서 학습한 정책을 실제 로봇에 전이하는 Sim-to-Real Transfer가 핵심 연구 주제다.
 
 ### 15.2.1 Gazebo
 
-Gazebo는 ROS와 가장 긴밀하게 연동되는 시뮬레이터이다. ROS 프로젝트 대부분의 시뮬레이션 데모가 Gazebo 기반으로 제공되므로, ROS를 쓰겠다면 Gazebo 사용법은 알아야 한다.
+Gazebo는 ROS와 연동되는 시뮬레이터다. 여러 ROS 패키지가 Gazebo용 시뮬레이션 데모와 로봇 모델을 제공한다.
 
 구성 요소:
 - **SDF (Simulation Description Format)**: 환경 정의
@@ -250,8 +250,6 @@ ROS와 시뮬레이터 외에도, 특정 용도에 특화된 프레임워크와 
 > - [Eigen Getting Started](https://eigen.tuxfamily.org/dox/GettingStarted.html) — C++ 선형대수 라이브러리 입문
 
 ## 15.4 심화: 시스템 설계
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 15.4.1 Latency Budgeting
 - 전체 파이프라인의 latency를 구간별로 할당

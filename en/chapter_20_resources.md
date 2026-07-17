@@ -1,6 +1,6 @@
 # Ch.20 — Further Reading
 
-A curated list of textbooks, courses, papers, and learning paths for starting robotics research. If there is too much material and you do not know where to look, start with the **Learning Path** section at the bottom.
+The resources are grouped by topic, and the **Learning Path** section at the bottom orders them by prerequisite background.
 
 ## 20.1 Textbooks
 
@@ -9,14 +9,14 @@ A curated list of textbooks, courses, papers, and learning paths for starting ro
 **Multiple View Geometry in Computer Vision** (Hartley & Zisserman)
 - The core reference on multi-view geometry
 - Camera models, Epipolar Geometry, 3D reconstruction
-- Mathematically rigorous — honestly painful to read cover to cover, but you can pick the chapters you need
+- Mathematically rigorous and useful as a reference for selected topics
 - Link: [Cambridge University Press](https://www.cambridge.org/core/books/multiple-view-geometry-in-computer-vision/0B6F289C78B2B23F596CAA76D3D43F7A)
 - Some chapter PDFs are available on the authors' page: https://www.robots.ox.ac.uk/~vgg/hzbook/
 
 **Computer Vision: Algorithms and Applications** (Szeliski)
 - A comprehensive CV textbook
 - The latest edition (2022) includes deep learning
-- **Free PDF available** — a blessing for students
+- **Free PDF available**
 - Free PDF: https://szeliski.org/Book/
 
 ### Robotics
@@ -64,7 +64,7 @@ A curated list of textbooks, courses, papers, and learning paths for starting ro
 ### Computer Vision
 
 **CS231n: Convolutional Neural Networks for Visual Recognition** (Stanford)
-- The foundation of deep learning vision — almost everyone starting in this field watches it
+- A course on the foundations of deep-learning-based vision
 - Free materials and videos
 - Lectures: https://www.youtube.com/playlist?list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv
 - Notes: https://cs231n.github.io/
@@ -108,17 +108,17 @@ A curated list of textbooks, courses, papers, and learning paths for starting ro
 
 **Neural Networks: Zero to Hero** (Andrej Karpathy)
 - Learn neural networks by building them from scratch
-- Extremely intuitive explanations, paired with code
+- Explanations paired with code
 - YouTube: https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ
 
 ## 20.3 Recommended YouTube Channels
 
-These are YouTube channels you can watch more casually than textbooks or full courses. Play them on your commute, during meals, or on breaks, and the intuition accumulates.
+These YouTube channels divide the material into shorter segments than a textbook or full course.
 
 | Channel | Topic | Notes |
 | --- | --- | --- |
-| **Cyrill Stachniss** | SLAM, Robotics | The canonical SLAM lectures. Undergraduate-class level of systematic explanation |
-| **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | A Columbia professor walks through CV fundamentals one by one. Genuinely approachable |
+| **Cyrill Stachniss** | SLAM, Robotics | Systematic SLAM explanations at an undergraduate-course level |
+| **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | Explains CV fundamentals concept by concept |
 | **Andrej Karpathy** | Deep Learning, AI | Former Tesla AI Director. Builds neural nets from scratch |
 | **Yannic Kilcher** | Paper reviews | Weekly reviews of the latest ML/AI papers. You learn how to read papers |
 | **Two Minute Papers** | AI research trends | Introduces the latest research in 2-3 minute videos. "What a time to be alive!" |
@@ -142,7 +142,7 @@ These are YouTube channels you can watch more casually than textbooks or full co
 
 ### How to read them
 
-The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-reviewer, the CCC lens, diagnosing reader expectations) is covered in depth in a separate meta-skill guide — [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (ch01–ch07, seven chapters) *(Korean; English version planned)*.
+[*Research Notes* Ch.6–12 — Reading](../../research-notes/guide.html#chapter-6) covers how to select papers, Keshav's three-pass method, the 5 Cs, the reviewer perspective, and the CCC lens *(Korean only)*.
 
 ### Must-read paper list
 
@@ -176,7 +176,7 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 ### Paper-writing tools
 
 > **Further reading**
-> - [Overleaf](https://www.overleaf.com/) — online LaTeX editor. The de facto standard for collaborative paper writing
+> - [Overleaf](https://www.overleaf.com/) — online LaTeX editor with collaborative editing
 > - [Mathpix](https://mathpix.com/) — convert equation screenshots into LaTeX code
 > - [Detexify](http://detexify.kirelabs.org/classify.html) — draw a symbol by hand to search for its LaTeX
 > - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML table generator
@@ -186,9 +186,9 @@ The reading mindset (why we read, Keshav's 3-pass method, the 5 Cs, reading-as-r
 
 ## 20.5 Major Conferences
 
-The reference tables of conferences by field live in the meta-skill guide — see the *Conferences by field* section at the end of [Research Notes Ch.34](../../research-notes/guide.html#ch34-학회-2-3주-전-체크리스트), which covers schedules and character of CV, robotics, and autonomous-driving venues *(Korean; English version planned)*.
+The *Conferences by field* table in [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) summarizes the schedules and character of venues in CV, robotics, and autonomous driving *(Korean only)*.
 
-The focus here is the SLAM/CV/robotics field core. The general theory of conferences (why attend, presentation openers, first-line craft) and the field reference tables are handled in the guide above.
+The same chapter discusses why researchers attend conferences and how to open a presentation.
 
 ## 20.6 Useful GitHub Repositories
 
@@ -354,14 +354,14 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 | --- | --- | --- |
 | Understanding and using VFMs | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
-| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/)* |
-| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/)* |
-| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [Research Notes Ch.32](../../research-notes/guide.html#ch32-revision-rebuttal)* |
+| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [*Research Notes* Ch.6–15 — Reading](../../research-notes/guide.html#chapter-6)* |
+| Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [*Research Notes* Ch.1–5 — Starting](../../research-notes/guide.html#chapter-1)* |
+| Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [Research Notes Ch.32](../../research-notes/guide.html#chapter-32)* |
 
 **Exercises**:
 - Analyze the code of recent papers — clone from GitHub and run it yourself
 - Experiment with your own improvement ideas — try "what if I change this part?"
-- Attempt paper writing — *the full frame is [Research Notes Part 2](../../research-notes/guide.html#ch16-마음가짐)*
+- Attempt paper writing — *the full frame is [Research Notes Part 2](../../research-notes/guide.html#chapter-16)*
 - Read **Chapters 10-13** of this document to track recent research directions
 
 **Milestone**: If you can run an experiment that modifies or improves an existing paper's method and compare the result quantitatively, you have entered the advanced stage. Aim to reach a level where the work could be submitted to a conference workshop.
@@ -383,21 +383,45 @@ Git usage                       Point clouds (Open3D)            Paper writing
 
 ## 20.8 Research Skills
 
-*Graduate level.*
+*Graduate level.* Paper reading and writing, experimental design, conference presentations, and peer review are treated in detail in [Research Notes](../../research-notes/guide.html); long-term PhD management is covered in [Grad Notes](../../grad-notes/guide.html). This section links the parts that apply directly to SLAM, CV, and robotics.
 
-The research-skill content of this section — researcher mindset, paper writing, experimental design, presentations, peer review, paper-writing tools — is covered in depth in a separate meta-skill guide *(Korean; English version planned)*:
+Research practice requires attention to direction, a sustainable way of working, and tools at the same time.
 
-- Researcher mindset (engineer-as-identity, optimization horizon, direction-engine-tools, sustainable growth) → [`../../research-notes/part0_starting/`](../../research-notes/part0_starting/) (5 chapters)
-- Paper reading → [`../../research-notes/part1_reading/`](../../research-notes/part1_reading/) (7 chapters; see also §20.4 above)
-- Paper writing (structure, sentence craft, revision workflow) → [Research Notes Part 2](../../research-notes/guide.html#ch16-마음가짐) (workflow · structure · sections · sentence · after-submission)
-- Conference presentations and peer review → [Research Notes Part 4](../../research-notes/guide.html#ch33-학회는-왜-가는가) (3 chapters; see also §20.5 above)
+### 20.8.0 Researcher Mindset
 
-Field-specific notes for SLAM/CV/robotics:
+- Direction, engine, and tools as three layers within one frame → [*Grad Notes* Ch.17 — Conditions Under Which Research Becomes a Life](../../grad-notes/guide.html#chapter-17), §5
+- The weight of autonomy, Hyun's *everything is optimization*, and the optimization horizon as a long game → [*Grad Notes* Ch.14 — The Weight of Autonomy](../../grad-notes/guide.html#chapter-14), §1
+- Consistency versus explosive growth, and the trap of comparing pace with the person next to you → [*Grad Notes* Ch.15 — The Comparison Trap](../../grad-notes/guide.html#chapter-15), §3
+- Solid foundations and the frame of a paper with no obvious reason for rejection → [*Research Notes* Ch.16 — Mindset](../../research-notes/guide.html#chapter-16), §1
 
-- *Experimental design.* Ablation removes components one at a time. Vary one variable at a time. Repeat at least 3 times and report mean/std. Compare on the same data, same split, same hardware — copying numbers from other papers often hides condition mismatches.
-- *Tooling.* LaTeX on Overleaf or local (texlive + VS Code). Reference management: PDF reader + AI for under 100 papers; Zotero + Better BibTeX once the count grows. Pipeline figures with TikZ (precise) or draw.io (fast); tables with `booktabs`; algorithms with `algorithm2e`. Build a notation table and apply it across the whole paper.
+### 20.8.1 Writing a Paper
 
-> Classic external references (kept here as field-agnostic must-reads):
+The Abstract → Introduction → Related Work → Method → Experiments → Conclusion structure, and the progression from problem and prior limitation to approach and contributions in an introduction, are covered in [*Research Notes* Part 2 — Writing](../../research-notes/guide.html#chapter-16) and [Ch.23 — Introduction](../../research-notes/guide.html#chapter-23).
+
+### 20.8.2 Experimental Design and Ablation
+
+SLAM and CV experiments require ablation, control of variables, repeated trials, and comparisons on the same data, split, and hardware. Copying baseline numbers from another paper can make a comparison unfair when the conditions differ.
+
+### 20.8.3 Conference Presentations
+
+A 1+1+3+3+1-minute talk structure, one message per slide, poster legibility at 3 m, and a 30-second to one-minute demo are discussed more fully in [*Research Notes* Part 4 — Presenting](../../research-notes/guide.html#chapter-33).
+
+### 20.8.4 Reviewing a Paper — Peer Review
+
+For a reviewer-oriented checklist covering novelty, soundness, experiments, clarity, and reproducibility, as well as constructive feedback and rebuttals, see [*Research Notes* Ch.10 — Reading as a Reviewer](../../research-notes/guide.html#chapter-10) and [Ch.32 — Revision/Rebuttal](../../research-notes/guide.html#chapter-32).
+
+### 20.8.5 Tools
+
+- LaTeX: Overleaf or local installation (TeX Live + VS Code)
+- References: Mark the primary text in a PDF reader and manage metadata with Zotero + Better BibTeX. Check AI-generated summaries, related-work comparisons, and draft BibTeX against the paper and DOI metadata.
+- Pipeline figures: TikZ for precision, draw.io for speed, or Inkscape for SVG
+- Tables: `booktabs` (`\toprule`, `\midrule`, `\bottomrule`)
+- Algorithms: `algorithm2e`
+- Equations: maintain a notation table and apply it consistently across the paper
+
+For consistent LaTeX notation, notation tables, and equation explanations, see [*Research Notes* Ch.30 — Writing Equations, Theorems, and Proofs](../../research-notes/guide.html#chapter-30).
+
+> Recommended references:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — a classic talk on paper writing
 > - [How to Read a Paper (S. Keshav)](http://ccr.sigcomm.org/online/files/p83-keshavA.pdf) — the 3-pass reading method
 > - [Tips for Writing Technical Papers (Jennifer Widom, Stanford)](https://cs.stanford.edu/people/widom/paper-writing.html) — concise, practical advice

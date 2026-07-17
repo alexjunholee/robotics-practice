@@ -3,7 +3,7 @@
 
 로봇 팔 하나를 책상 위에 올려놓았다고 하자. 모터 6개에 각각 어떤 각도를 줘야 손끝이 커피잔에 닿는가? 이 질문에 답하는 학문이 기구학이다. 그리고 그 모터를 실제로 돌리고, 센서를 읽고, 제어 루프를 1kHz로 돌리는 현실의 문제가 메카트로닉스이다.
 
-수학부터 실제 하드웨어 선정과 통신 프로토콜까지 다룬다. 수식이 좀 나오지만 목적은 실제 로봇을 움직이는 것이다.
+기구학의 수식은 하드웨어 선정과 통신 프로토콜을 거쳐 실제 로봇의 동작으로 이어진다.
 
 ---
 
@@ -18,7 +18,7 @@
 
 동역학(Dynamics)과 다르다. 기구학은 힘과 질량을 고려하지 않는다. 어디에 있는가의 문제이지, 어떤 힘이 필요한가의 문제가 아니다. 동역학은 다음 장에서 다룬다.
 
-기구학을 모르면 다음 상황에서 막힌다:
+기구학은 다음 작업에 쓰인다:
 - 로봇 팔 경로 계획 (motion planning)
 - 텔레오퍼레이션 (원격 조종 시 마스터-슬레이브 매핑)
 - 캘리브레이션 (실제 로봇과 모델 사이 오차 보정)
@@ -37,7 +37,7 @@ T = | R  p |
     | 0  1 |
 ```
 
-여기서 R은 3×3 회전 행렬, p는 3×1 위치 벡터이다. 이 행렬 하나로 강체의 위치와 자세를 동시에 표현할 수 있고, 여러 변환을 행렬 곱으로 연쇄(chain)할 수 있다는 점이 핵심이다.
+여기서 R은 3×3 회전 행렬, p는 3×1 위치 벡터이다. 동차 변환 행렬 하나로 강체의 위치와 자세를 함께 표현하고, 여러 변환을 행렬 곱으로 연쇄(chain)할 수 있다.
 
 두 프레임 사이의 변환 T_01이 있고, 또 다른 변환 T_12가 있으면:
 
@@ -45,12 +45,12 @@ T = | R  p |
 T_02 = T_01 * T_12
 ```
 
-이 행렬 곱이 순기구학의 본질이다. 베이스에서 끝단까지 각 관절의 변환을 순서대로 곱하면 된다.
+순기구학은 베이스에서 끝단까지 각 관절의 변환을 순서대로 곱해 이 합성 변환을 구한다.
 
 
 ### 4.2.2 DH Parameters (Denavit-Hartenberg)
 
-1955년 Denavit와 Hartenberg가 제안한 방법이다. 70년이 지났지만 여전히 산업계의 표준이다. 4개의 파라미터로 인접한 두 링크 사이의 관계를 정의한다:
+1955년 Denavit와 Hartenberg가 제안한 방법이다. 지금도 로봇 기구학에서 널리 쓰이는 좌표계 규약이며, 4개의 파라미터로 인접한 두 링크 사이의 관계를 정의한다:
 
 | 파라미터 | 의미 |
 |---------|------|
@@ -125,7 +125,7 @@ print(f"End-effector position: ({x:.3f}, {y:.3f}), orientation: {np.degrees(phi)
 
 DH 파라미터의 대안으로, Lie group/Lie algebra에 기반한 PoE (Product of Exponentials) 방법이 있다. Lynch & Park의 "Modern Robotics"에서 채택한 방법이다.
 
-핵심 아이디어: 각 관절을 twist(나선 운동)로 표현하고, 행렬 지수(matrix exponential)를 통해 변환을 계산한다.
+PoE는 각 관절을 twist(나선 운동)로 표현하고, 행렬 지수(matrix exponential)로 변환을 계산한다.
 
 ```
 T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
@@ -148,7 +148,7 @@ DH vs PoE 비교:
 | 산업계 채택 | 매우 높음 | 학계 중심, 점점 확산 |
 | 교재 | Craig, Siciliano | Lynch & Park |
 
-실무적 조언: DH 파라미터는 반드시 알아야 한다. URDF(로봇 기술 파일)에 들어가는 파라미터가 결국 DH 기반이고, 산업용 로봇 매뉴얼은 모두 DH 테이블을 제공한다. PoE는 이론적으로 더 깔끔하고 연구에서 선호되지만, 현장에서 DH를 모르면 곤란하다. 둘 다 익혀라.
+DH 파라미터는 교재와 산업용 로봇 매뉴얼에서 흔히 쓰인다. URDF는 같은 링크·관절 변환을 직접 기술한다. PoE는 Lie group에 기반한 정돈된 표현으로 연구에서 널리 쓰인다. 매뉴얼, 로봇 기술 파일, 수식 유도 사이를 오가려면 두 관례의 대응을 알아두는 편이 좋다.
 
 ```python
 # robotics-toolbox-python으로 DH 기반 FK 예제 (Puma 560)
@@ -163,8 +163,8 @@ print(f"RPY angles: {T.rpy()}")  # Roll-Pitch-Yaw
 ```
 
 > **추천 자료**
-> - Lynch & Park, *Modern Robotics*, Chapter 4 — PoE 설명이 가장 잘 되어 있는 교재. 무료 PDF와 Coursera 강의 제공: https://modernrobotics.org
-> - Craig, *Introduction to Robotics*, Chapter 3 — DH 파라미터의 정석. Modified DH convention 사용.
+> - Lynch & Park, *Modern Robotics*, Chapter 4 — PoE를 중심으로 설명하며 무료 PDF와 Coursera 강의를 제공한다: https://modernrobotics.org
+> - Craig, *Introduction to Robotics*, Chapter 3 — Modified DH convention을 사용하는 교재
 > - Peter Corke, *Robotics, Vision and Control* — Python 코드와 함께 FK를 실습할 수 있다: https://github.com/petercorke/robotics-toolbox-python
 
 ---
@@ -180,7 +180,7 @@ FK는 쉽다. 행렬 곱이면 된다. 문제는 IK이다.
 
 ### 4.3.1 Analytical IK (해석적 방법)
 
-닫힌 형태(closed-form)의 해를 구하는 방법이다. 가능한 경우 가장 빠르고 정확하다.
+닫힌 형태(closed-form)의 해를 구하는 방법이다. 해가 존재하면 반복 최적화 없이 후보를 계산할 수 있지만, 수치 정확도와 실행 시간은 구현과 특이점 처리에 따라 달라진다.
 
 **2-link planar arm의 IK:**
 
@@ -193,7 +193,7 @@ cos(θ_2) = (x² + y² - L1² - L2²) / (2 * L1 * L2)
 θ_1 = atan2(y, x) - atan2(L2*sin(θ_2), L1 + L2*cos(θ_2))
 ```
 
-±에서 보듯이 해가 두 개다 (elbow-up, elbow-down). 이것이 IK의 본질적 어려움이다.
+±에서 보듯이 해가 두 개다(elbow-up, elbow-down). 여러 해가 존재한다는 점이 IK를 어렵게 만든다.
 
 ```python
 def ik_2link(x, y, L1=1.0, L2=1.0, elbow_up=True):
@@ -311,21 +311,21 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 
 | 솔버 | 방법 | 특징 |
 |------|------|------|
-| KDL | Numerical (Newton-Raphson) | ROS 기본, 느림, 특이점 취약 |
+| KDL | Numerical (Newton-Raphson) | ROS 생태계에서 제공, 관절 한계·초기값·특이점에 민감 |
 | IKFast (OpenRAVE) | Analytical (코드 생성) | 특정 구조에 대해 C++ 코드 자동 생성. 빠름 |
 | TRAC-IK | KDL + SQP 듀얼 | KDL보다 성공률 높음, ROS 패키지 존재 |
 | MoveIt2 IK | 위 솔버들을 통합 | ROS2 생태계, 충돌 회피 통합 |
 | pinocchio | PoE 기반 | 현대적, 빠름, 미분 가능 (differentiable) |
 
 ```python
-# TRAC-IK가 KDL보다 나은 이유: 시간 내 해를 찾을 확률
-# 벤치마크 결과 (Beeson & Ames, 2015):
-#   KDL:     해 성공률 ~50-70% (시간 제한 5ms 기준)
-#   TRAC-IK: 해 성공률 ~95-99% (동일 조건)
+# Beeson & Ames (2015)는 5개 로봇 모델의 도달 가능한 자세를
+# 모델별 10,000개씩, 해 하나당 5ms 제한으로 비교했다.
+# 그 실험에서는 TRAC-IK가 stock KDL보다 높은 solve rate를 보였지만,
+# 수치는 관절 체인·초기값·허용 오차에 따라 달라진다.
 ```
 
 > **추천 자료**
-> - Beeson & Ames, "TRAC-IK: An Open-Source Library for Improved Solving of Generic Inverse Kinematics" (2015): https://traclabs.com/projects/trac-ik/
+> - [Beeson & Ames, "TRAC-IK: An Open-Source Library for Improved Solving of Generic Inverse Kinematics" (2015)](https://doi.org/10.1109/HUMANOIDS.2015.7363472) — 모델별 조건과 solve rate는 원 논문의 표를 확인
 > - MoveIt2 IK 문서: https://moveit.picknik.ai/main/doc/concepts/inverse_kinematics.html
 > - Pinocchio (rigid body dynamics library): https://github.com/stack-of-tasks/pinocchio
 
@@ -451,7 +451,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 ```
 
 > **추천 자료**
-> - Siciliano et al., *Robotics: Modelling, Planning and Control*, Chapter 3 — 자코비안의 가장 포괄적인 설명
+> - Siciliano et al., *Robotics: Modelling, Planning and Control*, Chapter 3 — 자코비안을 기구학·동역학 맥락에서 폭넓게 설명
 > - Corke, *Robotics, Vision and Control*, Chapter 8 — 코드 예제와 시각화 포함: https://petercorke.com/rvc/
 > - robotics-toolbox-python 문서: https://github.com/petercorke/robotics-toolbox-python
 
@@ -459,7 +459,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 
 ## 4.5 메카트로닉스 기초
 
-수학은 여기까지다. 이제 현실로 돌아오자. 관절 각도를 "정한다"고 해서 로봇이 움직이는 것이 아니다. 모터가 있어야 하고, 센서가 있어야 하고, 그 사이를 연결하는 전자 회로와 통신이 있어야 한다. 이것이 메카트로닉스이다.
+관절 각도를 정한다고 로봇이 움직이는 것은 아니다. 모터와 센서, 그 사이를 연결하는 전자 회로와 통신이 있어야 한다. 이것이 메카트로닉스다.
 
 
 ### 4.5.1 액추에이터
@@ -468,27 +468,27 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 가장 기본적인 액추에이터. 전압을 가하면 회전한다. 토크는 전류에 비례하고 (τ = K_t * i), 역기전력은 속도에 비례한다 (V_emf = K_e * ω). 제어가 쉽고 가격이 저렴하지만, 브러시 마모가 있다.
 
 **BLDC (Brushless DC) 모터:**
-브러시 없이 전자적으로 전류를 전환한다. 수명이 길고 토크 밀도가 높으며 효율도 좋아 현대 로봇의 표준이다. FOC(Field-Oriented Control)로 제어하면 토크 리플(ripple)을 최소화할 수 있다.
+브러시 없이 전자적으로 전류를 전환한다. 수명이 길고 토크 밀도와 효율이 높아 현대 로봇에서 자주 선택된다. FOC(Field-Oriented Control)는 토크 리플(ripple)을 줄이는 데 쓰인다.
 
 **서보 모터 (Dynamixel 시리즈):**
-모터 + 감속기 + 엔코더 + 컨트롤러를 일체형으로 묶은 제품이다. Robotis의 Dynamixel 시리즈가 연구용으로 가장 널리 쓰인다.
+모터 + 감속기 + 엔코더 + 컨트롤러를 일체형으로 묶은 제품이다. Robotis의 Dynamixel은 연구·교육용 플랫폼에서 널리 쓰이는 서보 제품군이다.
 
-| 모델 | 토크 (Nm) | 통신 | 용도 |
+| 모델 | 공칭 최대 토크 예시 (Nm) | 통신 | 용도 |
 |------|-----------|------|------|
 | XL330 | 0.5 | TTL | 소형 그리퍼, SO-ARM100 등 |
 | XM540 | 10.0 | RS-485 | 중형 로봇 팔 |
 | PH54  | 44.7 | RS-485 | 대형 매니퓰레이터, 모바일 로봇 |
 
-Dynamixel의 장점은 데이지 체인 연결, 위치/속도/토크 제어 모드, PID 게인 조절, 가격 대비 성능이다. 단점은 통신 속도 한계이고, 고급 제어를 하려면 커스텀 펌웨어가 필요한 경우가 있다.
+표의 토크는 모델과 공급 전압에 따라 달라지므로 실제 선정에는 각 e-Manual의 정격·stall 조건과 연속 운전 한계를 확인해야 한다. Dynamixel의 장점은 데이지 체인 연결, 위치/속도/전류 기반 제어 모드, PID 게인 조절이다. 단점은 제품별 통신·제어 주기와 열 한계이고, 필요한 대역폭과 제어 모드가 기본 펌웨어에서 지원되는지 먼저 확인해야 한다.
 
 **Quasi-Direct Drive (QDD):**
 
-MIT Mini Cheetah(2019)로 주목받은 방식이다. 핵심 아이디어는 감속비를 낮추는 것이다.
+MIT Mini Cheetah(2019)로 주목받은 방식으로, 감속비를 낮춘다.
 
 일반적인 로봇 관절: 감속비 100:1 이상 (harmonic drive)
 QDD: 감속비 6:1 ~ 10:1 (유성기어 또는 belt)
 
-낮은 감속비의 장점은 세 방향에서 나타난다. 외력이 가해졌을 때 관절이 자연스럽게 따라가는 백드라이버빌리티(backdrivability)가 높아서 충돌 시 안전하고 힘 제어가 쉬워진다. 토크 센서 없이 모터 전류만으로 끝단 힘을 추정할 수 있는 투명도(transparency)도 높다. 감속기의 마찰과 탄성이 적으니 토크 응답 대역폭도 넓어진다.
+낮은 감속비의 장점은 세 방향에서 나타난다. 외력이 가해졌을 때 관절이 따라가기 쉬운 백드라이버빌리티(backdrivability)가 높아지고, 충돌 대응과 힘 제어 설계가 단순해질 수 있다. 감속기 마찰을 충분히 모델링하면 모터 전류에서 관절 토크를 근사하기도 쉽다. 감속기의 마찰과 탄성이 작을수록 높은 토크 응답 대역폭을 설계할 여지도 커진다.
 
 단점: 동일 크기 대비 출력 토크가 낮다. 큰 토크가 필요하면 더 큰 모터를 써야 한다.
 
@@ -503,13 +503,13 @@ QDD를 사용하는 최근 시스템들:
 # 전통적 (감속비 100:1, harmonic drive):
 #   반사 관성 (reflected inertia) = N² × I_motor
 #   → 모터 관성 0.001 kg·m² × 100² = 10 kg·m²
-#   → 끝단에서 느끼는 관성이 매우 크다
+#   → 관절 출력 측에 반사되는 모터 관성이 매우 크다
 #   → 정밀한 힘 제어가 어렵다
 #
 # QDD (감속비 8:1):
-#   반사 관성 = 8² × 0.01 = 0.64 kg·m²
-#   → 15배 이상 가볍다
-#   → 힘 제어가 훨씬 쉽다
+#   같은 모터를 비교하면 반사 관성 = 8² × 0.001 = 0.064 kg·m²
+#   → 감속비만 바꾼 이 예에서는 약 156배 작다
+#   → 실제 힘 제어 성능은 링크 관성·마찰·제어기에도 좌우된다
 ```
 
 
@@ -521,9 +521,11 @@ QDD를 사용하는 최근 시스템들:
 | Harmonic Drive | 30~320:1 | 매우 낮음 | 65-85% | 비쌈 | 산업용 로봇, 정밀 |
 | Cycloidal | 6~120:1 | 낮음 | 85-93% | 중간 | 최근 대안으로 부상 |
 
+감속비·효율·백래시는 구조와 제품에 따라 크게 달라진다. 표의 범위는 계열을 비교하기 위한 출발점이며, 선정할 때는 제조사 데이터시트의 정격 부하 조건을 사용한다.
+
 **액추에이터 선정 기준:**
 
-로봇 관절의 액추에이터를 선정할 때 고려할 항목들이다. 필요 토크는 정적 토크(자세 유지)와 동적 토크(가속)의 합에 안전 계수 2~3배를 곱한다. 필요 속도는 관절의 최대 각속도로, 감속비를 고려하여 모터 RPM을 결정한다. 협동 로봇이나 힘 제어가 필요하면 QDD, 아니면 harmonic drive가 낫다. 크기와 무게는 링크 장착의 물리적 제약에 따른다. 열 특성은 연속 토크 사양으로 확인한다. 피크 토크는 짧은 시간만 가능하다.
+로봇 관절의 액추에이터를 선정할 때는 정적 토크(자세 유지), 동적 토크(가속), 충격 하중을 합산하고 하중 불확실성·수명·고장 결과에 맞는 여유 계수를 둔다. 아래 코드의 2배는 계산 예시이지 보편 규칙이 아니다. 필요 속도는 관절의 최대 각속도와 감속비로부터 모터 RPM으로 환산한다. 백드라이버빌리티, 크기와 무게, 연속 토크와 열 한계도 함께 검토한다. QDD와 harmonic drive 중 어느 쪽이 나은지는 토크 밀도, 투명도, 정밀도, 비용 요구에 따라 달라진다.
 
 ```python
 # 간단한 액추에이터 선정 계산 예시
@@ -570,7 +572,7 @@ print(f"모터 필요 RPM: {motor_rpm:.0f}")
 
 *Incremental encoder*: A, B 두 채널의 펄스를 세어 상대적 회전량을 측정한다. 전원이 꺼지면 위치를 잊는다 (homing 필요). 가격이 저렴하고, 분해능이 높다 (10,000 PPR 이상도 흔함).
 
-*Absolute encoder*: 현재 위치를 절대값으로 출력한다. 전원을 켜자마자 위치를 안다. Multi-turn absolute encoder는 여러 바퀴를 기억한다. 가격이 비싸지만 homing 불필요. 산업용 로봇에서 표준.
+*Absolute encoder*: 현재 위치를 절대값으로 출력한다. 전원을 켜자마자 위치를 안다. Multi-turn absolute encoder는 여러 바퀴를 기억한다. 가격이 비싸지만 homing이 필요 없어, 재기동 뒤 위치 복원이 중요한 산업용 로봇에 널리 쓰인다.
 
 ```
 분해능 계산 예시:
@@ -585,7 +587,7 @@ print(f"모터 필요 RPM: {motor_rpm:.0f}")
 
 *관절 토크 센서 (Joint Torque Sensor, JTS)*: 감속기 출력 측에 장착. KUKA LBR iiwa가 7개 관절 모두에 JTS를 장착하여 힘 제어의 기준을 세웠다.
 
-*힘/토크 센서 (F/T Sensor)*: 끝단에 장착하여 6축(Fx, Fy, Fz, Tx, Ty, Tz)을 측정. ATI Industrial Automation의 센서가 연구용 표준이다. 가격이 비싸다 ($3,000~$20,000).
+*힘/토크 센서 (F/T Sensor)*: 끝단에 장착하여 6축(Fx, Fy, Fz, Tx, Ty, Tz)을 측정한다. ATI Industrial Automation을 비롯한 업체가 연구용 센서를 공급하며, 선정할 때는 측정 범위·분해능·과부하 한계·인터페이스와 견적을 함께 확인한다.
 
 **관성 센서 (IMU):**
 
@@ -608,7 +610,7 @@ print(f"모터 필요 RPM: {motor_rpm:.0f}")
 
 **CAN Bus:**
 
-자동차 산업에서 시작하여 로봇에서도 표준으로 자리 잡았다. 차동 신호(differential signaling)로 노이즈에 강하고, 멀티마스터 구조에 우선순위 기반 중재(arbitration)를 지원한다.
+자동차 산업에서 시작했으며 로봇의 모터와 센서 네트워크에도 쓰인다. 차동 신호(differential signaling)로 노이즈에 강하고, 멀티마스터 구조에 우선순위 기반 중재(arbitration)를 지원한다.
 
 - 속도: 최대 1 Mbps (CAN 2.0), 5 Mbps (CAN FD)
 - 거리: 최대 1km (125 kbps에서)
@@ -654,7 +656,7 @@ void send_motor_command(CAN_HandleTypeDef* hcan, uint8_t motor_id,
 
 **EtherCAT:**
 
-산업용 실시간 이더넷 프로토콜이다. 일반 이더넷 하드웨어를 사용하면서 마이크로초 단위의 결정적(deterministic) 통신을 제공한다.
+산업용 실시간 이더넷 프로토콜이다. 일반 이더넷 하드웨어를 사용하면서 마이크로초 단위의 결정론적(deterministic) 통신을 제공한다.
 
 왜 로봇에서 쓰는가: 100 Mbps로 수십~수백 개 노드를 마이크로초 주기로 동기화하고, 패킷 지연이 일정하여 실시간 제어에 맞다. 마스터가 보낸 프레임을 각 슬레이브가 on-the-fly로 읽고 쓰는 방식이라 대역폭 효율이 극히 높다.
 
@@ -734,14 +736,14 @@ sudo chrt -f 99 ./my_robot_controller
 
 # 5. 성능 확인
 sudo cyclictest -m -p 99 -t 1 -n
-# 최대 지연(max latency)이 50μs 이하면 양호
+# 최대 지연을 목표 제어 주기와 여유 시간에 대조한다
 ```
 
-**왜 1kHz인가:**
+**제어 주기를 어떻게 정하는가:**
 
-로봇 제어 루프의 표준 주기가 1kHz(1ms)인 이유는 여러 제약이 맞물린 결과다. 임피던스/힘 제어는 기계적 공진 주파수보다 충분히 높아야 하고, 대부분의 로봇 팔은 수~수십 Hz의 고유 진동수를 가지므로 안정적 제어를 위해 적어도 10배 이상(수백 Hz~1kHz)이 필요하다. Nyquist 관점에서도 100Hz 동적 현상을 제어하려면 실제로는 5~10배(1kHz) 샘플링이 바람직하다. CAN bus 1 Mbps로 10개 모터를 1kHz로 제어하면 대역폭이 거의 꽉 찬다. 그리고 MIT Cheetah가 CAN + 1kHz 구성으로 동적 보행을 시연한 이후 QDD + 1kHz가 사실상 표준이 되었다.
+1kHz(1ms)는 torque·impedance control에서 자주 쓰이는 설계점이지만 보편 표준은 아니다. 필요한 주기는 폐루프 대역폭, 기계 공진, 센서와 actuator 지연, solver 시간, jitter 여유로 정한다. Nyquist의 2배는 aliasing을 피하기 위한 하한일 뿐 제어 성능을 보장하지 않으므로, 실제 설계에서는 목표 폐루프 대역폭보다 충분히 빠르게 sampling하고 주파수 응답과 지연 여유를 검증한다. CAN 대역폭도 모터 수만으로 정해지지 않는다. frame 크기, arbitration, bus load와 feedback rate를 합산해 계산해야 한다.
 
-고주파 제어 (5~10kHz)가 필요한 경우: 매우 가벼운 로봇 (낮은 관성), 고속 충돌 대응, 일부 촉각 제어. 이 경우 EtherCAT이나 FPGA 기반 제어가 필요하다.
+일부 가벼운 robot, 고속 충돌 대응, tactile control은 수 kHz 주기를 사용한다. 이때도 EtherCAT이나 FPGA가 항상 필수인 것은 아니며, 필요한 결정성·대역폭·I/O 구조에 맞춰 fieldbus, MCU, FPGA를 고른다.
 
 > **추천 자료**
 > - FreeRTOS 공식 문서: https://www.freertos.org/
@@ -753,8 +755,6 @@ sudo cyclictest -m -p 99 -t 1 -n
 ---
 
 ## 4.6 심화: Workspace Analysis와 최적 설계
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 기구학은 "주어진 로봇을 어떻게 움직이나"의 문제이기도 하지만, "어떤 로봇을 설계해야 하나"의 문제이기도 하다. 이 절은 설계 최적화와 관련된 고급 주제를 다룬다.
 
@@ -1164,7 +1164,7 @@ $$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid 
 
 ### 4.7.7 무엇이 살아남았나
 
-Velocity model과 Odometry model 모두, 특히 sampling 버전은 ROS2 Nav2 `nav2_amcl`에서 직접 구현되어 차륜 AGV·warehouse robot의 표준으로 자리 잡았다. 창고 AMR, 서비스 로봇, 물류 자동화 장비에서 particle filter localization의 motion prior가 이 모델이다. 1k~10k 입자 규모에서 fps 20-50으로 실시간 동작한다.
+Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 particle-filter localization의 motion prior를 설명한다. ROS2 Nav2 `nav2_amcl`의 `differential` motion model은 이 가운데 odometry 기반 formulation에 해당한다. 실제 입자 수와 update rate는 지도 크기, 센서 update, CPU, beam 수와 오차 파라미터에 맞춰 측정해 정한다.
 
 휴머노이드, 드론, legged robot은 차체 속도 $(v, \omega)$로 운동을 기술하기 어렵다. 발이 있으면 슬립 모델 자체가 다르고, 드론은 SE(2)가 아닌 SE(3) 위에서 움직인다. 이 플랫폼에서는 IMU preintegration이 motion prior를 제공한다(§14.10). 확률적 운동 모델의 형식적 프레임워크 $p(x_t \mid u_t, x_{t-1})$는 같지만, 내용이 완전히 다르다.
 
@@ -1186,13 +1186,13 @@ Velocity model과 Odometry model 모두, 특히 sampling 버전은 ROS2 Nav2 `na
 
 **교재:**
 
-- Craig, "Introduction to Robotics: Mechanics and Planning" — DH 파라미터와 기구학의 정석. Modified DH convention을 사용한다. 학부 수준에서 가장 적합하다.
+- Craig, "Introduction to Robotics: Mechanics and Planning" — DH 파라미터와 기구학을 다루며 Modified DH convention을 사용한다. 선수지식과 강의 구성에 맞는지는 목차와 예제를 보고 판단한다.
 
 - Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control" — PoE 기반. 무료 PDF와 Coursera 강의를 제공하여 접근성이 뛰어나다. 수학적으로 더 깔끔하지만 처음 보면 어렵다. https://modernrobotics.org
 
 - Corke, "Robotics, Vision and Control" — MATLAB/Python 코드와 함께 기구학을 실습할 수 있다. robotics-toolbox-python은 이 책의 동반 라이브러리이다. 3판은 Python 기반. https://petercorke.com/rvc/
 
-- Siciliano et al., "Robotics: Modelling, Planning and Control" — 가장 포괄적인 대학원 교과서. 기구학, 동역학, 제어를 모두 다룬다. 두껍지만 그만큼 빠짐없다.
+- Siciliano et al., "Robotics: Modelling, Planning and Control" — 기구학, 동역학, 제어를 한 권에서 폭넓게 다루는 대학원 교과서
 
 **온라인 강의:**
 
@@ -1212,13 +1212,13 @@ Velocity model과 Odometry model 모두, 특히 sampling 버전은 ROS2 Nav2 `na
 
 ```
 1955 ── DH 파라미터 제안 (Denavit & Hartenberg)
-1969 ── Stanford Arm (최초의 전기식 컴퓨터 제어 로봇 팔)
+1969 ── Stanford Arm (초기의 전기식 컴퓨터 제어 로봇 팔)
 1985 ── Product of Exponentials 정형화
 1998 ── Harmonic Drive 로봇 적용 확산
 2019 ── MIT Mini Cheetah: QDD 액추에이터
 2019 ── MoveIt2 (ROS2 기반 모션 플래닝 프레임워크)
 2023 ── ALOHA: 저비용 양팔 텔레오퍼레이션 플랫폼
-2024 ── SO-ARM100: 오픈소스 5축 로봇 팔 ($200 이하)
+2024 ── SO-ARM100: 공개 BOM과 조립 문서를 제공한 오픈소스 5축 로봇 팔
 ```
 
 ---

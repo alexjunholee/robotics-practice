@@ -1,13 +1,13 @@
 # Ch.15 — Robot Frameworks
 
 
-The moment that trips up most people writing robot software for the first time is realizing that sensor drivers, path planning, and motor control all have to run inside a single program. Frameworks solve this problem structurally. Build a robot without a framework and even "read sensor data → decide → send motor command" forces you to implement thread management, message serialization, and coordinate transforms yourself; if you do not know this, you hit a wall on your first project. ROS is the de facto industry standard, and simulators and surrounding tools sit around it.
+Robot software must run sensor drivers, path planning, and motor control concurrently while managing communication among them. A framework supplies shared functions such as thread management, message serialization, and coordinate transforms. This chapter begins with ROS communication and package structure, then moves to simulators and related tools.
 
 ## 15.1 ROS (Robot Operating System)
 
 ROS is an open-source framework for robot software development. It is not an operating system but **middleware**, providing inter-process communication, package management, and tooling.
 
-A robot has to run dozens of modules concurrently (cameras, LiDAR, motors, controllers), and ROS's core role is unifying how these modules exchange data. Without ROS you start from socket programming, and most of your research time evaporates into infrastructure work.
+A robot runs modules such as cameras, LiDAR, motors, and controllers concurrently. ROS standardizes their communication and message formats so that each function can be developed as a separate node.
 
 ### 15.1.1 ROS1 vs ROS2
 
@@ -21,20 +21,20 @@ A robot has to run dozens of modules concurrently (cameras, LiDAR, motors, contr
 | Master | Required (roscore) | Not required |
 | Python | 2/3 | 3 only |
 
-**Current recommendation**: ROS2 (Humble)
+**Current recommendation**: For a new long-lived project, evaluate ROS2 Jazzy LTS first. Projects tied to Ubuntu 22.04 or existing packages may still remain on Humble.
 
-However, many packages still support only ROS1, so choose based on the situation.
+Choose only after checking the supported ROS distribution, Ubuntu version, and EOL date of the required drivers and packages. Official support for ROS1 Noetic ended in May 2025.
 
-**ROS1 → ROS2 migration status**: As of 2024, official support for ROS1 Noetic reached end of life (EOL). For new projects, start with ROS2 unless there is a specific reason not to. If you must use an existing ROS1 package, `ros1_bridge` lets you run nodes from both side by side. Core packages like Nav2 and MoveIt2 have been fully ported to ROS2, so ROS2 alone suffices for most robot development.
+For a new project, start with ROS2 unless there is a specific reason not to. If an existing ROS1 package is required, evaluate `ros1_bridge` only after checking the supported ROS1, ROS2, and Ubuntu combination. Nav2 and MoveIt 2 are available for ROS2.
 
 > **Further reading**
-> - [ROS2 Official Tutorials](https://docs.ros.org/en/humble/Tutorials.html) — Official step-by-step guide based on ROS2 Humble. If it's your first time, start from "Beginner: CLI tools"
+> - [ROS2 Official Tutorials](https://docs.ros.org/en/jazzy/Tutorials.html) — Official step-by-step guide for ROS2 Jazzy LTS. If it is your first time, start from "Beginner: CLI tools"
 > - [The Construct - ROS2 Basics](https://www.youtube.com/@TheConstruct) — ROS-focused education channel. Hands-on inside a simulator
-> - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/humble/How-To-Guides/Migrating-from-ROS1.html) — Official guide for porting existing ROS1 code
+> - [ROS1 to ROS2 Migration Guide](https://docs.ros.org/en/jazzy/How-To-Guides/Migrating-from-ROS1.html) — Official guide for porting existing ROS1 code
 
 ### 15.1.2 Core Concepts
 
-These concepts form the skeleton of ROS. Without a precise grasp of the difference between Topic, Service, and Action, you get stuck every time on the question "how should I send this sensor data?" Building intuition for when each one fits is what matters.
+Topics, services, and actions differ in timing and response behavior. They represent sensor streams, short request-response operations, and long-running tasks that expose intermediate state, respectively.
 
 **Node**:
 - An executable process
@@ -74,13 +74,13 @@ class MinimalPublisher(Node):
 - Cancelable
 - Examples: navigation, manipulation
 
-In short: Topic is for continuously flowing data like camera images, Service is for situations like "tell me the current battery level" where you ask once and get an answer, and Action is for time-consuming tasks like "go over there". If you cannot tell these three apart, your system design keeps getting tangled.
+Use a Topic for continuous data such as camera images. A Service fits a single request and response, such as "tell me the current battery level," whereas an Action fits a task that takes time, such as "go over there." Distinguishing the three leads to a clearer communication design.
 
 **Parameter**:
 - Node configuration values
 - Changeable at runtime
 
-> **⚠ AI agent caveat**: When asking an AI to write ROS2 code, specify the QoS settings explicitly. The AI will default to omitting QoS, and sensor topics silently fail to arrive, leaving you stuck for a long time.
+> **⚠ Generated-code check**: Include the sensor topic's QoS when requesting ROS2 code. Verify that the generated subscriber matches the publisher's reliability and durability settings; a mismatch can prevent delivery without an obvious error message.
 
 > **Further reading**
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — Official concepts document
@@ -137,7 +137,7 @@ transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Ti
 
 ### 15.1.4 Key Packages
 
-The real power of ROS lies in the package ecosystem the community has built. You will use each of the packages below at least once in nearly every robot project, so at least remember the names.
+The packages below provide standard messages, image and point-cloud conversion, and navigation functions.
 
 | Package | Purpose |
 | --- | --- |
@@ -154,15 +154,13 @@ The real power of ROS lies in the package ecosystem the community has built. You
 
 ## 15.2 Simulation
 
-Experimenting directly on a real robot can damage the hardware or injure people. Testing thoroughly in a simulator first and then moving to hardware is safer and more efficient. In particular, for learning methods like reinforcement learning that require tens of thousands of episodes, research is effectively impossible without a simulator.
+Experimenting directly on a real robot can damage the hardware or injure people. A simulator provides a place to check motion limits and failure conditions before hardware tests, and to run the many repeated episodes required by methods such as reinforcement learning.
 
 Recently, as **embodied AI** research has expanded, the role of simulators in which robots learn autonomously within virtual environments has grown as well. Platforms like NVIDIA Isaac Sim, AI2-THOR, and Habitat are leading this trend, and sim-to-real transfer, moving policies learned in simulation onto real robots, is a central research topic.
 
 ### 15.2.1 Gazebo
 
-A physics simulation environment that integrates with ROS.
-
-Gazebo is the simulator most tightly integrated with ROS. Most simulation demos for ROS projects are provided in Gazebo, so if you are using ROS you need to know Gazebo.
+Gazebo integrates with ROS, and many ROS packages provide Gazebo simulation demos and robot models.
 
 **Components**:
 - **SDF (Simulation Description Format)**: environment definition
@@ -197,18 +195,7 @@ Gazebo is the simulator most tightly integrated with ROS. Most simulation demos 
 
 ### 15.2.2 NVIDIA Isaac Sim
 
-Widely used in embodied AI research for large-scale synthetic data generation and sim-to-real training. It combines photorealistic rendering with an accurate physics engine so that policies learned in the simulator also work on real robots.
-
-**Features**:
-- Photorealistic graphics (RTX rendering)
-- Accurate physics simulation (PhysX 5)
-- Synthetic data generation (domain randomization)
-- ROS2 integration
-
-**Primary uses**:
-- Manipulation research
-- Large-scale synthetic data generation
-- Sim-to-real training
+Isaac Sim is widely used in embodied AI research for large-scale synthetic-data generation and sim-to-real training. It combines RTX rendering with the PhysX 5 physics engine, generates synthetic data through domain randomization, integrates with ROS 2, and is used mainly for manipulation research.
 
 **Embodied AI simulator comparison**: Besides Isaac Sim, several simulators are widely used in embodied AI research.
 
@@ -226,8 +213,6 @@ Widely used in embodied AI research for large-scale synthetic data generation an
 > - [Habitat Documentation](https://aihabitat.org/docs/habitat2/) — Meta's embodied AI platform
 
 ### 15.2.3 CARLA
-
-A simulator for autonomous driving research.
 
 Autonomous driving papers very often use CARLA as their experimental environment. If you want to work on autonomous driving research, it is worth learning how to use CARLA.
 
@@ -269,8 +254,6 @@ For example, Eigen and Sophus are core libraries in robotics for handling coordi
 > - [Eigen Getting Started](https://eigen.tuxfamily.org/dox/GettingStarted.html) — Introduction to the C++ linear algebra library
 
 ## 15.4 Advanced: System Design
-
-*If you want to become a researcher, start reading here.*
 
 **15.4.1 Latency Budgeting**
 - Allocate the latency of the full pipeline segment by segment

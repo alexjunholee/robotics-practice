@@ -9,7 +9,7 @@
 
 **전통적 방법이 잘 되는 영역**
 
-PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정확하고, 환경이 정형화되어 있을 때 매우 잘 동작한다. 산업용 로봇 팔이 정해진 위치의 부품을 집어 조립하는 작업이 대표적이다. 모델이 정확하면 최적 제어 이론이 수학적으로 보장하는 성능을 얻을 수 있다. 학습 기반 방법이 이걸 이기기는 쉽지 않다.
+PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정확하고 환경이 정형화되어 있을 때 잘 동작한다. 산업용 로봇 팔이 정해진 위치의 부품을 집어 조립하는 작업이 대표적이다. 안정성이나 최적성의 수학적 보장은 각 방법의 모델·제약·해법 가정 안에서 성립하며, 그 조건을 만족하는 작업에서는 학습 기반 방법의 이점을 별도로 입증해야 한다.
 
 **전통적 방법이 힘든 영역**
 
@@ -21,12 +21,10 @@ PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정
 
 이런 상황에서 학습 기반 접근은 데이터에서 직접 입력-출력 관계를 근사하므로, 명시적 모델 없이도 동작할 수 있다.
 
-**하지만 만능은 아니다**
-
-학습 기반 방법의 한계를 명확히 알아야 한다.
+**학습 기반 방법의 한계**
 
 - **데이터 효율(sample efficiency)**: 강화학습은 수백만 스텝의 상호작용이 필요한 경우가 많다. 실제 로봇에서 이 데이터를 모으는 건 시간과 비용 면에서 비현실적이다.
-- **안전성(safety)**: 학습 중 로봇이 자기 자신이나 주변 환경을 파손할 수 있다. 탐색(exploration)이 본질적으로 위험하다.
+- **안전성(safety)**: 학습 중 로봇이 자기 자신이나 주변 환경을 파손할 수 있다. 탐색(exploration) 과정 자체에 위험이 따른다.
 - **일반화(generalization)**: 학습한 조건과 조금만 달라져도 성능이 급락하는 경우가 흔하다.
 
 전통적 방법으로 풀 수 있으면 전통적 방법을 쓰는 게 낫다. 학습은 전통적 방법이 한계에 부딪히는 문제에 적용하는 도구다. 둘을 적절히 조합하는 것이 실무에서 가장 현실적이다.
@@ -132,7 +130,7 @@ MDP는 환경 모델 $p(x'|x,a)$와 $r$이 *주어졌을 때* 적용된다. 모�
 
 ### Policy Gradient 직관
 
-Policy gradient의 핵심 아이디어는 단순하다.
+Policy gradient는 다음 세 단계로 policy를 개선한다.
 
 1. 현재 policy로 여러 trajectory를 수집한다.
 2. 높은 return을 받은 trajectory에서의 action 확률을 올린다.
@@ -170,7 +168,7 @@ Value function을 따로 학습해두면 variance를 줄일 수 있다. 대부�
 
 ### PPO (Proximal Policy Optimization)
 
-PPO는 Schulman et al. (2017)이 제안한 on-policy 알고리즘이다. 핵심 아이디어는 policy update의 크기를 제한하는 것이다. 이전 policy 대비 너무 크게 바뀌면 clipping으로 잘라낸다.
+PPO는 Schulman et al. (2017)이 제안한 on-policy 알고리즘이다. Policy update의 크기를 제한하고, 이전 policy에서 너무 크게 벗어나는 변화는 clipping으로 잘라낸다.
 
 ```
 L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
@@ -280,7 +278,7 @@ model.learn(total_timesteps=1_000_000)
 
 ## 8.4 시뮬레이션 환경
 
-로봇 RL에서 시뮬레이션은 사실상 필수다. 실제 로봇에서 수백만 스텝의 데이터를 수집하는 건 비현실적이기 때문이다. 주요 시뮬레이터를 정리한다.
+로봇 RL은 실제 하드웨어에서 수백만 스텝을 수집하는 데 비용과 위험이 따르므로 시뮬레이션을 이용한다. 시뮬레이터마다 접촉 모델, 병렬화 방식, 로봇 자산이 다르다.
 
 ### MuJoCo (Multi-Joint dynamics with Contact)
 
@@ -474,13 +472,13 @@ DAgger는 compounding error를 해결하기 위한 방법이다.
 4. 새 데이터를 기존 데이터에 추가하고 다시 학습한다.
 5. 2-4를 반복한다.
 
-핵심은 "policy가 실제로 방문하는 state"에서의 전문가 action을 학습 데이터에 포함시키는 것이다. 이론적으로 DAgger는 no-regret guarantee를 가진다.
+DAgger는 policy가 실제로 방문한 state에서 전문가가 선택할 action을 다시 받아 학습 데이터에 포함한다. 원 논문의 no-regret bound는 각 반복의 online learner와 expert-query 가정 아래 성립한다.
 
 단점은 전문가가 반복적으로 레이블링해야 한다는 점이다. 사람이 일일이 correction을 해줘야 하므로 노동 집약적이다.
 
 ### ACT (Action Chunking with Transformers)
 
-Stanford의 ALOHA 프로젝트에서 제안한 방법이다. 핵심 아이디어는 두 가지다.
+Stanford의 ALOHA 프로젝트에서 제안한 방법으로, 두 가지 장치를 결합한다.
 
 1. **Action chunking**: 한 번에 하나의 action을 예측하는 대신, 미래 k 스텝의 action sequence를 한 번에 예측한다. 이렇게 하면 temporal correlation을 잡을 수 있고, compounding error를 줄인다.
 2. **CVAE (Conditional Variational Autoencoder)**: action의 다봉(multimodal) 분포를 모델링한다. 같은 상황에서도 여러 유효한 행동이 있을 수 있는데, 단순 MSE loss로는 이걸 평균내버려서 어중간한 action이 나온다.
@@ -512,7 +510,7 @@ Diffusion policy와 ACT는 2023년 이후 manipulation 모방학습의 주요 �
 
 ### 데이터 수집 방법
 
-모방 학습의 성능은 데이터 품질에 결정적으로 의존한다. 주요 데이터 수집 방법:
+모방 학습의 성능은 데이터 품질에 크게 좌우된다. 주요 데이터 수집 방법은 다음과 같다.
 
 - **Teleoperation**: 사람이 원격으로 로봇을 조종한다. ALOHA는 leader-follower 구조를 사용했고, 비교적 저렴하게 양팔 조작 데이터를 수집할 수 있다.
 - **VR controller**: VR 컨트롤러로 end-effector 위치/자세를 지정한다. 직관적이지만 contact-rich 작업에서는 힘 피드백이 부족할 수 있다.
@@ -526,9 +524,7 @@ Diffusion policy와 ACT는 2023년 이후 manipulation 모방학습의 주요 �
 
 ## 8.7 심화: Foundation Models for Robot Control
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-LLM과 VLM의 성공에 영감을 받아, 로봇 분야에서도 대규모 사전학습 모델(foundation model)을 만들려는 시도가 이어지고 있다. 핵심 아이디어는 대량의 로봇 데이터로 범용 정책(generalist policy)을 학습해 두고, 새로운 로봇이나 태스크에 빠르게 적응시키는 것이다.
+LLM과 VLM의 성공에 영감을 받아, 로봇 분야에서도 대규모 사전학습 모델(foundation model)을 만들려는 시도가 이어지고 있다. 대량의 로봇 데이터로 범용 정책(generalist policy)을 학습한 뒤 새로운 로봇이나 태스크에 적응시킨다.
 
 ### RT-1, RT-2 (Google DeepMind)
 
@@ -540,9 +536,9 @@ LLM과 VLM의 성공에 영감을 받아, 로봇 분야에서도 대규모 사�
 
 UC Berkeley 등에서 개발한 오픈소스 범용 로봇 정책이다. Open X-Embodiment 데이터셋(다양한 로봇, 다양한 기관에서 수집한 데이터)으로 학습했다. Diffusion 기반 action head를 사용하며, 새로운 로봇에 fine-tuning할 수 있도록 설계했다.
 
-### pi0 (Physical Intelligence)
+### π0 (Physical Intelligence)
 
-2024년에 공개된 diffusion 기반 범용 로봇 정책이다. VLM을 backbone으로 사용하고, flow matching으로 action을 생성한다. 다양한 manipulation 태스크에서 state-of-the-art 성능을 보였으며, 빨래 접기 같은 복잡한 장시간(long-horizon) 태스크에서도 동작했다.
+[π0 기술 보고서(2024)](https://arxiv.org/abs/2410.24164)가 제안한 범용 로봇 정책이다. 사전학습 VLM 위에 flow-matching action expert를 결합한다. 저자들은 single-arm·dual-arm·mobile manipulator 데이터로 학습한 뒤 zero-shot, 언어 지시, fine-tuning 조건을 평가했으며, 빨래 접기·테이블 닦기·상자 조립 등을 시연했다. 성능 평가는 보고서의 로봇·태스크·baseline 범위로 한정해 읽어야 한다.
 
 ### OpenVLA
 
@@ -564,13 +560,11 @@ Foundation model for robotics는 아직 초기 단계다. 특정 태스크에서
 
 ## 8.8 심화: Reward Design과 Safe RL
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
 reward 함수를 잘못 설계하면 RL은 엉뚱한 방향으로 수렴한다. 실제 로봇에 RL을 적용할 때는 안전성 문제도 함께 다뤄야 한다.
 
 ### Reward Shaping
 
-**Sparse reward의 문제**: "목표에 도달하면 +1, 아니면 0" 같은 sparse reward는 정의하기 쉽지만, agent가 우연히 보상을 받기까지 무작위 탐색을 해야 한다. state-action 공간이 크면 사실상 학습이 안 된다.
+**Sparse reward의 문제**: "목표에 도달하면 +1, 아니면 0" 같은 sparse reward는 정의하기 쉽지만, agent가 우연히 보상을 받기까지 무작위 탐색을 해야 한다. State-action 공간이 크면 학습 신호를 얻기 어렵다.
 
 **Dense reward**: 중간 과정에 대한 보상을 추가한다. 예를 들어 물체 잡기 태스크에서:
 
@@ -609,7 +603,7 @@ Agent가 reward를 최대화하되, 설계자가 의도하지 않은 방식으�
 - 점프를 학습하라고 했는데 비정상적으로 긴 형태로 진화 (형태 최적화와 결합 시)
 
 대응 방법:
-- reward 함수를 반복적으로 수정하고 학습된 행동을 검토한다 (사실상 trial-and-error).
+- 학습된 행동을 확인하면서 reward 함수를 반복해서 조정한다.
 - 원치 않는 행동에 대한 penalty term을 추가한다.
 - 비디오를 보면서 정성적으로 검토한다. 자동화하기 어려운 부분이다.
 
@@ -643,7 +637,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 > **Sutton & Barto, "Reinforcement Learning: An Introduction" (2nd edition)**
 > http://incompleteideas.net/book/the-book-2nd.html
-> RL의 필수 교재. 무료 PDF 제공. MDP부터 policy gradient까지 기초를 다지려면 반드시 읽어야 한다. 전부 읽을 시간이 없으면 Ch.1-6, Ch.13을 우선으로.
+> MDP부터 policy gradient까지 다루는 표준 교재이며 무료 PDF가 제공된다. 기초를 먼저 볼 때는 Ch.1-6과 Ch.13부터 읽을 수 있다.
 
 > **Sergey Levine, CS285: Deep Reinforcement Learning**
 > https://rail.eecs.berkeley.edu/deeprlcourse/
@@ -682,7 +676,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 ```
 1992 ── REINFORCE algorithm (Williams)
-         최초의 policy gradient 방법. 수렴 증명은 있으나 variance가 높다.
+         초기의 영향력 큰 Monte Carlo policy-gradient 방법. score-function 추정량의 variance가 높다.
 
 2013 ── DQN (Mnih et al., Atari)
          Deep RL의 시작. replay buffer + target network로 안정적 학습.
@@ -720,6 +714,6 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 ---
 
-모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 어느 쪽을 택하든 sim-to-real gap은 반드시 넘어야 한다. OpenAI Dactyl은 그 gap을 넘기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 쌓았다.
+모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 실제 로봇에 적용할 때는 어느 접근이든 sim-to-real gap을 따로 평가해야 한다. OpenAI Dactyl은 이를 줄이기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 생성했다.
 
 로봇이 학습하려면 먼저 환경을 지각해야 한다. Ch.9에서는 카메라 이미지에서 정보를 뽑아내는 컴퓨터 비전 기초를 다룬다.

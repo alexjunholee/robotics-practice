@@ -1,7 +1,7 @@
 # Ch.11 — Vision Foundation Models (VFM)
 
 
-컴퓨터 비전의 패러다임이 바뀌고 있다. 앞서 배운 딥러닝 모델들이 특정 데이터셋에서 특정 태스크를 잘 하도록 학습된 specialist였다면, foundation model은 거대한 데이터로 범용적 시각 능력을 학습한 generalist이다. 이 차이를 이해하면, 2023년 이후 ICRA/IROS에서 VFM 기반 인식 논문이 빠르게 늘어난 이유도 보인다.
+앞 장의 모델들은 주로 특정 데이터셋과 태스크에 맞춰 학습됐다. Vision Foundation Model은 더 큰 데이터에서 사전학습한 표현을 여러 태스크에 옮겨 쓰는 접근이다. 2023년 이후 ICRA와 IROS에서는 이 표현을 로봇 인식에 적용한 연구가 늘었다.
 
 ---
 
@@ -9,7 +9,7 @@
 
 **Foundation Model**은 대규모 데이터로 사전학습되어 다양한 downstream task에 적용 가능한 모델이다.
 
-기존 접근을 생각해 보자. "새로운 환경 → 데이터 수집 → 라벨링 → 학습"의 사이클을 반복해야 했다. 공장이 바뀌면, 로봇이 인식해야 할 물체가 바뀌면, 처음부터 다시 해야 했다. Foundation model은 이 사이클을 끊는다. 한 번 학습된 모델이 본 적 없는 물체, 본 적 없는 환경에서도 작동한다. 로봇의 범용성(generalization) 문제를 푸는 가장 유력한 접근이다.
+태스크별 모델은 환경이나 인식 대상이 바뀔 때 데이터를 다시 모으고 라벨링해 학습하는 경우가 많다. Foundation model은 대규모 사전학습 표현을 재사용해 이 비용을 줄이려 한다. 본 적 없는 물체나 환경으로 전이되는 정도는 모델과 대상 도메인에 따라 달라지므로, zero-shot 평가와 추가 학습 결과를 구분해 봐야 한다.
 
 특징:
 - Scale: 수억~수십억 파라미터
@@ -17,9 +17,9 @@
 - Zero-shot / Few-shot: 학습 없이 또는 적은 예제로 새 태스크 수행
 - Transfer: 다양한 도메인으로 전이
 
-왜 중요한가? 새로운 환경에서도 일반화 능력이 작동하고, 특정 데이터셋의 annotation 없이도 쓸 수 있다. 연구실의 Global Module에서 핵심 역할을 맡는다.
+사전학습 표현을 재사용하면 새 환경마다 처음부터 라벨을 구축하는 비용을 줄일 수 있다. 다만 실제 일반화 성능은 대상 도메인과 추가 학습 여부를 구분해 평가해야 한다.
 
-여기서 Scale Law라는 개념이 중요하다. 모델 크기, 데이터 크기, 연산량을 키우면 성능이 power law로 향상된다는 경험적 법칙이다. GPT, CLIP, SAM 등 최근의 대형 모델들이 모두 이 법칙을 활용한다. "더 크면 더 좋다"가 일정 범위에서 성립한다 (Kaplan et al., 2020; Zhai et al., 2022 for ViT). 단, Hoffmann et al. (2022, Chinchilla)이 보여줬듯 모델 크기만 키우는 것보다 데이터와 연산량의 균형이 더 중요하다.
+Scaling law는 성능과 모델 크기·데이터·연산량 사이에서 관찰되는 power-law 관계를 가리킨다(Kaplan et al., 2020; Zhai et al., 2022 for ViT). GPT, CLIP, SAM 같은 대형 모델의 규모를 정할 때 이 경험적 관계를 참고한다. Hoffmann et al.(2022)은 모델 크기만 늘리기보다 데이터와 연산량을 함께 배분해야 함을 보였다.
 
 > **추천 자료**
 > - [Bommasani et al., "On the Opportunities and Risks of Foundation Models" (2021)](https://arxiv.org/abs/2108.07258) — Foundation Model이라는 용어를 정의한 Stanford 보고서
@@ -30,7 +30,7 @@
 
 ## 11.2 주요 VFM
 
-로보틱스에서 가장 많이 활용되는 Vision Foundation Model들을 본다. 각 모델이 어떤 문제를 풀고, 왜 로보틱스에서 중요하며, 어떻게 쓰는지를 중심으로 살펴본다.
+DINOv2, SAM, CLIP, Depth Anything을 각각 표현 학습, 분할, 이미지-텍스트 정렬, 단안 깊이 추정의 관점에서 비교한다.
 
 ### 11.2.1 DINOv2
 
@@ -67,7 +67,7 @@ features = outputs.last_hidden_state  # (1, num_patches+1, 768): CLS + 패치 fe
 > - [Oquab et al., "DINOv2: Learning Robust Visual Features without Supervision" (2023)](https://arxiv.org/abs/2304.07193) — DINOv2 원논문
 > - [DINOv2 GitHub](https://github.com/facebookresearch/dinov2) — 공식 코드 및 사전학습 모델
 > - [HuggingFace — DINOv2](https://huggingface.co/docs/transformers/model_doc/dinov2) — HuggingFace에서 바로 사용
-> - [Yannic Kilcher — DINO 설명](https://www.youtube.com/watch?v=h3ij3F3cPIk) — Self-distillation의 핵심 아이디어를 설명 (DINOv1 기반이지만 DINOv2 이해에 필수)
+> - [Yannic Kilcher — DINO 설명](https://www.youtube.com/watch?v=h3ij3F3cPIk) — DINOv1의 self-distillation 원리를 설명하며 DINOv2를 이해하는 데도 도움이 된다.
 
 ### 11.2.2 SAM (Segment Anything Model)
 
@@ -152,14 +152,14 @@ with torch.no_grad():
 
 **Monocular Depth Foundation Model**: 단일 이미지에서 상대적 깊이를 추정한다.
 
-10.7에서 depth estimation을 다뤘는데, Depth Anything은 그것을 foundation model 수준으로 끌어올린 모델이다. 1.5M 라벨 데이터에 62M 비라벨 데이터까지 활용해서, 실내(NYU), 실외(KITTI), zero-shot 도메인에서 안정적으로 깊이를 추정한다. 단, 학습 데이터와 크게 다른 도메인(내시경, 수중 등)에서는 정확도가 떨어질 수 있다. 로봇이 새로운 환경에 배치될 때 추가 학습 없이 바로 깊이 정보를 얻을 수 있다는 장점이 있다.
+Depth Anything은 1.5M 라벨 데이터와 62M 비라벨 데이터를 활용한 단안 깊이 모델이다. 실내(NYU), 실외(KITTI), zero-shot 도메인에서 평가됐지만, 학습 데이터와 크게 다른 내시경·수중 영상 등에서는 정확도가 떨어질 수 있다. 따라서 추가 학습 없이 얻은 결과와 대상 환경에 맞춰 조정한 결과를 나누어 본다.
 
 특징:
 - 1.5M 라벨 데이터 + 62M 비라벨 데이터 학습
 - 다양한 도메인에서 강건
-- V2: 더 정확한 절대 깊이
+- V2: metric depth 모델 제공
 
-Depth Anything V2는 V1에서 한 걸음 더 나아가, metric depth (절대 깊이)를 추정할 수 있는 버전도 제공한다. 로보틱스에서는 상대 깊이보다 "정확히 몇 미터 떨어져 있는가"가 중요한 경우가 많으므로, V2의 metric 버전에 주목하자.
+Depth Anything V2는 metric depth(절대 깊이)를 추정하는 모델도 제공한다. 물리 단위의 거리가 필요한 로봇 시스템에서는 상대적 깊이 순서와 metric depth를 구분해 사용한다.
 
 > **추천 자료**
 > - [Yang et al., "Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data" (2024)](https://arxiv.org/abs/2401.10891) — Depth Anything 원논문
@@ -174,7 +174,7 @@ Depth Anything V2는 V1에서 한 걸음 더 나아가, metric depth (절대 깊
 
 **Open-Vocabulary Object Detection**: 텍스트 프롬프트로 임의의 객체를 탐지한다.
 
-기존 detection 모델(YOLO, Faster R-CNN 등)은 학습에 사용된 클래스만 탐지할 수 있었다. "person, car, dog"으로 학습하면 "coffee mug"은 찾지 못한다. GroundingDINO는 CLIP처럼 텍스트로 어떤 물체든 지정해서 탐지할 수 있다. 로봇에게 "저기 있는 빨간 컵 찾아"라고 자연어로 지시하면, 학습 없이 바로 찾을 수 있다.
+표준 YOLO나 Faster R-CNN 같은 closed-set detector는 고정된 클래스 집합을 예측한다. GroundingDINO는 텍스트 질의를 받아 그 표현과 대응하는 이미지 영역의 bounding box를 반환한다. 따라서 "red cup" 같은 표현을 새 클래스별 출력 head를 학습하지 않고 탐지 질의로 쓸 수 있다.
 
 ```
 입력: 이미지 + "person. car. traffic light."
@@ -184,7 +184,7 @@ Depth Anything V2는 V1에서 한 걸음 더 나아가, metric depth (절대 깊
 Grounded-SAM: GroundingDINO + SAM 결합
 → 텍스트 프롬프트로 객체 탐지 + 세그멘테이션
 
-Grounded-SAM은 로보틱스에서 실용적인 조합이다. "red cup"이라고 텍스트를 넣으면 GroundingDINO가 bounding box를 찾고, SAM이 그 안에서 정확한 마스크를 생성한다. 별도 학습 없이도 임의의 물체를 탐지하고 분할할 수 있어서, manipulation 파이프라인에서 활발히 쓰인다.
+Grounded-SAM에서는 GroundingDINO가 "red cup" 같은 질의에 대응하는 bounding box를 찾고, SAM이 그 상자 안의 mask를 만든다. 이렇게 얻은 텍스트 조건 영역과 mask를 manipulation pipeline의 입력으로 사용할 수 있다.
 
 > **추천 자료**
 > - [Liu et al., "Grounding DINO: Marrying DINO with Grounded Pre-Training for Open-Set Object Detection" (2023)](https://arxiv.org/abs/2303.05499) — GroundingDINO 원논문
@@ -215,7 +215,7 @@ Dense Feature for SLAM:
 - 텍스처 없는 영역에서도 매칭 가능
 - 최근 연구: DROID-SLAM + DINOv2
 
-현장에서 겪는 문제와 직결된다. 고전 SLAM은 ORB, SIFT 같은 특징점에 의존하는데, 텍스처가 없는 벽면이나 바닥에서는 특징점이 잘 잡히지 않는다. DINOv2의 dense feature는 시맨틱 정보를 포함하고 있어서 하얀 벽이라도 이 부분과 저 부분을 구분할 수 있다. 이 특성이 SLAM의 robustness를 높이는 이유다.
+고전 SLAM은 ORB, SIFT 같은 특징점에 의존하므로 텍스처가 없는 벽면이나 바닥에서 특징점을 얻기 어렵다. DINOv2의 dense feature는 시맨틱 정보를 포함해 이런 영역에서도 위치별 특징을 구분할 수 있다. SLAM은 이 정보를 매칭에 활용해 textureless 환경의 tracking failure를 줄인다.
 
 3D Scene Understanding:
 - 2D VFM features를 3D로 리프팅
@@ -266,7 +266,7 @@ torch.onnx.export(model, dummy_input, "model.onnx")
 # trtexec --onnx=model.onnx --saveEngine=model.trt --fp16
 ```
 
-NVIDIA Jetson을 쓴다면 TensorRT가 거의 필수이다. FP16 변환만으로도 속도가 2-3배 빨라지면서 정확도 손실은 거의 없다. INT8까지 가면 더 빨라지지만 calibration 데이터가 필요하다.
+NVIDIA Jetson에서는 TensorRT가 선택 가능한 inference backend 중 하나다. FP16·INT8의 latency, memory와 task metric 변화는 model graph, input size, batch, Jetson power mode, TensorRT·CUDA version에 따라 달라진다. 따라서 target 장치에서 FP32 baseline과 같은 validation set으로 benchmark하고, INT8은 representative calibration data로 scale을 정한 뒤 정확도를 다시 측정한다.
 
 > **추천 자료**
 > - [NVIDIA TensorRT 문서](https://docs.nvidia.com/deeplearning/tensorrt/) — TensorRT 사용법과 최적화 가이드
@@ -278,8 +278,6 @@ NVIDIA Jetson을 쓴다면 TensorRT가 거의 필수이다. FP16 변환만으로
 ---
 
 ## 11.5 심화: VFM Fine-tuning과 Adaptation
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 VFM을 그대로 쓰면 zero-shot 성능이 나오지만, 특정 도메인(의료, 위성, 수중 등)에서는 성능이 떨어진다. fine-tuning이 필요한데, 수억 개 파라미터를 전부 학습시키는 것은 비용이 크다. Parameter-efficient fine-tuning(PEFT)은 모델의 극소수 파라미터만 학습하면서도 full fine-tuning에 근접한 성능을 얻는 방법이다.
 
@@ -295,7 +293,7 @@ Fine-tuning 전략 비교:
 
 LoRA (Low-Rank Adaptation):
 
-핵심 아이디어: 사전학습된 weight matrix $\mathbf{W}$에 low-rank update를 추가한다.
+LoRA는 사전학습된 weight matrix $\mathbf{W}$에 low-rank update를 추가한다.
 
 $$\mathbf{W}' = \mathbf{W} + \Delta\mathbf{W} = \mathbf{W} + \mathbf{B}\mathbf{A}$$
 
@@ -375,7 +373,7 @@ for param in sam.mask_decoder.parameters():
 
 평가 방법론:
 
-VFM adaptation 연구에서는 다음 프로토콜로 비교하는 것이 표준이다.
+VFM adaptation을 비교할 때는 다음과 같은 protocol matrix를 사용할 수 있다.
 
 | 프로토콜 | 설명 | 비교 목적 |
 |---------|------|----------|
@@ -394,9 +392,9 @@ VFM adaptation 연구에서는 다음 프로토콜로 비교하는 것이 표준
 ---
 
 > **기술 흐름: Vision Foundation Models**
-> - **2021**: CLIP (OpenAI) 발표. 이미지-텍스트 공유 임베딩으로 zero-shot 인식의 가능성을 열다. 4억 쌍의 이미지-텍스트 데이터로 학습. open-vocabulary 시대의 시작
+> - **2021**: CLIP(OpenAI) 발표. 4억 쌍의 이미지-텍스트 데이터로 공유 임베딩을 학습하고 zero-shot 분류를 시연
 > - **2022**: Masked Autoencoders (MAE) 등 self-supervised 사전학습 방법이 주목받기 시작. DINO가 self-supervised ViT의 가능성을 보여줌
 > - **2023**: SAM (Segment Anything Model) 발표. 11M 이미지, 1.1B 마스크로 학습. "어떤 물체든 분할"이라는 foundation model 수준의 범용성 달성. 같은 해 DINOv2 발표 — self-supervised 비전 feature의 새 기준
 > - **2024**: SAM2 (비디오 segmentation 확장), Depth Anything V2 (metric depth 지원), Florence-2 (통합 비전 모델) 등 VFM이 빠르게 진화. 모델들의 경량화와 edge 배포가 활발해짐
 > - **2025~**: VFM들의 3D 확장과 멀티모달 통합이 가속. 하나의 foundation model이 detection, segmentation, depth, tracking을 통합 처리하는 방향. 로보틱스에서는 VFM이 perception의 표준 백본으로 자리잡는 추세
-> - **지금**: Foundation model의 핵심 가치는 zero-shot 능력이다. 새 환경, 새 물체에서도 추가 학습 없이 작동하므로 로봇의 범용성을 높인다. CLIP+SAM+DINOv2 조합은 NLMap, ConceptGraphs 등에서 open-vocabulary 로봇 인식의 대표적 파이프라인으로 쓰이고 있다. 경량화(FastSAM, MobileSAM)를 통해 실제 로봇에 올리는 것까지가 완전한 파이프라인이다
+> - **최근 흐름**: Zero-shot 전이는 foundation model을 로봇 인식에 적용하는 주요 이유 가운데 하나다. NLMap과 ConceptGraphs 등은 CLIP, SAM, DINOv2의 표현을 open-vocabulary 인식에 조합한다. 실제 로봇에서는 FastSAM, MobileSAM 같은 경량 모델의 지연 시간과 정확도를 함께 평가한다.

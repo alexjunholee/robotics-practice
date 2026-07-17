@@ -457,7 +457,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
   <a href="../" class="back-link">← repos</a>
 </div>
 
-<div id="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="sidebar-overlay"></div>
 
 <nav id="sidebar">
   <div id="search-box">
@@ -584,8 +584,8 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
 
       document.getElementById('toc-container').innerHTML = '';
       embedDemos();
-      buildOverview();
       buildTOC();
+      buildOverview();
 
       contentEl.style.display = 'block';
       loadingEl.style.display = 'none';
@@ -717,6 +717,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     const headings = contentEl.querySelectorAll('h1, h2');
     const tocContainer = document.getElementById('toc-container');
     const fragment = document.createDocumentFragment();
+    const usedHeadingIds = Object.create(null);
 
     var groupFirstChapter = {};
     I18N[state.lang].groups.forEach(function(group) {
@@ -731,16 +732,23 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     headings.forEach(function(heading, index) {
       if (heading.classList.contains('overview-title')) return;
 
-      // Create ID from heading text
-      let id = heading.id;
-      if (!id) {
-        id = heading.textContent
+      // Create a stable, unique ID from heading text.
+      let baseId = heading.id;
+      if (!baseId) {
+        baseId = heading.textContent
           .toLowerCase()
           .replace(/[^\w\s가-힣-]/g, '')
           .replace(/\s+/g, '-')
-          .substring(0, 60);
-        heading.id = id;
+          .substring(0, 60) || 'section';
       }
+      let id = baseId;
+      let suffix = 2;
+      while (usedHeadingIds[id]) {
+        id = baseId + '-' + suffix;
+        suffix += 1;
+      }
+      usedHeadingIds[id] = true;
+      heading.id = id;
 
       if (heading.tagName === 'H1') {
         var chNum = getChapterNumber(heading.textContent);

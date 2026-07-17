@@ -17,31 +17,31 @@ We split a Spatial AI system into **two modules**.
 │  │ • Real-time Geometry│     │ • VFM-based Understanding   │ │
 │  │ • Odometry          │     │ • Semantic Scene Graph      │ │
 │  │ • Local Obstacle    │     │ • Long-term Memory          │ │
-│  │ • 10-100 Hz         │     │ • 1-10 Hz                   │ │
+│  │ • control-budget rate│    │ • task-budget rate          │ │
 │  └─────────────────────┘     └─────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Why two modules? — an intuitive view**
+### Why the System Uses Two Modules
 
-You might think, "Can't we just put one good computer on the robot?" Honestly, if that were possible we would do it. But it is not.
+A single onboard computer cannot handle every function within the robot's weight, power, and response-time limits.
 
-First, consider the **physical constraints**. A robot has to move. You cannot mount an NVIDIA A100 GPU server on a drone — the weight alone is tens of kilograms, and it draws hundreds of watts. That is unrealistic for a battery-powered robot. So the computer actually carried on the robot is an embedded board like the Jetson Orin, and such a board cannot run large models like DINOv2 or SAM in real time.
+Start with the **physical constraints**. An NVIDIA A100 GPU server weighs tens of kilograms and draws hundreds of watts, so a battery-powered drone cannot carry one. Robots commonly use embedded boards such as the Jetson Orin, but these boards cannot run large models such as DINOv2 or SAM in real time.
 
-Next are the **time constraints**. Suppose a robot is walking down a hallway, 0.1 seconds away from hitting a wall — it cannot pause and say "wait, waiting for the server to respond...". Things that must react "right now," like obstacle avoidance, are a different kind of problem from "understanding what that object is," which can afford to be slower.
+The **time constraints** also differ. Obstacle avoidance must respond within tens of milliseconds, whereas semantic interpretation can run more slowly. The former cannot wait for a server response; the latter has room to use a larger model.
 
-So we split it this way:
+The two modules divide their roles accordingly:
 
 1. **The reality of compute**: on-board computers on the robot (Jetson, etc.) do not have the headroom to run large models
-2. **Real-time requirements**: obstacle avoidance needs immediate reaction — 0.1 seconds is the difference between life and death
-3. **Deep understanding**: VFMs and VLAs need heavy compute — judgments like "that is a broken glass, be careful"
-4. **Mutual complementarity**: geometric precision (Local) + semantic understanding (Global) = a truly intelligent robot
+2. **Real-time requirements**: obstacle avoidance needs a response within tens of milliseconds
+3. **Semantic understanding**: VFMs and VLAs distinguish an object's class and state, such as identifying a broken glass
+4. **Complementary roles**: combine geometric precision in the Local Module with semantic understanding in the Global Module
 
-> By analogy, the Local Module is the robot's **reflex nervous system**, and the Global Module is its **cerebral cortex**. Touch a hot pot and you pull your hand away first (reflex), then think "ah, the stove was on" (cognition). Robots work the same way.
+> By analogy, the Local Module provides the robot's **reflexes**, while the Global Module acts as its **cerebral cortex**. Touch a hot pot and you pull your hand away first (reflex), then think "ah, the stove was on" (cognition). Robots work the same way.
 
 ## 18.2 Local Module: Lightweight Geometry
 
-This module runs directly on the robot in real time. It processes the minimum information the robot needs to move safely "in this moment."
+The Local Module runs directly on the robot and processes the information needed for safe, real-time motion.
 
 ### 18.2.1 Goals
 
@@ -49,13 +49,13 @@ This module runs directly on the robot in real time. It processes the minimum in
 - **Obstacle Detection**: immediate obstacle sensing — "something is in front, dodge!"
 - **Local Mapping**: a geometric map of the surroundings — "within 3 m of me, the world looks like this"
 
-**A real scenario**: say a delivery robot is passing through an apartment hallway and a child suddenly runs out. The Local Module detects the obstacle instantly through the depth sensor, locates itself via odometry, and computes an avoidance path within 0.05 seconds. It does not need to know whether it is a child or a dog — that is the Global Module's job. The Local Module only needs to know "something is in front, so avoid it."
+**Operating example**: when a child suddenly runs in front of a delivery robot in an apartment hallway, the Local Module detects the obstacle with a depth sensor, estimates pose through odometry, and computes an avoidance path within the deadline derived by the control and safety analysis. At this stage, collision risk matters before the object class. The Global Module interprets meaning separately.
 
 ### 18.2.2 Characteristics
 
-- **Low latency**: 10-100 Hz operation (one processing pass every 10-100 ms)
-- **Limited resources**: Jetson, embedded GPU — 15-30 W power envelope
-- **Deterministic behavior**: predictable response time — "an answer within 50 ms even in the worst case"
+- **Latency budget**: derive update rate and deadline from platform speed, braking distance, control bandwidth, and sensor rate
+- **Resource budget**: choose the embedded module, power mode, and cooling for the measured workload
+- **Timing evidence**: measure worst-case latency, jitter, and deadline misses as well as mean FPS on the target hardware
 
 ### 18.2.3 Tech Stack
 
@@ -67,7 +67,7 @@ This module runs directly on the robot in real time. It processes the minimum in
 **Lightweight learning models**:
 - Lightweight depth estimation — compressed with a MobileNet backbone (see Ch.10)
 - Compressed segmentation models — knowledge distillation applied (see Ch.10, Ch.11)
-- TensorRT optimization — 2-5x speedup on NVIDIA GPUs
+- TensorRT optimization — a candidate for graph, kernel, and precision optimization on NVIDIA GPUs
 
 **Edge deployment**:
 
@@ -76,7 +76,7 @@ This module runs directly on the robot in real time. It processes the minimum in
 trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --workspace=4096
 ```
 
-> What is TensorRT: a tool that converts a PyTorch-trained model into a form optimized for NVIDIA GPUs. Switching to FP16 (half precision) halves the model size while keeping accuracy nearly intact. Running YOLO on a Jetson: without TensorRT, 5 FPS; with it, 30 FPS — on a real robot, that gap is the difference between "usable" and "not usable."
+> TensorRT builds an inference engine for NVIDIA GPUs. FP16 can reduce memory and latency, but gains and task-metric changes depend on the model, input, batch, power mode, and software versions. Compare end-to-end latency and validation metrics on the target Jetson before adopting it.
 
 ### 18.2.4 Example Implementation
 
@@ -105,7 +105,7 @@ class LocalModule:
 
 ## 18.3 Global Module: VFM-based Understanding
 
-A high-level understanding module that runs on a server or in the cloud. Where the Local Module only gets as far as "something is in front," the Global Module understands "that is a broken glass, probably dropped by the owner in the living room."
+The Global Module runs on a server or in the cloud and interprets object classes and relations. When the Local Module detects an obstacle, the Global Module can classify it as a broken glass and connect it to a location in the scene graph.
 
 ### 18.3.1 Goals
 
@@ -117,15 +117,15 @@ A high-level understanding module that runs on a server or in the cloud. Where t
 
 ### 18.3.2 Characteristics
 
-- **High accuracy**: uses large VFMs — models with billions of parameters like DINOv2 and SAM2
-- **Abundant compute**: GPU servers, cloud — GPUs at the level of RTX 4090 or A100
-- **Non-real-time is acceptable**: 1-10 Hz — "updating once per second is fine"
+- **Model choice**: DINOv2 and SAM2 have variants of different sizes; they are not all billion-parameter models
+- **Compute choice**: select hardware from the variant, input resolution, precision, scene count, and measured memory/latency
+- **Update budget**: some global tasks can run outside the local control deadline, while interaction and change detection still need an explicit end-to-end latency budget
 
 ### 18.3.3 Tech Stack
 
 **Vision Foundation Models** (see Ch.11):
 - DINOv2: dense feature extraction — produces a meaningful feature vector for every pixel in an image
-- SAM2: open-vocabulary segmentation — point at "any object" and it gets segmented accurately
+- SAM2: promptable image/video segmentation — tracks a target mask from point, box, or mask prompts
 - GroundingDINO: text-guided detection — say "red cup" and it finds it
 
 **3D Understanding** (see Ch.11, Ch.13):
@@ -167,7 +167,7 @@ class GlobalModule:
         return self.scene_graph.find(text_prompt)
 ```
 
-**Reading it as a scenario**: whenever a keyframe arrives from the Local Module, `process_keyframe()` is called. DINOv2 pulls rich features from the image, SAM segments the objects, and these accumulate into the 3D Scene Graph and the Gaussian Map. Later, when the user asks "where is the red cup?", `query()` looks it up. This whole process taking about a second is fine — real-time safety is the Local Module's job.
+**Runtime behavior**: whenever a keyframe arrives from the Local Module, `process_keyframe()` is called. DINOv2 extracts image features, SAM segments the objects, and the results accumulate in the 3D Scene Graph and Gaussian Map. Later, when the user asks "where is the red cup?", `query()` looks it up. This process can take about a second because the Local Module handles real-time safety.
 
 ## 18.4 Cooperation Between the Two Modules
 
@@ -213,7 +213,7 @@ The two modules operate independently, but exchange information and cooperate. I
    - Precision approach near the cup
 ```
 
-**Another scenario — unstable communication**: the robot is working in an underground parking lot and WiFi drops. In this case it must run on the Local Module alone. It estimates position via odometry and, while avoiding obstacles, moves to the last waypoint it received. When WiFi is restored, it sends the accumulated data to the Global module in one batch and receives an updated plan. This kind of **graceful degradation** is very important on real robots.
+**Communication failure**: if WiFi drops while the robot is working in an underground parking lot, it must continue on the Local Module alone. It estimates its position through odometry, avoids obstacles, and moves toward the last waypoint it received. When WiFi returns, it sends the accumulated data to the Global Module and receives an updated plan. Real robots need this form of **graceful degradation**.
 
 ### 18.4.3 Communication and Synchronization
 
@@ -280,3 +280,39 @@ The research topics below are ones our lab is actively working on or could take 
     - Local/Global map synchronization — if the two modules' maps disagree, the robot gets confused
     - Semantic consistency — "that is a chair" should not later flip to "table"
     - **Prerequisites**: Ch.3 (optimization) and Ch.14 (SLAM, map management) required
+
+## 18.6 Questions That Separate Motivation from Novelty
+
+Motivation explains why a problem needs to be solved; novelty identifies what an approach changes and how. The two are often conflated when choosing a research direction or writing a first paper.
+
+Saying only that "an existing method cannot do X, so we added a module" rarely goes beyond motivation. Novelty becomes concrete only when the paper explains why the module is necessary and why it must take that particular form.
+
+The following three papers illustrate the difference between posing a problem and contributing a design.
+
+### Case 1 — ORB-SLAM2 (Mur-Artal & Tardós 2017)
+
+- **Motivation**: Extend the map-reuse, loop-closing, and relocalization structure of monocular ORB-SLAM to stereo and RGB-D inputs.
+- **Direct extension**: Build a separate SLAM system for each input modality.
+- **Paper's design**: All three modalities share the tracking, local-mapping, and loop-closing structure and use ORB features. Stereo and RGB-D observations contribute depth from disparity and enter metric-scale bundle adjustment.
+- **Design principle**: Preserve a common system architecture while placing modality-specific differences in observation construction and bundle-adjustment residuals.
+
+The primary source is [*ORB-SLAM2: An Open-Source SLAM System for Monocular, Stereo and RGB-D Cameras*](https://doi.org/10.1109/TRO.2017.2705103). The 2015 ORB-SLAM paper describes a monocular system and therefore cannot support the three-modality example.
+
+### Case 2 — 3D Gaussian Splatting (Kerbl et al. 2023)
+
+- **Motivation**: NeRF rendering is too slow for the desired interactive use.
+- **Direct extension**: Add acceleration modules such as sparse sampling, pruning, or distillation on top of NeRF.
+- **Paper's design**: Treat ray marching as the bottleneck and replace the representation with explicit 3D Gaussian primitives that can be rasterized directly.
+- **Design principle**: Locate the speed limit in the combination of representation and rendering, rather than in one isolated operation.
+
+### Case 3 — DUSt3R (Wang et al. 2024)
+
+Traditional SfM requires camera intrinsics and is sensitive to errors passed between stages. One could replace only matching or triangulation with a neural network, but Wang et al. changed the output representation itself. Given two views, the model predicts pointmaps in a common coordinate frame, obtaining correspondence and structure together; camera intrinsics can then be recovered from the pointmaps instead of being supplied as an input. DUSt3R's contribution is this reformulation of the staged SfM pipeline as pointmap prediction.
+
+### The Design Question Shared by the Three Papers
+
+All three papers ask *why must this module take this form?* The answer lies less in the number of modules than in how the interface, representation, and output format are chosen.
+
+> A contribution section should answer *why this module must take this form*. Explaining only why the problem matters remains motivation; novelty appears when the basis for the design choice is also explicit.
+
+For a fuller treatment of motivation and method in a paper, see [*Research Notes* Ch.23 — Introduction](../../research-notes/guide.html#chapter-23) and [Ch.25 — Method](../../research-notes/guide.html#chapter-25).

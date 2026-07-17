@@ -164,7 +164,7 @@ ICP의 직관: "두 포인트 클라우드에서 가장 가까운 점 쌍을 찾
 
 ### 13.3.1 Point-based Methods
 
-PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 raw 포인트에 직접 딥러닝을 적용한다는 것이다. 이전에는 "불규칙한 점들에 어떻게 CNN을 쓰지?"라는 질문에 답이 없었는데, PointNet이 이를 해결했다.
+PointNet은 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 raw 포인트에 직접 신경망을 적용한다. 격자 구조를 전제로 하는 CNN과 달리, 불규칙한 점 집합을 그대로 입력으로 받는다.
 
 **PointNet (2017)**:
 - Raw 포인트에 직접 적용
@@ -183,7 +183,7 @@ PointNet의 핵심 아이디어는 포인트 클라우드를 복셀이나 이미
 # 3. PointNet: 각 그룹에서 특징 추출
 ```
 
-PointNet의 핵심 아이디어: 포인트 클라우드의 점 순서가 바뀌어도 결과가 같아야 한다(permutation invariance). 이를 위해 각 점을 독립적으로 MLP에 통과시킨 뒤 max pooling으로 집계한다. 수학적으로 f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))) 형태이다.
+PointNet의 출력은 포인트 클라우드의 점 순서가 바뀌어도 같아야 한다(permutation invariance). 이를 위해 각 점을 독립적으로 MLP에 통과시킨 뒤 max pooling으로 집계한다. 수학적으로 f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))) 형태이다.
 
 ### 13.3.2 Voxel-based Methods
 
@@ -202,7 +202,7 @@ PointNet의 핵심 아이디어: 포인트 클라우드의 점 순서가 바뀌�
 - 2D CNN으로 변환하여 빠른 속도
 - 실시간 가능
 
-PointPillars의 핵심 아이디어: 3D 공간을 수직 기둥(pillar)으로 나누면, 각 pillar 안의 점들을 하나의 특징 벡터로 압축한 뒤, 이를 2D 이미지처럼 배열할 수 있다. 잘 검증된 2D CNN을 그대로 쓸 수 있어서, 3D CNN보다 훨씬 빠르다.
+PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar 안의 점을 하나의 특징 벡터로 압축해 2D 이미지처럼 배열한다. 이렇게 하면 2D CNN을 그대로 활용할 수 있어 3D CNN보다 계산이 빠르다.
 
 ### 13.3.3 Multi-modal Methods
 
@@ -244,7 +244,7 @@ PointPillars의 핵심 아이디어: 3D 공간을 수직 기둥(pillar)으로 �
 Bundle Adjustment는 "모든 카메라 포즈와 3D 점 위치를 동시에 최적화"하는 것이다. 비선형 최소자승법(Levenberg-Marquardt 등)을 사용하며, 변수가 수만~수십만 개가 될 수 있다. 선형대수에서 배운 최소자승법의 대규모 비선형 확장이라고 보면 된다.
 
 **도구**:
-- **COLMAP**: 분야 사실상 표준, GUI/CLI
+- **COLMAP**: 널리 쓰이는 공개 SfM/MVS 참조 구현, GUI/CLI
 - **OpenMVG**: 라이브러리 형태
 
 ```bash
@@ -255,7 +255,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 ```
 
 > **추천 자료**
-> - [COLMAP Documentation](https://colmap.github.io/) — SfM/MVS의 사실상 표준 도구
+> - [COLMAP Documentation](https://colmap.github.io/) — 널리 쓰이는 공개 SfM/MVS 참조 구현
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — 다중 뷰 기하학 핵심 강의
 > - [Schönberger & Frahm, "Structure-from-Motion Revisited" (2016)](https://openaccess.thecvf.com/content_cvpr_2016/papers/Schonberger_Structure-From-Motion_Revisited_CVPR_2016_paper.pdf) — COLMAP 논문
 
@@ -274,7 +274,7 @@ SfM이 "카메라가 어디 있었는지"와 "sparse한 3D 점들"을 복원한�
 - 여러 뷰 통합
 - Marching Cubes로 mesh 추출
 
-TSDF의 핵심 아이디어: 각 복셀에 "가장 가까운 표면까지의 부호 있는 거리(signed distance)"를 저장한다. 양수면 표면 바깥, 음수면 표면 안쪽이다. 여러 뷰에서 관측한 깊이를 가중 평균하면, 노이즈가 줄어들고 깨끗한 표면을 얻는다. 부호가 바뀌는 지점(0을 지나는 곳)이 바로 표면이다.
+TSDF는 각 복셀에 가장 가까운 표면까지의 부호 있는 거리(signed distance)를 저장한다. 양수는 표면 바깥, 음수는 표면 안쪽을 뜻한다. 여러 뷰에서 관측한 깊이를 가중 평균하면 노이즈가 줄어들고, 부호가 바뀌는 지점에서 표면을 추출할 수 있다.
 
 ```python
 # Open3D TSDF Integration
@@ -329,12 +329,12 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 > **추천 자료**
 > - [Mildenhall et al., "NeRF: Representing Scenes as Neural Radiance Fields" (2020)](https://arxiv.org/abs/2003.08934) — NeRF 원 논문
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF 실험을 쉽게 할 수 있는 통합 프레임워크. NeRF를 직접 돌려보고 싶다면 여기서 시작하자.
-> - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — NeRF의 핵심 아이디어를 직관적으로 설명
+> - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — NeRF의 표현 방식을 직관적으로 설명
 > - [Jon Barron — Understanding NeRF (ECCV 2022 Tutorial)](https://www.youtube.com/watch?v=HfJpQCBTqZs) — NeRF 저자 직강
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS가 빠르게 채택된 이유는 NeRF의 치명적 단점인 느린 렌더링 속도를 해결했기 때문이다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸리지만, 3DGS는 100 FPS 이상으로 실시간 렌더링이 가능하다. 이 속도 덕분에 SLAM, 실시간 매핑 등 로봇 응용에 직접 쓸 수 있게 되었다.
+3DGS는 NeRF의 느린 렌더링 속도를 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 실시간 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
 
 **개념**: 장면을 수백만 개의 3D Gaussian으로 표현
 
@@ -379,7 +379,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — 2D Gaussian으로 표면 복원 품질 향상
 > - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — 3DGS + SLAM의 대표작
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
-> - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — 카메라 내부/외부 파라미터 없이 이미지 쌍에서 dense 3D 복원. 3D reconstruction 패러다임 전환
+> - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — 카메라 내부/외부 파라미터 없이 이미지 쌍에서 dense 3D를 복원한다.
 > - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching 추가. 복원 + 정밀 대응점 동시 제공
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF/3DGS 실험 통합 프레임워크
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — 공식 코드
@@ -388,8 +388,6 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 > 3D Gaussian의 위치, 공분산, 색상을 조작하며 splatting 렌더링 과정을 인터랙티브하게 이해할 수 있다.
 
 ## 13.6 심화: Neural Implicit Representations
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 13.5에서 NeRF와 3DGS를 다뤘다. NeRF는 density field를 사용하여 volume rendering을 수행하지만, density에서 명확한 surface를 추출하기 어렵다는 한계가 있다. 로보틱스에서 물체를 잡거나 충돌을 판단하려면 정확한 surface가 필요하다. 여기서 부호 있는 거리 함수(Signed Distance Function, SDF) 기반 접근이 등장한다.
 
@@ -466,9 +464,7 @@ density σ(x) = max(-dΦ_s(f(x))/dt, 0) / Φ_s(f(x))
 
 ## 13.7 심화: Differentiable Rendering
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-NeRF, 3DGS, NeuS 등 최근 3D 비전의 핵심 기술들은 하나의 공통 원리를 공유한다: 렌더링 과정을 미분 가능하게 만들어서, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화하는 것이다. 이 패러다임을 analysis-by-synthesis라 한다.
+NeRF, 3DGS, NeuS는 렌더링 과정을 미분 가능하게 만들고, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화한다. 관측 이미지를 가장 잘 재현하는 장면 표현을 찾는 이 방식을 analysis-by-synthesis라 한다.
 
 **Volume Rendering Equation**
 
@@ -541,8 +537,6 @@ Differentiable rendering을 SLAM에 적용하면, tracking과 mapping을 모두 
 > - [Laine et al., "Modular Primitives for High-Performance Differentiable Rendering" (2020)](https://arxiv.org/abs/2011.03277) — nvdiffrast 논문
 
 ## 13.8 심화: 3D Scene Graph
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 로봇에게 "주방에 있는 빨간 컵을 가져와"라고 명령하면, 포인트 클라우드나 mesh만으로는 이 명령을 수행하기 어렵다. "주방"이 어디인지, "빨간 컵"이 어떤 물체인지, 그것이 주방 "안에 있다"는 관계를 이해해야 한다. 3D Scene Graph는 환경을 기하학적 표현을 넘어 의미론적 관계 그래프로 표현하는 방법이다.
 
@@ -617,4 +611,4 @@ task planning이나 자연어 기반 내비게이션에서 scene graph는 3D 표
 > - **2020~**: NeRF 등장으로 Neural Rendering이 주목받았다. 사진 몇 장으로 포토리얼리스틱한 3D 장면을 만들 수 있게 되었고, Instant-NGP, Mip-NeRF 등 후속 연구가 빠르게 이어졌다.
 > - **2023~**: 3D Gaussian Splatting이 NeRF의 속도 한계를 극복했다. 실시간 렌더링과 명시적 표현의 장점을 동시에 갖추었고, BEVFusion 등 멀티모달 3D 감지가 자율주행에서 기준점이 되었다.
 > - **2024~**: 3DGS + SLAM 결합(SplaTAM, MonoGS, Gaussian-SLAM)으로 Neural SLAM의 새 방향이 열리고 있다. 로봇이 이동하면서 실시간으로 포토리얼리스틱 3D 맵을 구축하는 방식이다.
-> - **지금 주목할 것**: SLAM/로보틱스 응용에서 3DGS 기반 방법이 빠르게 늘고 있다. NeRFStudio에서 두 방법 모두 실험해볼 수 있으니 직접 비교해보자.
+> - **최근 흐름**: SLAM과 로보틱스에서 3DGS 기반 장면 표현을 사용하는 연구가 늘고 있다. NeRFStudio에서는 NeRF와 3DGS의 표현과 렌더링 속도를 같은 데이터로 비교할 수 있다.

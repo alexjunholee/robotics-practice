@@ -5,7 +5,7 @@
 
 ## 5.1 왜 동역학을 배우는가
 
-기구학(kinematics)이 "로봇이 *어디로* 움직이는가"를 다룬다면, 동역학(dynamics)은 "*어떤 힘으로* 움직이는가"를 다룬다. 기구학만으로 로봇을 제어할 수 있는 경우도 있다. 느리게 움직이는 산업용 매니퓰레이터가 그렇다. 관절 속도가 충분히 낮으면 관성력과 코리올리 힘이 무시할 만하고, PID 제어기가 나머지를 알아서 잡아준다.
+기구학(kinematics)이 "로봇이 *어디로* 움직이는가"를 다룬다면, 동역학(dynamics)은 "*어떤 힘으로* 움직이는가"를 다룬다. 기구학만으로 로봇을 제어할 수 있는 경우도 있다. 느리게 움직이는 산업용 매니퓰레이터가 그렇다. 관절 속도가 충분히 낮으면 관성력과 코리올리 힘이 무시할 만하고, PID 제어기가 나머지 오차를 보정한다.
 
 그런데 다음과 같은 상황에서는 동역학 없이 버틸 수 없다:
 
@@ -27,7 +27,7 @@
 
 ### 기본 원리
 
-뉴턴 역학의 핵심은 두 가지다:
+뉴턴 역학은 병진 운동과 회전 운동을 따로 기술한다.
 
 **병진 운동 (translational motion):**
 ```
@@ -39,7 +39,7 @@ F = ma
 ```
 τ = Iα + ω × (Iω)
 ```
-물체에 작용하는 합토크 τ는 관성 텐서 I와 각가속도 α의 곱에, 자이로스코픽 항 ω × (Iω)를 더한 것이다. 2D에서는 뒤의 항이 사라져서 τ = Iα로 단순해지지만, 3D에서는 반드시 포함해야 한다. 이걸 빠뜨리면 시뮬레이션에서 로봇이 귀신 같은 거동을 보인다.
+물체에 작용하는 합토크 τ는 관성 텐서 I와 각가속도 α의 곱에 자이로스코픽 항 ω × (Iω)를 더한 것이다. 2D에서는 뒤의 항이 사라져 τ = Iα로 단순해지지만, 3D에서는 이 항을 포함해야 한다. 빠뜨리면 시뮬레이션에서 비현실적인 회전 거동이 나타난다.
 
 ### Recursive Newton-Euler Algorithm (RNEA)
 
@@ -216,7 +216,7 @@ M(q) = [ (m_1+m_2)l_1^2 + m_2 l_2^2 + 2 m_2 l_1 l_2 cos(q_2)    m_2 l_2^2 + m_2 
         [ m_2 l_2^2 + m_2 l_1 l_2 cos(q_2)                          m_2 l_2^2                          ]
 ```
 
-M(q)가 q_2에 의존하는 것에 주목하라. q_2 = 0이면 팔이 쭉 펴진 상태이고, 관성이 최대다. q_2 = π이면 팔이 접힌 상태이고, 관성이 최소다.
+M(q)는 q_2에 따라 달라진다. q_2 = 0일 때는 팔이 완전히 펴져 관성이 최대가 되고, q_2 = π일 때는 팔이 접혀 관성이 최소가 된다.
 
 **C(q, q̇) 행렬:**
 
@@ -302,7 +302,7 @@ print("V =", V)
 3. manipulator equation의 구조(M, C, g)를 이용한 computed torque control, passivity-based control 등을 설계한다 (제어기 설계).
 4. Pinocchio나 Drake가 내부적으로 RNEA/ABA를 사용하므로, 라이브러리를 호출하면 된다 (코드 구현).
 
-결국 두 formulation은 상호보완적이다. 라그랑주는 제어 이론의 언어이고, 뉴턴-오일러는 실시간 구현의 도구다.
+두 formulation은 서로 다른 역할을 맡는다. 라그랑주 방식은 제어 이론의 구조를 드러내고, 뉴턴-오일러 방식은 실시간 계산에 적합하다.
 
 > **추천 자료**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 3 — 두 formulation의 관계를 명확히 설명
@@ -326,7 +326,7 @@ print("V =", V)
 주어진 것: q, q̇, τ
 구하는 것: q̈
 ```
-"이 토크를 가하면 로봇이 어떻게 가속하는가?"에 답한다. 시뮬레이션의 핵심이다. 시뮬레이터는 매 time step마다 이 계산을 반복한다.
+"이 토크를 가하면 로봇이 어떻게 가속하는가?"에 답하며, 시뮬레이터는 매 time step마다 이 계산을 반복한다.
 
 수학적으로 forward dynamics는 manipulator equation에서 q̈을 풀어내는 것이다:
 
@@ -439,17 +439,17 @@ RNEA와 ABA는 서로 역연산 관계이다. RNEA(q, v, ABA(q, v, τ)) ≈ τ �
 
 물체를 잡고, 돌리고, 끼우는 작업(peg-in-hole, in-hand manipulation 등)은 왜 그렇게 어려운가?
 
-첫째, 접촉 모드가 수시로 바뀐다(contact/no-contact, stick/slip). 각 모드마다 동역학이 다르고, 모드 전환 시점을 예측하기 어렵다. 둘째, 전환 순간에 상태가 불연속적으로 변할 수 있다(충격, impact). 셋째, 마찰 계수나 접촉 강성의 정확한 값을 모르면 sim-to-real gap이 커진다. 여기에 n개의 접촉점이 있으면 가능한 접촉 모드 조합이 3^n개(contact/separation, stick/slip 각 방향)라는 조합론적 복잡성까지 겹친다.
+첫째, 접촉 모드가 수시로 바뀐다(contact/no-contact, stick/slip). 각 모드마다 동역학이 다르고, 모드 전환 시점을 예측하기 어렵다. 둘째, 전환 순간에 상태가 불연속적으로 변할 수 있다(충격, impact). 셋째, 마찰 계수나 접촉 강성의 정확한 값을 모르면 sim-to-real gap이 커진다. 접촉점 수가 늘면 contact/separation과 stick/slip 조합이 지수적으로 늘어나는 조합론적 복잡성도 겹친다. 정확한 모드 수는 마찰 모델과 접선 방향의 이산화 방식에 따라 달라진다.
 
 ### 시뮬레이터마다 접촉 처리가 다른 이유
 
-접촉 역학에 "정답"이 없기 때문이다. 각 시뮬레이터는 정확도, 속도, 안정성 사이의 트레이드오프를 다르게 선택한다.
+접촉을 수치적으로 근사하는 방식이 여러 가지이기 때문이다. 각 시뮬레이터는 정확도, 속도, 안정성 사이의 트레이드오프를 다르게 선택한다.
 
 **MuJoCo**는 compliant contact + convex optimization 방식을 쓴다. 빠르고 안정적이지만 물리적으로 완벽하지는 않다. 특히 관통이 허용되는데, 이를 "soft contact"의 일부로 받아들인다. RL 환경으로 인기 많은 이유 중 하나가 이 안정성이다. **Drake**는 rigid contact + time-stepping(Stewart-Trinkle) 또는 hydroelastic contact을 지원한다. 물리적으로 더 엄밀하지만 계산 비용이 높을 수 있다. Hydroelastic contact은 접촉면의 압력 분포까지 계산한다.
 
 **Bullet**은 velocity-level LCP + sequential impulse 방식으로, 게임/VR에서 출발한 엔진이라 속도에 최적화되어 있으나 정밀한 접촉이 필요한 로보틱스 작업에서는 한계가 있다. **DART**는 LCP 기반 rigid contact으로 학술적으로 엄밀한 구현이지만, MuJoCo나 Drake에 비해 사용자 기반이 작다.
 
-어떤 시뮬레이터를 쓸지는 연구 목적에 따라 다르다. RL로 locomotion을 학습하겠다면 MuJoCo가 표준이다. 접촉이 중요한 manipulation 연구라면 Drake나 MuJoCo 중 택하는데, 최근에는 MuJoCo도 접촉 품질이 많이 좋아졌다.
+어떤 시뮬레이터를 쓸지는 연구 목적에 따라 다르다. MuJoCo는 locomotion RL에서 널리 쓰이고, Drake와 MuJoCo는 모두 contact-rich manipulation을 다룰 수 있다. 최종 선택은 필요한 접촉 모델, gradient, 처리 속도, 재현할 hardware와 검증 사례를 기준으로 한다.
 
 ```python
 # MuJoCo에서 접촉 정보 접근
@@ -478,15 +478,13 @@ for i in range(n_contacts):
 > **추천 자료**
 > - Stewart, "Rigid-Body Dynamics with Friction and Impact", SIAM Review 2000 — 접촉 역학의 수학적 기초
 > - Todorov, "Convex and analytically-invertible dynamics with contacts and constraints", ICRA 2014 — MuJoCo의 접촉 모델 논문
-> - [Todorov et al., "MuJoCo: A Physics Engine for Model-Based Control" (IROS 2012)](https://ieeexplore.ieee.org/document/6386109) — 접촉 기반 제어 시뮬레이션의 표준. 볼록 접촉 모델과 velocity stepping 소개
+> - [Todorov et al., "MuJoCo: A Physics Engine for Model-Based Control" (IROS 2012)](https://ieeexplore.ieee.org/document/6386109) — MuJoCo의 convex contact formulation과 velocity stepping을 설명한 원 논문
 > - Drake의 접촉 모델 documentation (https://drake.mit.edu/doxygen_cxx/group__hydroelastic__user__guide.html) — Hydroelastic contact 설명
 > - Russ Tedrake, *Underactuated Robotics*, Ch. "Contact" (https://underactuated.csail.mit.edu/) — 접촉 역학 개론
 
 ---
 
 ## 5.7 심화: Featherstone 알고리즘과 Spatial Algebra
-
-*연구자가 되고 싶다면 여기서부터 읽어라.*
 
 여기서부터는 대학원 수준이다. Featherstone의 spatial vector algebra는 동역학 알고리즘을 간결하고 효율적으로 표현하기 위한 수학적 틀이다.
 
@@ -585,10 +583,10 @@ Eigen::VectorXd tau_id = pinocchio::rnea(model, data, q, v, Eigen::VectorXd::Zer
 Eigen::VectorXd qdd = pinocchio::aba(model, data, q, v, tau);
 ```
 
-Pinocchio의 C++ API는 Eigen 기반이며, Python API와 거의 동일한 인터페이스를 제공한다. 실시간 제어에서는 C++ API를 써야 한다 — Python의 오버헤드가 kHz 급 제어 루프에서는 무시할 수 없다.
+Pinocchio의 C++ API는 Eigen 기반이며, Python API와 거의 동일한 인터페이스를 제공한다. kHz급 실시간 제어에서는 Python 오버헤드를 피하려고 C++ API를 사용한다.
 
 > **추천 자료**
-> - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 2 — Spatial vector algebra의 원본 설명. 이 분야를 연구하려면 이 장을 반드시 읽어야 한다.
+> - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 2 — Spatial vector algebra의 원본 설명
 > - Featherstone, "A Beginner's Guide to 6-D Vectors" (IEEE Robotics & Automation Magazine, 2010) — 교과서보다 접근하기 쉬운 소개 논문
 > - Pinocchio GitHub (https://github.com/stack-of-tasks/pinocchio) — 소스 코드 자체가 spatial algebra의 좋은 구현 예시이다
 
@@ -596,9 +594,7 @@ Pinocchio의 C++ API는 Eigen 기반이며, Python API와 거의 동일한 인�
 
 ## 5.8 심화: 부유 베이스 시스템 (Floating Base)
 
-*연구자가 되고 싶다면 여기서부터 읽어라.*
-
-산업용 매니퓰레이터는 base가 바닥에 볼트로 고정되어 있다. 그런데 보행 로봇, 드론, 수중 로봇은 base 자체가 움직인다. 이 경우 base의 위치와 자세가 추가적인 자유도가 되며, 동역학의 구조가 근본적으로 달라진다.
+산업용 매니퓰레이터는 base가 바닥에 볼트로 고정되어 있다. 반면 보행 로봇, 드론, 수중 로봇은 base 자체가 움직인다. 이 경우 base의 위치와 자세가 자유도에 추가되면서 동역학의 구조도 달라진다.
 
 ### 부유 베이스의 Configuration
 
@@ -621,7 +617,7 @@ Manipulator equation을 base와 joints로 나누면:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
 ```
 
-왼쪽 위의 `0`이 핵심이다 — base에는 관절 토크가 없다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 오직 접촉력과 중력을 통해서만 가속할 수 있다.
+왼쪽 위의 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
 
 이 구속 조건이 locomotion 제어를 어렵게 만든다. 고정 base 매니퓰레이터는 원하는 관절 토크를 그냥 모터에 명령하면 되지만, 보행 로봇은 적절한 접촉력을 만들어내야 base를 원하는 대로 움직일 수 있다.
 
@@ -649,7 +645,7 @@ CoM 역학이 balance를 결정한다. 로봇이 넘어지지 않으려면 CoM�
 
 차원 축소의 효과도 있다. n-DOF 보행 로봇의 전체 동역학은 n차원이지만, centroidal dynamics는 6차원(선운동량 3 + 각운동량 3)이다. 이 6차원 공간에서 원하는 운동량 궤적을 먼저 계획하고, 그다음 전체 관절 수준으로 분해하는 것이 일반적인 접근이다.
 
-무엇보다 centroidal momentum의 변화율은 외력(접촉력 + 중력)만으로 결정된다. 어떤 접촉력 패턴이 원하는 운동량 궤적을 만들어내는지 계획하는 것이 locomotion의 핵심 문제다.
+Centroidal momentum의 변화율은 외력(접촉력 + 중력)으로 결정된다. 따라서 locomotion에서는 원하는 운동량 궤적을 만드는 접촉력 패턴을 계획해야 한다.
 
 ```python
 # Pinocchio에서 centroidal dynamics 계산
@@ -693,11 +689,11 @@ print("CoM velocity:", data.vcom[0])
 4단계: 모터에 토크 명령
 ```
 
-이 구조는 보행 로봇에 한정되지 않고, 부유 base를 가진 모든 시스템에 적용 가능하다. 드론의 trajectory optimization, 수중 로봇의 제어에도 유사한 구조가 사용된다.
+부유 base를 가진 시스템에는 이 구조를 적용할 수 있다. 드론의 trajectory optimization과 수중 로봇 제어에도 유사한 구조를 사용한다.
 
 > **추천 자료**
-> - Orin et al., "Centroidal Dynamics of a Humanoid Robot", Autonomous Robots 2013 — Centroidal dynamics를 로보틱스에 도입한 핵심 논문
-> - Wensing et al., "Optimization-Based Control for Dynamic Legged Locomotion", 2023 — 최신 locomotion 제어 survey
+> - Orin et al., "Centroidal Dynamics of a Humanoid Robot", Autonomous Robots 2013 — Humanoid의 centroidal dynamics를 분석한 논문
+> - Wensing et al., "Optimization-Based Control for Dynamic Legged Locomotion", 2023 — Locomotion 제어 survey
 > - Russ Tedrake, *Underactuated Robotics*, Ch. "Walking" (https://underactuated.csail.mit.edu/) — Underactuated 시스템과 보행의 관계
 > - Carpentier, Mansard, "Pinocchio: fast forward and inverse dynamics for poly-articulated systems" (https://github.com/stack-of-tasks/pinocchio) — Pinocchio의 centroidal dynamics 구현
 
@@ -705,17 +701,17 @@ print("CoM velocity:", data.vcom[0])
 
 ## 5.9 추천 자료
 
-이 분야를 공부할 때 어디서 시작할지가 가장 중요하다. 추천 순서는 배경지식에 따라 다르다.
+추천 순서는 배경지식에 따라 다르다.
 
 **학부 3-4학년, 동역학 입문:**
 
-> - Spong, Hutchinson, Vidyasagar, *Robot Modeling and Control* — 학부 수준에서 가장 접근하기 쉬운 교재. Manipulator equation 유도가 상세하다.
+> - Spong, Hutchinson, Vidyasagar, *Robot Modeling and Control* — 학부 수준의 입문 교재. Manipulator equation 유도가 상세하다.
 > - Craig, *Introduction to Robotics: Mechanics and Control* — 산업 현장 관점. 실용적이지만 수학적 깊이는 좀 얕다.
 
 **대학원, 수학적으로 엄밀한 이해가 필요할 때:**
 
-> - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation* (https://www.cds.caltech.edu/~murray/mlswiki/) — Lie group/algebra 관점에서의 동역학. 무료 PDF 제공. 수학적으로 가장 엄밀하지만, 처음 읽으면 어렵다.
-> - Featherstone, *Rigid Body Dynamics Algorithms* — 동역학 알고리즘의 핵심 참고서. Spatial vector algebra, RNEA, ABA, composite rigid body algorithm 등 모든 핵심 알고리즘이 여기 있다. 대학원생이라면 반드시 읽어야 한다.
+> - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation* (https://www.cds.caltech.edu/~murray/mlswiki/) — Lie group/algebra 관점에서 동역학을 엄밀하게 다룬다. 무료 PDF를 제공하며, 입문자가 바로 읽기에는 어렵다.
+> - Featherstone, *Rigid Body Dynamics Algorithms* — Spatial vector algebra, RNEA, ABA, composite rigid body algorithm을 체계적으로 다루는 대학원 수준의 참고서.
 
 **동역학 + 제어 통합:**
 
@@ -725,7 +721,7 @@ print("CoM velocity:", data.vcom[0])
 
 > - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — 순수 동역학 계산용 C++/Python 라이브러리. RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives 등을 지원한다. CasADi/JAX를 통한 autodiff도 가능하다 (Pinocchio 3.x).
 > - Drake (https://drake.mit.edu/) — 시뮬레이션 + 최적화 + 제어를 통합한 프레임워크. MultibodyPlant가 동역학 엔진이다. Mathematical programming 인터페이스가 강력하여 trajectory optimization에 특히 유용하다.
-> - MuJoCo (https://mujoco.org/) — DeepMind가 관리하는 물리 시뮬레이터. 접촉 처리가 빠르고 안정적이다. RL 연구의 사실상 표준 시뮬레이터.
+> - MuJoCo (https://mujoco.org/) — DeepMind가 관리하는 물리 시뮬레이터. 접촉을 포함한 로봇 학습 연구에 널리 쓰인다.
 > - PyBullet (https://pybullet.org/) — Bullet Physics의 Python 인터페이스. 진입 장벽이 낮아 교육용으로 적합하지만, 접촉 물리의 정밀도는 MuJoCo나 Drake에 미치지 못한다.
 
 ---
@@ -755,12 +751,12 @@ print("CoM velocity:", data.vcom[0])
 
 ## 정리
 
-실무적으로 기억해야 할 것:
+실무 요점:
 
-1. Manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ`는 모든 것의 출발점이다.
+1. Manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ`가 동역학 계산의 표준 형태다.
 2. 역동역학(τ 계산)에는 RNEA, 순동역학(q̈ 계산)에는 ABA를 쓴다. 둘 다 O(n)이다.
-3. 접촉이 들어가면 문제가 급격히 어려워진다. 시뮬레이터 선택이 중요하다.
+3. 접촉은 제약과 불연속성을 추가하므로, 접촉 모델과 시뮬레이터의 선택을 함께 검토한다.
 4. 부유 base 시스템에서는 centroidal dynamics가 핵심 도구다.
-5. 직접 구현하지 말고 Pinocchio나 Drake를 써라. 단, 이 라이브러리들이 내부적으로 무엇을 계산하는지는 이해하고 있어야 한다.
+5. 실무에서는 Pinocchio나 Drake를 활용하되, 라이브러리가 내부에서 계산하는 양과 가정을 확인한다.
 
 이 동역학 모델 위에서 computed torque control, operational space control, whole-body control 같은 제어 기법이 만들어진다.

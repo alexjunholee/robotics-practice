@@ -1,48 +1,48 @@
 # Ch.22 — Closing: Where to Start?
 
-Twenty-one chapters behind us. How sensors turn the world into numbers, how those numbers flow through coordinate frames, how a robot moves on top of that, and where deep learning fits into this pipeline — one full loop. The remaining question is "so what do I do starting tomorrow?"
+The previous twenty-one chapters covered the main elements of Spatial AI, from sensors and coordinate frames to robot motion, spatial perception, and learning-based methods. This final chapter identifies where to begin for different backgrounds and projects.
 
 ## 22.1 The Map So Far
 
-Four parts.
+The guide consists of four parts.
 
-- **Foundations** (Ch.1–3): the name Spatial AI, how sensors capture the world, and the math to handle it. The rotations, transformations, optimization, and probability introduced here came back in every later chapter.
-- **Robots** (Ch.4–8): how to handle a physical system of joints and links. Kinematics solves pose, dynamics computes forces, control drives it to the desired state, motion planning lays out paths, and learning picks up the whole thing from data.
-- **Perception and Spatial Understanding** (Ch.9–14): starting from images and climbing up to 3D space. Deep learning was stacked on top of classical CV, foundation models on top of that, and attempts like VLA that bind language and action follow. SLAM places this whole stack on a time axis.
-- **Research in Practice** (Ch.15–21): what you need to actually run code. Frameworks, tools, datasets, and how to survive in a lab.
+- **Foundations** (Ch.1–3): the scope of Spatial AI, how sensors measure the environment, and the mathematics used to process those measurements. Rotation, transformation, optimization, and probability recur throughout the guide.
+- **Robots** (Ch.4–8): physical systems built from joints and links. Kinematics determines pose, dynamics computes forces, and control and motion planning produce desired states and paths. Robot learning acquires parts of this process from data.
+- **Perception and Spatial Understanding** (Ch.9–14): the path from image processing to 3D spatial perception. Classical CV, deep learning, foundation models, and VLA lead into SLAM, which connects pose and maps over time.
+- **Research in Practice** (Ch.15–21): the frameworks, development tools, datasets, and references needed to run experiments.
 
-These four parts are not laid out to be read in order — they are closer to four rooms you can return to when needed. In practice, moments come when, standing in front of a robot, you have to use the equations of Ch.3, the SLAM of Ch.14, and the Docker of Ch.16 all at once.
+Real projects cross these boundaries. Operating a robot may require the equations in Ch.3, the SLAM methods in Ch.14, and the Docker setup in Ch.16 at the same time.
 
 ## 22.2 Starting Points by Profile
 
-The question I hear most often is "where do I start reading?" The door you enter depends on your background.
+The best starting point depends on the reader's background.
 
-If you are a **third- or fourth-year undergraduate new to robotics**, I recommend Ch.1 → Ch.3 → Ch.9 → Ch.14. Get a feel for what Spatial AI is, pick up the mathematical language, climb from images to 3D, and then see how the pieces click together in SLAM. If you set up the practice environment of Ch.16 along the way, you can start moving your hands right away.
+For a **third- or fourth-year undergraduate new to robotics**, Ch.1 → Ch.3 → Ch.9 → Ch.14 is a useful sequence. It introduces the scope of Spatial AI and its mathematical language before connecting images, 3D geometry, and SLAM. Setting up the environment in Ch.16 alongside these chapters makes it possible to run the examples immediately.
 
-Someone arriving as a **new master's student with a deep learning background** should read Ch.2 → Ch.3 → Ch.10 → Ch.11 first. Starting from the language you already know (deep learning), learn the new grammar of sensors and math, and then see how foundation models enter robotics. After that, move to Ch.14 and Ch.13 for the 3D and SLAM side.
+A **new master's student with a deep-learning background** can begin with Ch.2 → Ch.3 → Ch.10 → Ch.11. This sequence starts from familiar learning-based methods, fills in the sensor and mathematical foundations, and then shows how robotics uses foundation models. Ch.13 and Ch.14 extend the path to 3D vision and SLAM.
 
-Those with a **classical robotics background who are weak on deep learning** should head straight to Ch.8 → Ch.10 → Ch.11 → Ch.12. Skim Ch.4–7, which you already know, and focus on what changed over the past five years. By the time you reach VLA (Ch.12), you can see where the field's center of gravity has shifted.
+Readers with a **classical robotics background and less experience in deep learning** can start with Ch.8 → Ch.10 → Ch.11 → Ch.12. They can consult Ch.4–7 as needed and concentrate on the progression from robot learning to VFMs and VLAs.
 
-**Someone with a concrete project** goes in reverse. Start by skimming the datasets and benchmarks of Ch.17, pick one or two papers on a similar task, and trace backward only to the chapters those papers depend on. There is no need to read everything.
+Readers with a **specific project** can begin with the datasets and benchmarks in Ch.17. After selecting one or two papers on a similar task, they can work backward to the chapters those papers require.
 
-Ch.20.7's learning roadmap has more detailed recommendations by timeframe (1 month, 3 months, 6 months). Here the goal is only to set the broad direction.
+Ch.20.7 provides learning plans for one-, three-, and six-month periods.
 
 ## 22.3 What Not to Do
 
-The four traps newcomers fall into most often — *reading many papers first / perfecting the environment first / writing everything yourself / skipping fundamentals because "AI will write it"* — are treated generally in [Research Notes Ch.6](../../research-notes/guide.html#ch6-왜-읽는가-그리고-무엇을-안-읽을지-정하는-법) (the trap of reading-many) and [Grad Notes Ch.11](../../grad-notes/guide.html#ch11-도구의-함정-장비병과-가짜-진척) (the tool-fetish trap — environment / from-scratch / AI dependency) *(Korean; English version planned)*.
+New researchers may focus on increasing the paper count, postpone experiments until the environment is perfect, or spend too much time implementing every component from scratch. Accepting AI-generated output without verification creates the opposite problem. [Research Notes Ch.6](../../research-notes/guide.html#chapter-6) and [Grad Notes Ch.11](../../grad-notes/guide.html#chapter-11) discuss these issues in detail *(Korean only)*.
 
-Field-specific application in one line. SLAM/CV has *deep field tooling* — ORB-SLAM3, Colmap, and Gaussian Splatting are open-source standards. Implementing from scratch is meaningful only for educational purposes or when there is a genuinely new contribution. Otherwise, running an existing implementation and finding where it breaks is closer to research.
+SLAM and CV already have widely used public implementations, including ORB-SLAM3, COLMAP, and Gaussian Splatting. Unless the goal is education or a clearly new contribution, running an existing implementation and analyzing its limits may lead to the research problem more directly.
 
 ## 22.4 A Sense of the Long Game
 
-The PhD-time frame (the first year, the year-and-a-half mark, five years out) is treated in the meta-skill guide — [Grad Notes Ch.7](../../grad-notes/guide.html#ch7-내-연구를-갖기-0년차-학생에서-5년차-연구자로) (when your own research appears) and [Grad Notes Ch.1](../../grad-notes/guide.html#ch1-박사를-결정한다는-일) (the time-horizon of the PhD decision) *(Korean; English version planned)*.
+The first year, the eighteen-month mark, and the five-year horizon of a PhD are discussed in [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) and [Grad Notes Ch.1](../../grad-notes/guide.html#chapter-1) *(Korean only)*.
 
-Robotics experiments commonly run on a *3–6 month setup, 2-week experiment-cycle* unit. The year-and-a-half first-paper estimate comes from the same place. When the field's time-sense merges with the PhD's operating frame, daily pace shakes you less.
+Robotics experiments can have long cycles because they require hardware preparation, safety procedures, data collection, and repeated runs. Since preparation time and cycle length vary widely by equipment, environment, and laboratory, planning around complete experiment cycles is more realistic than judging progress day by day.
 
-## 22.5 One Line
+## 22.5 Next Steps
 
-If you have read this far, you already have one ability — the ability to read a long text to the end. The field core ends here, in one full loop.
+There is no need to reread the guide from beginning to end. When a project stalls, return to the relevant chapter and check the equations, implementation details, or datasets.
 
-The full guide on PhD operation and reading mindset lives at [`../../research-notes/`](../../research-notes/)·[`../../grad-notes/`](../../grad-notes/) *(Korean; English version planned)*.
+Continue with [Research Notes](../../research-notes/guide.html) for reading and writing papers, and [Grad Notes](../../grad-notes/guide.html) for managing the PhD process *(Korean only)*.
 
 Draft date: 2025.12.28 · Revision date: 2026.05.01

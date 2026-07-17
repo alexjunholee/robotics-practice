@@ -1,6 +1,6 @@
 # Ch.17 — Datasets & Benchmarks
 
-In robotics and computer vision research, datasets are as important as algorithms. Without good data you cannot build good models, and without fair benchmarks you cannot prove in a paper that your method is genuinely better. The useful view is the structure and characteristics of major datasets, plus the methods for collecting and managing your own data.
+A dataset's sensors, collection conditions, splits, and annotations determine what can be learned and compared. This chapter contrasts the structure of major benchmarks and outlines procedures for collecting and managing new data.
 
 The share of **synthetic data** has been growing recently. Collecting and labeling real data is costly and time-consuming, so a workflow of pretraining on automatically generated synthetic data from a simulator and then fine-tuning on a small amount of real data has taken hold. NVIDIA Isaac Sim's Domain Randomization and Habitat's large-scale scene generation are representative examples. **Sim-to-Real datasets** — datasets that provide simulator data paired with the corresponding real data — are also being actively constructed.
 
@@ -8,9 +8,9 @@ The share of **synthetic data** has been growing recently. Collecting and labeli
 
 ### 17.1.1 KITTI / KITTI360
 
-A long-standing dataset that became the starting point for autonomous driving research.
+KITTI is a long-standing dataset that became the starting point for autonomous driving research.
 
-Since its release in 2012, KITTI has served as the de facto standard benchmark for autonomous driving and 3D vision research. Larger and more diverse datasets exist today, but many papers still report KITTI results, so you need to know it as a reference point. For Visual Odometry and Stereo Depth Estimation in particular, KITTI is still the primary benchmark.
+Since its release in 2012, KITTI has provided a common comparison point for autonomous driving and 3D vision. Even after larger and more varied datasets appeared, it has remained useful for comparing VO, SLAM, and stereo-depth results with earlier work.
 
 **Composition**:
 - Stereo cameras
@@ -34,7 +34,7 @@ Since its release in 2012, KITTI has served as the de facto standard benchmark f
 
 ### 17.1.2 nuScenes
 
-A large-scale autonomous driving dataset.
+nuScenes is a large-scale autonomous driving dataset.
 
 It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and is much larger in scale. Alongside KITTI, it is one of the most cited datasets in recent autonomous driving papers. It is central to 3D Object Detection and BEV (Bird's Eye View) based perception research.
 
@@ -57,7 +57,7 @@ It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and
 
 ### 17.1.3 Waymo Open Dataset
 
-Google's large-scale autonomous driving dataset.
+The Waymo Open Dataset is Google's large-scale autonomous driving dataset.
 
 Together with nuScenes, it is one of the two main benchmarks in current autonomous driving research. It leads in data quality and scale, and its annual challenge lets you track the latest technical trends.
 
@@ -77,7 +77,7 @@ Together with nuScenes, it is one of the two main benchmarks in current autonomo
 
 ### 17.1.4 Datasets for VIO / VINS
 
-If you work on Visual-Inertial Odometry (VIO) or SLAM, you need to know the datasets below. Papers in this area almost always report results on them.
+TUM RGB-D and EuRoC MAV are used for indoor RGB-D SLAM and drone VIO evaluation, respectively.
 
 **TUM RGB-D**:
 - RGB-D camera sequences
@@ -99,7 +99,7 @@ If you work on Visual-Inertial Odometry (VIO) or SLAM, you need to know the data
 
 ### 17.2.1 ImageNet
 
-The standard benchmark for image classification.
+ImageNet is the standard benchmark for image classification.
 
 This is the dataset that marked the turn into deep learning. After AlexNet's overwhelming performance on ImageNet in 2012, nearly every vision model started using ImageNet-pretrained weights. In robotics too, the backbone of camera-based perception modules is mostly an ImageNet-pretrained model.
 
@@ -109,9 +109,9 @@ This is the dataset that marked the turn into deep learning. After AlexNet's ove
 
 ### 17.2.2 COCO
 
-The standard for object detection and segmentation.
+COCO evaluates object detection and instance segmentation.
 
-If you work on object detection, you need to understand the COCO dataset's evaluation metric (COCO mAP), since it is the industry standard. Note that the way AP is computed per IoU threshold differs from PASCAL VOC.
+COCO mAP averages AP across several IoU thresholds. This differs from the PASCAL VOC convention that uses a single IoU threshold.
 
 **Features**:
 - 80 object categories
@@ -184,9 +184,9 @@ with open('label.txt', 'r') as f:
 
 ### 17.3.2 DataLoader Implementation
 
-The standard pattern for data loading in PyTorch.
+This is the standard pattern for data loading in PyTorch.
 
-Without knowing PyTorch's `Dataset` and `DataLoader` pattern you cannot write training code. How you preprocess data in `__getitem__` and what you set `num_workers` to can change training speed significantly.
+PyTorch's `Dataset` defines sample loading and preprocessing, while `DataLoader` handles batching and parallel loading. Preprocessing cost in `__getitem__` and the `num_workers` setting both affect training throughput.
 
 ```python
 from torch.utils.data import Dataset, DataLoader

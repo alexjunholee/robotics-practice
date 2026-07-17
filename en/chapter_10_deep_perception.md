@@ -1,22 +1,22 @@
 # Ch.10 — Deep Learning for Perception
 
-These are the core techniques for a robot to understand "what it is looking at." Classical CV focused on "how to process the image and extract geometric relationships," whereas here the focus is on recognizing "what is in the image." Object detection, classification, segmentation — for a robot to carry out commands like "there's a red cup over there, pick it up," these techniques are essential.
+Classical CV designs image-processing and geometric operations explicitly. Learning-based perception instead fits representations from data to predict an object's class, location, or region. Classification, detection, and segmentation provide different outputs for locating and manipulating objects in a scene.
 
 ---
 
 ## 10.1 Choosing a Framework
 
-Which deep learning framework to use is a more important decision than it seems. To read and reproduce research code, you need to know the framework it uses; to build your own model, you have to know at least one properly.
+Framework choice determines which research code and pretrained models can be run directly. Learning model definition, training, inference, and debugging in one framework also makes other codebases easier to compare.
 
 ### 10.1.1 PyTorch (Recommended)
 
 **Strengths**:
 - Intuitive dynamic graph (eager execution)
 - Easy to debug
-- Standard in the research community
+- Large ecosystem of research code and pretrained models
 - Rich pretrained models (torchvision, timm)
 
-There is a practical reason. As of 2024, more than about 80% of code released with papers at major conferences such as NeurIPS, CVPR, and ICLR is in PyTorch. Without PyTorch, you essentially cannot read, run, and modify the latest papers.
+There is also a practical reason. Many public research repositories and pretrained models provide PyTorch implementations, so familiarity with PyTorch makes it easier to run and modify recent work. Usage shares for conference code depend on how repositories are sampled, so they should not be presented as a fixed percentage without a documented census.
 
 **Install**:
 
@@ -62,13 +62,13 @@ That said, TensorFlow Lite is still widely used when deploying models to a robot
 
 ## 10.2 Deep Learning Fundamentals
 
-Without knowing the concepts in this section, you cannot understand "why deep learning overwhelms classical methods in image recognition." Without knowing the CNN structure, you don't see why ResNet matters; without knowing the Transformer, you can't understand why ViT and DETR replace earlier approaches.
+CNNs provide the architectural context for ResNet, while the Transformer explains how ViT and DETR differ from earlier convolutional approaches.
 
 ### 10.2.1 Convolutional Neural Network (CNN)
 
-This is the core architecture for extracting spatial features from images.
+A CNN extracts spatial features by applying learned filters across an image.
 
-A CNN is an architecture that "automatically learns local patterns (edges, corners, textures) in images." In the classical CV covered earlier, features like SIFT and ORB were hand-crafted by humans, whereas a CNN learns the optimal features automatically from data. This is the turning point of deep learning.
+A CNN learns local patterns such as edges, corners, and textures from data. Unlike the hand-designed SIFT and ORB features covered earlier, its filters are optimized with the rest of the network for the training objective.
 
 **Main components**:
 - **Convolution Layer**: extract features with filters
@@ -92,7 +92,7 @@ class ConvBlock(nn.Module):
 From a linear algebra perspective, a convolution is "the inner product of a filter (kernel) with an image patch." The matrix multiplication taught in class is used directly here. With `kernel_size=3, padding=1` the output size is kept the same as the input — this pattern shows up very often.
 
 > **Further reading**
-> - [Stanford CS231n — Convolutional Neural Networks for Visual Recognition](https://www.youtube.com/playlist?list=PLoROMvodv4rMFqRtEuo6SGjY4XbRIVRd4) — the canonical lecture series for understanding CNNs. Worth watching.
+> - [Stanford CS231n — Convolutional Neural Networks for Visual Recognition](https://www.youtube.com/playlist?list=PLoROMvodv4rMFqRtEuo6SGjY4XbRIVRd4) — a lecture series covering CNN foundations and visual-recognition models.
 > - [d2l.ai — CNN chapter](https://d2l.ai/chapter_convolutional-neural-networks/index.html) — code and math explained together.
 > - [3Blue1Brown — But what is a Neural Network?](https://www.youtube.com/watch?v=aircAruvnKk) — intuitive understanding of neural networks.
 
@@ -104,12 +104,12 @@ From a linear algebra perspective, a convolution is "the inner product of a filt
 Attention(Q, K, V) = softmax(QK^T / √d_k) V
 ```
 
-Once you see the difference from a CNN, it is immediately clear why the Transformer is rising. CNNs exchange information only between "nearby pixels" (local receptive field), but the Transformer's Self-Attention lets "any part of the image reference any other part" (global attention). This is advantageous for grasping the overall context of an object. Since 2020, Transformers have largely replaced CNNs in vision.
+A convolution aggregates a local neighborhood in one layer and expands its receptive field as layers accumulate. Transformer self-attention can relate distant positions within a single layer. Since 2020, vision systems have used pure Transformers and CNN-Transformer hybrids for classification, detection, and segmentation.
 
-**Vision Transformer (ViT)** splits the image into fixed-size patches such as 16×16, treats each patch like a "word" as in NLP, and feeds them into a Transformer encoder. The idea itself is simple, but by outperforming CNNs on large-scale data, it has recently become the mainstay of vision tasks.
+**Vision Transformer (ViT)** splits an image into fixed-size patches such as 16×16, treats each patch as a token, and feeds them into a Transformer encoder. The original paper reported higher image-classification performance than its comparison CNNs under large-scale pretraining, and Transformer families later became major options across several vision tasks.
 
 > **Further reading**
-> - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — the original Transformer paper. The start of everything.
+> - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — the original Transformer paper.
 > - [Dosovitskiy et al., "An Image is Worth 16x16 Words" (2020)](https://arxiv.org/abs/2010.11929) — the original ViT paper.
 > - [Yannic Kilcher — Vision Transformer explanation](https://www.youtube.com/watch?v=TrdevFK_am4) — accessible walk-through of the paper.
 > - [Andrej Karpathy — Let's build GPT from scratch](https://www.youtube.com/watch?v=kCc8FmEb1nY) — builds a Transformer from scratch. NLP-focused but directly relevant to understanding ViT.
@@ -118,7 +118,7 @@ Once you see the difference from a CNN, it is immediately clear why the Transfor
 
 ## 10.3 Image Classification
 
-Classification is the most basic question: "what is in this image?" Object detection and segmentation models internally contain a classifier, so understanding classification models is the fundamental of fundamentals. The backbone of pretrained classification models (ResNet, ViT, etc.) is widely used as the feature extractor for other tasks.
+Classification asks what an image contains. Object-detection and segmentation models also contain classifiers. The backbone of a pretrained classification model, such as ResNet or ViT, can serve as the feature extractor for another task.
 
 **Representative models**:
 
@@ -129,7 +129,7 @@ Classification is the most basic question: "what is in this image?" Object detec
 | ViT | Transformer-based | Large-scale data, high performance |
 | ConvNeXt | Modernized CNN | Competes with ViT |
 
-ResNet's residual connection is the simple idea of "adding the input to the output," and this one thing made it possible to train networks dozens of layers deep. Since its 2015 release, it has become a basic building block of almost every deep learning architecture.
+ResNet's residual connection adds a block's input to its output, stabilizing the training of deep networks. Many architectures have adopted this structure since its 2015 release.
 
 **Using a pretrained model**:
 
@@ -144,19 +144,19 @@ model.fc = nn.Identity()  # remove the last FC
 features = model(x)  # (batch, 2048)
 ```
 
-This pattern is used very often. Remove only the final classification layer of a model pretrained on ImageNet and use the output up to that point as "features." This is called transfer learning, and in robotics it is almost always the approach taken when teaching a system to recognize new objects.
+An ImageNet-pretrained model can be reused by removing its final classification layer and treating the preceding output as features. This transfer-learning pattern supplies an initial representation when labeled data for a new recognition problem is limited.
 
 > **Further reading**
-> - [He et al., "Deep Residual Learning for Image Recognition" (2015)](https://arxiv.org/abs/1512.03385) — the original ResNet paper. One of the most cited papers in the history of deep learning.
-> - [Papers With Code — Image Classification](https://paperswithcode.com/task/image-classification) — check the latest benchmarks and SOTA models.
-> - [timm (PyTorch Image Models) library](https://github.com/huggingface/pytorch-image-models) — loads hundreds of pretrained models in a single line. Extremely useful in practice.
+> - [He et al., "Deep Residual Learning for Image Recognition" (2015)](https://arxiv.org/abs/1512.03385) — the original ResNet paper and an influential basis for later vision models.
+> - [Papers With Code — Image Classification](https://paperswithcode.com/task/image-classification) — a starting point for public implementations and historical leaderboards; verify current numbers and protocols on the benchmark's official page and in the source paper.
+> - [timm (PyTorch Image Models) library](https://github.com/huggingface/pytorch-image-models) — loads hundreds of pretrained models in a single line.
 > - [Stanford CS231n — Training Neural Networks](https://www.youtube.com/playlist?list=PLoROMvodv4rMFqRtEuo6SGjY4XbRIVRd4) — training techniques and tricks.
 
 ---
 
 ## 10.4 Object Detection
 
-For a robot to know "where is the cup on that table," it needs not just classification but "where is what." That is object detection — the task of predicting the location and class of objects simultaneously via bounding boxes, used in almost every application: robot manipulation, autonomous driving, and so on.
+Classification can tell a robot that a cup is present, but manipulation also requires its location. Object detection predicts both the class and the bounding box of each object and is used in applications such as robot manipulation and autonomous driving.
 
 ### 10.4.1 Two-Stage Detectors
 
@@ -177,7 +177,7 @@ Faster R-CNN is the representative two-stage detector and is still used where ac
 - Real-time processing (30+ FPS)
 - Versions: YOLOv5, YOLOv8, YOLOv11 (Ultralytics)
 
-YOLO "only looks once" as its name says — instead of proposing candidates first like two-stage methods, it processes the whole image in one pass and detects every object. When real-time performance matters in a robot system, it is the first model to consider. Ultralytics' YOLOv8/v11 are very simple to install and use, making them well suited for prototyping.
+Unlike a two-stage detector, YOLO processes the full image without first generating region proposals. It can be used when a robot system needs real-time inference. Ultralytics' YOLOv8/v11 have a short setup and inference path, which suits prototyping.
 
 ```python
 from ultralytics import YOLO
@@ -197,7 +197,7 @@ results[0].show()
 > **Further reading**
 > - [Redmon et al., "You Only Look Once: Unified, Real-Time Object Detection" (2016)](https://arxiv.org/abs/1506.02640) — the original YOLO paper. Concise and a good read.
 > - [Ultralytics YOLOv8 docs](https://docs.ultralytics.com/) — well organized from installation to custom training.
-> - [Papers With Code — Object Detection](https://paperswithcode.com/task/object-detection) — check the latest SOTA.
+> - [Papers With Code — Object Detection](https://paperswithcode.com/task/object-detection) — a starting point for public implementations and historical leaderboards; verify current numbers and protocols on the benchmark's official page and in the source paper.
 > - [Dark Programmer — Understanding precision and recall](https://darkpgmr.tistory.com/162) — an intuitive explanation of detection evaluation metrics.
 
 ### 10.4.3 Transformer-based
@@ -208,7 +208,7 @@ results[0].show()
 > - [Carion et al., "End-to-End Object Detection with Transformers" (2020)](https://arxiv.org/abs/2005.12872) — the original DETR paper.
 > - [Yannic Kilcher — DETR explanation](https://www.youtube.com/watch?v=T35ba_VXkMY) — accessible walk-through of the paper.
 > - [HuggingFace — Object Detection guide](https://huggingface.co/docs/transformers/tasks/object_detection) — using DETR through the Transformers library.
-> - [Zhao et al., "DETRs Beat YOLOs on Real-time Object Detection" (RT-DETR, CVPR 2024, arXiv:2304.08069)](https://arxiv.org/abs/2304.08069) — first DETR-family model to reach YOLO-level real-time speed. A new direction for real-time detection.
+> - [Zhao et al., "DETRs Beat YOLOs on Real-time Object Detection" (RT-DETR, CVPR 2024, arXiv:2304.08069)](https://arxiv.org/abs/2304.08069) — reports speed-accuracy improvements for real-time DETRs under the paper's comparison protocol.
 > - [Cheng et al., "YOLO-World: Real-Time Open-Vocabulary Object Detection" (CVPR 2024, arXiv:2401.17270)](https://arxiv.org/abs/2401.17270) — adds text-prompt-based open-vocabulary detection to YOLO. Practical for detecting arbitrary objects in robotics.
 
 ---
@@ -217,13 +217,13 @@ results[0].show()
 
 This is the task of predicting a class for every pixel.
 
-Robot manipulation makes the difference obvious. Object detection only gives you a rough location via a bounding box, but semantic segmentation gives you the exact boundary of the object. A robot needs the precise contour, not a bounding box, to grasp an object, and for autonomous driving to distinguish road, sidewalk, and lane markings, pixel-level classification is essential.
+Robot manipulation makes the difference clear. Detection predicts a bounding box, whereas semantic segmentation predicts a class per pixel and can represent object-background boundaries more finely. A predicted boundary is not the exact physical contour, so grasping also needs depth, instance separation, and uncertainty checks. Pixel-level classification is likewise used to distinguish roads, sidewalks, and lane markings in autonomous driving.
 
 **Representative models**:
 
 | Model | Characteristics |
 | --- | --- |
-| FCN | First end-to-end segmentation |
+| FCN | An early representative of fully convolutional end-to-end segmentation |
 | U-Net | Encoder-Decoder structure, originated in medical imaging |
 | DeepLab v3+ | Atrous convolution, multi-scale |
 | SegFormer | Transformer-based, lightweight decoder |
@@ -295,13 +295,11 @@ A caveat: MiDaS and Depth Anything by default estimate **relative depth**. You c
 
 ## 10.8 Advanced: Training Recipes
 
-*If you want to become a researcher, start reading from here.*
-
-Knowing the model architecture seems enough to do research, but in practice "making the training work well" takes more than half of the total research time. Even with the same model, a bad learning rate prevents convergence, and adding one augmentation can bump accuracy by several percent. This section summarizes training techniques used repeatedly in practice.
+Model architecture is only one part of an experiment. Learning-rate and data-augmentation settings can change convergence and final accuracy even when the architecture stays fixed. This section collects training techniques that recur in practice.
 
 **Learning Rate Schedule**:
 
-- **Cosine Annealing with Warm-up**: the most widely used schedule. For the first few epochs, the learning rate is ramped linearly from 0 up to the target value (warm-up), then decayed along a cosine curve.
+- **Cosine Annealing with Warm-up**: one commonly used option. For the first few epochs, the learning rate is ramped linearly from 0 up to the target value (warm-up), then decayed along a cosine curve.
 
 $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(\frac{t \cdot \pi}{T}\right)\right)$$
 
@@ -395,13 +393,11 @@ model = DDP(model, device_ids=[local_rank])
 
 ## 10.9 Advanced: Self-Supervised and Contrastive Learning
 
-*If you want to become a researcher, start reading from here.*
-
 Robotics data is label-scarce. A robot collects thousands or tens of thousands of images, but labeling each of them with bounding boxes or segmentation masks is impractical. Self-supervised learning creates a training signal from the data itself without labels.
 
 **Contrastive Learning**:
 
-The core idea is simple: place different augmentations of the same image close together in the embedding space (positive pair) and different images far apart (negative pair).
+Contrastive learning places different augmentations of the same image close together in the embedding space (a positive pair) and different images far apart (negative pairs).
 
 - **SimCLR**: apply different augmentations to the same image to form positive pairs. Other images in the batch form the negative pairs. Requires a large batch size.
 - **MoCo (Momentum Contrast)**: uses a momentum encoder and a queue to secure many negatives without needing a large batch.
@@ -461,9 +457,7 @@ class MyClassifier(nn.Module):
 
 ## 10.10 Advanced: Knowledge Distillation
 
-*If you want to become a researcher, start reading from here.*
-
-This is the technique of transferring the "knowledge" of a large model (teacher) to a small model (student). It is especially important in robotics because giant models such as VFMs must run on edge devices. To run SAM in real time on a Jetson, distillation is almost the only way.
+Knowledge distillation transfers the "knowledge" of a large model (teacher) to a small model (student). In robotics, it is used to run large models such as VFMs on edge devices. It can also be applied when running SAM in real time on a Jetson.
 
 **Teacher-Student Structure**:
 
@@ -475,7 +469,7 @@ For example, for an image of "cat" the hard label is [1, 0, 0], but the teacher'
 
 $$\mathcal{L}_{KD} = \text{KL}\left(\sigma\left(\frac{z_t}{\tau}\right) \| \sigma\left(\frac{z_s}{\tau}\right)\right)$$
 
-Here z_t and z_s are the teacher and student logits, respectively, and τ is the temperature. When τ > 1, the probability distribution becomes "softer," so more information about inter-class relationships is conveyed. Typically τ = 3~5 is used.
+Here z_t and z_s are the teacher and student logits, respectively, and τ is the temperature. When τ > 1, the probability distribution becomes "softer," so more information about inter-class relationships is conveyed. A value of τ = 3~5 is used.
 
 The total loss is a weighted sum of the hard label loss and the distillation loss:
 
@@ -485,7 +479,7 @@ The reason for multiplying by τ^2: it compensates for the fact that gradient ma
 
 **Feature-based Distillation (FitNets)**:
 
-Not only logits, but also the intermediate layer feature maps are made similar to the teacher's.
+Feature-based distillation aligns intermediate feature maps as well as the final logits with those of the teacher.
 
 $$\mathcal{L}_{feat} = \|f_t(x) - r(f_s(x))\|^2$$
 
@@ -526,8 +520,6 @@ def distillation_loss(student_logits, teacher_logits, labels,
 ---
 
 ## 10.11 Advanced: Domain Adaptation
-
-*If you want to become a researcher, start reading from here.*
 
 When a model trained in simulation is deployed to a real robot, performance drops sharply. The same goes for training on indoor data and deploying outdoors. This problem is called **domain shift**, and the research that addresses it is domain adaptation. In robotics, it is directly tied to the sim-to-real gap problem.
 
@@ -572,7 +564,7 @@ A way for the model to adapt to new environments even after deployment. Without 
 - **CoTTA**: continual TTA. Adapts even when the distribution changes over time.
 
 ```python
-# Core idea of TENT (simplified)
+# Simplified TENT update
 model.eval()
 # Make only the BN affine parameters trainable
 for m in model.modules():
@@ -593,12 +585,12 @@ for batch in test_loader:
 
 **Connection to the sim-to-real gap**:
 
-In real-world robotics these techniques are combined:
+In real-world robotics these techniques can be combined according to the target and available data:
 1. Generate diverse data in the simulator with domain randomization.
 2. Perform adversarial adaptation with a small amount of real-environment data.
 3. After deployment, continually adapt to environmental changes via TTA.
 
-This combination is currently the most widely used approach to sim-to-real transfer.
+Using all three stages is not a standard recipe. A system may use domain randomization alone, add fine-tuning on real data, or prohibit adaptation after deployment; choose the combination according to safety and compute constraints.
 
 > **Further reading**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — the original domain randomization paper.
@@ -612,6 +604,6 @@ This combination is currently the most widely used approach to sim-to-real trans
 > - **2012**: AlexNet wins the ImageNet competition by a large margin over prior methods. The start of the "deep learning revolution." The era of hand-crafted features begins to end.
 > - **2014~2015**: VGGNet, GoogLeNet, and ResNet appear. In particular, ResNet's (2015) residual connection makes it possible to train networks hundreds of layers deep. During this period, Faster R-CNN (2015) and YOLO (2016) make real-time object detection possible.
 > - **2017**: "Attention Is All You Need" — Transformer is announced. Originally for NLP, but later extended to vision.
-> - **2020~2021**: ViT (Vision Transformer) appears. A new paradigm of processing images as patch sequences. DETR applies Transformer to detection as well. Swin Transformer achieves SOTA on various vision tasks.
+> - **2020~2021**: ViT (Vision Transformer) appears and patch-sequence processing spreads; DETR applies a Transformer to detection. The original Swin Transformer paper reports scores above its comparison models on several public vision benchmarks of that period.
 > - **2022~**: ConvNeXt shows that "CNNs are not dead yet." Segment Anything (SAM) elevates segmentation to a foundation model. Extension to Spatial AI — depth estimation and 3D scene understanding become the next battleground for deep learning.
-> - **What to watch now**: the shift from single-task models to foundation models. Pipelines that use a single DINOv2 to extract detection, segmentation, and depth features are beginning to appear experimentally.
+> - **Recent direction**: researchers are testing a single foundation-model representation across detection, segmentation, and depth estimation. Reusing DINOv2 features for several downstream tasks is one example.

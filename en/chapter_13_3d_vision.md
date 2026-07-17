@@ -1,7 +1,7 @@
 # Ch.13 — 3D Vision
 
 
-With only 2D images, a robot has trouble answering "how far is that object?" or "what is behind that wall?" 3D vision is the field that gives a robot spatial awareness. Point cloud processing, 3D object detection, and scene reconstruction fall under it. Neither SLAM nor robot manipulation is fully understandable without this material. It is the foundation of the next chapter (SLAM), so study it carefully.
+With only 2D images, a robot has trouble answering "how far is that object?" or "what is behind that wall?" 3D vision gives a robot the spatial information needed to answer such questions. Point-cloud processing, 3D object detection, and scene reconstruction all belong to this field, and the same concepts support both SLAM and robot manipulation.
 
 ## 13.1 Point Cloud Basics
 
@@ -164,7 +164,7 @@ Predict 3D bounding boxes from a point cloud. In autonomous driving, this is the
 
 ### 13.3.1 Point-based Methods
 
-The core idea of PointNet is to apply deep learning **directly to raw points** without converting the point cloud to voxels or images. Previously there was no answer to "how do we apply a CNN to irregular points?" — PointNet solved this.
+PointNet applies a neural network directly to raw points without converting the point cloud to voxels or images. Unlike a CNN, which assumes a regular grid, it accepts an irregular set of points as input.
 
 **PointNet (2017)**:
 - Applied directly to raw points
@@ -183,7 +183,7 @@ The core idea of PointNet is to apply deep learning **directly to raw points** w
 # 3. PointNet: extract features in each group
 ```
 
-PointNet's core idea: the result must be the same even if the point order changes (permutation invariance). To achieve this, each point is passed independently through an MLP and then aggregated via max pooling. Mathematically, it takes the form f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))).
+PointNet must produce the same result when the order of the points changes (permutation invariance). It passes each point independently through an MLP and aggregates the outputs with max pooling. Mathematically, it takes the form f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))).
 
 ### 13.3.2 Voxel-based Methods
 
@@ -202,7 +202,7 @@ PointNet's core idea: the result must be the same even if the point order change
 - Converts to a 2D CNN for high speed
 - Real-time capable
 
-PointPillars' core idea: if you divide 3D space into vertical pillars, you can compress the points inside each pillar into a single feature vector and arrange them like a 2D image. You can then reuse well-validated 2D CNNs as-is, which is much faster than a 3D CNN.
+PointPillars divides 3D space into vertical pillars, compresses the points inside each pillar into a feature vector, and arranges the vectors like a 2D image. This representation can use a 2D CNN directly and is faster to process than a 3D CNN.
 
 ### 13.3.3 Multi-modal Methods
 
@@ -244,7 +244,7 @@ Recover camera poses and 3D structure simultaneously from multiple images.
 Bundle adjustment "jointly optimizes all camera poses and 3D point positions." It uses nonlinear least squares (Levenberg-Marquardt and the like), and the number of variables can reach tens of thousands to hundreds of thousands. Think of it as a large-scale nonlinear extension of the least squares you learned in linear algebra.
 
 **Tools**:
-- **COLMAP**: the most widely used, GUI/CLI
+- **COLMAP**: a widely used public SfM/MVS reference implementation, GUI/CLI
 - **OpenMVG**: library-style
 
 ```bash
@@ -255,7 +255,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 ```
 
 > **Further reading**
-> - [COLMAP Documentation](https://colmap.github.io/) — the de facto standard tool for SfM/MVS.
+> - [COLMAP Documentation](https://colmap.github.io/) — documentation for a widely used public SfM/MVS implementation.
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — core lectures on multiple view geometry.
 > - [Schönberger & Frahm, "Structure-from-Motion Revisited" (2016)](https://openaccess.thecvf.com/content_cvpr_2016/papers/Schonberger_Structure-From-Motion_Revisited_CVPR_2016_paper.pdf) — the COLMAP paper.
 
@@ -274,7 +274,7 @@ Where SfM recovers "where the cameras were" and "sparse 3D points," MVS uses tho
 - Integrate multiple views
 - Extract a mesh via Marching Cubes
 
-TSDF's core idea: each voxel stores "the signed distance to the nearest surface." Positive means outside the surface, negative means inside. Taking a weighted average of depths observed from multiple views reduces noise and yields a clean surface. The location where the sign flips (passes through zero) is the surface.
+A TSDF stores the signed distance to the nearest surface in each voxel. Positive values indicate the outside of the surface and negative values the inside. A weighted average of depths observed from multiple views reduces noise, and the zero crossing identifies the surface.
 
 ```python
 # Open3D TSDF Integration
@@ -329,12 +329,12 @@ Intuitively: NeRF learns, via a neural network, "for every point in 3D space, wh
 > **Further reading**
 > - [Mildenhall et al., "NeRF: Representing Scenes as Neural Radiance Fields" (2020)](https://arxiv.org/abs/2003.08934) — the original NeRF paper.
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — a unified framework that makes NeRF experiments easy. Start here if you want to run NeRF yourself.
-> - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — an intuitive explanation of NeRF's core idea.
+> - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — an intuitive explanation of NeRF's representation.
 > - [Jon Barron — Understanding NeRF (ECCV 2022 Tutorial)](https://www.youtube.com/watch?v=HfJpQCBTqZs) — from a NeRF author.
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS was adopted quickly because it fixed NeRF's fatal weakness, slow rendering. NeRF takes seconds to render a single frame, whereas 3DGS renders in real time at 100+ FPS. This speed makes it directly usable in robot applications such as SLAM and real-time mapping.
+3DGS was adopted quickly because it substantially reduced the rendering time associated with NeRF. NeRF can take seconds to render a frame, whereas reported 3DGS implementations render at more than 100 FPS. This difference makes real-time mapping and SLAM applications more practical.
 
 **Concept**: represent a scene with millions of 3D Gaussians.
 
@@ -379,7 +379,7 @@ If a robot can build photorealistic 3D maps in real time while moving around, ap
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — improves surface reconstruction quality via 2D Gaussians.
 > - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — an early 3DGS + SLAM system.
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — the MonoGS paper.
-> - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — dense 3D reconstruction from image pairs without camera intrinsics/extrinsics. A paradigm shift for 3D reconstruction.
+> - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — reconstructs dense 3D from image pairs without camera intrinsics or extrinsics.
 > - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — adds local feature matching to DUSt3R. Provides reconstruction and precise correspondences simultaneously.
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — unified framework for NeRF/3DGS experiments.
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — the official code.
@@ -388,8 +388,6 @@ If a robot can build photorealistic 3D maps in real time while moving around, ap
 > Manipulate the position, covariance, and color of 3D Gaussians to interactively understand the splatting rendering process.
 
 ## 13.6 Advanced: Neural Implicit Representations
-
-*If you want to become a researcher, read from here.*
 
 Section 13.5 covered NeRF and 3DGS. NeRF uses a density field to perform volume rendering, but extracting a clear surface from the density is hard. For robotics — grasping objects or checking collisions — an accurate surface is required. This is where signed-distance-function (SDF) based approaches come in.
 
@@ -466,8 +464,6 @@ The standard method for converting the iso-surface `f(x) = 0` of a learned SDF i
 
 ## 13.7 Advanced: Differentiable Rendering
 
-*If you want to become a researcher, read from here.*
-
 NeRF, 3DGS, NeuS, and other recent core 3D vision techniques share one principle: **make the rendering process differentiable, so the difference between the rendered result and the real image optimizes the 3D representation**. This paradigm is called analysis-by-synthesis.
 
 **Volume rendering equation**
@@ -542,8 +538,6 @@ When differentiable rendering is applied to SLAM, both tracking and mapping can 
 
 ## 13.8 Advanced: 3D Scene Graph
 
-*If you want to become a researcher, read from here.*
-
 If you tell a robot "bring me the red cup in the kitchen," a point cloud or mesh alone cannot carry out the command. The robot has to understand where "the kitchen" is, which object is "the red cup," and the relation that it is "inside" the kitchen. A 3D scene graph represents the environment as a semantic relation graph beyond a purely geometric representation.
 
 **Structure**
@@ -592,7 +586,7 @@ Prior scene graphs relied on a predefined set of categories (chair, table, and s
 5. Build the scene graph
 ```
 
-The key point is that it can handle queries like "red cup" that were never seen at training time.
+The resulting graph can handle queries such as "red cup" even when that phrase did not appear during training.
 
 **Why is this needed?**
 
@@ -617,4 +611,4 @@ In task planning, natural-language-driven navigation, and human-robot interactio
 > - **2020~**: the arrival of NeRF brings neural rendering into the spotlight. A handful of photos can yield a photorealistic 3D scene, and follow-ups such as Instant-NGP and Mip-NeRF arrive in quick succession.
 > - **2023~**: 3D Gaussian Splatting overcomes NeRF's speed limits. It combines real-time rendering with the advantages of explicit representation, and multi-modal 3D detection such as BEVFusion becomes the reference in autonomous driving.
 > - **2024~**: the combination of 3DGS + SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is opening up a new direction for neural SLAM. Robots can build photorealistic 3D maps in real time as they move.
-> - **Worth watching now**: new 3DGS-based methods keep appearing in SLAM/robotics applications. NeRFStudio lets you experiment with both, so I recommend comparing them directly.
+> - **Recent direction**: more SLAM and robotics systems are using 3DGS-based scene representations. NeRFStudio allows NeRF and 3DGS to be compared on the same data, including their representations and rendering speed.

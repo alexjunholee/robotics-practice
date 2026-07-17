@@ -2,17 +2,17 @@
 
 로봇이 환경을 인식하려면 센서가 필요하다. 각 센서의 특성을 이해해야 적절한 선택과 알고리즘 설계가 가능하다.
 
-알고리즘을 아무리 잘 짜도, 센서 특성을 모르면 "왜 이 알고리즘이 이 상황에서 실패하는가?"를 진단할 수 없다. 예를 들어, SLAM을 돌렸는데 특정 구간에서 트래킹이 날아가는 원인이 Rolling Shutter 때문인지, LiDAR 반사 특성 때문인지, IMU 바이어스 때문인지를 센서 지식 없이는 파악하기 어렵다. 센서는 로보틱스 시스템의 입구이며, 입구에서 들어오는 데이터의 특성을 모르면 나머지 모든 것이 흔들린다.
+SLAM 추적 실패가 rolling shutter, LiDAR 반사 특성, IMU bias 가운데 어디에서 시작됐는지 가리려면 센서의 측정 원리와 오차를 알아야 한다. 센서 모델은 뒤따르는 인식·추정 알고리즘이 어떤 데이터를 받는지 규정한다.
 
 ## 2.1 카메라 (Camera)
 
-카메라는 가장 정보량이 풍부한 센서이다. 사람이 시각으로 세상의 대부분을 이해하듯, 로봇도 카메라에서 가장 많은 정보를 얻는다. 하지만 카메라 종류마다 특성이 많이 다르기 때문에, 각각의 장단점을 이해하고 목적에 맞는 카메라를 선택하는 것이 중요하다.
+카메라는 색상과 텍스처를 높은 공간 해상도로 측정한다. 단안·스테레오·RGB-D·event camera는 깊이 측정 방식, 시간 해상도, 조명 변화에 대한 반응이 서로 다르므로 작업 조건에 맞춰 선택한다.
 
 ### 2.1.1 Monocular Camera (단안 카메라)
 
 가장 기본적인 시각 센서로, 하나의 렌즈로 2D 이미지를 촬영한다.
 
-단안 카메라는 가장 저렴하고 가벼운 센서이면서도 Visual SLAM, 객체 인식, 시맨틱 이해 등 대부분의 비전 태스크의 출발점이다. 다만 깊이를 직접 측정할 수 없다는 구조적 한계 때문에, 이를 극복하기 위한 다양한 알고리즘(Monocular Depth Estimation, SfM 등)이 발전해왔다. 이 한계를 이해해야 왜 스테레오 카메라나 깊이 카메라가 필요한지도 알 수 있다.
+단안 카메라는 렌즈 하나로 색상과 텍스처를 얻어 Visual SLAM, 객체 인식, 시맨틱 이해에 사용한다. 깊이를 직접 측정하지 못하므로 monocular depth estimation이나 SfM으로 장면 구조를 추정한다. 스테레오·깊이 카메라는 이 깊이 모호성을 다른 측정 방식으로 보완한다.
 
 **장점**:
 - 저렴하고 가벼움
@@ -134,7 +134,7 @@ ros2 launch realsense2_camera rs_launch.py
 
 기존 카메라와 다른 패러다임의 센서이다. 프레임 단위 촬영 대신, 각 픽셀이 **밝기 변화**가 생길 때만 비동기적으로 이벤트를 출력한다.
 
-Event Camera 관련 논문은 CVPR 기준 2019년 5편 수준에서 2024년 30편 이상으로 늘었다. 고속 환경(드론 고속 비행, 자동차 급회전)에서 모션 블러 없이 동작하기 때문이다. 아직 주류는 아니지만, 고속(>100km/h) 환경이나 HDR 조건을 다룰 예정이라면 Gallego et al. survey (TPAMI 2020)와 rpg_dvs_ros 패키지를 살펴보라.
+Event camera 연구는 고속 운동과 HDR처럼 프레임 카메라가 어려움을 겪는 조건을 중심으로 꾸준히 확장되어 왔다. 이벤트 센서는 픽셀별 밝기 변화를 비동기적으로 기록하므로 프레임 노출에서 생기는 모션 블러를 피할 수 있다. 고속 운동이나 HDR 조건을 다룬다면 Gallego et al. survey (TPAMI 2020)와 rpg_dvs_ros 패키지부터 살펴보라.
 
 **이벤트 출력 형식**:
 
@@ -170,9 +170,9 @@ Event Camera 관련 논문은 CVPR 기준 2019년 5편 수준에서 2024년 30�
 
 **LiDAR (Light Detection and Ranging)**는 레이저를 이용하여 거리를 측정하는 센서이다. 3D 포인트 클라우드를 직접 생성한다.
 
-카메라는 풍부하지만 깊이가 없는 데이터를 준다. LiDAR는 정확한 3D 좌표를 직접 준다. 카메라만으로 깊이를 추정하면 오차가 크고 날씨 영향을 받지만, LiDAR는 수 센티미터 정확도로 100m 이상 떨어진 물체까지 측정할 수 있다. 자율주행에서 LiDAR가 핵심 센서가 된 건 그 때문이다.
+카메라는 색과 texture를 기록하지만 수동 monocular 영상만으로 metric depth가 직접 정해지지는 않는다. LiDAR는 각 return의 range를 측정해 3D 점을 만든다. 측정 범위와 오차는 모델, 표면 반사율, 입사각, 대기, 햇빛, return mode에 따라 달라지며, 자동차용 장거리 LiDAR 가운데 일부는 지정 반사율 조건에서 100m 이상의 range를 제공한다. 자율주행에서는 이 직접 range 측정 때문에 LiDAR가 사용된다.
 
-최근 주목할 트렌드: Solid-State LiDAR가 기존의 Spinning(기계식) LiDAR를 빠르게 대체하고 있다. 움직이는 부품이 없어 내구성이 높고 대량 생산에 유리하며, 자동차 양산에 적합하기 때문이다. Livox의 비반복 스캔 패턴 같은 새로운 접근도 나오고 있어, 포인트 클라우드 처리 알고리즘에도 변화가 필요한 시점이다.
+Solid-State LiDAR는 기존의 Spinning(기계식) LiDAR를 대체해 가고 있다. 움직이는 부품이 없어 내구성과 대량 생산 측면에서 자동차 양산에 유리하기 때문이다. Livox의 비반복 스캔처럼 기존 회전식 센서와 다른 패턴도 등장하면서, 포인트 클라우드 처리 알고리즘은 이런 차이를 함께 고려해야 한다.
 
 ### 2.2.1 2D LiDAR vs 3D LiDAR
 
@@ -188,7 +188,7 @@ Event Camera 관련 논문은 CVPR 기준 2019년 5편 수준에서 2024년 30�
 
 > **추천 자료**
 > - [Cyrill Stachniss — LiDAR-based SLAM](https://www.youtube.com/watch?v=vrdlk2p9AZI) — LiDAR 데이터를 이용한 SLAM의 원리를 설명
-> - [PCL (Point Cloud Library) 공식 튜토리얼](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — 포인트 클라우드 처리의 사실상 표준 라이브러리
+> - [PCL (Point Cloud Library) 공식 튜토리얼](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — 널리 쓰이는 공개 포인트 클라우드 처리 라이브러리
 
 ### 2.2.2 Spinning vs Solid-State
 
@@ -258,15 +258,9 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 - 각속도 적분 → 자세 오차 누적
 - 짧은 시간 동안만 신뢰 가능 (보통 수 초)
 
-실제로 겪어보면 바로 느끼는데, 가속도를 두 번 적분해서 위치를 구하면 노이즈와 바이어스 오차가 시간의 제곱에 비례하여 누적된다. Consumer 등급 IMU(스마트폰 내장)로는 10초만 지나도 위치 오차가 수 미터에 달할 수 있다. 그래서 IMU를 단독으로 쓰는 경우는 거의 없고, 항상 카메라나 LiDAR와 퓨전하여 드리프트를 보정한다.
+가속도를 두 번 적분해 위치를 구하면 noise, bias, scale factor와 초기 자세 오차가 누적된다. 오차 증가는 센서와 운동, 보정, 온도, 초기화에 따라 달라져 고정된 시간 하나로 설명할 수 없다. 저가 MEMS IMU의 unaided 위치 추정은 장기 위치 오차 예산을 빠르게 넘기기 쉬우므로, 장시간 위치가 필요한 시스템은 camera, LiDAR, GNSS 같은 외부 관측으로 drift를 제한한다.
 
-**IMU 등급**:
-| 등급 | 용도 | 가격 | 예시 |
-|------|------|------|------|
-| Consumer | 스마트폰, 게임 | $1-10 | MPU6050, BMI160 |
-| Industrial | 로봇, 드론 | $100-1K | VectorNav VN-100, Xsens MTi |
-| Tactical | 자율주행, 항공 | $1K-10K | KVH 1750 |
-| Navigation | 선박, 항공기 | $10K+ | Honeywell HG1700 |
+**IMU 등급**은 단일 표준 가격표가 아니라 bias stability, noise density, scale-factor error, 온도 보정, 진동 내성과 인증 요구로 구분한다. Consumer MEMS는 크기와 전력을 우선하고, industrial·tactical·navigation 계열로 갈수록 장기 안정성과 보정 범위를 강화하는 경향이 있다. `VN-100`, `MTi`, `KVH 1750`, `HG1700` 같은 제품을 비교할 때는 등급 이름보다 같은 단위의 최신 datasheet와 Allan 측정 결과를 확인한다.
 
 > **추천 자료**
 > - [Probabilistic Robotics, Ch.5 — Robot Motion (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — 센서 노이즈 모델링과 모션 모델의 핵심 참고서. IMU 오차 모델링의 이론적 기초를 다룬다.
@@ -279,12 +273,9 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 
 **GNSS (Global Navigation Satellite System)**는 위성 신호를 이용한 위치 측정 시스템이다. GPS는 미국 시스템이며, GNSS는 GPS, GLONASS(러시아), Galileo(유럽), BeiDou(중국) 등을 포함하는 총칭이다.
 
-실외 자율주행이나 드론에서 GNSS는 "전역 좌표"를 제공하는 유일한 센서이다. SLAM은 상대적 위치(어디서 출발해서 얼마나 움직였나)를 추정하지만, GNSS는 지구상 절대 위치(위도, 경도, 고도)를 알려준다. 이 두 가지 정보를 결합하는 것이 실외 로봇의 핵심 과제이다. RTK-GPS의 센티미터급 정확도가 자율주행 고정밀 측위의 Ground Truth로도 사용되므로, 원리를 이해해두어야 한다.
+GNSS는 실외 자율주행차와 드론에 지구 기준의 전역 좌표를 제공한다. SLAM이 출발점에 대한 상대 위치를 추정한다면, GNSS는 위도·경도·고도로 위치를 나타낸다. 실외 로봇은 두 기준을 결합하며, RTK-GPS 측정은 고정밀 측위 평가의 ground truth로도 사용된다.
 
-**정확도**:
-- 일반 GPS: 2-5m
-- DGPS (Differential): 0.5-2m
-- RTK-GPS (Real-Time Kinematic): 1-2cm
+**정확도 해석**: standalone code solution은 open-sky에서 보통 meter-class이고, differential correction은 조건에 따라 sub-meter 또는 meter-class가 될 수 있다. RTK가 짧은 baseline, 충분한 위성 기하, 낮은 multipath와 fixed ambiguity를 유지하면 horizontal centimeter-class 결과가 가능하다. 수치를 인용할 때는 CEP·RMS·95% 같은 metric, horizontal/vertical, baseline, correction link와 fix 상태를 함께 적는다.
 
 **RTK-GPS 원리**:
 - 고정된 Base Station이 보정 데이터 제공
@@ -304,7 +295,7 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 
 **Radar**
 
-자율주행과 로보틱스에서 레이더의 중요성이 높아지고 있다. LiDAR와 카메라가 안 되는 환경 — 안개, 비, 먼지, 강한 역광 — 에서도 레이더는 안정적으로 동작한다. 가격도 LiDAR보다 저렴하다.
+자율주행과 로보틱스에서는 radar를 camera·LiDAR와 함께 사용한다. 전파는 가시광과 일부 LiDAR 파장보다 안개·비·먼지·역광에 상대적으로 강건할 수 있지만, 강우 감쇠, clutter, multipath, wet radome과 낮은 각해상도는 남는다. 가격대도 antenna 수, bandwidth, imaging capability와 자동차 인증에 따라 LiDAR 제품군과 겹칠 수 있으므로 현재 견적으로 비교한다.
 
 **FMCW (Frequency Modulated Continuous Wave) Radar**:
 - 주파수를 시간에 따라 변조하여 송신하고, 반사파와의 주파수 차이로 거리와 속도를 동시에 측정한다.
@@ -353,7 +344,7 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 
 단일 센서는 각각 한계가 있다. 여러 센서를 결합해 서로 보완한다.
 
-현실에서 단일 센서만으로 완벽한 인식을 구현하는 건 불가능하다. 자율주행차는 카메라, LiDAR, Radar, IMU, GNSS를 전부 동시에 사용한다. 이 센서들의 데이터를 언제, 어디서, 어떻게 결합하느냐가 시스템 성능을 좌우한다.
+단일 센서는 조명·거리·가림·드리프트 같은 조건을 모두 감당하지 못한다. 자율주행 센서 구성은 차량과 운행 조건에 따라 다르며, 카메라·LiDAR·Radar·IMU·GNSS 가운데 여러 종류를 조합한다. 선택한 센서들의 데이터를 언제, 어디서, 어떻게 결합하느냐가 시스템 성능을 좌우한다.
 
 **왜 필요한가?**
 
@@ -402,14 +393,14 @@ $$p(z_t \mid x_t, m) = \prod_{k=1}^{K} p(z_t^k \mid x_t, m)$$
 지도 $m$의 형태도 두 가지다. feature-based 지도는 랜드마크 목록으로 구성되며 각 요소를 ID로 참조한다. location-based 지도는 격자 셀의 점유 확률 배열이며 셀을 좌표로 참조한다. 측정 모델 4가족은 이 두 지도 형태 중 하나에 의존한다.
 
 측정 모델 4가족:
-- 빔 모델 (beam model): 물리 오차 채널의 혼합. location-based 지도.
+- 빔 모델 (beam model): 측정값이 생긴 원인을 근사하는 혼합 모델. location-based 지도.
 - likelihood field: 빔 끝점→nearest obstacle 거리. location-based 지도.
 - 상관 기반 (map matching): local map과 global map의 정규화 상관계수.
 - 특징 기반 (landmark model): 추출된 특징을 (range, bearing, signature)로 모델링. feature-based 지도.
 
 ### 2.7.2 빔 모델 — 4성분 혼합
 
-거리 센서의 한 빔이 잘못된 측정값을 내는 원인은 네 가지 물리 채널로 분류된다. [Thrun et al. 2005](https://www.probabilistic-robotics.org/) (PR §6.3.1)은 각 채널을 독립된 확률 분포로 모델링하고, 네 분포의 가중 혼합으로 최종 likelihood를 구성했다.
+거리 센서의 한 빔이 낼 수 있는 측정값을 네 가지 원인 가설로 근사한다. [Thrun et al. 2005](https://www.probabilistic-robotics.org/) (PR §6.3.1)은 각 가설에 확률 분포를 두고, 네 분포의 가중 혼합으로 최종 likelihood를 구성했다. 이 성분들은 센서 안의 독립된 물리 채널이 아니라 관측 분포를 설명하기 위한 모델 항이다.
 
 4성분 중 가장 빈번한 것은 hit, 즉 실제 장애물을 정확히 감지한 경우다. 예측 거리 $z_t^{k*}$를 평균으로 분산 $\sigma_{\text{hit}}^2$의 절단 가우시안으로 모델링한다. 절단은 $[0, z_{\max}]$ 범위 밖의 확률 질량을 제거한다.
 
@@ -458,7 +449,7 @@ $$p(z_t^k \mid x_t, m) = \begin{pmatrix} z_{\text{hit}} \\ z_{\text{short}} \\ z
 
 내재 파라미터는 6개다: $z_{\text{hit}}, z_{\text{short}}, z_{\text{max}}, z_{\text{rand}}, \sigma_{\text{hit}}, \lambda_{\text{short}}$. PR §6.3.2는 로봇이 알려진 환경을 주행하며 수집한 데이터 $\{(z_t^k, z_t^{k*})\}$로부터 EM 알고리즘으로 이 파라미터를 최대우도 추정한다.
 
-핵심 아이디어는 correspondence variable이다. 각 측정값 $z_t^k$에 대해 어느 성분이 그 값을 생성했는지를 나타내는 잠재 변수 $c_i \in \{\text{hit, short, max, rand}\}$를 도입한다.
+EM 정식화에서는 correspondence variable을 도입한다. 잠재 변수 $c_i \in \{\text{hit, short, max, rand}\}$는 각 측정값 $z_t^k$을 생성한 성분을 나타낸다.
 
 **E-step**: 현재 파라미터 추정값으로 각 측정에 대해 4성분의 사후 확률을 계산한다 (PR 식 6.15~6.32):
 
@@ -489,7 +480,7 @@ repeat until convergence:
 return params
 ```
 
-ROS AMCL의 기본 파라미터 `laser_sigma_hit`(기본값 0.2m), `laser_lambda_short`(기본값 0.1)가 이 EM 과정의 수렴값이다. 2005년 PR 출판 이후 여러 실제 환경에서 EM을 돌린 결과다.
+EM은 특정 sensor·map·환경에서 수집한 데이터에 맞춰 이 파라미터를 추정하는 방법이다. AMCL 구현도 `sigma_hit`, `lambda_short`와 혼합 가중치를 설정값으로 노출하지만, package 기본값을 여러 환경에서 EM이 보편적으로 수렴한 값으로 해석해서는 안 된다.
 
 EM으로 파라미터를 얻었더라도, 실제 시스템에서 이 모델을 빠르게 동작시키려면 추가적인 고려가 필요하다.
 
@@ -497,7 +488,7 @@ EM으로 파라미터를 얻었더라도, 실제 시스템에서 이 모델을 �
 
 빔 모델의 주요 계산 병목은 ray casting이다. 입자마다 스캔의 모든 빔에 ray casting을 수행하면 MCL에서 입자 수 × 빔 수의 연산이 필요하다.
 
-우선 빔 수를 줄인다. 전체 스캔에서 균일하게 샘플된 소수의 빔(보통 8~50개)만 사용해도, 인접 빔들은 상관이 높으므로 정보 손실이 제한적이다.
+우선 빔 수를 줄일 수 있다. 전체 스캔에서 균일 간격으로 일부 빔만 사용하면 계산량과 인접 빔의 중복을 함께 줄일 수 있다. 사용할 빔 수는 scan resolution, 환경 구조, particle 수에 맞춰 검증한다.
 
 **$p^{\alpha}$ 지수화 보정**: 빔들 사이의 독립 가정이 위반될 때, likelihood를 $p(z_t \mid x_t, m)^{\alpha}$ ($0 < \alpha < 1$)로 지수화하면 각 빔의 기여를 축소하여 over-confidence를 완화한다. $\alpha$는 경험적으로 설정하거나 교차 검증으로 정한다.
 
@@ -539,7 +530,7 @@ $$p(z_t^k \mid x_t, m) = z_{\text{hit}} \cdot \mathcal{N}(\text{dist};\, 0,\, \s
 10. return q
 ```
 
-지도가 고정되면 거리 변환(distance transform)을 한 번만 수행하고 테이블로 저장해 두면 $\text{dist}$ 조회가 $O(1)$이 된다. 이 테이블은 본질적으로 SDF(Signed Distance Field)의 양수 부분이다. 포즈 $x_t$에 대한 likelihood의 gradient를 계산할 수 있어, gradient 기반 scan matching에 적합하다.
+지도가 고정되어 있다면 거리 변환(distance transform)을 한 번만 수행해 테이블로 저장할 수 있다. 그러면 $\text{dist}$ 조회가 $O(1)$이 된다. 이 테이블은 SDF(Signed Distance Field)의 양수 영역에 해당한다. 포즈 $x_t$에 대한 likelihood의 gradient도 계산할 수 있으므로 gradient 기반 scan matching에 적합하다.
 
 한계도 있다. short 성분이 없어 동적 장애물을 명시적으로 모델링하지 않으며, occlusion도 없어서 지도에 없는 자유 공간을 통과하는 빔도 끝점 거리만으로 평가한다. 벽 너머까지 "볼 수" 있고 지도 자체의 불확실성도 무시한다.
 
@@ -593,11 +584,11 @@ $\varepsilon_{\sigma^2}$는 0-평균 분산 $\sigma^2$ 가우시안이다. 세 �
 
 <!-- DEMO: landmark_donut.html -->
 
-visual SLAM에서 사용하는 reprojection error $\| \pi(K[R|t]\, X_w) - u \|^2_\Sigma$는 이 랜드마크 모델의 직접적인 계승이다. range/bearing 대신 픽셀 좌표 $(u, v)$, signature 대신 ORB/SIFT 디스크립터가 들어간다. EKF가 이 likelihood를 업데이트 단계에서 사용하는 방식은 Ch.3 §3.10 가우시안 필터·Ch.14 §14.7를 참조한다. AprilTag, ArUco 같은 fiducial marker는 ID로 대응이 보장되므로 known correspondence 가정이 그대로 성립한다. 이 모델이 문자 그대로 현역이다.
+Visual SLAM의 reprojection residual $\| \pi(K[R|t]\, X_w) - u \|^2_\Sigma$도 pose와 landmark로 관측을 예측하고 실제 관측과 비교한다는 공통 구조를 가진다. 다만 pixel reprojection model과 range-bearing model은 서로 다른 sensor model이고, ORB/SIFT descriptor는 보통 likelihood의 연속 signature 항이라기보다 data association에 쓰인다. AprilTag·ArUco의 ID는 대응 모호성을 크게 줄이지만 false detection과 잘못 읽힌 ID까지 원천적으로 배제하지는 않는다.
 
 ### 2.7.8 실무 정리: 모델 선택
 
-4가족 모델을 비교하면:
+4가족 모델을 정성적으로 비교하면 다음과 같다. 정확도와 속도는 sensor, map resolution, implementation과 parameter에 따라 달라진다.
 
 | 모델 | 정확도 | 계산 속도 | 미분 가능성 | 주요 용도 |
 |------|--------|-----------|------------|-----------|
@@ -606,29 +597,29 @@ visual SLAM에서 사용하는 reprojection error $\| \pi(K[R|t]\, X_w) - u \|^2
 | 상관 기반 | 낮음 | 매우 빠름 | 낮음 | loop closure 검출 |
 | 랜드마크 | 높음 (특징 의존) | 빠름 (저차원) | 높음 | visual SLAM, fiducial |
 
-over-confidence도 실용적 고려사항이다. 빔들 사이의 조건부 독립 가정이 위반되면 likelihood $p(z_t \mid x_t, m)$의 절댓값이 실제보다 훨씬 작아지거나 특정 포즈에 과도하게 몰린다. §2.7.4의 지수화 기법, 즉 likelihood를 $p(z_t \mid x_t, m)^{\alpha}$ ($\alpha < 1$)로 치환하는 것이 표준 완화책이다. $\alpha < 1$이면 각 빔의 기여가 줄어들어 분포가 더 평탄해진다.
+over-confidence도 실용적 고려사항이다. 빔들 사이의 조건부 독립 가정이 위반되면 likelihood가 특정 pose에 지나치게 좁게 모일 수 있다. §2.7.4처럼 $p(z_t \mid x_t, m)^{\alpha}$ ($\alpha < 1$)로 tempering하면 각 scan의 영향이 줄어 분포가 평탄해진다. Beam subsampling, correlation을 반영한 model, robust likelihood도 대안이며 $\alpha$는 calibration·validation data로 정해야 한다.
 
 그렇다면 이 모델들이 실제 시스템에서 얼마나 살아남았는가.
 
 ### 2.7.9 무엇이 살아남았나
 
-PR §6에서 정형화된 4가족 모델의 직계 후손들이 2026년 현재 실전 시스템에서 작동한다.
+PR §6의 네 가족은 오늘날 시스템을 분류하고 설계할 때도 유용하다. 다만 최신 scan matcher나 visual SLAM을 이 모델들의 **직계 후손**으로 묶으면 계보를 과장하게 된다. 같은 관측-예측 비교 구조를 공유하더라도 목적함수와 지도 표현은 서로 다를 수 있다.
 
-빔 모델의 4-혼합과 EM으로 학습한 파라미터는 ROS Navigation Stack의 AMCL 노드에 그대로 남아 있다. `amcl` 패키지의 `laser_sigma_hit = 0.2`, `laser_lambda_short = 0.1` 기본값이 2000년대 초 실제 환경에서 EM을 돌린 결과다. `beam_skip_*` 파라미터는 §2.7.4의 빔 부분집합 아이디어다.
+[Nav2 AMCL 문서](https://docs.nav2.org/configuration/packages/configuring-amcl.html)는 `beam`, `likelihood_field`, `likelihood_field_prob` 세 laser model을 제공하고, 기본값은 `likelihood_field`로 둔다. `max_beams`는 한 scan에서 균등 간격으로 사용할 빔 수를 정한다. 반면 `beam_skip_*`는 `likelihood_field_prob`에서 많은 particle과 맞지 않는 빔을 건너뛰는 기능이다. 따라서 단순한 빔 subsampling과 같은 항목이 아니다. `sigma_hit`, `lambda_short` 같은 기본값도 구현의 초기값이지, 특정 EM 실험에서 보편적으로 수렴한 값이라고 단정할 근거는 없다.
 
-likelihood field는 더 넓게 살아있다. Cartographer, SLAM Toolbox, hdl_localization 모두 2D LiDAR localization 코어에서 거리 변환 기반 likelihood 평가를 쓴다. ESDF 기반 경로 계획이나 NeRF-SLAM처럼 SDF/ESDF를 핵심 자료구조로 쓰는 최근 시스템도 likelihood field의 사전계산 아이디어를 그대로 계승한다.
+다른 LiDAR 시스템은 별도의 정합 목적함수를 쓴다. Cartographer는 probability grid 위의 correlative scan matching과 비선형 최적화를 결합하고, `hdl_localization`은 3D point cloud에 NDT/GICP 계열 정합을 사용한다. 이들은 모두 관측을 지도와 비교한다는 넓은 원리는 공유하지만, likelihood-field distance transform을 그대로 쓴다고 볼 수는 없다. ESDF 경로 계획과 neural implicit map도 거리 또는 implicit field를 사용하지만, 자료구조가 비슷하다는 이유만으로 likelihood-field sensor model의 계승 관계를 주장할 수는 없다.
 
-랜드마크 모델 (식 6.41)은 visual SLAM 전체의 골격이다. ORB-SLAM3의 reprojection error 최소화, SfM의 bundle adjustment, DROID-SLAM의 DBA layer가 모두 이 식의 카메라 투영 일반화다. fiducial 기반 AR/로봇 시스템에서는 식 그대로가 현역이다.
+랜드마크 모델과 visual SLAM도 같은 구분이 필요하다. 식 6.41의 range-bearing 생성 모델, 카메라 reprojection model, DROID-SLAM의 dense bundle adjustment는 모두 pose와 scene structure에서 관측을 예측해 residual을 만든다. 그러나 측정 공간, association, noise model, optimization 변수가 다르므로 하나를 다른 하나의 역사적 일반화라고 단정하지 않는다. Fiducial ID는 association을 단순하게 만들지만 false detection까지 없애지는 않는다.
 
-측정 모델의 형태는 센서 물리가 결정한다. hit·short·max·rand는 물리 채널이다. 모든 모델은 지도 형태(location-based vs feature-based)와 짝을 이루고, 계산 속도와 확률론적 정당성은 트레이드오프다. 빠른 시스템은 likelihood field나 상관 기반을 쓰고, 진단이 필요하면 빔 모델로 돌아간다.
+`hit·short·max·rand`는 센서의 독립된 물리 채널이 아니라 range measurement가 생긴 원인을 근사하는 혼합 성분이다. 어떤 성분과 지도 표현을 쓸지는 센서 물리뿐 아니라 환경, outlier, 계산 예산, calibration data에 따라 정한다. 이 장의 네 가족은 그 선택을 비교하는 출발점이지, 모든 최신 시스템을 한 줄로 잇는 계보도가 아니다.
 
 Ch.14 §14.7에서 MCL의 `beam_range_finder_model` 호출과 occupancy mapping의 `inverse_sensor_model`을 보면, 이 모델들이 어떻게 연결되는지 확인할 수 있다.
 
-> **⚠ AI 에이전트 주의**: 센서가 "데이터가 안 온다"는 문제의 원인은 대부분 소프트웨어가 아니라 물리적 연결(케이블, IP 설정, 전원, USB 대역폭)이다. AI는 드라이버 재설치부터 권하지만, `dmesg`, `lsusb`, `ping` 같은 시스템 명령으로 물리 연결부터 확인하라.
+> **⚠ 센서 연결 점검**: 센서 데이터가 들어오지 않을 때는 드라이버와 함께 케이블, IP 설정, 전원, USB 대역폭도 확인한다. `dmesg`, `lsusb`, `ping` 같은 시스템 명령으로 장치와 연결 상태를 먼저 기록하면 원인 범위를 빠르게 좁힐 수 있다.
 
 > **기술 흐름: 센서 기술**
-> - **~2010**: 2D LiDAR(SICK, Hokuyo)와 단안 카메라 중심. 센서가 비싸고 크며, 처리 능력도 제한적. Stereo 카메라는 계산 비용 때문에 실시간 처리가 어려웠다.
-> - **2012~2017**: 3D LiDAR(Velodyne VLP-16) 보급, RGB-D 카메라(Kinect) 대중화. LiDAR 가격이 수만 달러에서 수천 달러로 하락. Visual-Inertial 시스템(VIO)도 실제 시스템에서 쓰이기 시작했다.
-> - **2018~2022**: Solid-State LiDAR(Livox) 등장, 가격이 수백 달러 수준까지 하락. Event Camera 연구 활발해짐. 멀티모달 센서 퓨전(Camera + LiDAR + IMU)이 표준으로 자리잡음.
-> - **2023~**: Solid-State LiDAR가 Spinning 방식을 빠르게 대체 중. 고속/HDR 응용에서 Event Camera 채택이 늘기 시작했다. 4D Radar(도플러 속도 포함)도 보조 센서로 채택이 늘고 있다.
-> - **지금 주목할 것**: Solid-State LiDAR가 대중화되면서 기존 Spinning LiDAR 전제의 알고리즘을 재설계해야 하는 상황이다. Event Camera는 아직 주류가 아니지만, 고속 드론·자율주행처럼 기존 카메라의 한계가 명확한 분야에서 빠르게 채택되고 있다. 센서 하드웨어가 바뀌면 알고리즘 연구 방향도 따라 바뀐다.
+> - **~2010**: 이동 로봇 연구에서는 2D LiDAR와 frame camera가 널리 쓰였다. Stereo의 실시간 처리 범위는 당시의 연산 자원과 장면 조건에 크게 좌우됐다.
+> - **2010년대**: RGB-D camera와 소형 multi-beam 3D LiDAR가 보급되면서 실내 3D 인식과 야외 mapping의 선택지가 넓어졌다. Camera와 IMU를 결합한 VIO도 연구 prototype을 넘어 여러 로봇·AR 시스템에 쓰이기 시작했다.
+> - **2010년대 후반~2020년대 초반**: 비반복 주사·MEMS·flash 등 서로 다른 방식이 `solid-state LiDAR`라는 이름 아래 등장했고, event camera와 automotive imaging radar 연구도 확대됐다. 가격과 성능의 변화 폭은 제품군마다 달라 하나의 수치로 일반화하기 어렵다.
+> - **2020년대**: Spinning LiDAR와 solid-state 계열은 대체 관계 하나로 정리되지 않고 field of view, range, resolution, motion distortion, cost 조건에 따라 공존한다. Event camera와 Doppler radar의 채택 역시 고속·HDR·악천후 같은 응용 조건에 따라 달라진다.
+> - **설계상의 함의**: 센서의 주사 방식과 timestamp 구조가 바뀌면 deskew, calibration, data association의 가정도 함께 바뀐다. 하드웨어 이름보다 실제 sampling geometry와 noise 특성을 먼저 확인해야 한다.
