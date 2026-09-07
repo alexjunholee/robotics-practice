@@ -1,6 +1,6 @@
 # Ch.12 — Vision-Language-Action (VLA) & Embodied AI
 
-The goal of VLA is for a robot to take a natural-language command like "pick up the red cup and place it on the table" and execute it. It is the field that unifies vision, language models, and control, and you need the concepts in this chapter to understand "why ChatGPT cannot move a robot" and "why a policy that worked well in simulation falls apart on a real robot."
+The goal of VLA is for a robot to take a natural-language command like "pick up the red cup and place it on the table" and execute it. It is the field that unifies vision, language models, and control. This conceptual bridge explains why text-only language models cannot directly move a robot and why a policy trained in simulation often degrades on physical hardware.
 
 ## 12.1 VLA Concepts
 

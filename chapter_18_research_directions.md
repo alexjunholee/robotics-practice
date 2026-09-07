@@ -1,6 +1,6 @@
 # Ch.18 — 연구실 연구 방향
 
-우리 연구실은 Spatial AI 시스템을 두 개의 모듈로 나눠 설계한다. 물리적 제약과 실시간 요구사항이 이 구조를 만들었고, 앞 챕터들에서 쌓은 개념들이 여기서 맞물린다.
+우리 연구실은 Spatial AI 시스템을 두 모듈로 나눠 설계한다. 이 구조는 물리적 제약과 실시간 요구사항에서 비롯되며, 앞선 장들에서 다룬 개념들이 여기서 맞물린다.
 
 ## 18.1 개요
 
@@ -24,7 +24,7 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 
 ### 두 모듈로 나누는 이유
 
-온보드 컴퓨터 하나에서 모든 기능을 처리하기에는 무게와 전력, 응답 시간의 제약이 크다.
+온보드 컴퓨터 하나로 모든 기능을 처리하기에는 무게, 전력, 응답 시간의 제약이 크다.
 
 **물리적 제약**부터 보자. NVIDIA A100 GPU 서버는 무게가 수십 kg이고 전력도 수백 와트를 사용하므로 배터리로 움직이는 드론에 실을 수 없다. 로봇에는 대개 Jetson Orin 같은 임베디드 보드를 탑재하지만, 이 장치에서 DINOv2나 SAM 같은 대형 모델을 실시간으로 실행하기는 어렵다.
 
@@ -32,12 +32,12 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 
 두 모듈은 이 차이에 맞춰 역할을 나눈다.
 
-1. **계산 자원의 현실**: 로봇 온보드 컴퓨터(Jetson 등)는 대형 모델을 돌릴 여력이 없다
+1. **계산 자원의 현실**: 로봇 온보드 컴퓨터(Jetson 등)는 대형 모델을 돌릴 여력이 없다.
 2. **실시간 요구사항**: 장애물 회피에는 수십 ms 단위의 응답이 필요하다.
 3. **의미 이해**: VFM/VLA로 "깨진 유리컵"처럼 물체의 종류와 상태를 구분한다.
 4. **상호 보완**: Local의 기하학적 정밀도와 Global의 의미론적 이해를 결합한다.
 
-> 비유하자면, Local Module은 로봇의 **반사 신경**이고, Global Module은 로봇의 **대뇌 피질**이다. 뜨거운 냄비를 만지면 손을 먼저 떼고(반사), 그다음에 "아, 불이 켜져 있었구나"라고 이해한다(인지). 로봇도 마찬가지다.
+> 인체에 빗대면 Local Module은 즉각적인 **반사 신경**에 해당하며, Global Module은 고차원 판단을 내리는 **대뇌 피질**의 역할을 맡는다. 뜨거운 물체에 닿았을 때 손을 조건반사로 먼저 뗀 뒤 뒤이어 원인을 인지하듯, 로봇 역시 반사적 기하 회피와 인지적 의미 이해가 분리되어 맞물린다.
 
 ## 18.2 Local Module: Lightweight Geometry
 
@@ -47,7 +47,7 @@ Local Module은 로봇에 직접 탑재되어 실시간으로 동작하며, 안�
 
 - **Odometry**: 자신의 움직임 추정 — "나는 지금 어디에 있는가?"
 - **Obstacle Detection**: 즉각적인 장애물 감지 — "앞에 뭔가 있다, 피해!"
-- **Local Mapping**: 주변 환경의 기하학적 지도 — "내 주변 3m 이내는 이렇게 생겼다"
+- **Local Mapping**: 주변 환경의 기하학적 지도 — "내 주변 3 m 이내는 이렇게 생겼다"
 
 **운영 예**: 아파트 복도를 지나던 배달 로봇 앞에 아이가 갑자기 뛰어나오면, Local Module은 depth 센서로 장애물을 감지하고 odometry로 위치를 추정해 제어·안전 분석에서 정한 deadline 안에 회피 경로를 계산한다. 이 단계에서는 장애물의 종류보다 충돌 가능성을 먼저 판단한다. 물체의 의미는 Global Module이 별도로 해석한다.
 
@@ -99,11 +99,11 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**실행 시나리오**: 위 코드에서 `process()`는 센서 데이터가 들어올 때마다 호출된다. IMU 데이터는 100Hz(초당 100번), 카메라 이미지는 30Hz로 들어온다. 매 프레임마다 "나 지금 어디?"(odometry)와 "앞에 뭐 있어?"(obstacle)를 계산하고, 중요한 순간인 키프레임만 Global Module에 보낸다. 모든 프레임을 전송하면 네트워크 대역폭을 초과할 수 있기 때문이다.
+**실행 시나리오**: 위 코드에서 `process()`는 센서 데이터가 들어올 때마다 호출된다. IMU 데이터는 100 Hz(초당 100번), 카메라 이미지는 30 Hz로 들어온다. 매 프레임마다 "나 지금 어디?"(odometry)와 "앞에 뭐 있어?"(obstacle)를 계산하고, 중요한 순간의 키프레임만 Global Module에 보낸다. 모든 프레임을 전송하면 네트워크 대역폭을 넘길 수 있기 때문이다.
 
 ## 18.3 Global Module: VFM-based Understanding
 
-Global Module은 서버나 cloud에서 동작하며 물체의 종류와 관계를 해석한다. Local Module이 앞의 장애물을 감지하면, Global Module은 이를 깨진 유리잔으로 분류하고 scene graph의 위치 정보와 연결할 수 있다.
+Global Module은 서버나 cloud에서 동작하며 물체의 종류와 관계를 해석한다. Local Module이 앞의 장애물을 감지하면 Global Module은 이를 깨진 유리잔으로 분류하고 scene graph의 위치 정보와 연결할 수 있다.
 
 ### 18.3.1 목표
 
@@ -111,7 +111,7 @@ Global Module은 서버나 cloud에서 동작하며 물체의 종류와 관계�
 - **Semantic Scene Graph**: 객체 간 관계 표현 — "컵이 테이블 위에 있다"
 - **Long-term Memory**: 환경 변화 추적 — "어제는 여기에 의자가 없었는데 오늘은 있다"
 
-**실제 시나리오**: 가정용 서비스 로봇이 매일 집 안을 돌아다니면서 환경을 학습한다. Global Module은 "거실에 소파, TV, 테이블이 있고, 주방에는 냉장고, 싱크대가 있다"는 고수준 지도를 유지한다. 사용자가 "거실 테이블에 있는 리모컨 가져와"라고 하면, Scene Graph에서 리모컨의 위치를 찾아 Local Module에 waypoint를 전달한다.
+**실제 시나리오**: 가정용 서비스 로봇이 매일 집 안을 다니며 환경을 학습한다. Global Module은 "거실에 소파·TV·테이블이 배치되어 있으며 주방에는 냉장고·싱크대가 위치한다"는 고수준 시맨틱 지도를 유지한다. 사용자가 "거실 테이블에 있는 리모컨 가져와"라고 하면 Scene Graph에서 리모컨의 위치를 찾아 Local Module에 waypoint를 전달한다.
 
 ### 18.3.2 특징
 
@@ -163,11 +163,11 @@ class GlobalModule:
         return self.scene_graph.find(text_prompt)
 ```
 
-**시나리오로 읽기**: Local Module에서 키프레임이 올 때마다 `process_keyframe()`이 호출된다. DINOv2로 이미지에서 풍부한 feature를 뽑고, SAM으로 물체들을 분리하고, 이걸 3D Scene Graph와 Gaussian Map에 누적한다. 나중에 사용자가 "빨간 컵 어디 있어?"라고 물으면 `query()`로 검색한다. 이 전체 과정이 1초 정도 걸려도 괜찮다 — 실시간 안전은 Local Module이 책임지니까.
+**시나리오로 읽기**: Local Module에서 키프레임이 올 때마다 `process_keyframe()`이 호출된다. DINOv2로 이미지에서 풍부한 feature를 뽑고 SAM으로 물체를 분리한 뒤, 그 결과를 3D Scene Graph와 Gaussian Map에 누적한다. 나중에 사용자가 "빨간 컵 어디 있어?"라고 물으면 `query()`로 검색한다. 이 과정은 1초 정도 걸려도 괜찮다. 실시간 안전은 Local Module이 맡기 때문이다.
 
 ## 18.4 두 모듈의 협업
 
-두 모듈은 독립적으로 동작하지만, 서로 정보를 주고받으며 협력한다. 마치 드라이버(Local)와 네비게이션 앱(Global)의 관계와 비슷하다 — 드라이버는 눈앞의 도로를 보고 운전하고, 네비게이션은 전체 경로를 안내한다.
+두 모듈은 독립적으로 동작하면서 정보를 주고받는다. 눈앞의 도로를 보고 운전하는 드라이버(Local)와 전체 경로를 안내하는 내비게이션 앱(Global)의 관계에 가깝다.
 
 ### 18.4.1 Local → Global
 
@@ -177,7 +177,7 @@ class GlobalModule:
 - 센서 메타데이터
 
 **키프레임 선택 기준**:
-- 이동 거리/회전량 threshold — "1m 이동하거나 30도 회전하면 보내기"
+- 이동 거리/회전량 threshold — "1 m 이동하거나 30도 회전하면 보내기"
 - 장면 변화 감지 — "새로운 방에 들어갔다"
 - 정보량 (특징점 수, 커버리지) — "이 프레임에 새로운 정보가 많다"
 
@@ -266,7 +266,7 @@ class GlobalModule:
 
 ## 18.6 Motivation과 Novelty를 가르는 질문
 
-Motivation은 왜 이 문제를 풀어야 하는지 설명하고, novelty는 기존 방법에서 무엇을 어떻게 바꾸었는지 특정한다. 둘은 연구 방향을 잡거나 첫 논문을 쓸 때 자주 뒤섞인다.
+Motivation이 문제 해결의 당위성을 제시한다면, novelty는 기존 방법론 대비 어떤 기술적 지점을 구체적으로 변경했는지 입증한다. 둘은 연구 방향을 잡거나 첫 논문을 쓸 때 자주 뒤섞인다.
 
 "기존 방법이 X를 하지 못하므로 모듈을 붙였다"는 문장만으로는 motivation을 넘어가기 어렵다. 그 모듈이 왜 필요한지, 왜 그 형태여야 하는지까지 설명해야 novelty가 구체화된다.
 
@@ -286,11 +286,11 @@ Motivation은 왜 이 문제를 풀어야 하는지 설명하고, novelty는 기
 - **Motivation**: NeRF가 너무 느리다 → 빠르게 만들어야 한다
 - **직접적 확장**: NeRF 위에 sparse sampling · pruning · distillation 같은 가속 모듈을 추가
 - **논문의 설계**: ray-marching의 탐색 비용을 병목으로 보고, 명시적 primitive인 3D Gaussian으로 표현을 교체. Primitive는 직접 rasterization할 수 있게 설계
-- **설계 원리**: 속도 한계의 원인을 개별 연산이 아니라 표현과 rendering 방식의 조합에서 찾는다.
+- **설계 원리**: 연산 속도 저하의 근본 원인을 개별 커널 연산을 넘어 공간 표현과 래스터화 렌더링 방식의 구조적 결합에서 찾는다.
 
 ### Case 3 — DUSt3R (Wang et al. 2024)
 
-기존 SfM은 camera intrinsics가 필요하고 단계별 오차에 민감하다. Matching이나 triangulation 한 단계만 신경망으로 교체할 수도 있지만, Wang et al.은 출력 형식 자체를 바꿨다. 두 view를 입력받아 공통 좌표계의 pointmap을 직접 예측하면 intrinsics, correspondence, structure를 함께 얻을 수 있다. Camera intrinsics는 별도의 입력이 아니라 pointmap에서 유도되는 값이 된다. DUSt3R의 기여는 이처럼 SfM의 단계별 분해를 pointmap 예측 문제로 다시 정식화한 데 있다.
+기존 SfM은 camera intrinsics가 필요하고 단계별 오차에 민감하다. Matching이나 triangulation 한 단계만 신경망으로 교체할 수도 있지만, Wang et al.은 출력 형식 자체를 바꿨다. 두 view를 입력받아 공통 좌표계의 pointmap을 직접 예측하면 intrinsics, correspondence, structure를 함께 얻을 수 있다. Camera intrinsics는 선행 주입해야 하는 고정 입력값을 벗어나 pointmap 예측 결과로부터 자연스럽게 유도되는 산출물로 바뀐다. DUSt3R의 기여는 이처럼 SfM의 단계별 분해를 pointmap 예측 문제로 다시 정식화한 데 있다.
 
 ### 세 논문이 공유하는 설계 질문
 

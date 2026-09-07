@@ -126,7 +126,7 @@ from tf2_ros import Buffer, TransformListener
 tf_buffer = Buffer()
 tf_listener = TransformListener(tf_buffer, self)
 
-# Look up base_link → camera_link transform
+# Look up the transform from camera_link coordinates to base_link coordinates
 transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Time())
 ```
 

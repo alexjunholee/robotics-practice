@@ -159,7 +159,7 @@ p(x) = N(μ, Σ)
 
 Widely used for modeling sensor noise and position uncertainty.
 
-The Gaussian is used this heavily because of mathematical convenience. Thanks to the central limit theorem, many natural phenomena follow a Gaussian, and operations between Gaussians (product, sum) are closed, which makes analysis easy. The Kalman filter assumes a Gaussian for the same reason.
+The Gaussian is used this heavily because of mathematical convenience. The central limit theorem explains why sums of many small independent effects can be approximated by a Gaussian under suitable conditions. The sum of independent Gaussian random variables is Gaussian, and the product of Gaussian densities over the same variable is Gaussian after normalization, which makes analysis easy. The Kalman filter assumes a Gaussian for the same reason.
 
 > **Further reading**
 > - [3Blue1Brown — But what is the Central Limit Theorem?](https://www.youtube.com/watch?v=zeJD6dqJ5lo) — Visual explanation of the central limit theorem. An intuitive answer to why the Gaussian appears everywhere.
@@ -226,7 +226,7 @@ x* = argmax P(x | z) = argmax P(z | x) × P(x)
 
 MAP incorporates the prior into the estimate.
 
-The difference in SLAM is between "find the optimal position from observations alone (MLE)" and "find the optimal position using prior position information too (MAP)." Real SLAM systems mostly use MAP. A prior makes estimation stable even with noisy observations. Mathematically, taking the log of MAP turns it into "sum of squared observation errors + regularization term," which is the same form as regularized least squares from an optimization standpoint.
+The difference in SLAM is between "find the optimal position from observations alone (MLE)" and "find the optimal position using prior position information too (MAP)." Real SLAM systems mostly use MAP. A prior makes estimation stable even with noisy observations. With Gaussian observation noise and fixed covariance, minimizing the negative log posterior for MAP gives a "weighted sum of squared observation errors + a regularization term from the negative log prior," which is the same form as regularized least squares from an optimization standpoint.
 
 > **Further reading**
 > - [Probabilistic Robotics, Ch.2 — Recursive State Estimation (Thrun)](https://www.probabilistic-robotics.org/) — Explains the relationships between MLE, MAP, and Bayes filtering in a robotics context.
@@ -271,7 +271,7 @@ Least squares is the most basic way to "find the best-fitting model parameters f
 
 "Why minimize the square of the error?" The reason for square rather than absolute value is twofold: it is differentiable, and it penalizes large errors more. As a bonus, under a Gaussian noise assumption it gives the same solution as Maximum Likelihood Estimation.
 
-In an over-determined system (more equations than unknowns), no x exactly satisfies Ax = b. Instead, find the x that minimizes ||Ax - b||², which gives the normal equation `A^T A x = A^T b`. That is all there is to least squares.
+In an over-determined system (more equations than unknowns), there may be no x that exactly satisfies Ax = b. Instead, find the x that minimizes ||Ax - b||², which gives the normal equation `A^T A x = A^T b`. That is all there is to least squares.
 
 Caveat: if `A^T A` is singular (rank deficient), there is no unique solution. In that case, instead of the pseudo-inverse `x = (A^T A)^{-1} A^T b`, use SVD for numerical stability.
 
@@ -546,7 +546,7 @@ Twist transformation:
 xi_a = Ad_{T_ab} * xi_b
 ```
 
-**Practical meaning**: the velocity a sensor (e.g., an IMU) measures (angular velocity, linear velocity) is expressed in the sensor frame. Use the adjoint to convert it to the body or world frame. In a VIO system fusing multiple sensors, coordinate frame conversions happen frequently, so you need to understand what the adjoint means.
+**Practical meaning**: use the adjoint to convert a twist (angular velocity and linear velocity) expressed in the sensor frame to its body- or world-frame representation. An IMU measures angular velocity and specific force rather than linear velocity, and rotation matrices transform the axes of these measurement vectors. In a VIO system fusing multiple sensors, coordinate frame conversions happen frequently, so you need to understand what the adjoint means.
 
 ### 3.5.7 Use in Practice
 
@@ -891,7 +891,7 @@ State variables fall into several categories. Along the time axis: dynamic state
 Interactions between the robot and the environment decompose into two data streams.
 
 - **Measurement data** $z_t$: information the environment gives the robot (LiDAR range, camera image). Increases the robot's knowledge over the interval $(t-1, t]$.
-- **Control data** $u_t$: actions the robot applies to the environment (motor commands). Applying control increases state uncertainty.
+- **Control data** $u_t$: actions the robot applies to the environment (motor commands). State prediction under control can increase uncertainty because of motion noise.
 
 $$z_{t_1:t_2} = z_{t_1},\, z_{t_1+1},\, \ldots,\, z_{t_2} \qquad u_{t_1:t_2} = u_{t_1},\, \ldots,\, u_{t_2}$$
 
@@ -929,7 +929,7 @@ $$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t
 
 $$\text{bel}(x_t) = \eta\, p(z_t \mid x_t)\, \overline{\text{bel}}(x_t) \tag{correction}$$
 
-$\eta$ is a normalization constant corresponding to the total-probability denominator ($P(B)$) in the Bayes rule of §3.3.2.
+$\eta$ is a normalization constant corresponding to the reciprocal of the total-probability denominator ($P(B)$) in the Bayes rule of §3.3.2.
 
 ```
 # Algorithm Bayes_filter (Table 2.1, adapted)
@@ -1076,7 +1076,7 @@ Lines 1–2 are prediction (incorporating control $u_t$; uncertainty grows), and
 
 **Meaning of Kalman gain $K_t$:** $K_t$ sets the confidence balance between prediction and measurement. Large measurement noise $Q_t$ shrinks $K_t$, reducing trust in the measurement; large prediction uncertainty $\bar\Sigma_t$ grows $K_t$, increasing trust in the measurement.
 
-**Innovation:** $z_t - C_t \bar\mu_t$ is the difference between the predicted measurement and the actual measurement. When this is zero, no new information has arrived.
+**Innovation:** $z_t - C_t \bar\mu_t$ is the difference between the predicted measurement and the actual measurement. When this is zero, the mean is unchanged, but the covariance can still decrease.
 
 #### 1D KF Illustration: How Information Combines
 
@@ -1117,7 +1117,7 @@ Real robotic systems are not linear. The motion model $g$ for a robot that rotat
 $$x_t = g(u_t, x_{t-1}) + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
 $$z_t = h(x_t) + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
 
-A Gaussian passed through a nonlinear $g$ is no longer Gaussian. The EKF addresses this with a **first-order Taylor expansion**: it linearizes $g$ and $h$ around the most likely point (the predicted mean) to force Gaussian closure.
+A Gaussian passed through a nonlinear $g$ is generally no longer Gaussian. The EKF addresses this with a **first-order Taylor expansion**: it linearizes $g$ around the previous posterior mean and $h$ around the predicted mean to maintain a Gaussian approximation.
 
 $$g(u_t, x_{t-1}) \approx g(u_t, \mu_{t-1}) + G_t (x_{t-1} - \mu_{t-1})$$
 
@@ -1180,7 +1180,7 @@ $$\Omega = \Sigma^{-1}, \quad \xi = \Sigma^{-1} \mu$$
 
 Inverse: $\Sigma = \Omega^{-1}$, $\mu = \Omega^{-1} \xi$.
 
-In these coordinates the negative log-likelihood of the Gaussian is quadratic in $\Omega$ and $\xi$:
+In these coordinates the negative log-likelihood of the Gaussian is quadratic in the state $x$:
 
 $$p(x) = \eta \exp\!\left\{-\tfrac{1}{2} x^T \Omega x + x^T \xi\right\}$$
 

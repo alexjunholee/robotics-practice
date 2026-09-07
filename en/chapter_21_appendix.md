@@ -262,7 +262,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 
 **Problem**: `RuntimeError: CUDA error: device-side assert triggered`
 
-**Solution**: This usually happens when a label index is out of range. Running on CPU produces a more detailed error message.
+**Solution**: This usually happens when a label index is out of range. Running on CPU can produce a more detailed error message. The command below is a separate method that synchronizes CUDA calls on the GPU to help locate the failing operation.
 
 ```bash
 CUDA_LAUNCH_BLOCKING=1 python train.py
@@ -394,7 +394,7 @@ sudo apt-get install libglew-dev libpython2.7-dev
 # Check the system Eigen version
 pkg-config --modversion eigen3
 
-# Install a specific version directly if needed
+# Install the Eigen development package provided by the repository
 sudo apt-get install libeigen3-dev
 ```
 

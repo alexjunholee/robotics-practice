@@ -61,7 +61,7 @@ outputs = model(**inputs)
 features = outputs.last_hidden_state  # (1, num_patches+1, 768): CLS + 패치 feature
 ```
 
-`last_hidden_state`의 첫 번째 토큰은 [CLS] 토큰으로 이미지 전체의 요약이고, 나머지는 각 패치의 feature이다. [CLS]는 분류에, 패치 features는 dense prediction(segmentation, matching 등)에 쓰인다.
+`last_hidden_state`에서 인덱스 0의 [CLS] 토큰은 이미지 전체 요약 벡터 역할을 하며, 이어지는 토큰들은 패치별 국소 feature를 담는다. 전자는 분류 태스크에 적합하고, 후자는 세그멘테이션이나 feature 매칭 같은 dense prediction에 활용된다.
 
 > **추천 자료**
 > - [Oquab et al., "DINOv2: Learning Robust Visual Features without Supervision" (2023)](https://arxiv.org/abs/2304.07193) — DINOv2 원논문
@@ -114,7 +114,7 @@ masks, scores, logits = predictor.predict(
 
 **Vision-Language Model**: 이미지와 텍스트를 공유 임베딩 공간에 매핑한다.
 
-CLIP 이전에는 이미지를 분류하려면 미리 정한 클래스 목록이 필요했다. CLIP은 이미지와 텍스트를 같은 공간에 놓으므로, 임의의 텍스트로 이미지를 검색하거나 분류할 수 있다. "red mug on a wooden table" 같은 자연어로 로봇에게 목표 물체를 지시할 수 있게 된 것이다. CLIP은 open-vocabulary의 시작이고, 로봇이 자연어를 이해하는 기반이 된다.
+CLIP 이전에는 이미지를 분류하려면 미리 정한 클래스 목록이 필요했다. CLIP은 이미지와 텍스트를 같은 공간에 놓으므로, 임의의 텍스트로 이미지를 검색하거나 분류할 수 있다. "red mug on a wooden table" 같은 자연어로 로봇에게 목표 물체를 지시할 수 있게 된 것이다. CLIP이 연 open-vocabulary 패러다임은 로봇이 사용자의 자연어 지시를 공간 내 객체와 연결하는 든든한 기술적 기반이 되었다.
 
 학습: 4억 쌍의 이미지-텍스트 데이터로 contrastive learning
 
@@ -234,7 +234,7 @@ Dense Feature for SLAM:
 
 로봇의 Local Module에서 사용하려면 경량화가 필요하다.
 
-VFM은 성능은 좋지만, 수억 개의 파라미터가 있어서 GPU 서버가 아니면 실시간으로 돌리기 어렵다. 반면 로봇은 Jetson이나 임베디드 보드에서 30FPS로 돌려야 한다. 이 간극을 메우는 것이 경량화와 Edge 배포 기술이다. 아무리 좋은 모델도 로봇에서 실시간으로 돌릴 수 없으면 논문 안에서만 빛난다.
+VFM은 탁월한 성능을 자랑하지만 수억 개에 달하는 파라미터 탓에 대규모 GPU 서버 없이 실시간 구동이 어렵다. 하지만 현장 로봇은 온보드 Jetson 환경에서 30 FPS 이상의 처리율을 확보해야 한다. 이 간극을 메우는 것이 경량화와 Edge 배포 기술이다. 아무리 좋은 모델도 로봇에서 실시간으로 돌릴 수 없으면 논문 안에서만 빛난다.
 
 경량화 기법:
 | 기법 | 설명 |
@@ -243,7 +243,7 @@ VFM은 성능은 좋지만, 수억 개의 파라미터가 있어서 GPU 서버�
 | **Quantization** | FP32 → INT8/INT4로 precision 감소 |
 | **Pruning** | 중요하지 않은 weight 제거 |
 
-각 기법의 trade-off를 파악하는 것이 중요하다. Quantization은 모델 구조를 바꾸지 않으므로 적용이 가장 쉽고, Pruning은 실제 연산량을 줄이지만 정확도 손실이 따를 수 있다. Distillation은 아예 작은 모델을 새로 학습시키므로 효과가 가장 크지만 비용도 높다.
+각 기법의 trade-off를 고려해야 한다. Quantization은 기존 네트워크 구조를 유지한 채 정밀도만 낮추므로 도입 난도가 낮다. Pruning 기법은 실제 FLOPs 절감 효과가 큰 대신 정밀한 가지치기 기준이 필요하며, Distillation은 소형 학생 모델을 새로 학습시켜 경량화 효과를 극대화하지만 추가 학습 비용을 감수해야 한다.
 
 경량 VFM:
 - FastSAM: SAM의 경량 버전 (YOLO 기반)
@@ -279,7 +279,7 @@ NVIDIA Jetson에서는 TensorRT가 선택 가능한 inference backend 중 하나
 
 ## 11.5 심화: VFM Fine-tuning과 Adaptation
 
-VFM을 그대로 쓰면 zero-shot 성능이 나오지만, 특정 도메인(의료, 위성, 수중 등)에서는 성능이 떨어진다. fine-tuning이 필요한데, 수억 개 파라미터를 전부 학습시키는 것은 비용이 크다. Parameter-efficient fine-tuning(PEFT)은 모델의 극소수 파라미터만 학습하면서도 full fine-tuning에 근접한 성능을 얻는 방법이다.
+VFM을 그대로 쓰면 zero-shot 성능이 나오지만, 특정 도메인(의료, 위성, 수중 등)에서는 성능이 떨어진다. fine-tuning이 필요한데, 수억 개의 파라미터를 전부 학습시키는 것은 비용이 크다. Parameter-efficient fine-tuning(PEFT)은 모델의 극소수 파라미터만 학습하면서도 full fine-tuning에 근접한 성능을 얻는 방법이다.
 
 Fine-tuning 전략 비교:
 
@@ -297,7 +297,7 @@ LoRA는 사전학습된 weight matrix $\mathbf{W}$에 low-rank update를 추가�
 
 $$\mathbf{W}' = \mathbf{W} + \Delta\mathbf{W} = \mathbf{W} + \mathbf{B}\mathbf{A}$$
 
-여기서 $\mathbf{W}$는 $d \times d$ 행렬이고, $\mathbf{B}$는 $d \times r$, $\mathbf{A}$는 $r \times d$ 행렬이다 ($r \ll d$). 원래 $\mathbf{W}$의 파라미터 수 $d^2$ 대신 $2dr$개만 학습한다.
+여기서 $\mathbf{W} \in \mathbb{R}^{d \times d}$이며, 분해 행렬의 차원은 각각 $\mathbf{B} \in \mathbb{R}^{d \times r}$, $\mathbf{A} \in \mathbb{R}^{r \times d}$로 정의된다 ($r \ll d$). 원래 $\mathbf{W}$의 파라미터 수 $d^2$ 대신 $2dr$개만 학습한다.
 
 예를 들어 $d = 768$, $r = 8$이면, 원래 589,824개의 파라미터 대신 12,288개만 학습한다(약 2%).
 
@@ -334,7 +334,7 @@ Transformer block 사이에 작은 bottleneck layer를 삽입한다. 원래 weig
 Input → [Frozen Attention] → [Adapter: down_proj → ReLU → up_proj] → [Frozen FFN] → Output
 ```
 
-LoRA는 기존 weight에 합쳐지므로 추론 시 추가 비용이 없고, Adapter는 추가 layer이므로 약간의 추론 지연이 생긴다.
+LoRA는 훈련 후 저차원 행렬을 기존 가중치에 직접 병합하므로 추론 단계의 연산 오버헤드가 발생하지 않는다. 이와 달리 추가 레이어를 거쳐야 하는 어댑터 방식은 미세한 추론 지연을 동반한다.
 
 Prompt Tuning:
 

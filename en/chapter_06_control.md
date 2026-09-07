@@ -110,7 +110,7 @@ for step in range(5000):
     error = target - position
     force = pid.compute(error)
 
-    # Simple first-order dynamics: F = ma, with damping
+    # Simple second-order position dynamics: F = ma, with damping
     acceleration = (force - 0.5 * velocity) / mass
     velocity += acceleration * dt
     position += velocity * dt
@@ -193,7 +193,7 @@ A system is controllable if, from any initial state, it can reach any final stat
 C_ctrl = [B, A*B, A^2*B, ..., A^(n-1)*B]
 ```
 
-If this matrix has rank n, the system is controllable. If the rank is less than n, there exist states unreachable by the control input. LQR should not be applied to such a system.
+If this matrix has rank n, the system is controllable. If the rank is less than n, there exist states unreachable by the control input. A stabilizing infinite-horizon LQR solution requires stabilizability rather than full controllability. Conditions such as detectability through the state cost and a positive-definite input cost must also be checked.
 
 ### Observability
 

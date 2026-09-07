@@ -537,7 +537,7 @@ I_sp = [ I_cm + m·[c]×[c]×^T    m·[c]× ]
 Here m is the mass, c is the vector to the CoM, I_cm is the rotational inertia about the CoM, and [c]× is the skew-symmetric matrix of c.
 
 Advantages of spatial inertia:
-- Inertias of multiple rigid bodies combine by simple addition: I_composite = I_1 + I_2 + ...
+- Inertias of multiple rigid bodies expressed in the same frame about the same reference point combine by addition: I_composite = I_1 + I_2 + ...
 - Coordinate transformation is a single congruence transform: I_B = X^T I_A X
 
 ### Spatial Vector Form of RNEA and ABA

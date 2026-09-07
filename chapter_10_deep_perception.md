@@ -1,6 +1,6 @@
 # Ch.10 — 딥러닝 기반 인식 (Deep Learning for Perception)
 
-고전 CV가 영상 처리와 기하 관계를 직접 설계했다면, 학습 기반 인식은 데이터에서 표현을 학습해 물체의 클래스, 위치, 영역을 예측한다. 분류, 물체 탐지, 분할은 로봇이 장면의 대상을 찾아 조작하는 데 필요한 서로 다른 출력을 만든다.
+고전 CV가 영상 처리와 기하 관계를 직접 설계했다면, 학습 기반 인식은 데이터에서 표현을 학습해 물체의 클래스, 위치, 영역을 예측한다. 분류, 물체 탐지, 분할은 로봇이 장면 속 대상을 찾아 조작하는 데 필요한 서로 다른 출력을 만든다.
 
 ---
 
@@ -345,7 +345,7 @@ transform = T.Compose([
 - Stochastic Depth: 학습 시 일부 layer를 랜덤으로 건너뛴다. ResNet 계열에서 overfitting 방지에 효과적이다.
 - Weight Decay: optimizer에서 `weight_decay=0.01~0.05` 설정. AdamW에서는 decoupled weight decay를 사용한다.
 
-**Gradient Clipping**: gradient가 폭발하는 것을 방지한다. Transformer 학습에서는 거의 필수이다.
+**Gradient Clipping**: gradient가 폭발하는 것을 방지한다. Transformer 학습에서 안정화 도구로 자주 쓴다.
 
 ```python
 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)

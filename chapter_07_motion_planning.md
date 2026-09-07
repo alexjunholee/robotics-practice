@@ -1,6 +1,6 @@
 # Ch.7 — 모션 플래닝 & 궤적 최적화 (Motion Planning & Trajectory Optimization)
 
-로봇이 A에서 B로 가려면 장애물·관절 한계·동역학 제약을 모두 만족하는 경로가 필요하다. 이런 경로를 찾는 과정이 모션 플래닝이고, 경로를 시간에 따라 최적으로 추종하도록 만드는 과정이 궤적 최적화다.
+로봇이 A에서 B로 가려면 장애물·관절 한계·동역학 제약을 모두 만족하는 경로가 필요하다. 모션 플래닝은 충돌 없는 기하학적 경로를 탐색하며, 궤적 최적화는 동역학 한계와 목적 함수를 반영하여 시간 축에 정렬된 구체적 궤적을 산출한다.
 
 ---
 
@@ -23,7 +23,7 @@
 
 **C-space obstacle**: 작업 공간(3D)의 장애물을 C-space로 변환한 것이다. C-space에서 장애물 영역에 속하는 configuration은 충돌 상태이다.
 
-왜 C-space에서 생각해야 하는가: 로봇은 점이 아니다. 3D 공간에서 로봇의 모든 링크가 장애물과 충돌하지 않는지 확인하려면, 각 configuration에서 FK를 계산하고 충돌 검사를 해야 한다. C-space에서는 로봇을 "점"으로 취급할 수 있고, 장애물을 피하는 문제가 점의 경로 찾기 문제로 환원된다.
+왜 C-space에서 생각해야 하는가? 로봇은 점이 아니다. 3D 공간에서 모든 링크가 장애물과 충돌하지 않는지 확인하려면 각 configuration에서 FK를 계산하고 충돌 검사를 해야 한다. C-space에서는 로봇을 "점"으로 취급할 수 있어, 장애물 회피가 점의 경로를 찾는 문제로 환원된다.
 
 문제는 C-space obstacle의 정확한 형태를 계산하기가 어렵다는 데 있다. 실무에서는 C-space obstacle을 명시적으로 구하지 않고, 특정 configuration에서의 충돌 여부를 검사하는 collision checker를 사용한다.
 
@@ -55,7 +55,7 @@ def astar_2d(grid, start, goal):
     g_score = {start: 0}
 
     def heuristic(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])  # 맨해튼 거리
+        return np.hypot(a[0] - b[0], a[1] - b[1])  # 대각선 이동 비용과 일치하는 유클리드 거리
 
     neighbors = [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]
 
@@ -270,7 +270,7 @@ CasADi는 symbolic computation, automatic differentiation, NLP solver 연결을 
 import casadi as ca
 import numpy as np
 
-# 간단한 예: 1D 더블 인티그레이터의 시간 최적 궤적
+# 간단한 예: 고정 시간 동안 1D 더블 인티그레이터의 제어 입력 제곱 적분 최소화
 # x = [position, velocity], u = force
 # x_dot = [velocity, force/mass]
 
@@ -284,10 +284,10 @@ opti = ca.Opti()
 X = opti.variable(2, N + 1)  # 상태 궤적
 U = opti.variable(1, N)      # 입력 궤적
 
-# 비용: 에너지 최소화 + 시간 패널티
+# 비용: 고정 시간 동안 제어 입력 제곱 적분 최소화
 cost = 0
 for k in range(N):
-    cost += U[0, k]**2 * dt  # 에너지
+    cost += U[0, k]**2 * dt  # 제어 입력 제곱 적분
 opti.minimize(cost)
 
 # 동역학 제약 (Euler integration)
@@ -393,7 +393,7 @@ Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
 
 정적 환경에서 한 번 계획하면 끝이지만, 동적 환경에서는 실시간으로 재계획(re-plan)해야 한다. 궤적 최적화와 MPC가 여기서 만난다. MPC를 짧은 horizon의 trajectory optimization으로 볼 수 있다. 매 제어 주기마다 짧은 구간의 궤적을 최적화하고, 첫 입력만 적용한 뒤 다시 최적화한다. 이전 장의 MPC가 정확히 이것이다.
 
-차이점: 모션 플래닝의 trajectory optimization은 보통 오프라인으로 전체 궤적을 한 번에 계산하고, MPC는 온라인으로 짧은 구간을 반복 계산한다.
+차이점: 모션 플래닝의 trajectory optimization이 오프라인 환경에서 전체 궤적 일괄 산출에 무게를 둔다면, MPC는 실시간 온라인 루프 안에서 짧은 구간을 끊임없이 갱신해 나간다.
 
 ---
 
@@ -426,7 +426,7 @@ TAMP는 환경과 행동이 결정론적이라고 가정한다. 환경 동역학
 
 ---
 
-## 7.9 심화: 불확실성 하 의사결정 (POMDP와 belief space planning)
+## 7.9 심화: 불확실성하 의사결정 (POMDP와 belief space planning)
 
 §7.1~§7.8은 로봇이 자신의 상태와 환경을 정확히 안다고 가정했다. 하지만 실제 로봇은 노이즈 있는 센서로 부분적인 정보만 관측한다. 대칭 복도에서 어느 쪽에 있는지 모르는 로봇, 문이 열려 있는지 닫혀 있는지 불확실한 상황 — 이럴 때 "현재 최선 추정 상태"에서 계획하면 틀린다. belief(사후 분포) 위에서 직접 계획해야 한다. 이 절의 내용은 Thrun, Burgard, Fox의 *Probabilistic Robotics* §15.2·§16을 기반으로 한다.
 
@@ -460,7 +460,7 @@ $$C^T(b) = \max_a \int \left[ c(b') + C^{T-1}(b') \right] P(b' \mid a, b)\, db' 
 
 $$\pi^T(b) = \arg\max_a \int \left[ c(b') + C^{T-1}(b') \right] P(b' \mid a, b)\, db' \tag{16.3}$$
 
-문제는 $b'$가 분포 위의 분포라는 점이다. $b$는 상태 공간 $\mathcal{S}$ 위의 확률 분포이고, $b'$는 그 분포들의 공간 위에 다시 분포한다. 적분 차원이 발산한다.
+$b$와 $b'$는 모두 상태 공간 $\mathcal{S}$ 위의 확률 분포다. 분포들의 공간 위에 정의되는 것은 belief 전이 분포 $P(b' \mid a,b)$이며, 위 식은 이 belief 공간에 걸쳐 적분한다. 유한 상태 공간에서는 차원이 $|\mathcal{S}|-1$이고, 연속 상태 공간의 일반적인 belief는 무한차원이다.
 
 무한 horizon 극한에서 이 재귀가 수렴하면 표준 Bellman 방정식을 얻는다:
 
@@ -515,7 +515,7 @@ $$C^2(b) = \max\{ 0,\; -33.05 p_1 + 7.78 p_2,\; 72 p_1 - 72 p_2 \}$$
 
 세 선형 조각의 max. horizon이 늘수록 조각이 추가된다.
 
-가치 함수는 belief 공간에서 볼록(convex)이다: $\beta C(b) + (1-\beta) C(b') \geq C(\beta b + (1-\beta) b')$. 불확실한 belief보다 확실한 belief에서 가치가 항상 높거나 같다.
+가치 함수는 belief 공간에서 볼록(convex)이다: $\beta C(b) + (1-\beta) C(b') \geq C(\beta b + (1-\beta) b')$. 따라서 두 belief의 혼합에서 가치는 두 가치의 가중평균보다 크지 않다.
 
 <!-- DEMO: pomdp_toy_pwlc.html -->
 
@@ -533,7 +533,7 @@ $$V(b) = \max_\phi \langle \phi, b \rangle$$
 
 $\Phi$가 alpha-vector 집합이면 $V(b) = \max_{\phi \in \Phi} \sum_i \phi_i\, p_i$.
 
-각 alpha-vector는 하나의 *조건부 정책*(현재 행동 + 관측에 따른 후속 정책)에 대응한다. $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$으로 이중 지수적으로 폭발한다. $|\Phi^1| = 1$에서 시작해 $|\Phi^2| = 2 \cdot 2^1 = 4$, $|\Phi^3| = 2 \cdot 2^4 = 32$, $|\Phi^4| = 2 \cdot 2^{32} \approx 10^{10}$으로 horizon 4에서 이미 100억 개를 넘는다. 정확 해법이 비실용적인 이유다.
+각 alpha-vector는 하나의 *조건부 정책*(현재 행동 + 관측에 따른 후속 정책)에 대응한다. 가지치기 전 후보 수는 $|\Phi^T| = |A| \cdot |\Phi^{T-1}|^{|\mathcal{O}|}$으로 이중 지수적으로 증가한다. 행동과 관측이 각각 2개이고 $|\Phi^0| = 1$이면, $|\Phi^1| = 2$, $|\Phi^2| = 2 \cdot 2^2 = 8$, $|\Phi^3| = 2 \cdot 8^2 = 128$, $|\Phi^4| = 2 \cdot 128^2 = 32768$이다. 이 빠른 증가 때문에 긴 horizon의 정확 해법은 비실용적이다.
 
 ### 7.9.5 LP 해법
 
@@ -545,7 +545,7 @@ POMDP horizon $T$의 제약 (식 16.67):
 
 $$\bigcup_a \bigcup_{k(o'):1 \leq k(o') \leq |\Phi^{T-1}|} \left\{ C^T(b) \geq \gamma \sum_{o'} \sum_i \left(c_i + C^{T-1}_{k(o'),i}\right) P(o' \mid s_i') \sum_j P(s_i' \mid a, s_j)\, p_j \right\}$$
 
-제약 수는 $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$.
+가지치기 전 제약 수는 $|\Phi^T| = |A| \cdot |\Phi^{T-1}|^{|\mathcal{O}|}$.
 
 ---
 
@@ -571,7 +571,7 @@ Algorithm finite_world_POMDP(T):
 
 ---
 
-$|\Phi^T|$는 이중지수적으로 증가한다. horizon 5, 행동 3개, 관측 5개면 이미 수백만 개의 alpha-vector가 필요하고, pruning을 해도 현실적인 도메인에서는 감당이 안 된다. 정확 해법은 개념 증명이고, 실제로는 근사가 필수다.
+$|\Phi^T|$는 이중지수적으로 증가한다. horizon 5, 행동 3개, 관측 5개면 이미 수백만 개의 alpha-vector가 필요하고, pruning을 거치더라도 현실적인 도메인에서는 계산 한계를 넘는다. 정확 해법은 개념 증명 차원에 머물며, 실무에서는 근사 기법이 불가피하다.
 
 ### 7.9.6 일반 POMDP
 
@@ -670,7 +670,7 @@ Outer loop는 belief 데이터베이스를 정적으로 유지하거나, $\varep
 
 ### 7.9.9 AMDP — belief 통계로 차원 축소
 
-MC-POMDP가 입자 집합으로 belief를 직접 추적한다면, 같은 불확실성을 훨씬 적은 수의 통계량으로 요약할 수 있다. 이 발상이 AMDP(Augmented MDP)의 출발점이다. POMDP의 두 극단은 MDP($|S|$에 polynomial)와 정확 POMDP(이중지수)이고, AMDP는 그 사이 절충이다.
+MC-POMDP가 입자 집합으로 belief를 직접 추적한다면, 같은 불확실성을 훨씬 적은 수의 통계량으로 요약할 수 있다. 이 발상이 AMDP(Augmented MDP)의 출발점이다. 복잡도 스펙트럼에서 MDP($|S|$에 polynomial)와 정확 POMDP(이중지수)가 양극단에 놓인다면, AMDP는 실용성을 추구하며 그 중간 지점을 절충한다.
 
 아이디어: 실제 로봇 궤적에서 belief는 belief 공간 전체를 채우지 않고 좁은 manifold만 점유한다. 그 manifold를 *저차원 통계* $\bar{b} = f(b)$로 요약하고, $\bar{b}$ 위에서 표준 MDP 가치 반복을 적용한다.
 
@@ -733,7 +733,7 @@ Active SLAM에서 위치 불확실성을 줄이도록 경로를 선택하는 것
 
 coastal navigation은 비용 함수에 엔트로피를 포함했을 때 계획기가 자동으로 도달하는 결론이다. §7.9.2의 belief 위 가치 반복이 실제 경로 선택에서 어떻게 드러나는지 보여주는 가장 직관적인 사례이기도 하다.
 
-정확 해법(§7.9.5·§7.9.6)은 비실용적이지만 개념 도구로 살아있고, 현대 POMDP solver는 이를 기반으로 세 방향으로 발전했다.
+정확 해법(§7.9.5·§7.9.6)은 비실용적이지만 개념 도구로 살아 있고, 현대 POMDP solver는 이를 기반으로 세 방향으로 발전했다.
 
 Point-based value iteration(SARSOP, HSVI, PBVI)은 belief 공간 전체가 아니라 샘플된 belief 점에서만 alpha-vector backup을 수행한다. §7.9.4의 alpha-vector 구조는 그대로이고, 탐색 범위를 제한하여 폭발을 막는다.
 
@@ -741,7 +741,7 @@ Point-based value iteration(SARSOP, HSVI, PBVI)은 belief 공간 전체가 아�
 
 **Deep POMDP**: DRQN(Recurrent Q-network), DVRL(Igl et al.). RNN의 hidden state가 implicit belief 역할을 한다. MC-POMDP의 nearest-neighbor 함수 근사가 neural function approximation으로 대체된 형태다.
 
-AMDP에서 사용한 원리는 다른 방법에도 나타난다. Bayes-adaptive MDP(BAMDP)는 모델 파라미터의 사후 분포를 증강 상태로 쓰고, Active SLAM은 위치 belief의 분산을 비용 함수에 포함한다. NeRF 기반 능동 인식에서도 entropy-augmented planning을 사용한다.
+AMDP에 담긴 원리는 여러 후속 연구에서도 확인된다. Bayes-adaptive MDP(BAMDP)의 경우 모델 파라미터의 사후 분포를 증강 상태에 직접 반영하며, Active SLAM은 위치 belief의 분산 지표를 비용 함수에 포함한다. NeRF 기반 능동 인식에서도 entropy-augmented planning을 사용한다.
 
 ch.8 §8.3의 PPO·SAC 등 deep RL은 경험에서 학습하고, 모델(전이 확률, 관측 모델)을 알 필요가 없다. POMDP planning은 모델을 알 때 최적 정책을 계산한다. 모델이 없으면 MC-POMDP도 돌아가지 않는다. MC-POMDP는 그 교집합에 있다 — belief는 모델로 추적하고, Q값은 경험에서 학습한다.
 

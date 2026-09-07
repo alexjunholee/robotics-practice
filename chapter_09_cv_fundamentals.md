@@ -1,7 +1,7 @@
 # Ch.9 — 컴퓨터 비전 기초 (Computer Vision Fundamentals)
 
 
-컴퓨터 비전은 카메라의 원시 데이터를 로봇이 사용할 수 있는 정보로 바꾼다. 이미지 처리와 카메라 기하를 이해해야 SLAM이나 물체 조작 파이프라인에서 생긴 오류를 추적할 수 있다.
+컴퓨터 비전은 카메라의 원시 데이터를 로봇이 활용할 수 있는 정보로 바꾼다. 이미지 처리와 카메라 기하를 이해해야 SLAM이나 물체 조작 파이프라인에서 생기는 오류를 추적할 수 있다.
 
 ---
 
@@ -133,7 +133,7 @@ Opening은 먼저 깎고(erosion) 다시 키우므로(dilation) 작은 돌기와
 
 Intrinsic Parameters (내부 파라미터):
 - f_x, f_y: Focal length (픽셀 단위)
-- c_x, c_y: Principal point (이미지 중심)
+- c_x, c_y: Principal point (광축이 영상면과 만나는 점이며, 이미지 중심과 다를 수 있음)
 - Intrinsic Matrix K (3×3)
 
 Extrinsic Parameters (외부 파라미터):
@@ -322,7 +322,7 @@ matches = bf.knnMatch(des1, des2, k=2)
 good = [m for m, n in matches if m.distance < 0.75 * n.distance]
 ```
 
-Lowe's ratio test는 kNN으로 가장 가까운 매치 두 개를 찾고, 첫째와 둘째 거리의 비가 threshold 이하인 것만 남긴다. 두 거리가 비슷한 애매한 매치를 이 과정에서 걸러낸다. Lowe는 원논문에서 0.75를 제안했으며, 상황에 따라 0.6~0.8 사이에서 조절할 수 있다.
+Lowe's ratio test는 kNN으로 가장 가까운 매치 두 개를 찾고, 첫째와 둘째 거리의 비가 threshold 이하인 것만 남긴다. 두 거리가 비슷한 애매한 매치를 이 과정에서 걸러낸다. Lowe의 원논문은 0.8을 사용했고 위 예제는 0.75를 사용하며, 상황에 따라 0.6~0.8 사이에서 조절할 수 있다.
 
 > 추천 자료
 > - [OpenCV Feature Matching](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — BFMatcher, FLANN, Ratio Test 예제
@@ -352,7 +352,7 @@ x2^T E x1 = 0
 
 5-point 알고리즘: 최소 5쌍의 대응점으로 E 추정 (RANSAC과 함께 사용)
 
-Essential Matrix에서 R과 t를 분해(decompose)하면 두 카메라 간의 상대 회전과 이동을 알 수 있다. Visual Odometry의 핵심 원리다.
+Essential Matrix에서 R과 t를 분해(decompose)하면 양의 깊이 조건으로 후보를 고른 뒤 두 카메라 간의 상대 회전과 이동 방향을 알 수 있다. 이동의 크기는 별도의 척도 정보가 필요하다. Visual Odometry의 핵심 원리다.
 
 > 실습: [Epipolar Geometry 시각화](https://alexjunholee.github.io/robotics-practice/app.html#epipolar)
 > 두 카메라 시점 간의 에피폴라 선과 에피폴을 인터랙티브하게 확인하며, Essential/Fundamental Matrix의 기하학적 의미를 이해할 수 있다.
@@ -518,7 +518,7 @@ camera_position = -R.T @ tvec
 주의할 점:
 - `solvePnP`의 결과는 **세계→카메라 변환**이다. 카메라의 세계 좌표 위치를 구하려면 역변환을 해야 한다.
 - 최소 4점이 필요하지만, 점이 많을수록 노이즈에 강건하다. RANSAC 버전인 `cv2.solvePnPRansac()`을 쓰면 outlier를 자동으로 걸러준다.
-- `flags` 파라미터로 알고리즘을 선택할 수 있다: `cv2.SOLVEPNP_ITERATIVE` (기본, LM), `cv2.SOLVEPNP_P3P` (최소 3점), `cv2.SOLVEPNP_EPNP` (빠르고 안정적, 많은 점에 적합).
+- `flags` 파라미터로 알고리즘을 선택할 수 있다: `cv2.SOLVEPNP_ITERATIVE` (기본, LM), `cv2.SOLVEPNP_P3P` (`solvePnP`에서는 정확히 4점), `cv2.SOLVEPNP_EPNP` (빠르고 안정적, 많은 점에 적합).
 
 Rodrigues 벡터의 방향이 회전축, 크기(norm)가 회전 각도다. 3장의 Lie algebra so(3)에서 다룬 축-각 표현과 정확히 같다. `cv2.Rodrigues()`는 exp/log map의 구현이다.
 

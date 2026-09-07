@@ -1,8 +1,8 @@
 # Ch.17 — 데이터셋 & 벤치마크
 
-데이터셋의 센서 구성, 수집 조건, split, annotation은 학습 결과와 비교의 범위를 정한다. 이 장은 주요 벤치마크의 구조를 비교하고, 자체 데이터를 수집·관리하는 절차를 정리한다.
+데이터셋의 센서 구성, 수집 조건, split, annotation은 학습 결과와 비교가 성립하는 범위를 정한다. 연구에 널리 쓰이는 주요 벤치마크의 구조를 비교하고 자체 데이터를 수집·관리하는 절차를 차례로 짚는다.
 
-최근 **합성 데이터(Synthetic Data)**의 비중이 높아지고 있다. 실제 데이터 수집과 라벨링은 비용과 시간이 많이 드는데, 시뮬레이터에서 자동 생성한 합성 데이터로 사전학습한 뒤 소량의 실제 데이터로 미세조정(fine-tuning)하는 방식이 자리를 잡았다. NVIDIA Isaac Sim의 Domain Randomization이나 Habitat의 대규모 장면 생성이 대표적이다. **Sim-to-Real 데이터셋** — 시뮬레이터 데이터와 대응하는 실제 데이터를 쌍으로 제공하는 데이터셋 — 도 활발히 구축되고 있다.
+최근 **합성 데이터(Synthetic Data)**의 비중이 커지고 있다. 실제 데이터 수집과 라벨링에는 비용과 시간이 많이 들기 때문에, 시뮬레이터가 자동 생성한 합성 데이터로 사전학습한 뒤 소량의 실제 데이터로 미세조정(fine-tuning)하는 방식을 쓴다. NVIDIA Isaac Sim의 Domain Randomization과 Habitat의 대규모 장면 생성이 대표적이다. 시뮬레이터 데이터와 대응하는 실제 데이터를 쌍으로 제공하는 **Sim-to-Real 데이터셋**도 활발히 구축되고 있다.
 
 ## 17.1 자율주행/로봇 데이터셋
 
@@ -36,7 +36,7 @@ KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으
 
 대규모 자율주행 데이터셋이다.
 
-KITTI보다 센서 구성이 더 풍부하고(360도 카메라, Radar 포함), 데이터 규모도 훨씬 크다. 3D Object Detection과 BEV(Bird's Eye View) 기반 인식 연구에서 KITTI와 함께 표준 평가셋으로 자리잡았다.
+KITTI보다 센서 구성이 풍부하고(360도 카메라, Radar 포함) 데이터 규모도 크다. 3D Object Detection과 BEV(Bird's Eye View) 기반 인식 연구에서 KITTI와 함께 표준 평가셋으로 자리 잡았다.
 
 구성:
 - 6개 카메라 (360° 커버)
@@ -59,7 +59,7 @@ KITTI보다 센서 구성이 더 풍부하고(360도 카메라, Radar 포함), �
 
 Google의 대규모 자율주행 데이터셋이다.
 
-nuScenes와 함께 최신 자율주행 연구의 양대 벤치마크이다. 데이터 품질과 규모 면에서 가장 앞서 있으며, 매년 챌린지를 통해 최신 기술 동향을 파악할 수 있다.
+nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이터 품질이 높고 규모가 크며, 매년 챌린지를 통해 최신 기술 동향을 확인할 수 있다.
 
 규모:
 - 1,150 장면 (20초)
@@ -101,7 +101,7 @@ TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰�
 
 이미지 분류의 표준 벤치마크이다.
 
-딥러닝 전환기의 출발점이 된 데이터셋이다. 2012년 AlexNet이 ImageNet에서 큰 성능 향상을 보인 뒤 ImageNet 사전학습(pretrained) 가중치는 여러 비전 모델의 표준적인 출발점이 됐다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)에 ImageNet 사전학습 모델이 널리 쓰인다.
+딥러닝 전환기의 출발점이 된 데이터셋이다. 2012년 AlexNet이 ImageNet에서 큰 성능 향상을 보인 뒤, ImageNet 사전학습(pretrained) 가중치는 여러 비전 모델의 표준적인 출발점이 됐다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)에 ImageNet 사전학습 모델을 널리 쓴다.
 
 - 1000 클래스
 - 120만 학습 이미지
@@ -137,7 +137,7 @@ COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU 
 - Depth estimation 벤치마크
 - 464 장면, 407K 프레임
 
-실내 로봇(가정용, 서비스 로봇 등)을 한다면 ScanNet과 NYU Depth V2는 핵심 벤치마크이다. 특히 ScanNet은 3D 장면 이해(Scene Understanding) 연구에서 빠지지 않는다.
+실내 로봇(가정용, 서비스 로봇 등)을 다룬다면 ScanNet과 NYU Depth V2는 핵심 벤치마크다. 특히 ScanNet은 3D 장면 이해(Scene Understanding) 연구에서 빠지지 않는다.
 
 > **추천 자료**
 > - [COCO Dataset](https://cocodataset.org/) — 공식 사이트, 데이터셋 다운로드 및 evaluation 도구
@@ -150,7 +150,7 @@ COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU 
 
 각 데이터셋마다 고유한 디렉토리 구조와 포맷이 있다.
 
-데이터셋을 다운로드했는데 디렉토리 구조와 라벨 포맷을 제대로 이해하지 못하면, 데이터 로더를 짜는 데만 며칠이 걸릴 수 있다. 특히 3D 라벨은 좌표계(coordinate system)가 데이터셋마다 다르므로(카메라 좌표계 vs LiDAR 좌표계, y-up vs z-up 등) 문서를 꼼꼼히 읽어야 한다.
+데이터셋을 내려받고도 디렉터리 구조와 라벨 포맷을 이해하지 못하면 데이터 로더 작성에만 며칠이 걸릴 수 있다. 특히 3D 라벨은 데이터셋마다 좌표계(coordinate system)가 다르므로(카메라 좌표계 vs LiDAR 좌표계, y-up vs z-up 등) 문서를 꼼꼼히 읽어야 한다.
 
 예시 — KITTI Object Detection:
 
@@ -231,7 +231,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 여러 센서의 데이터를 시간 동기화하지 않으면 퓨전 자체가 의미가 없다.
 
-카메라와 LiDAR의 타임스탬프가 10ms만 어긋나도 고속 주행 시 수십 cm의 위치 오차가 생긴다. 센서 퓨전의 기본 전제가 "같은 시점의 데이터"인데, 동기화가 안 되면 그 전제가 무너진다.
+카메라와 LiDAR의 타임스탬프가 10 ms만 어긋나도 고속 주행 시 수십 cm의 위치 오차가 생긴다. 센서 퓨전의 기본 전제가 "같은 시점의 데이터"인데, 동기화가 안 되면 그 전제가 무너진다.
 
 하드웨어 동기화:
 - 트리거 신호로 동시 촬영
@@ -241,7 +241,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 - 타임스탬프 기반 근사 동기화
 - 보간(interpolation) 사용
 
-ROS에서는 받는 시점만 필터링 가능:
+ROS에서는 수신 시점에만 필터링할 수 있다:
 
 ```python
 import message_filters
@@ -291,7 +291,7 @@ Camera-IMU: Kalibr 사용 권장
 - SUSTechPOINTS: LiDAR 포인트 클라우드
 - KITTI-360 labeling tool
 
-합성 데이터를 통한 자동 라벨링: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 생성하면 라벨도 함께 만들어지므로 수동 라벨링이 필요 없다. Domain Randomization으로 텍스처, 조명, 배경을 무작위 변형하면 모델의 일반화 성능도 높일 수 있다. 실제 데이터 대비 수집 비용이 거의 0에 가깝다.
+합성 데이터를 통한 자동 라벨링: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 생성하면 라벨도 함께 만들어지므로 수동 라벨링을 줄일 수 있다. Domain Randomization으로 텍스처, 조명, 배경을 무작위 변형하면 모델의 일반화 성능도 높일 수 있다. 실제 데이터 수집·수동 주석 비용을 줄일 수 있지만, 시뮬레이터 구축·렌더링·검수 비용은 남는다.
 
 > **추천 자료**
 > - [CVAT Documentation](https://docs.cvat.ai/) — 오픈소스 라벨링 도구 공식 문서

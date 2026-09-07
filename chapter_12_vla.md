@@ -1,6 +1,6 @@
 # Ch.12 — Vision-Language-Action (VLA) & Embodied AI
 
-로봇이 "빨간 컵을 집어서 테이블 위에 놓아줘"라는 자연어 명령을 받아 실행하는 것이 VLA의 목표다. 비전, 언어 모델, 제어를 하나로 합치는 분야이며, "왜 ChatGPT가 로봇을 움직이지 못하는지", "왜 시뮬레이션에서 잘 되던 정책이 실제 로봇에서 망하는지"를 이해하려면 이 챕터의 개념이 필요하다.
+VLA의 목표는 로봇이 "빨간 컵을 집어서 테이블 위에 놓아줘" 같은 자연어 명령을 받아 실행하는 것이다. 비전, 언어 모델, 제어를 하나로 묶는 분야이며, "왜 ChatGPT가 로봇을 움직이지 못하는지", "왜 시뮬레이션에서 잘 되던 정책이 실제 로봇에서 실패하는지"를 이해하려면 이 장의 개념이 필요하다.
 
 ## 12.1 VLA 개념
 
@@ -17,7 +17,7 @@
 - 단순 인식을 넘어 행동까지 포함
 - 시뮬레이션과 실제 환경의 간극 (Sim-to-Real)
 
-Embodied AI는 "이것은 컵이다"라는 분류 위에 실제로 컵을 집어 올리는 물리적 행동까지 얹는다. 이 과정에서 중력이나 마찰, 충돌 같은 물리 법칙을 모두 고려해야 하므로, 단순 이미지 분류보다 훨씬 어렵다.
+Embodied AI는 시각적 객체 분류를 넘어 실제 환경에서 컵을 집어 올리는 물리적 상호작용까지 포괄한다. 중력, 마찰, 충돌 같은 물리 법칙이 직접 작용하므로 단순 인식 태스크보다 고려할 변수가 훨씬 복잡하다.
 
 > **추천 자료**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — RT-1, RT-2, PaLM-E 등의 공식 블로그 포스트
@@ -29,11 +29,11 @@ Embodied AI는 "이것은 컵이다"라는 분류 위에 실제로 컵을 집어
 
 RT-1과 RT-2는 대규모 로봇 데이터와 웹 규모의 시각·언어 지식을 하나의 정책에 결합한 사례다. RT-1은 하나의 모델이 수백 가지 태스크를 수행할 수 있음을 논문의 실험 환경에서 보였다.
 
-RT-1(Robotics Transformer 1)은 대규모 로봇 데모 데이터로 학습했다. 130K 에피소드, 700개 이상의 태스크. 출력은 tokenized action이다.
+RT-1(Robotics Transformer 1)은 대규모 로봇 데모 데이터, 즉 130K 에피소드와 700개 이상의 태스크로 학습했다. 출력은 tokenized action이다.
 
 RT-2(Robotics Transformer 2)는 PaLI-X와 PaLM-E 같은 VLM을 로봇 행동 출력에 맞게 파인튜닝한다. 원 논문은 웹 규모 데이터에서 얻은 지식의 전이와 별도의 robot-chain-of-thought 실험을 보고한다.
 
-RT-2의 아이디어는 단순하다. 인터넷에서 학습한 거대 언어/비전 모델이 이미 "세상에 대한 지식"을 갖고 있으니, 그 지식을 로봇 행동으로 파인튜닝하면 제로샷(zero-shot)으로 새로운 물체나 상황에도 대응할 수 있다. 예를 들어, RT-2는 학습 데이터에 없던 물체도 언어 지식을 활용해 집어 올릴 수 있다.
+RT-2는 인터넷에서 학습한 거대 언어·비전 모델의 "세상에 대한 지식"을 로봇 행동에 맞춰 파인튜닝한다. 원 논문의 실험에서는 이 구조가 제로샷(zero-shot)으로 새로운 물체나 상황에 대응할 수 있음을 보였다. RT-2는 학습 데이터에 없던 물체도 언어 지식을 활용해 집어 올리는 식이다.
 
 > **추천 자료**
 > - [Google DeepMind — RT-2 Demo Video](https://deepmind.google/discover/blog/rt-2-new-model-translates-vision-and-language-into-action/) — RT-2의 실제 동작 영상과 설명
@@ -44,7 +44,7 @@ RT-2의 아이디어는 단순하다. 인터넷에서 학습한 거대 언어/�
 
 PaLM-E는 Embodied Multimodal Language Model로, PaLM(언어)과 ViT(비전)에 로봇 상태를 결합한 562B 파라미터 모델이다. 다양한 로봇 태스크를 단일 모델로 처리한다.
 
-PaLM-E가 흥미로운 이유는 "positive transfer"를 보여줬기 때문이다. 로봇 데이터, 웹 이미지, 텍스트를 함께 학습하면 오히려 각각을 따로 학습할 때보다 로봇 태스크 성능이 올라간다. 범용 지식이 로봇 행동에도 도움이 된다는 점을 실증한 것이다.
+PaLM-E는 "positive transfer"를 보였다는 점에서 주목할 만하다. 로봇 데이터, 웹 이미지, 텍스트를 함께 학습하면 각각을 따로 학습했을 때보다 로봇 태스크 성능이 올라간다. 범용 지식이 로봇 행동에도 도움이 될 수 있음을 실증한 사례다.
 
 > **추천 자료**
 > - [Driess et al., "PaLM-E: An Embodied Multimodal Language Model" (2023)](https://arxiv.org/abs/2303.03378) — PaLM-E 원 논문
@@ -67,9 +67,9 @@ action = model.predict(
 )
 ```
 
-RT-X 프로젝트는 OpenVLA와 함께 알아둘 내용이다. 여러 연구 기관이 수집한 로봇 데이터를 모아 하나의 거대한 데이터셋(Open X-Embodiment)을 만들고, 이를 기반으로 범용 로봇 정책을 학습한다. 22개 이상의 로봇 유형에서 나온 데이터를 포함한다.
+RT-X 프로젝트도 OpenVLA와 함께 살펴볼 만하다. 여러 연구 기관이 수집한 로봇 데이터를 모은 Open X-Embodiment 데이터셋으로 범용 로봇 정책을 학습한다. 이 데이터셋에는 22개 이상의 로봇 유형에서 나온 데이터가 포함된다.
 
-**Octo**: RT-X 데이터로 학습된 또 다른 오픈소스 모델로, OpenVLA보다 작은 사이즈(93M 파라미터)로 더 가볍게 활용할 수 있다. 다양한 로봇 플랫폼에 빠르게 파인튜닝할 수 있도록 설계한 모델이다.
+**Octo**: RT-X 데이터로 학습한 또 다른 오픈소스 모델이다. OpenVLA보다 작은 93M 파라미터 규모라 더 가볍게 활용할 수 있으며, 다양한 로봇 플랫폼에 빠르게 파인튜닝하도록 설계됐다.
 
 > **추천 자료**
 > - [OpenVLA GitHub](https://github.com/openvla/openvla) — 코드와 모델 가중치 공개
@@ -79,7 +79,7 @@ RT-X 프로젝트는 OpenVLA와 함께 알아둘 내용이다. 여러 연구 기
 
 ### 12.2.4 Navigation 관련
 
-물체 조작(manipulation)과 함께 환경 내 이동(navigation)도 Embodied AI의 핵심 과제이다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용하는 접근이다.
+물체 조작(manipulation)뿐 아니라 환경 안에서의 이동(navigation)도 Embodied AI의 핵심 과제다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용한다.
 
 LINGO는 Language-guided Indoor Navigation이다.
 
@@ -87,7 +87,7 @@ LINGO는 Language-guided Indoor Navigation이다.
 - Affordance function: 로봇이 현재 할 수 있는 행동
 - LLM: 목표 달성을 위해 해야 하는 행동
 
-SayCan의 동작을 예로 들어 보자. LLM에게 "커피 만들어줘"라고 하면, LLM은 "1. 컵을 잡아 2. 커피 머신으로 가 3. 버튼을 눌러..."처럼 계획을 세울 수 있다. 하지만 로봇이 현재 컵 근처에 없다면 "컵을 잡아"는 실행할 수 없다. SayCan은 LLM의 계획(해야 하는 것)과 로봇의 현재 가능 행동(할 수 있는 것)을 함께 고려해, 실행할 수 있으면서도 목표에 가까운 행동을 선택한다.
+예를 들어 LLM은 "커피 만들어줘"라는 요청에 "1. 컵을 잡아 2. 커피 머신으로 가 3. 버튼을 눌러..."처럼 계획을 세울 수 있다. 그러나 로봇이 컵 근처에 없다면 "컵을 잡아"는 실행할 수 없다. SayCan은 LLM의 계획(해야 하는 것)과 로봇이 현재 할 수 있는 행동을 함께 고려해, 실행 가능하면서 목표에 가까운 행동을 고른다.
 
 > **추천 자료**
 > - [Ahn et al., "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances" (2022)](https://arxiv.org/abs/2204.01691) — SayCan 논문
@@ -95,7 +95,7 @@ SayCan의 동작을 예로 들어 보자. LLM에게 "커피 만들어줘"라고 
 
 ## 12.3 World Models
 
-실제 로봇에서 많은 시행착오를 반복하면 시간과 장비 비용이 커진다. **World Model**은 현재 상태와 행동에서 다음 상태나 관측을 예측한다. 이 예측을 사용하면 실제 장비에서 모든 후보 행동을 실행하지 않고 model-based policy를 평가할 수 있다.
+실제 로봇에서 시행착오를 거듭하면 시간과 장비 비용이 커진다. **World Model**은 현재 상태와 행동으로부터 다음 상태나 관측을 예측한다. 이 예측으로 실제 장비에서 모든 후보 행동을 실행하지 않고 model-based policy를 평가할 수 있다.
 
 World model은 model-based RL의 rollout과 위험한 행동의 사전 평가에 사용할 수 있다.
 
@@ -130,7 +130,7 @@ End-to-End:
 - 단점: Interpretability 부족, 대규모 데이터 필요
 - 예시: NVIDIA PilotNet, Tesla FSD (추정)
 
-자율주행에서는 End-to-End 방식이 여러 형태로 발전했다. UniAD(Unified Autonomous Driving, 2023)는 End-to-End이면서도 내부에 detection, tracking, mapping, prediction, planning 모듈을 두어 해석 가능성을 유지한다. CVPR 2023 Best Paper. VAD(2023)는 장면을 벡터화된 표현으로 변환해 효율적인 주행 정책을 학습하고, GenAD(2024)는 생성 모델 기반으로 다양한 시나리오에 일반화한다.
+자율주행에서는 End-to-End 방식이 여러 형태로 발전했다. UniAD(Unified Autonomous Driving, 2023)는 End-to-End이면서도 내부에 detection, tracking, mapping, prediction, planning 모듈을 두어 해석 가능성을 유지한다. CVPR 2023 Best Paper. VAD(2023)는 장면을 벡터화된 기하 표현으로 변환하여 효율적인 주행 정책을 유도하며, GenAD(2024)는 생성형 파이프라인을 바탕으로 다채로운 도로 시나리오에 걸친 일반화 성능을 확보한다.
 
 Modular:
 
@@ -156,15 +156,15 @@ End-to-end와 모듈형 중 어느 쪽이 우세한지는 응용과 검증 조�
 - 디버깅: end-to-end 모델이 실패했을 때 원인을 찾기 어렵다. "왜 로봇이 컵을 놓쳤는가?"에 대해, 모듈형이면 "depth estimation이 틀렸다" 또는 "grasp planning이 잘못됐다"로 좁힐 수 있지만, end-to-end에서는 어디서 틀렸는지 모른다.
 - 안전 보장: 모듈형은 각 모듈에 safety check를 넣을 수 있다 (속도 제한, 충돌 감지 등). End-to-end에서 이런 보장을 넣기 어렵다.
 - 부분 업데이트: perception 모듈만 개선하고 싶을 때, 모듈형이면 해당 모듈만 교체할 수 있다. End-to-end에서는 변경 범위에 따라 여러 구성요소를 함께 재학습하거나 재검증해야 할 수 있다.
-- 데이터 효율: 이 장에서 다룬 범용 정책은 대규모 데이터를 사용했다. RT-1의 데이터셋은 약 13만 에피소드였고, OpenVLA는 97만 에피소드로 학습됐다. 대부분의 연구실이 같은 규모의 데이터를 직접 수집하기는 어렵다.
+- 데이터 효율: 이 장에서 다룬 범용 정책은 대규모 데이터를 사용했다. RT-1은 약 13만 에피소드의 시연 데이터를 활용했으며, OpenVLA에 이르러서는 97만 에피소드 규모의 방대한 데이터셋으로 학습이 이뤄졌다. 대부분의 연구실이 같은 규모의 데이터를 직접 수집하기는 어렵다.
 
-한 가지 현실적 방향은 하이브리드다. 인식에는 VFM을 쓰고 계획·제어에는 명시적인 모듈과 안전 검사를 두는 식이다. 연구실의 Local/Global Module 설계(18장)가 이 방향이다.
+현실적인 선택지 가운데 하나는 하이브리드 구성이다. 인식에는 VFM을 쓰되 계획·제어에는 명시적 모듈과 안전 검사를 둔다. 연구실의 Local/Global Module 설계(18장)도 이 방향에 속한다.
 
 end-to-end가 모듈형을 넓게 대체하려면 디버깅 가능성, 소규모 데이터에서의 학습 효율, safety guarantee를 응용별 검증 기준으로 입증해야 한다. 현재 공개 시스템은 이 조건들을 서로 다른 범위에서 다루며, 하나의 구조가 모두 해결했다고 보기는 어렵다.
 
 ## 12.5 Spatial AI + VLA 통합
 
-VLA는 "커피 가져와" 같은 장기 작업을 해석하고, local controller는 실시간 장애물 회피와 자세 안정화를 맡는다. 실제 시스템은 두 시간척도의 출력을 연결해야 한다.
+VLA가 "커피 가져와" 같은 고수준 장기 작업을 의미론적으로 분해한다면, 로컬 제어기는 실시간 동적 장애물 회피와 차체 자세 안정화를 전담한다. 실제 시스템에서는 서로 다른 시간척도의 두 출력을 연결해야 한다.
 
 연구실의 2-Module Architecture와 연결:
 
@@ -184,11 +184,11 @@ Global(Heavy) Understanding은 semantic understanding 담당이다. 객체, 관�
 
 ## 12.6 Sim-to-Real & Simulation Platforms
 
-실제 로봇으로 데이터를 모으는 건 시간과 비용이 많이 들고 위험하다. 그래서 시뮬레이션에서 먼저 학습하고 실제 로봇에 전이하는 Sim-to-Real을 많이 사용한다. 하지만 시뮬레이션과 현실 사이에는 "Reality Gap"이 존재한다. 이 간극을 좁히는 주요 기법들을 아래에 정리한다.
+실제 로봇으로 데이터를 모으는 일은 시간과 비용이 많이 들고 위험하다. 그래서 시뮬레이션에서 먼저 학습한 뒤 실제 로봇으로 옮기는 Sim-to-Real을 많이 쓴다. 다만 시뮬레이션과 현실 사이에는 "Reality Gap"이 있다. 다음 기법들은 이 간극을 줄이는 데 쓰인다.
 
 **Domain Randomization**: 시뮬레이션에서 텍스처, 조명, 물리 파라미터 등을 무작위로 변경하여 학습한다. 모델이 다양한 조건에 노출되면, 현실 환경도 그 중 하나의 변형(variation)으로 처리할 수 있게 된다.
 
-주요 시뮬레이션 플랫폼은 네 가지다. NVIDIA Isaac Sim/Lab은 GPU 가속 물리 시뮬레이션으로 수천 개의 환경을 병렬로 돌릴 수 있어 대규모 강화학습에 적합하다. Isaac Lab은 로봇 학습 연구를 위한 통합 프레임워크다. AI2-THOR(Allen Institute)는 실내 환경 시뮬레이터로, 주방·거실 같은 가정 환경에서 물체 조작(manipulation)을 연습할 수 있다. Habitat(Meta)는 Matterport3D·Gibson 같은 대규모 3D 스캔 환경에서 내비게이션을 학습하며, Habitat Challenge로 매년 벤치마크를 제공한다. MuJoCo는 접촉(contact) 물리에 강점이 있는 시뮬레이터로, 로봇 팔 조작과 보행 학습에 많이 쓰인다. DeepMind가 인수 후 오픈소스로 전환했다.
+대표적인 시뮬레이션 플랫폼은 네 가지다. NVIDIA Isaac Sim/Lab은 GPU 가속 물리 시뮬레이션으로 수천 개의 환경을 병렬로 돌릴 수 있어 대규모 강화학습에 맞는다. Isaac Lab은 로봇 학습 연구를 위한 통합 프레임워크다. AI2-THOR(Allen Institute)는 주방·거실 같은 가정 환경에서 물체 조작(manipulation)을 연습할 수 있는 실내 시뮬레이터다. Habitat(Meta)는 Matterport3D·Gibson 같은 대규모 3D 스캔 환경에서 내비게이션을 학습하며, Habitat Challenge를 통해 매년 벤치마크를 제공한다. MuJoCo는 접촉(contact) 물리에 강점이 있어 로봇 팔 조작과 보행 학습에 널리 쓰이며, DeepMind가 인수한 뒤 오픈소스로 전환됐다.
 
 > **추천 자료**
 > - [NVIDIA Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/) — 로봇 학습을 위한 시뮬레이션 프레임워크
@@ -202,13 +202,13 @@ VLA와 Embodied AI의 정책(policy) 학습은 크게 강화학습(RL)과 모방
 
 **Behavioral Cloning (BC)**
 
-가장 단순한 IL 방법이다. 전문가(사람 또는 스크립트)의 시연 데이터 `{(s_t, a_t)}`를 수집하고, 상태 `s_t`에서 행동 `a_t`를 예측하는 supervised learning을 수행한다.
+가장 단순한 IL 방법이다. 전문가(사람 또는 사전 설계된 스크립트) 시연 데이터 `{(s_t, a_t)}`를 확보한 뒤, 임의 상태 `s_t`에 대응하는 행동 `a_t`를 예측하도록 지도학습(supervised learning)을 수행한다.
 
 ```
 Loss = E[ || π_θ(s_t) - a_t ||^2 ]
 ```
 
-간단하고 구현하기 쉽지만 **distribution shift**라는 중요한 한계가 있다. 학습할 때는 전문가의 상태 분포를 따르지만, 추론할 때는 정책 자체의 불완전한 행동이 다음 상태를 결정한다. 작은 오차가 누적되면 전문가가 방문한 적 없는 상태에 이르고, 정책은 그 상태에서 적절한 행동을 고르지 못한다.
+간단하고 구현하기 쉽지만 **distribution shift**라는 한계가 있다. 학습 때는 전문가의 상태 분포를 따르지만, 추론 때는 정책의 불완전한 행동이 다음 상태를 결정한다. 작은 오차가 누적되면 전문가가 방문하지 않은 상태에 이르고, 정책은 그 상태에서 적절한 행동을 고르지 못한다.
 
 **DAgger (Dataset Aggregation)**
 
@@ -225,7 +225,7 @@ DAgger는 distribution shift를 완화하는 대표적 방법이다. 학습된 �
 
 전문가에게 매번 질의하는 건 비싸기 때문에, human-in-the-loop 변형이나 DAgger의 근사 버전(HG-DAgger, ThriftyDAgger 등)이 쓰인다.
 
-두 접근의 전형적인 차이를 표로 정리하면 다음과 같다. 실제 표본 수와 안전성은 알고리즘, 시뮬레이터, 전문가 데이터의 품질에 따라 달라진다.
+두 접근인 RL과 IL의 전형적 차이는 다음과 같다. 실제 표본 수와 안전성은 알고리즘, 시뮬레이터, 전문가 데이터의 품질에 따라 달라진다.
 
 | 기준 | RL | IL |
 |------|----|----|
@@ -245,11 +245,11 @@ DAgger는 distribution shift를 완화하는 대표적 방법이다. 학습된 �
 
 Chi et al.(RSS 2023)이 제안한 Diffusion Policy는 로봇 조작(manipulation) 분야에서 BC 계열 방법의 대안으로 쓰이는 정책 표현 방식이다. 행동 시퀀스(action trajectory)를 denoising diffusion 과정으로 생성한다.
 
-기존 BC는 `π_θ(s) → a`로 단일 action을 결정론적으로 예측한다. 하지만 현실에서는 같은 상태에서도 여러 가능한 행동이 있다(multi-modality). 예를 들어 테이블 위의 컵을 잡을 때 왼쪽에서 잡아도 되고 오른쪽에서 잡아도 된다. 결정론적 BC는 이 두 행동의 평균을 출력해서 둘 다 실패한다. Gaussian Mixture Model 같은 방법도 있지만, 모드 수를 미리 정해야 한다.
+기존 BC는 `π_θ(s) → a`로 단일 action을 결정론적으로 예측한다. 그러나 현실에서는 같은 상태에서도 여러 행동이 가능하다(multi-modality). 테이블 위의 컵은 왼쪽에서도, 오른쪽에서도 잡을 수 있다. 결정론적 BC는 이 두 행동의 평균을 출력해 어느 쪽도 성공하지 못할 수 있다. Gaussian Mixture Model 같은 방법도 있지만 모드 수를 미리 정해야 한다.
 
 Diffusion Policy는 denoising 과정을 이용해 이 multi-modal 분포를 표현한다.
 
-동작 원리는 다음과 같다.
+동작은 다음 순서를 따른다.
 
 ```
 1. 랜덤 노이즈 a_T ~ N(0, I)에서 시작 (T = diffusion steps)
@@ -260,9 +260,9 @@ Diffusion Policy는 denoising 과정을 이용해 이 multi-modal 분포를 표�
 
 Action trajectory는 단일 action이 아니라 미래 수 스텝의 action 시퀀스 `[a_0, a_1, ..., a_H]`이다. 이 중 처음 몇 스텝만 실행하고(receding horizon), 다시 새 관측으로 다음 trajectory를 생성한다.
 
-이 방식은 multi-modal action distribution에 모드 수를 미리 정하지 않아도 되고, action sequence를 한 번에 생성해 시간적으로 이어지는 행동을 만들 수 있다. 학습에는 denoising score matching을 사용한다.
+이 방식은 multi-modal action distribution의 모드 수를 미리 정할 필요가 없고, action sequence를 한 번에 생성해 시간적으로 이어진 행동을 만들 수 있다. 학습에는 denoising score matching을 쓴다.
 
-단점은 속도다. Inference 시 여러 번의 denoising step이 필요해 느리고(10~100 steps), 실시간 제어(>100 Hz)에는 부적합할 수 있다. DDIM 같은 가속 기법이나 consistency distillation으로 완화할 수 있다.
+단점은 속도다. Inference 때는 denoising 과정을 10~100 steps 반복해야 하므로 실시간 제어(>100 Hz)에는 맞지 않을 수 있다. DDIM 같은 가속 기법이나 consistency distillation으로 이를 완화할 수 있다.
 
 Chi et al.의 원 논문 프로젝트 페이지는 4개 벤치마크의 12개 태스크에서 기존 로봇 학습 방법보다 평균 46.9% 향상됐다고 보고한다. 이 수치는 논문이 사용한 태스크·평가지표·baseline에 한정해 해석해야 한다.
 

@@ -49,7 +49,7 @@ RNEA는 직렬 매니퓰레이터(serial manipulator)의 역동역학(inverse dy
 
 **Backward pass (end-effector → base):** 각 링크에 작용하는 힘과 토크를 역방향으로 전파한다. 뉴턴-오일러 방정식으로 링크 i에 필요한 합력/합토크를 구하고, 이를 관절 i의 토크로 변환한다.
 
-왜 재귀적(recursive)으로 푸는가? 단일 강체의 동역학은 O(1)이다. n개의 링크를 순차적으로 처리하면 O(n)이다. 반면 라그랑주 방정식을 직접 풀면 M(q) 행렬 계산에 O(n^3)이 걸린다. 관절 수가 많은 로봇(예: humanoid의 30+ DOF)에서 이 차이는 실시간 제어 가능 여부를 결정한다.
+왜 재귀적(recursive)으로 푸는가? 단일 강체의 동역학은 O(1)이다. n개의 링크를 순차적으로 처리하면 O(n)이다. 라그랑주 방정식을 기계적으로 직접 전개하면 M(q) 행렬 계산만으로도 O(n³) 이상의 비용이 든다. 6자유도 팔이라면 O(n)과 O(n³)의 차이가 제어 루프의 실시간성을 가른다.
 
 RNEA의 의사 코드를 정리하면 다음과 같다:
 
@@ -104,6 +104,7 @@ Drake에서의 동일한 계산:
 ```python
 from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
+from pydrake.multibody.tree import MultibodyForces
 import numpy as np
 
 plant = MultibodyPlant(time_step=0.0)
@@ -216,7 +217,7 @@ M(q) = [ (m_1+m_2)l_1^2 + m_2 l_2^2 + 2 m_2 l_1 l_2 cos(q_2)    m_2 l_2^2 + m_2 
         [ m_2 l_2^2 + m_2 l_1 l_2 cos(q_2)                          m_2 l_2^2                          ]
 ```
 
-M(q)는 q_2에 따라 달라진다. q_2 = 0일 때는 팔이 완전히 펴져 관성이 최대가 되고, q_2 = π일 때는 팔이 접혀 관성이 최소가 된다.
+M(q)는 q_2에 따라 달라진다. q_2 = 0일 때는 팔이 완전히 펴져 관성이 최댓값에 도달하며, q_2 = \pi로 접혔을 때는 관성이 최솟값까지 줄어든다.
 
 **C(q, q̇) 행렬:**
 
@@ -302,7 +303,7 @@ print("V =", V)
 3. manipulator equation의 구조(M, C, g)를 이용한 computed torque control, passivity-based control 등을 설계한다 (제어기 설계).
 4. Pinocchio나 Drake가 내부적으로 RNEA/ABA를 사용하므로, 라이브러리를 호출하면 된다 (코드 구현).
 
-두 formulation은 서로 다른 역할을 맡는다. 라그랑주 방식은 제어 이론의 구조를 드러내고, 뉴턴-오일러 방식은 실시간 계산에 적합하다.
+두 formulation은 서로 다른 역할을 맡는다. 라그랑주 역학이 제어계 설계에 필요한 동역학적 대칭 구조를 투명하게 보여준다면, 뉴턴-오일러 역학은 실시간 루프에서 고속 연산을 수행하기에 이상적이다.
 
 > **추천 자료**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 3 — 두 formulation의 관계를 명확히 설명
@@ -364,7 +365,7 @@ ABA(model, q, q̇, τ):
     return q̈
 ```
 
-실제 구현은 상당히 복잡하다. Pinocchio나 Drake 같은 검증된 라이브러리를 쓰는 편이 현명하다.
+실제 구현은 상당히 복잡하므로 Pinocchio나 Drake 같은 검증된 라이브러리를 쓰는 편이 낫다.
 
 ### 시뮬레이터에서의 역할
 
@@ -449,7 +450,7 @@ RNEA와 ABA는 서로 역연산 관계이다. RNEA(q, v, ABA(q, v, τ)) ≈ τ �
 
 **Bullet**은 velocity-level LCP + sequential impulse 방식으로, 게임/VR에서 출발한 엔진이라 속도에 최적화되어 있으나 정밀한 접촉이 필요한 로보틱스 작업에서는 한계가 있다. **DART**는 LCP 기반 rigid contact으로 학술적으로 엄밀한 구현이지만, MuJoCo나 Drake에 비해 사용자 기반이 작다.
 
-어떤 시뮬레이터를 쓸지는 연구 목적에 따라 다르다. MuJoCo는 locomotion RL에서 널리 쓰이고, Drake와 MuJoCo는 모두 contact-rich manipulation을 다룰 수 있다. 최종 선택은 필요한 접촉 모델, gradient, 처리 속도, 재현할 hardware와 검증 사례를 기준으로 한다.
+어떤 시뮬레이터를 쓸지는 연구 목적에 따라 달라진다. MuJoCo가 locomotion 분야의 강화학습에서 주도적으로 활용된다면, contact-rich manipulation 영역에서는 Drake와 MuJoCo가 모두 강력한 해석 능력을 제공한다. 필요한 접촉 모델, gradient, 처리 속도, 재현할 hardware와 검증 사례를 기준으로 고른다.
 
 ```python
 # MuJoCo에서 접촉 정보 접근
@@ -486,7 +487,7 @@ for i in range(n_contacts):
 
 ## 5.7 심화: Featherstone 알고리즘과 Spatial Algebra
 
-여기서부터는 대학원 수준이다. Featherstone의 spatial vector algebra는 동역학 알고리즘을 간결하고 효율적으로 표현하기 위한 수학적 틀이다.
+이하는 대학원 심화 과정 수준에 해당한다. Featherstone의 spatial vector algebra는 동역학 알고리즘을 간결하고 효율적으로 표현하기 위한 수학적 틀이다.
 
 ### Spatial Vectors (6D Vectors)
 
@@ -522,7 +523,7 @@ I_sp = [ I_cm + m·[c]×[c]×^T    m·[c]× ]
 
 여기서 m은 질량, c는 질량중심까지의 벡터, I_cm은 질량중심 주위의 회전 관성, [c]×는 c의 skew-symmetric matrix이다.
 
-여러 강체의 관성을 합칠 때 그냥 더하면 된다(I_composite = I_1 + I_2 + ...). 좌표 변환은 congruence transform 하나로 끝난다(I_B = X^T I_A X).
+여러 강체의 관성을 같은 좌표계와 기준점으로 표현하면 더할 수 있다(I_composite = I_1 + I_2 + ...). 좌표 변환은 congruence transform 하나로 끝난다(I_B = X^T I_A X).
 
 ### RNEA와 ABA의 Spatial Vector 표현
 
@@ -641,7 +642,7 @@ L = Σ (r_i - r_CoM) × (m_i v_i) + I_i ω_i
 L̇ = Σ (r_contact - r_CoM) × f_contact
 ```
 
-CoM 역학이 balance를 결정한다. 로봇이 넘어지지 않으려면 CoM의 궤적이 지지 영역(support polygon) 위에 있어야 한다(ZMP 조건). 더 정확히는 centroidal momentum가 적절히 조절되어야 한다.
+CoM 역학이 balance를 결정한다. 로봇이 넘어지지 않으려면 CoM의 궤적이 지지 영역(support polygon) 위에 있어야 한다(ZMP 조건). 더 정확히는 centroidal momentum이 적절히 조절되어야 한다.
 
 차원 축소의 효과도 있다. n-DOF 보행 로봇의 전체 동역학은 n차원이지만, centroidal dynamics는 6차원(선운동량 3 + 각운동량 3)이다. 이 6차원 공간에서 원하는 운동량 궤적을 먼저 계획하고, 그다음 전체 관절 수준으로 분해하는 것이 일반적인 접근이다.
 
@@ -740,8 +741,8 @@ print("CoM velocity:", data.vcom[0])
 2012 ── MuJoCo 공개 (Todorov, Erez, Tassa)
 2015 ── Bullet Physics 2.x → PyBullet 인터페이스
 2016 ── Pinocchio 1.0 공개 (LAAS-CNRS)
-2022 ── Drake 1.0 (MIT → Toyota Research Institute)
 2021 ── MuJoCo 오픈소스화 (DeepMind 인수 후)
+2022 ── Drake 1.0 (MIT → Toyota Research Institute)
 2022 ── MuJoCo 2.3: implicit integration, elliptic friction cone
 2023 ── Pinocchio 3.0: CasADi/JAX autodiff 지원
 2023 ── MuJoCo 3.0: MJX (JAX backend for GPU parallelism)

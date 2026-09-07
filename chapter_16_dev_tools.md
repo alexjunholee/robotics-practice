@@ -1,16 +1,16 @@
 # Ch.16 — 개발 환경 & 도구
 
-로봇 연구 코드는 CUDA, Python, ROS, 시스템 라이브러리의 버전 조합에 민감하다. 이 장은 실행 환경을 분리하고 재현하는 데 쓰는 언어 도구, 패키지 환경, Docker를 다룬다.
+로봇 연구 코드는 CUDA, Python, ROS, 시스템 라이브러리의 버전 조합에 민감하다. 안정적인 개발을 위해서는 실행 환경을 분리하고 재현하는 언어 도구, 패키지 환경, Docker가 기본으로 뒷받침되어야 한다.
 
 ## 16.1 프로그래밍 언어
 
-AI 코딩 에이전트가 코드 작성의 상당 부분을 돕더라도, 기존 코드를 읽고 이해하는 능력은 여전히 필요하다. 다른 사람의 연구 코드를 클론해 구조를 파악하고, AI가 생성한 코드를 검증하며, 문제가 생겼을 때 수정할 위치를 판단할 수 있어야 한다.
+AI 코딩 에이전트가 코드 작성의 상당 부분을 돕더라도 기존 코드를 읽고 이해하는 능력은 필요하다. 다른 사람의 연구 코드를 클론해 구조를 파악하고, AI가 생성한 코드를 검증하며, 문제가 생겼을 때 어디를 고칠지 판단할 수 있어야 한다.
 
 ### 16.1.1 C++
 
 **용도**: 실시간 시스템, ROS 노드, SLAM, 성능 중요 모듈
 
-연구실에서 다루는 핵심 코드 대부분이 C++이다. SLAM, 실시간 제어, ROS 패키지의 핵심 로직이 전부 C++로 작성되어 있고, 이 코드를 읽고 수정할 일이 많다. ORB-SLAM3, LOAM, VINS-Mono 같은 코드를 이해하려면 C++에 익숙해야 한다.
+연구실에서 다루는 핵심 코드는 대부분 C++이다. SLAM, 실시간 제어, ROS 패키지의 핵심 로직이 C++로 작성되어 있어 읽고 수정할 일이 많다. ORB-SLAM3, LOAM, VINS-Mono 같은 코드를 이해하려면 C++에 익숙해야 한다.
 
 **장점**:
 - 빠른 실행 속도
@@ -46,7 +46,7 @@ auto func = [&](int x) { return x * 2; };
 
 **용도**: 프로토타이핑, 딥러닝 학습/추론, 데이터 분석, 시각화
 
-PyTorch 학습 스크립트와 데이터 전처리 같은 작업에 널리 쓴다. 에이전트로 초안을 만들기 좋지만, 생성된 코드를 읽고 실행 결과와 성능 병목을 직접 확인할 수 있어야 한다.
+PyTorch 학습 스크립트와 데이터 전처리에 널리 쓴다. 에이전트로 초안을 만들기에는 좋지만, 생성된 코드를 읽고 실행 결과와 성능 병목을 직접 확인할 수 있어야 한다.
 
 **자주 쓰는 라이브러리**:
 
@@ -100,9 +100,7 @@ nvidia-smi          # GPU 상태
 nvcc --version      # CUDA 버전
 ```
 
-**권장 버전**: CUDA 12.x, cuDNN 8.x
-
-**주의**: PyTorch/TensorFlow 버전과 CUDA 버전 호환성 확인 필수
+**버전 선택**: 사용할 PyTorch/TensorFlow 릴리스의 공식 설치 표에서 지원하는 CUDA·cuDNN 조합을 고른다.
 
 > **추천 자료**
 > - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — PyTorch와 CUDA 버전 매칭 확인. 설치 전 확인할 것
@@ -186,7 +184,7 @@ sudo make install
 
 ### 16.2.3 환경 관리
 
-프로젝트마다 필요한 Python 버전과 라이브러리 버전이 다르다. 환경 관리 도구 없이 `pip install`을 전역으로 하면 프로젝트 A에 필요한 라이브러리가 프로젝트 B와 충돌하는 "의존성 지옥(dependency hell)"에 빠진다. Conda나 venv로 프로젝트별 독립 환경을 만드는 것이 기본이다.
+프로젝트마다 필요한 Python 버전과 라이브러리 버전이 다르다. 환경 관리 도구 없이 `pip install`을 전역으로 하면 프로젝트 A의 라이브러리가 프로젝트 B와 충돌하는 "의존성 지옥(dependency hell)"에 빠질 수 있다. Conda나 venv로 프로젝트별 독립 환경을 만드는 것이 기본이다.
 
 **Conda** (권장):
 
@@ -211,7 +209,7 @@ source myenv/bin/activate
 pip install -r requirements.txt
 ```
 
-예를 들어 SLAM 연구에는 Python 3.8이 필요하고, 최신 트랜스포머 모델에는 Python 3.10이 필요할 수 있다. Conda를 쓰면 `conda activate slam_env`, `conda activate transformer_env`로 전환하면 끝이다.
+가령 SLAM 연구에는 Python 3.8이, 최신 트랜스포머 모델에는 Python 3.10이 필요할 수 있다. Conda에서는 `conda activate slam_env`, `conda activate transformer_env`로 환경을 전환하면 된다.
 
 > **추천 자료**
 > - [Conda Documentation - Managing Environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) — Conda 환경 관리 공식 가이드
@@ -221,7 +219,7 @@ pip install -r requirements.txt
 
 ### 16.3.1 왜 Docker인가?
 
-Docker는 OS 사용자 공간, 라이브러리, 환경 설정을 이미지로 묶는다. 같은 이미지를 사용하면 개발자 사이의 의존성 차이를 줄일 수 있고, 논문 코드의 실행 환경도 함께 전달할 수 있다.
+Docker는 OS 사용자 공간, 라이브러리, 환경 설정을 이미지로 묶는다. 같은 이미지를 쓰면 개발자 사이의 의존성 차이를 줄일 수 있고, 논문 코드의 실행 환경도 함께 전달할 수 있다.
 
 ### 16.3.2 기본 사용법
 
@@ -326,10 +324,10 @@ docker run --rm -it \
 |--------|------|
 | `--gpus all` | GPU 패스스루 (nvidia-container-toolkit) |
 | `--privileged` | USB/시리얼 디바이스 전체 접근. 프로덕션에서는 `--device`로 개별 매핑할 것 |
-| `--net=host` | DDS multicast 통신을 위해 호스트 네트워크 공유. ROS2 노드 간 통신에 필수 |
+| `--net=host` | DDS multicast 설정을 간단히 하려고 호스트 네트워크 공유. 통신 구성에 따라 선택 |
 | `--ipc=host` | 공유 메모리. Rviz 등 GUI 도구에서 필요 |
-| `-e QT_X11_NO_MITSHM=1` | 이거 빠지면 RViz가 segfault로 죽는다. MIT-SHM이 Docker에서 안 됨 |
-| `-e ROS_DOMAIN_ID=42` | 같은 네트워크의 다른 ROS2 시스템과 격리. 연구실에서 여러 명이 쓸 때 필수 |
+| `-e QT_X11_NO_MITSHM=1` | MIT-SHM 호환성 문제로 RViz 등이 종료될 때 사용하는 우회 설정 |
+| `-e ROS_DOMAIN_ID=42` | 같은 네트워크의 다른 ROS2 시스템과 격리. 여러 시스템이 함께 있을 때 도메인 값을 분리 |
 | `-v /dev:/dev` | 센서 USB가 언제 꽂힐지 모르므로 /dev 전체 마운트. `--privileged`와 세트 |
 | `-v .Xauthority` | X11 인증. 이걸 안 걸면 `cannot open display` |
 
@@ -370,7 +368,7 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 ```
 
-`docker commit`보다 Dockerfile이 나은 이유: 나중에 "이 이미지에 뭐가 깔려있지?"를 추적할 수 있다. commit으로 만든 이미지는 히스토리가 없어서 재현이 안 된다.
+`docker commit`보다 Dockerfile이 나은 이유: 나중에 "이 이미지에 뭐가 깔려있지?"를 추적할 수 있다. commit으로 만든 이미지도 layer history는 남지만, 구성 절차가 Dockerfile로 기록되지 않아 다시 만들기 어렵다.
 
 > **추천 자료**
 > - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — ROS + NVIDIA + GUI Docker 설정 레퍼런스. Melodic부터 Humble까지 지원

@@ -24,7 +24,7 @@
 **Probabilistic Robotics** (Thrun, Burgard, Fox)
 - 확률적 로보틱스의 표준 교재
 - Kalman Filter, Particle Filter, SLAM
-- 필수 교재 — SLAM을 연구하려면 읽어야 한다
+- SLAM을 연구할 때 읽어야 할 교재
 - 링크: [MIT Press](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/)
 - PDF는 공식적으로 무료가 아니지만, 저자의 강의 슬라이드가 대부분의 내용을 커버한다
 
@@ -51,7 +51,7 @@
 
 **Introduction to Linear Algebra** (Gilbert Strang)
 - 선형대수를 직관적으로 설명하는 명저
-- MIT OCW 강의와 함께 보면 효과 극대화
+- MIT OCW 강의와 함께 보면 이해에 도움이 됨
 - 링크: https://math.mit.edu/~gs/linearalgebra/ila6/indexila6.html
 
 **Convex Optimization** (Boyd & Vandenberghe)
@@ -77,8 +77,8 @@
 ### SLAM
 
 **Cyrill Stachniss SLAM Course** (YouTube)
-- SLAM 이론 강의 — 독일어 억양이지만 설명이 정말 명확하다
-- SLAM 입문자에게 가장 추천하는 강의
+- SLAM 이론 강의 — 독일어 억양이 있지만 설명이 명확함
+- SLAM 입문자에게 먼저 권할 만한 강의
 - YouTube: https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_
 
 **Multiple View Geometry** (TUM, Daniel Cremers 교수)
@@ -103,7 +103,7 @@
 ### 딥러닝 기초
 
 **CS229: Machine Learning** (Stanford, Andrew Ng)
-- ML 기초 — 딥러닝 전에 이것부터 보는 것을 추천
+- ML 기초 — 딥러닝 전에 살펴보기 좋음
 - YouTube: https://www.youtube.com/playlist?list=PLoROMvodv4rMiGQp3WXShtMGgzqpfVfbU
 
 **Neural Networks: Zero to Hero** (Andrej Karpathy)
@@ -113,7 +113,7 @@
 
 ## 20.3 유튜브 채널 추천
 
-교과서나 전체 강의보다 짧게 나누어 볼 수 있는 유튜브 채널들이다.
+교과서나 전체 강의보다 짧은 단위로 볼 수 있는 유튜브 채널들이다.
 
 | 채널 | 주제 | 특징 |
 | --- | --- | --- |
@@ -121,7 +121,7 @@
 | **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | CV 기초를 개념별로 설명 |
 | **Andrej Karpathy** | Deep Learning, AI | Tesla AI Director 출신. Neural Net을 밑바닥부터 구현 |
 | **Yannic Kilcher** | 논문 리뷰 | 최신 ML/AI 논문을 매주 리뷰. 논문 읽는 법을 배울 수 있다 |
-| **Two Minute Papers** | AI 연구 트렌드 | 최신 연구를 2-3분 영상으로 소개. "What a time to be alive!" |
+| **Two Minute Papers** | AI 연구 트렌드 | 최신 연구를 2~3분 영상으로 소개. "What a time to be alive!" |
 | **3Blue1Brown** | 수학 시각화 | 선형대수, 미적분을 시각적으로 설명. 수학이 막힐 때 |
 | **Computerphile** | CS 전반 | 컴퓨터과학의 다양한 주제를 쉽게 설명 |
 | **sentdex** | Python, ML | Python으로 ML/로보틱스 실습. 코드 중심 |
@@ -171,7 +171,7 @@
 - 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.14737](https://arxiv.org/abs/2308.14737)
 - Depth Anything: Yang et al., 2024 — [arXiv:2401.10891](https://arxiv.org/abs/2401.10891)
 
-> 논문 검색은 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [Papers With Code](https://paperswithcode.com/), [arXiv](https://arxiv.org/)를 활용하자. Papers With Code는 특히 벤치마크 순위와 코드 링크를 같이 보여줘서 편하다.
+> 논문 검색에는 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [Papers With Code](https://paperswithcode.com/), [arXiv](https://arxiv.org/)를 활용할 수 있다. Papers With Code는 벤치마크 순위와 코드 링크를 함께 볼 수 있어 편하다.
 
 ### 논문 작성 도구
 
@@ -186,7 +186,7 @@
 
 ## 20.5 주요 학회
 
-CV·로보틱스·자율주행 학회의 일정과 성격은 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)의 *분야별 학회 reference* 표에 정리되어 있다.
+CV·로보틱스·자율주행 학회의 일정과 성격은 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)의 *분야별 학회 reference* 표에 정리되어 있다.
 
 학회에 참석하는 목적과 발표를 시작하는 방법도 같은 장에서 확인할 수 있다.
 
@@ -304,7 +304,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 아래는 기존 1.4절에 있던 학습 경로를 확장한 것이다. 각 단계별로 구체적인 자료와 링크를 달았으니, 자기 수준에 맞는 단계부터 시작하면 된다.
 
-### 입문 단계 (1-3개월)
+### 입문 단계 (1~3개월)
 
 **목표**: 기초 도구 습득 — 일단 뭔가 돌려볼 수 있는 상태
 
@@ -325,7 +325,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 **마일스톤**: Python으로 이미지를 읽어서 특징점을 추출하고, 두 이미지 간 매칭을 시각화할 수 있으면 입문 단계 졸업이다.
 
-### 중급 단계 (3-6개월)
+### 중급 단계 (3~6개월)
 
 **목표**: 핵심 기술 이해 — 논문을 읽고 코드를 돌려볼 수 있는 상태
 
@@ -342,7 +342,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 - YOLOv8 파인튜닝 — 커스텀 데이터셋으로 fine-tuning
 - ORB-SLAM3 실행 및 분석 — TUM RGB-D 데이터셋으로 평가
 - TUM RGB-D 벤치마크 — ATE, RPE 계산해보기
-- 본 문서의 **9-14장**을 읽으면서 이론적 배경을 다진다
+- 본 문서의 **9~14장**을 읽으면서 이론적 배경을 다진다
 
 **마일스톤**: ORB-SLAM3를 직접 빌드하고 데이터셋으로 돌려서, trajectory를 ground truth와 비교할 수 있으면 중급 단계 졸업이다.
 
@@ -352,7 +352,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
-| VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10-11장 + 논문 직접 읽기 |
+| VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10~11장 + 논문 직접 읽기 |
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
 | 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)* |
 | 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [「연구노트」 Ch.1–5 — 시작하기](../research-notes/guide.html#chapter-1)* |
@@ -362,7 +362,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
 - 자체 개선 아이디어 실험 — 이 부분을 바꾸면 어떻게 될지 직접 시도
 - 논문 작성 시도 — *본격 frame은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)* 참고
-- 본 문서의 **10-13장**을 읽으면서 최신 연구 방향을 파악한다
+- 본 문서의 **10~13장**을 읽으면서 최신 연구 방향을 파악한다
 
 **마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교할 수 있으면 고급 단계에 진입한 것이다. 학회 워크숍에 제출할 수 있는 수준이 되는 것을 목표로 하자.
 

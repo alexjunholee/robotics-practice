@@ -1,6 +1,6 @@
 # Ch.3 — 수학적 기초 (Mathematical Foundations)
 
-Spatial AI 논문을 읽고 구현하려면 수학적 기초가 필요하다. SLAM 논문의 "SE(3) 위의 최적화"나 "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 문장을 해석하지 못하면 방법론을 따라가기 어렵다. 여기서 쓰는 수학은 시험을 위한 이론이 아니라 로봇 논문을 이해하고 구현하기 위한 도구다. 학부 선형대수에서 배운 개념이 로보틱스에서 어떻게 쓰이는지 연결하는 데 초점을 둔다.
+Spatial AI 논문을 읽고 구현하려면 수학적 기초가 필요하다. SLAM 논문의 "SE(3) 위의 최적화"나 "Jacobian을 유도하여 Gauss-Newton으로 풀었다"는 문장을 해석하지 못하면 방법론을 따라가기 어렵다. 여기서 다루는 수학은 단순한 수식 유도를 넘어 로봇 논문을 깊이 이해하고 코드로 구현하기 위한 실전 도구다. 학부 선형대수에서 배운 개념을 로보틱스에 어떻게 연결하는지에 초점을 둔다.
 
 Differentiable Programming과 Auto-Differentiation(자동 미분)은 고전적인 수학 도구를 계산 파이프라인 안에 넣는 방식을 바꿨다. PyTorch나 JAX는 손으로 유도하던 Jacobian과 복잡한 파이프라인의 gradient를 자동으로 계산한다. 이 기능은 End-to-End 학습 기반 SLAM과 Differentiable Rendering(NeRF, 3D Gaussian Splatting)의 기반이 된다. 다만 자동 미분이 계산하는 내용을 해석하고 오류를 찾으려면 이 장에서 다루는 선형대수와 최적화가 필요하다.
 
@@ -64,7 +64,7 @@ A = UΣV^T
 
 **활용**: 최소자승법 해, 행렬 근사, Fundamental Matrix 계산
 
-SVD는 로보틱스에서 반복적으로 나온다. 과결정(overdetermined) 시스템의 최소자승 해를 구하는 데 수치적으로 가장 안정적인 방법이기 때문이다. 카메라 캘리브레이션에서 Fundamental Matrix를 구할 때, 포인트 클라우드 정합에서 최적 변환을 구할 때, 전부 SVD를 사용한다. "8-point algorithm"에서 8개 이상의 대응점으로 Fundamental Matrix를 구하는 마지막 단계가 바로 SVD이다.
+SVD는 로보틱스에서 자주 등장한다. 과결정(overdetermined) 시스템의 최소자승 해를 구하는 데 수치적으로 안정적이기 때문이다. 카메라 캘리브레이션에서 Fundamental Matrix를 구할 때나 포인트 클라우드 정합에서 최적 변환을 구할 때 모두 SVD를 사용한다. "8-point algorithm"에서 8개 이상의 대응점으로 Fundamental Matrix를 구하는 마지막 단계도 SVD다.
 
 > **추천 자료**
 > - [Steve Brunton — Singular Value Decomposition (YouTube)](https://www.youtube.com/watch?v=nbBvuuNVfco) — SVD의 수학적 의미와 응용을 명쾌하게 설명하는 워싱턴 대학교 교수의 강의
@@ -76,7 +76,7 @@ SVD는 로보틱스에서 반복적으로 나온다. 과결정(overdetermined) �
 
 ### 3.2.1 좌표계 (Coordinate Frames)
 
-Spatial AI에서는 여러 좌표계를 오가며 작업한다. World Frame(W)은 전역 고정 좌표계이고, Camera Frame(C)은 카메라 중심, Body Frame(B)은 로봇 중심, IMU Frame(I)은 IMU 센서 기준 좌표계다.
+Spatial AI에서는 여러 좌표계를 오가며 작업한다. World Frame(W)은 전역 고정 좌표계를 뜻하며, Camera Frame(C)은 카메라 중심, Body Frame(B)은 로봇 중심, IMU Frame(I)은 IMU 센서 기준 좌표계를 나타낸다.
 
 카메라가 관측한 물체 위치는 camera frame에 표현된다. 로봇이 그 위치를 사용하려면 body frame이나 world frame으로 변환해야 한다. 센서마다 좌표계가 다르므로, sensor fusion은 좌표계 사이의 extrinsic calibration을 사용한다.
 
@@ -140,7 +140,7 @@ SE(3)와 SO(3)는 **Lie Group**이다. 최적화를 할 때 "회전 행렬의 �
 
 ## 3.3 확률 및 통계 (Probability & Statistics)
 
-센서 데이터에는 항상 노이즈가 있고, 로봇의 상태에는 항상 불확실성이 있다. 이 불확실성을 수학적으로 표현하고 다루는 것이 확률과 통계이다. "센서 값이 정확히 3.0m"가 아니라 "3.0m ± 0.05m (95% 신뢰구간)"으로 표현해야 의미가 있고, 이 불확실성을 전파하고 업데이트하는 것이 상태 추정의 기본이다.
+센서 관측치에는 필연적으로 노이즈가 섞이며, 로봇의 추정 상태 역시 언제나 불확실성을 수반한다. 이 불확실성을 수학적으로 표현하고 다루는 것이 확률과 통계다. "센서 값이 정확히 3.0 m" 대신 "3.0 m ± 0.05 m (95% 신뢰구간)"처럼 통계적 분포로 다루어야 비로소 의미가 있으며, 이 불확실성을 전파하고 업데이트하는 것이 상태 추정의 기본이다.
 
 ### 3.3.1 정규분포 (Gaussian Distribution)
 
@@ -159,7 +159,7 @@ p(x) = N(μ, Σ)
 
 센서 노이즈, 위치 불확실성 모델링에 쓰인다.
 
-정규분포가 이렇게까지 많이 쓰이는 이유는 수학적 편의성이다. 중심극한정리 덕분에 많은 자연현상이 정규분포를 따르고, 정규분포끼리의 연산(곱, 합)이 닫혀 있어 분석이 쉽다. 칼만 필터가 정규분포를 가정하는 것도 같은 이유다.
+정규분포가 이렇게까지 많이 쓰이는 이유는 수학적 편의성이다. 중심극한정리는 적절한 조건에서 많은 작은 독립 효과의 합이 정규분포로 근사되는 이유를 설명한다. 독립 정규 확률변수의 합은 정규분포이고, 같은 변수에 대한 정규 밀도의 곱도 정규화하면 정규 밀도가 되어 분석이 쉽다. 칼만 필터가 정규분포를 가정하는 것도 같은 이유다.
 
 > **추천 자료**
 > - [3Blue1Brown — But what is the Central Limit Theorem?](https://www.youtube.com/watch?v=zeJD6dqJ5lo) — 중심극한정리를 시각적으로 설명. 왜 정규분포가 어디에나 나타나는지 직관적으로 이해할 수 있다.
@@ -228,7 +228,7 @@ x* = argmax P(x | z) = argmax P(z | x) × P(x)
 
 사전 확률(prior)을 고려해 추정한다.
 
-SLAM에서 "관측 데이터만 보고 최적 위치를 구하는 것(MLE)"과 "이전 위치 정보도 함께 고려하여 최적 위치를 구하는 것(MAP)"의 차이다. 실제 SLAM 시스템은 대부분 MAP 추정을 쓴다. Prior를 넣으면 노이즈가 심한 관측에도 안정적으로 추정할 수 있기 때문이다. 수학적으로는 MAP의 로그를 취하면 "관측 오차의 제곱합 + 정규화 항"이 되어, 최적화 관점에서 Regularized Least Squares와 같은 형태가 된다.
+SLAM에서 "관측 데이터만 보고 최적 위치를 구하는 것(MLE)"과 "이전 위치 정보도 함께 고려하여 최적 위치를 구하는 것(MAP)"의 차이다. 실제 SLAM 시스템은 대부분 MAP 추정을 쓴다. Prior를 넣으면 노이즈가 심한 관측에도 안정적으로 추정할 수 있기 때문이다. 관측 노이즈가 가우시안이고 공분산이 고정되어 있으면, 음의 로그 사후확률을 최소화하는 MAP 문제는 "가중 관측 오차의 제곱합 + 음의 로그 사전확률에 따른 정규화 항"이 되어, 최적화 관점에서 Regularized Least Squares와 같은 형태가 된다.
 
 > **추천 자료**
 > - [Probabilistic Robotics, Ch.2 — Recursive State Estimation (Thrun)](https://www.probabilistic-robotics.org/) — MLE, MAP, 베이즈 필터의 관계를 로보틱스 맥락에서 설명
@@ -236,11 +236,11 @@ SLAM에서 "관측 데이터만 보고 최적 위치를 구하는 것(MLE)"과 "
 
 **MLE와 MAP의 직관적 차이**
 
-둘 다 "가장 그럴듯한 파라미터를 찾는다"는 목표는 같지만, 접근이 다르다.
+둘 다 "가장 그럴듯한 파라미터를 찾는다"는 목표는 같지만 접근 방식은 다르다.
 
-MLE(Maximum Likelihood)는 "이 데이터가 관측될 확률을 가장 높이는 파라미터는?"을 묻는다. 데이터만 본다. MAP(Maximum A Posteriori)는 여기에 prior를 더한다. "이 데이터가 관측되었을 때, 사전 지식까지 합쳐서 파라미터의 사후 확률을 가장 높이는 값은?"이 그 질문이다.
+MLE(Maximum Likelihood)는 "이 데이터가 관측될 확률을 가장 높이는 파라미터는?"이라고 묻는다. 데이터만 본다. MAP(Maximum A Posteriori)는 여기에 prior를 더한다. "이 데이터가 관측되었을 때, 사전 지식까지 합쳐서 파라미터의 사후 확률을 가장 높이는 값은?"이 그 질문이다.
 
-수식으로: MAP = MLE + prior. 가우시안 prior를 쓰면 MAP는 MLE에 L2 정규화를 추가한 것과 같다. 딥러닝에서 weight decay가 MAP의 구현이라고 볼 수 있다.
+수식으로: MAP = MLE + prior. 가우시안 prior를 쓰면 MAP은 MLE에 L2 정규화를 추가한 것과 같다. 딥러닝에서 weight decay가 MAP의 구현이라고 볼 수 있다.
 
 SLAM에서: odometry 측정값의 likelihood와 센서 관측의 likelihood를 곱하고, 이전 상태의 prior를 결합하여 MAP 추정을 한다. Factor graph에서 각 factor가 바로 이 likelihood/prior에 해당한다.
 
@@ -256,7 +256,7 @@ SLAM의 bundle adjustment, 카메라 calibration, 딥러닝 학습은 모두 목
 x* = argmin ||Ax - b||²
 ```
 
-**정규방정식 (Normal Equation)**:
+**정규방정식의 해 (Normal Equation, `A`가 full column rank인 경우)**:
 
 ```
 x* = (A^T A)^(-1) A^T b
@@ -271,11 +271,11 @@ x* = (A^T A)^(-1) A^T b
 
 **최소자승법의 직관**
 
-"왜 오차의 제곱을 최소화하는가?" 절댓값이 아니라 제곱인 이유는 두 가지다. 미분이 가능하고 큰 오차에 더 큰 페널티를 준다. 부수적으로 가우시안 노이즈 가정 하에서 Maximum Likelihood Estimation과 동일한 해를 준다는 성질도 있다.
+"왜 오차의 제곱을 최소화하는가?" 단순 절댓값 대신 제곱 오차를 택하는 이유는 크게 두 가지다. 미분이 가능하고 큰 오차에 더 큰 페널티를 준다. 부수적으로 가우시안 노이즈 가정 하에서 Maximum Likelihood Estimation과 동일한 해를 준다는 성질도 있다.
 
-over-determined system (방정식 수 > 미지수 수)에서 Ax = b를 정확히 만족하는 x는 없다. 대신 ||Ax - b||²를 최소화하는 x를 찾으면, normal equation `A^T A x = A^T b`가 된다. 이것이 최소자승법의 전부다.
+over-determined system (방정식 수 > 미지수 수)에서는 Ax = b를 정확히 만족하는 x가 없을 수 있다. 대신 ||Ax - b||²를 최소화하는 x를 찾으면, normal equation `A^T A x = A^T b`가 된다. 이것이 최소자승법의 전부다.
 
-주의: `A^T A`가 singular하면 (rank 부족) 유일한 해가 없다. 이때는 pseudo-inverse `x = (A^T A)^{-1} A^T b` 대신 SVD를 써야 수치적으로 안정적이다.
+주의: `A^T A`가 singular하면 (rank 부족) 위의 역행렬은 존재하지 않고, 최소자승 해도 유일하지 않을 수 있다. `A = U Σ V^T`를 SVD했을 때 Moore–Penrose pseudo-inverse를 `A^+ = V Σ^+ U^T`로 구하면, 최소 norm 해 `x = A^+ b`를 얻을 수 있다.
 
 (참고: [다크 프로그래머 — 최소자승법 이해와 다양한 활용예](https://darkpgmr.tistory.com/56))
 
@@ -296,7 +296,7 @@ Gradient Descent는 딥러닝에서 매일 쓰는 알고리즘이지만, 로보�
 
 관계:
 ```
-비용 함수 C(x) = ||r(x)||² 일 때:
+비용 함수 C(x) = (1/2)||r(x)||² 일 때:
   Gradient:  ∇C = J^T r           (J는 r의 Jacobian)
   Hessian:   H ≈ J^T J            (Gauss-Newton 근사: 2차 미분 항 무시)
   Update:    δx = -(J^T J)^{-1} J^T r
@@ -318,7 +318,7 @@ x_{k+1} = x_k + Δx
 - J: Jacobian 행렬
 - r: Residual (잔차)
 
-Gauss-Newton이 Gradient Descent보다 로보틱스에서 선호되는 이유: 2차 정보(Hessian의 근사인 J^T J)를 사용하므로 수렴이 훨씬 빠르다. SLAM에서 수천~수만 개의 변수를 최적화할 때, Gradient Descent로는 수렴에 너무 오래 걸리지만 Gauss-Newton으로는 몇 번의 반복만에 수렴할 수 있다.
+Gauss-Newton이 로보틱스에서 Gradient Descent보다 선호되는 이유는 2차 정보(Hessian의 근사인 J^T J)를 사용해 더 빨리 수렴하기 때문이다. SLAM에서 수천~수만 개의 변수를 최적화할 때 Gradient Descent는 수렴에 오래 걸리지만, Gauss-Newton은 몇 번의 반복으로 수렴할 수 있다.
 
 ### 3.4.4 Levenberg-Marquardt (LM)
 
@@ -364,7 +364,7 @@ Gauss-Newton은 초기값이 좋을 때 빠르게 수렴하지만, 그렇지 않
 - **쿼터니언**: 4개 파라미터에 정규화 제약(||q|| = 1)이 있다. 업데이트할 때마다 re-normalize해야 하고, 이 과정에서 수치 오류가 누적될 수 있다.
 - **오일러 각**: Gimbal lock 문제가 있고, 각도 wrapping도 까다롭다.
 
-핵심 문제는 이것이다: 회전은 비선형 manifold 위에 살고 있는데, 우리가 아는 최적화 알고리즘(Gauss-Newton, LM)은 유클리드 공간에서 동작한다. Lie group 이론은 이 간극을 메운다. Manifold 위의 점(회전 행렬) 근처에 접선 공간(Lie algebra)을 정의하고, 이 접선 공간에서 유클리드 최적화를 수행한 뒤, 결과를 다시 manifold 위로 올리는 것이다.
+문제는 회전이 비선형 manifold 위에 있는 반면, Gauss-Newton 및 LM 같은 최적화 알고리즘은 유클리드 공간에서 동작한다는 점이다. Lie group 이론은 이 간극을 메운다. Manifold 위의 점(회전 행렬) 근처에 접선 공간(Lie algebra)을 정의하고, 그 공간에서 유클리드 최적화를 수행한 뒤 결과를 다시 manifold 위로 올린다.
 
 배경 지식: 여기서 말하는 "group"이란, 어떤 연산에 대해 닫힘(closure), 결합법칙(associativity), 항등원(identity), 역원(inverse)이 성립하는 집합이다. 예를 들어 invertible한 n x n 행렬의 집합은 행렬 곱에 대해 group을 이루며, 이를 general linear group GL(n)이라 한다. 그 중 det = 1인 부분군이 special linear group SL(n)이다. Orthogonal group O(n)은 내적을 보존하는 행렬의 집합이고, 여기서 det = 1인 것만 모으면 SO(n) — 즉 회전군이 된다. det = -1인 것들은 반사(reflection)를 포함하며, 이들은 군 연산에 대해 닫혀있지 않으므로 부분군을 형성하지 않는다.
 
@@ -434,7 +434,7 @@ exp([w]x) = I + (sin(theta) / theta) [w]x + ((1 - cos(theta)) / theta^2) [w]x^2
 theta가 작을 때(|theta| < eps)는 sin(theta)/theta ≈ 1, (1-cos(theta))/theta^2 ≈ 1/2이므로:
 
 ```
-exp([w]x) ≈ I + [w]x + (1/2)[w]x^2   (1차 근사)
+exp([w]x) ≈ I + [w]x + (1/2)[w]x^2   (2차 항까지의 근사)
 ```
 
 주의: 하나의 회전 행렬 R에 대해 `R = exp([w]x)`를 만족하는 w는 유일하지 않다. ||w|| + 2*pi*k (정수 k)에 대해 같은 R을 준다. 이것이 logarithmic map에서 주의해야 하는 부분이다.
@@ -511,7 +511,7 @@ T' = exp(d_xi^) * T
 T' = T * exp(d_xi^)
 ```
 
-어느 쪽을 쓰든 수학적으로 일관성 있게 유지하면 된다. 문헌마다 convention이 다르니 주의해야 한다. Barfoot의 교재는 left를 주로 쓰고, Strasdat의 Sophus는 right를 기본으로 한다.
+어느 쪽을 쓰든 수학적으로 일관성 있게 유지하면 된다. 문헌마다 convention이 다르니 주의해야 한다. Barfoot의 교재가 left convention을 주로 채택한 데 비해, Strasdat의 Sophus 라이브러리는 right convention을 기본값으로 삼는다.
 
 **Jacobian 계산:**
 
@@ -548,7 +548,7 @@ twist 변환:
 xi_a = Ad_{T_ab} * xi_b
 ```
 
-**실용적 의미**: 센서(예: IMU)가 측정한 속도(angular velocity, linear velocity)는 센서 프레임에서 표현된다. 이를 body 프레임이나 world 프레임으로 변환할 때 Adjoint를 쓴다. 여러 센서를 fusion하는 VIO 시스템에서 좌표계 간 변환이 빈번하게 일어나므로, Adjoint의 의미를 이해하고 있어야 한다.
+**실용적 의미**: 센서 프레임에서 표현한 twist(angular velocity, linear velocity)를 body 프레임이나 world 프레임의 twist 표현으로 바꿀 때 Adjoint를 쓴다. IMU는 선속도를 직접 측정하지 않고 각속도와 비력을 측정하며, 이 측정 벡터들의 축 변환에는 회전 행렬을 쓴다. 여러 센서를 fusion하는 VIO 시스템에서 좌표계 간 변환이 빈번하게 일어나므로, Adjoint의 의미를 이해하고 있어야 한다.
 
 ### 3.5.7 실무에서의 사용
 
@@ -585,16 +585,16 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 **GTSAM**: `gtsam::Pose3`가 내부적으로 SE(3)를 쓴다. Factor graph 최적화 시 Lie group 위에서의 perturbation을 자동으로 처리한다.
 
 > **추천 자료**
-> - [State Estimation for Robotics, Ch.7-8 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Lie group을 로보틱스 상태 추정 관점에서 다루는 핵심 레퍼런스
+> - [State Estimation for Robotics, Ch.7–8 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Lie group을 로보틱스 상태 추정 관점에서 다루는 핵심 레퍼런스
 > - [A micro Lie theory for state estimation in robotics (Sola et al., arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Lie group 핵심을 20페이지로 요약한 글
-> - [TUM Multiple View Geometry, Ch.2 -- Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) — Daniel Cremers 교수의 강의. SO(3), SE(3)를 시각적으로 설명
+> - [TUM Multiple View Geometry, Ch.2 — Rigid Body Motion](https://cvg.cit.tum.de/teaching/online/mvg) — Daniel Cremers 교수의 강의. SO(3), SE(3)를 시각적으로 설명
 > - [Sophus GitHub](https://github.com/strasdat/Sophus) — C++ Lie group 라이브러리. 코드를 읽으면 이해가 빨라진다
 > - [정진용 블로그 — SE(3) and SO(3) transformation](https://jinyongjeong.github.io/2016/06/07/se3_so3_transformation/) — SE(3), SO(3) 변환의 한글 정리. GL(3), O(3)부터 체계적으로 설명
 > - [T-Robotics: Lie Group Formulation for Robot Mechanics](http://t-robotics.blogspot.com/2015/07/lie-group-formulation-for-robot.html) — 한국어로 작성된 Lie Group 설명. 로봇 역학에서의 Lie Group 활용을 정리
 
 ## 3.6 심화: Factor Graph
 
-Factor graph는 SLAM 문제를 체계적으로 정의하고 효율적으로 푸는 프레임워크다. 현대 SLAM 시스템의 백엔드는 거의 예외 없이 factor graph 기반이다.
+Factor graph는 SLAM 문제를 체계적으로 정의하고 효율적으로 푸는 프레임워크다. 많은 현대 SLAM 시스템의 백엔드가 factor graph를 사용한다.
 
 ### 3.6.1 Factor Graph란
 
@@ -708,7 +708,7 @@ class PoseGraph3dErrorTerm {
 ```
 
 - **template \<typename T\>**: Ceres 내부에서 residual 값이 필요하면 `T=double`, Jacobian이 필요하면 `T=Jet<double>`로 자동 전환된다. 이것이 AutoDiff의 원리다.
-- **sqrt_information**: covariance의 Cholesky decomposition. `information.llt().matrixL()`로 구한다.
+- **sqrt_information**: information matrix의 Cholesky decomposition. `information.llt().matrixL()`로 구한다.
 - **AutoDiffCostFunction 차원**: `<PoseGraph3dErrorTerm, 6, 3, 4, 3, 4>` — residual 6차원, pos_a 3차원, quat_a 4차원, pos_b 3차원, quat_b 4차원.
 - **SetManifold**: quaternion은 4차원이지만 자유도는 3이므로, `EigenQuaternionManifold`를 지정해서 manifold 위에서 최적화하도록 한다. 이전 API에서는 `LocalParameterization`이었다.
 
@@ -744,7 +744,7 @@ ceres::Solver::Summary summary;
 ceres::Solve(options, &problem, &summary);
 ```
 
-`SPARSE_NORMAL_CHOLESKY`는 pose graph처럼 sparse한 문제에 적합하다. 변수가 많아지면 `SPARSE_SCHUR`도 고려할 수 있다.
+`SPARSE_NORMAL_CHOLESKY`는 pose graph처럼 sparse한 문제에 적합하다. Bundle adjustment처럼 제거할 점 변수 블록이 분명한 문제에서는 `SPARSE_SCHUR`도 고려할 수 있다.
 
 **GTSAM vs Ceres 비교**
 
@@ -816,7 +816,7 @@ OpenCV의 `cv::findHomography`, `cv::findFundamentalMat` 등에서 `cv::USAC_MAG
 
 > **추천 자료**
 > - [State Estimation for Robotics, Ch.5 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 바이어스, 대응 문제, outlier를 다루는 실전적 챕터
-> - [Hartley & Zisserman, Ch.4 -- Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — RANSAC의 원본 설명과 robust estimation 이론
+> - [Hartley & Zisserman, Ch.4 — Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — RANSAC의 원본 설명과 robust estimation 이론
 > - [다크 프로그래머 — RANSAC의 이해와 영상처리 활용](https://darkpgmr.tistory.com/61) — RANSAC의 원리, threshold 설정, 반복 횟수 계산을 한글로 설명
 > - [정진용 블로그 — Bundle Adjustment의 Jacobian 계산](https://jinyongjeong.github.io/2020/03/01/Jacobian_of_BA/) — BA의 reprojection error Jacobian을 Lie algebra와 quaternion으로 유도. 손필기 수식 포함
 
@@ -841,7 +841,7 @@ Entropy가 높을수록 불확실성이 크다. 가우시안 분포의 경우 �
 D_KL(p || q) = sum  p(x) log(p(x) / q(x))
 ```
 
-비대칭이다: D_KL(p||q) != D_KL(q||p). "p라고 생각했는데 실제로 q일 때의 정보 손실"로 해석할 수 있다.
+비대칭이다: D_KL(p||q) != D_KL(q||p). p를 q로 근사할 때 생기는 정보 손실로 해석할 수 있다.
 
 **Mutual information**: Y를 관측하면 X에 대해 얼마나 알게 되는가를 측정한다.
 
@@ -879,7 +879,7 @@ a* = argmax_a  I(X; Z_a)  =  argmax_a  [ H(Z_a) - H(Z_a | X) ]
 
 §3.8 정보 이론은 불확실성을 *측정*하는 도구였다. 그렇다면 시간이 흐르면서 새 관측이 쌓일 때, 그 불확실성을 어떻게 *갱신*할 것인가. §3.3.2의 베이즈 정리를 시간 축 위에서 재귀적으로 돌리면, "로봇이 지금 어디 있는가"라는 질문에 답하는 구조가 만들어진다. §3.6 Factor Graph가 공간적 제약들을 그래프로 묶었다면, 베이즈 필터는 그 추정 구조를 시간 방향으로 확장한다.
 
-"로봇이 지금 어디 있는가?"라는 질문은 단일 시점 추정이 아니라 **재귀 추정(recursive estimation)** 문제다. 베이즈 필터는 그 재귀 구조의 가장 일반적인 형태로, 이후 칼만 필터와 입자 필터가 모두 이 틀 안에서 작동한다.
+"로봇이 지금 어디 있는가?"라는 물음은 정적인 단일 시점 추정을 넘어, 과거와 현재의 정보를 순차적으로 누적하는 **재귀 추정(recursive estimation)** 문제로 다루어야 한다. 베이즈 필터는 그 재귀 구조의 가장 일반적인 형태로, 이후 칼만 필터와 입자 필터가 모두 이 틀 안에서 작동한다.
 
 ### 3.9.1 상태와 Markov 가정
 
@@ -889,14 +889,14 @@ $$p(x_{t+1} \mid x_t,\, x_{0:t-1},\, z_{1:t},\, u_{1:t}) = p(x_{t+1} \mid x_t)$$
 
 완전 상태 가정 아래 미래는 오직 현재 $x_t$에만 달려 있다. 과거는 무관하다.
 
-상태 변수는 다양한 방식으로 분류된다. 시간에 따라 변하는 동적 상태(로봇 위치, 속도)와 변하지 않는 정적 상태(벽 위치, 랜드마크)로 나뉜다. 값의 종류로는 연속 상태(pose), 이산 상태(센서 고장 여부), 하이브리드 상태(둘 다)로 구분한다. 실제 시스템에서 완전 상태는 거의 불가능하므로, 필터는 항상 부분적 근사 위에서 돌아간다. Markov 가정 위반 요인으로는 모델 부정확과 미모델 동역학이 대표적이며, 근사 자체에서 비롯되는 오차도 있다.
+상태 변수는 다양한 방식으로 분류된다. 시간에 따라 변하는 동적 상태(로봇 위치, 속도)와 변하지 않는 정적 상태(벽 위치, 랜드마크)로 나뉜다. 값의 형태에 따라 연속 상태(pose), 이산 상태(센서 고장 여부), 하이브리드 상태(둘의 결합) 등으로 세분화할 수 있다. 실제 시스템에서 완전 상태는 거의 불가능하므로, 필터는 항상 부분적 근사 위에서 돌아간다. Markov 가정을 위협하는 주된 요인으로는 모델의 부정확성과 미모델링 동역학을 들 수 있으며, 수치적 근사 과정 자체에서 생기는 오차 역시 무시할 수 없다.
 
 ### 3.9.2 환경 상호작용: 측정과 제어
 
 로봇과 환경의 상호작용은 두 데이터 스트림으로 분해된다.
 
 - **측정 데이터** $z_t$: 환경이 로봇에 주는 정보 (LiDAR 거리, 카메라 이미지). 시간 구간 $(t-1, t]$에서 로봇의 지식을 늘린다.
-- **제어 데이터** $u_t$: 로봇이 환경에 가하는 행동 (모터 명령). 제어를 적용하면 상태 불확실성이 증가한다.
+- **제어 데이터** $u_t$: 로봇이 환경에 가하는 행동 (모터 명령). 제어에 따른 상태 예측에서는 운동 잡음 때문에 상태 불확실성이 증가할 수 있다.
 
 $$z_{t_1:t_2} = z_{t_1},\, z_{t_1+1},\, \ldots,\, z_{t_2} \qquad u_{t_1:t_2} = u_{t_1},\, \ldots,\, u_{t_2}$$
 
@@ -912,7 +912,7 @@ $$\text{bel}(x_t) = p(x_t \mid z_{1:t},\, u_{1:t})$$
 
 $$\overline{\text{bel}}(x_t) = p(x_t \mid z_{1:t-1},\, u_{1:t})$$
 
-$\overline{\text{bel}} \to \text{bel}$ 전환을 **correction** 또는 **measurement update**라 부른다. GPS조차 로봇의 pose를 직접 주지 않는다 — belief는 항상 간접 추론의 결과다. 이 $\text{bel}/\overline{\text{bel}}$ 구분이 베이즈 필터 두 단계의 의미 분리 기반이다.
+$\overline{\text{bel}} \to \text{bel}$ 전환을 **correction** 또는 **measurement update**라 부른다. GPS조차 로봇의 pose를 직접 주지 않는다 — belief는 항상 간접 추론의 결과다. 이 $\text{bel}/\overline{\text{bel}}$ 구분은 베이즈 필터의 두 단계가 각각 무엇을 뜻하는지 나누는 기반이다.
 
 ### 3.9.4 생성 법칙: 모션 모델과 측정 모델
 
@@ -934,7 +934,7 @@ $$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t
 
 $$\text{bel}(x_t) = \eta\, p(z_t \mid x_t)\, \overline{\text{bel}}(x_t) \tag{correction}$$
 
-$\eta$는 정규화 상수로, 전확률 정리에서 나오는 §3.3.2의 베이즈 분모($P(B)$)에 해당한다.
+$\eta$는 정규화 상수로, 전확률 정리에서 나오는 §3.3.2의 베이즈 분모($P(B)$)의 역수에 해당한다.
 
 ```
 # Algorithm Bayes_filter (Table 2.1 의역)
@@ -1078,11 +1078,11 @@ KF는 belief를 $(\mu_t, \Sigma_t)$ 두 개로 표현하고, 예측 2줄 + 갱�
 return μ_t, Σ_t
 ```
 
-라인 1-2가 prediction (제어 $u_t$ 반영, 불확실성 증가), 라인 3-5가 measurement update (관측 $z_t$ 반영, 불확실성 감소)다.
+라인 1~2가 prediction (제어 $u_t$ 반영, 불확실성 증가), 라인 3~5가 measurement update (관측 $z_t$ 반영, 불확실성 감소)다.
 
 **칼만 이득 $K_t$의 의미:** $K_t$는 prediction과 측정 사이의 신뢰 균형을 결정한다. 측정 노이즈 $Q_t$가 크면 $K_t$가 작아져 측정을 덜 신뢰하고, prediction 불확실성 $\bar\Sigma_t$가 크면 $K_t$가 커져 측정을 더 신뢰한다.
 
-**혁신(innovation):** $z_t - C_t \bar\mu_t$는 예측된 측정과 실제 측정의 차이로, 이 값이 0이면 새 정보가 없다.
+**혁신(innovation):** $z_t - C_t \bar\mu_t$는 예측된 측정과 실제 측정의 차이로, 이 값이 0이면 평균 보정은 없지만 공분산은 줄어들 수 있다.
 
 #### 1D KF 도해: 정보가 어떻게 결합되는가
 
@@ -1123,7 +1123,7 @@ KF 5줄이 이렇게 짧아진 배경에는 선형 가우시안 가정이 있다
 $$x_t = g(u_t, x_{t-1}) + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, R_t)$$
 $$z_t = h(x_t) + \delta_t, \quad \delta_t \sim \mathcal{N}(0, Q_t)$$
 
-비선형 $g$를 통과한 가우시안은 더 이상 가우시안이 아니다. EKF는 이 문제를 **1차 Taylor 전개**로 해결한다. 가장 그럴듯한 점(예측 평균) 주위에서 $g$와 $h$를 선형화하여 가우시안 닫힘을 강제한다.
+비선형 $g$를 통과한 가우시안은 일반적으로 가우시안이 아니다. EKF는 이 문제를 **1차 Taylor 전개**로 해결한다. 이전 사후 평균 주위에서 $g$를, 예측 평균 주위에서 $h$를 선형화하여 가우시안 근사를 유지한다.
 
 $$g(u_t, x_{t-1}) \approx g(u_t, \mu_{t-1}) + G_t (x_{t-1} - \mu_{t-1})$$
 
@@ -1172,7 +1172,7 @@ EKF는 2010년대 중반까지 SLAM·VIO·IMU 융합에서 널리 쓰였다. 현
 - **IEKF (Iterated EKF):** 갱신점을 반복해서 Jacobian을 재계산. 강한 비선형에서 EKF보다 정확.
 - **LIEKF (Left-Invariant EKF):** SO(3)/SE(3) 상태에서 Taylor 선형화 대신 manifold 선형화 사용. 회전 추정 정확도 향상.
 
-ch.14 §14.7 EKF localization과 §14.10 IMU preintegration에서 사용하는 EKF/IEKF는 이 알고리즘 박스를 그대로 가져다 쓴다. §14.10의 IMU preintegration은 IEKF로 rotation drift를 줄이고, §14.7의 localization은 EKF prediction에 odometry를, correction에 landmark 관측을 넣는 구조다. 여기서 $g$, $h$, $G_t$, $H_t$가 무엇인지 이해하면, Ch.14에서 구체적인 센서 모델을 만날 때 알고리즘 골격을 재유도할 필요가 없다.
+ch.14 §14.7 EKF localization과 IEKF·MSCKF의 필터 구조는 이 알고리즘 박스와 연결된다. 반면 §14.10의 IMU preintegration은 키프레임 사이의 IMU 측정을 최적화 factor로 묶는 별도의 측정 구성 방법이다. 여기서 $g$, $h$, $G_t$, $H_t$가 무엇인지 이해하면, Ch.14에서 구체적인 필터와 센서 모델을 만날 때 알고리즘 골격을 재유도할 필요가 없다.
 
 ### 3.10.3 정보 필터 (Information Filter)
 
@@ -1186,7 +1186,7 @@ $$\Omega = \Sigma^{-1}, \quad \xi = \Sigma^{-1} \mu$$
 
 역방향: $\Sigma = \Omega^{-1}$, $\mu = \Omega^{-1} \xi$.
 
-이 좌표에서 가우시안의 음의 로그 우도는 $\Omega$와 $\xi$에 대해 quadratic이다.
+이 좌표에서 가우시안의 음의 로그 우도는 상태 $x$에 대해 quadratic이다.
 
 $$p(x) = \eta \exp\!\left\{-\tfrac{1}{2} x^T \Omega x + x^T \xi\right\}$$
 
@@ -1410,13 +1410,13 @@ $$\left[\sum_{m=1}^M w^{[m]}\right]^{-1} \sum_{m=1}^M \mathbf{1}(x^{[m]} \in A)\
 
 #### (1) 유한 $M$의 체계적 편향 (Systematic Bias)
 
-$M = 1$인 극단을 상상하라. weight가 자기 자신으로 정규화되어 $w/w = 1$이 된다. 측정이 완전히 무시된다. $M$이 유한하면 weight들이 $M-1$차원 simplex에 국한되어 무작위 오차가 누적된다. $M$이 커질수록 편향이 줄지만 계산 비용은 선형으로 증가한다.
+$M = 1$인 극단을 상상하라. weight가 자기 자신으로 정규화되어 $w/w = 1$이 된다. 결과적으로 센서 측정 정보가 완전히 무시되는 셈이다. $M$이 유한하면 weight들이 $M-1$차원 simplex에 국한되어 무작위 오차가 누적된다. $M$이 커질수록 편향이 줄지만 계산 비용은 선형으로 증가한다.
 
 #### (2) Resampling으로 인한 다양성 상실 (Sample Impoverishment)
 
 정적 상태($x_t = x_{t-1}$)에서 모션이 없으면 모든 입자가 동일한 궤적을 따른다. 무한 resampling은 입자 다양성을 0으로 수렴시켜 단일 상태로 붕괴된다.
 
-완화: 로봇이 정지 시 resampling을 보류한다. 또는 weight variance가 높을 때만 resampling하고, 나머지 시간에는 weight를 곱셈적으로 누적한다.
+완화: 로봇이 정지하면 resampling을 보류한다. 또는 weight variance가 높을 때만 resampling하고, 나머지 시간에는 weight를 곱셈적으로 누적한다.
 
 $$w_t^{[m]} = \begin{cases} 1 & \text{(resampling 직후)} \\ p(z_t \mid x_t^{[m]})\, w_{t-1}^{[m]} & \text{(resampling 없을 때)} \end{cases}$$
 
@@ -1458,7 +1458,7 @@ return X̄_t
 
 핵심: 가중치가 모두 같으면 결과가 입력과 동일하다 — 측정 통합이 없는 step에서 입자를 잃지 않는다. 독립 샘플링 $O(M \log M)$ 대비 $O(M)$.
 
-이로써 입자 필터가 왜 잘 작동하는지와 어디서 무너지는지 모두 이해했다. 4가지 오차 원천 각각에 완화 기법이 있고, 그 트레이드오프를 상황에 맞게 선택하는 것이 실전 구현의 핵심이다. 이 4가지 오차는 ch.14 §14.7 augmented MCL·mixture MCL에서 완화 기법이 등장한다.
+여기까지 오면 입자 필터가 잘 작동하는 이유와 한계가 드러난다. 4가지 오차 원천마다 완화 기법이 있으며, 상황에 맞는 트레이드오프를 고르는 일이 실전 구현의 핵심이다. ch.14 §14.7에서는 이 4가지 오차에 대응해 augmented MCL·mixture MCL에서 쓰는 완화 기법을 다룬다.
 
 > **추천 자료**
 > - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.4 전체가 이 절의 원전. 히스토그램, 이진 베이즈, 입자 필터의 알고리즘·분석이 완결적으로 서술되어 있다.
@@ -1468,6 +1468,6 @@ return X̄_t
 
 ---
 
-베이즈 필터는 틀이고, KF·EKF·IF는 가우시안 가정 아래 그 틀을 닫힌 형식으로 구현한 것이며, 히스토그램·PF는 가우시안 가정 없이 계산 비용으로 유연성을 산 것이다. 어떤 필터를 고를지는 상태공간 차원과 분포의 다봉 여부가 결정한다.
+베이즈 필터가 가장 기초적인 확률론적 골격을 제공한다면, KF·EKF·IF는 가우시안 가정 위에서 이를 닫힌 형식으로 푼 해법이며, 히스토그램 필터와 입자 필터는 가우시안 가정을 내려놓는 대신 연산 비용을 지불하여 비모수적 유연성을 확보한 해법이다. 어떤 필터를 고를지는 상태공간 차원과 분포의 다봉 여부가 결정한다.
 
-ch.14에서 EKF localization(§14.7)과 MCL(§14.7)·IMU preintegration(§14.10)을 만날 때, 알고리즘마다 새 유도를 따라갈 필요는 없다. 여기서 쌓은 필터 언어로 각 알고리즘의 $g$, $h$, proposal이 무엇인지 확인하면 골격이 바로 보인다.
+ch.14에서 EKF localization(§14.7)과 MCL(§14.7)을 만날 때, 알고리즘마다 새 유도를 따라갈 필요는 없다. 여기서 쌓은 필터 언어로 각 알고리즘의 $g$, $h$, proposal이 무엇인지 확인하면 골격이 바로 보인다. IMU preintegration(§14.10)은 필터 구조와 구별되는 기법으로, 관측치를 최적화 factor로 압축하는 방안으로 따로 다룬다.

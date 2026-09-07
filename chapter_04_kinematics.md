@@ -9,14 +9,14 @@
 
 ## 4.1 왜 기구학을 배우는가
 
-로봇 매니퓰레이터는 여러 개의 관절(joint)과 링크(link)로 구성된다. 우리가 원하는 것은 끝단(end-effector)의 위치와 자세(pose)이다. 하지만 우리가 직접 제어하는 것은 각 관절의 각도(또는 변위)이다.
+로봇 매니퓰레이터는 여러 관절(joint)과 링크(link)로 이루어진다. 우리가 원하는 것은 끝단(end-effector)의 위치와 자세(pose)이지만, 직접 제어하는 값은 각 관절의 각도(또는 변위)다.
 
 이 둘 사이의 관계를 수학적으로 기술하는 것이 **기구학(Kinematics)**이다.
 
 - 순기구학(Forward Kinematics, FK): 관절 각도 → 끝단 위치/자세
 - 역기구학(Inverse Kinematics, IK): 끝단 위치/자세 → 관절 각도
 
-동역학(Dynamics)과 다르다. 기구학은 힘과 질량을 고려하지 않는다. 어디에 있는가의 문제이지, 어떤 힘이 필요한가의 문제가 아니다. 동역학은 다음 장에서 다룬다.
+동역학(Dynamics)과 다르다. 기구학은 힘과 질량을 고려하지 않는다. 어디에 위치하는가의 기하학적 문제를 다루며, 어떤 크기의 힘이나 토크가 필요한지의 역학적 문제는 배제한다. 동역학은 다음 장에서 다룬다.
 
 기구학은 다음 작업에 쓰인다:
 - 로봇 팔 경로 계획 (motion planning)
@@ -44,22 +44,28 @@ T = | R  p |
 ```
 T_02 = T_01 * T_12
 ```
+## 4.1 포워드 키네마틱스 (Forward Kinematics)
 
-순기구학은 베이스에서 끝단까지 각 관절의 변환을 순서대로 곱해 이 합성 변환을 구한다.
+관절 각도가 주어졌을 때, 로봇 끝단(End-Effector)의 위치와 자세를 구하는 문제이다.
 
+```
+q = [θ_1, θ_2, ..., θ_n]^T  →  T = [R, t; 0, 1] ∈ SE(3)
+```
 
-### 4.2.2 DH Parameters (Denavit-Hartenberg)
+FK는 **유일한 해**를 갖는다. 관절 각도가 정해지면 끝단 위치는 물리적으로 하나만 존재한다.
 
-1955년 Denavit와 Hartenberg가 제안한 방법이다. 지금도 로봇 기구학에서 널리 쓰이는 좌표계 규약이며, 4개의 파라미터로 인접한 두 링크 사이의 관계를 정의한다:
+### 4.1.1 Denavit-Hartenberg (DH) 파라미터
 
-| 파라미터 | 의미 |
-|---------|------|
-| a_i (link length) | x_i 축을 따른 z_{i-1}에서 z_i까지의 거리 |
-| α_i (link twist) | z_{i-1}에서 z_i까지 x_i 축 기준 회전 각도 |
-| d_i (link offset) | z_{i-1} 축을 따른 x_{i-1}에서 x_i까지의 거리 |
-| θ_i (joint angle) | x_{i-1}에서 x_i까지 z_{i-1} 축 기준 회전 각도 |
+로봇 링크 사이의 상대적 위치 관계를 4개의 파라미터로 표준화한 방법이다:
 
-회전 관절(revolute joint)에서는 θ_i가 변수이고, 나머지 3개는 상수이다.
+| 파라미터 | 의미 | 설명 |
+|---------|------|------|
+| $a_i$ | 링크 길이 (link length) | $z_{i-1}$과 $z_i$ 사이의 $x_i$ 축을 따른 거리 |
+| $\alpha_i$ | 링크 꼬임각 (link twist) | $z_{i-1}$과 $z_i$ 사이의 $x_i$ 축 기준 회전각 |
+| $d_i$ | 링크 오프셋 (link offset) | $x_{i-1}$과 $x_i$ 사이의 $z_{i-1}$ 축을 따른 거리 |
+| $\theta_i$ | 관절각 (joint angle) | $x_{i-1}$과 $x_i$ 사이의 $z_{i-1}$ 축 기준 회전각 |
+
+회전 관절(revolute joint)의 경우 $\theta_i$만이 자유도로 변하며, 나머지 3개 DH 파라미터는 고정된 상수로 유지된다.
 직선 관절(prismatic joint)에서는 d_i가 변수이다.
 
 각 관절의 변환 행렬:
@@ -115,7 +121,7 @@ def fk_2link(theta1, theta2, L1=1.0, L2=1.0):
 # θ_1=30°, θ_2=45°, 링크 길이 각각 1m
 x, y, phi = fk_2link(np.radians(30), np.radians(45))
 print(f"End-effector position: ({x:.3f}, {y:.3f}), orientation: {np.degrees(phi):.1f}°")
-# 출력: End-effector position: (0.259, 1.366), orientation: 75.0°
+# 출력: End-effector position: (1.125, 1.466), orientation: 75.0°
 ```
 
 단순해 보인다면 맞다. 실제 6축 로봇 팔의 FK도 원리는 같다. 4×4 행렬을 6번 곱하면 된다.
@@ -133,7 +139,7 @@ T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
 
 여기서:
 - S_i는 i번째 관절의 screw axis (6×1 벡터)
-- [S_i]는 S_i의 4×4 skew-symmetric matrix 표현 (se(3) 원소)
+- [S_i]는 S_i의 4×4 행렬 표현 (se(3) 원소이며, 왼쪽 위 3×3 회전 블록이 skew-symmetric)
 - M은 모든 관절이 영 위치(home configuration)일 때의 끝단 자세
 - θ_i는 관절 변수
 
@@ -175,7 +181,7 @@ FK는 쉽다. 행렬 곱이면 된다. 문제는 IK이다.
 
 "끝단을 (x, y, z)에 놓고 싶은데, 관절 각도를 각각 얼마로 해야 하는가?"
 
-이 문제가 어려운 이유는 네 가지다. 삼각함수가 얽힌 비선형 방정식이고, 같은 끝단 위치에 도달하는 관절 각도 조합이 여러 개일 수 있다(elbow-up, elbow-down). Workspace 밖의 점은 아예 해가 없고, 자유도가 남으면(redundant manipulator) 해가 무한히 많다.
+이 문제에는 네 가지 어려움이 있다. 삼각함수가 얽힌 비선형 방정식이며, 같은 끝단 위치에 도달하는 관절 각도 조합도 여러 개일 수 있다(elbow-up, elbow-down). Workspace 밖의 점에는 아예 해가 없고, 자유도가 남으면(redundant manipulator) 해가 무한히 많다.
 
 
 ### 4.3.1 Analytical IK (해석적 방법)
@@ -292,7 +298,7 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 
 자코비안의 rank가 부족해지는 관절 배치를 특이점(singularity)이라 한다. 특이점에서는 특정 방향으로 끝단을 전혀 움직일 수 없고, 미소 이동에도 관절 속도가 폭발하며, IK 해가 불연속적이어서 경로 추종 시 관절이 급격히 점프한다.
 
-2-link arm의 특이점은 간단하다: θ_2 = 0 (팔이 완전히 펴진 경우) 또는 θ_2 = π (완전히 접힌 경우). 이때 끝단은 반지름 방향으로만 움직일 수 있고, 접선 방향 속도는 낼 수 없다.
+2-link arm의 특이점은 간단하다: θ_2 = 0 (팔이 완전히 펴진 경우) 또는 θ_2 = π (완전히 접힌 경우). 이 순간 매니퓰레이터 끝단은 접선 방향으로만 순간적인 이동이 가능하며, 반지름 방향으로는 속도를 전혀 생성하지 못한다.
 
 6축 로봇의 대표적 특이점:
 - Wrist singularity: 축 4와 6이 정렬됨 (q5 ≈ 0)
@@ -348,7 +354,7 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
       J(q) ∈ ℝ^{6×n}
 ```
 
-n < 6이면 under-actuated, n = 6이면 fully-actuated, n > 6이면 redundant이다.
+6차원 끝단 운동에 대해 n < 6이면 관절 자유도가 부족하고, n = 6이면 자유도 수가 같으며, n > 6이면 여유 자유도가 있다. 실제로 가능한 운동은 J(q)의 rank에 달려 있으며, underactuated 여부는 독립 구동 입력 수와 시스템 자유도를 비교해 판단한다.
 
 차륜 mobile robot의 경우 관절 속도가 아닌 차체 속도 $(v, \omega)$가 주 제어이며, 노이즈가 동반된 형태는 §4.7 확률적 운동 모델 참조.
 
@@ -380,7 +386,7 @@ P = F^T * ẋ = F^T * J * q̇ = (J^T * F)^T * q̇ = τ^T * q̇
 manipulability index = √det(J * J^T)
 ```
 
-이 값이 0이면 특이점이다. 값이 클수록 모든 방향으로 고르게 움직일 수 있다.
+6차원 작업에 대해 J가 평소 full row rank를 갖는 로봇에서는 이 값이 0이면 특이점이다. 값이 클수록 조작성 타원체의 부피가 크지만, 모든 방향으로 고른지는 축 길이의 비를 따로 보아야 한다.
 
 J * J^T의 고유값(eigenvalue)과 고유벡터(eigenvector)로 타원체(ellipsoid)를 그릴 수 있다. 고유값이 크면 그 방향으로 빠르게 움직일 수 있고, 작으면 느리다. 고유값이 모두 비슷하면 등방적(isotropic)이고, 차이가 크면 비등방적이다.
 
@@ -468,7 +474,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 가장 기본적인 액추에이터. 전압을 가하면 회전한다. 토크는 전류에 비례하고 (τ = K_t * i), 역기전력은 속도에 비례한다 (V_emf = K_e * ω). 제어가 쉽고 가격이 저렴하지만, 브러시 마모가 있다.
 
 **BLDC (Brushless DC) 모터:**
-브러시 없이 전자적으로 전류를 전환한다. 수명이 길고 토크 밀도와 효율이 높아 현대 로봇에서 자주 선택된다. FOC(Field-Oriented Control)는 토크 리플(ripple)을 줄이는 데 쓰인다.
+브러시 없이 전자적으로 전류를 전환한다. 수명이 길고 토크 밀도와 효율이 높아 현대 로봇에서 자주 선택된다. FOC(Field-Oriented Control) 기법을 적용하여 회전 시 발생하는 토크 리플(ripple)을 효과적으로 억제한다.
 
 **서보 모터 (Dynamixel 시리즈):**
 모터 + 감속기 + 엔코더 + 컨트롤러를 일체형으로 묶은 제품이다. Robotis의 Dynamixel은 연구·교육용 플랫폼에서 널리 쓰이는 서보 제품군이다.
@@ -488,7 +494,7 @@ MIT Mini Cheetah(2019)로 주목받은 방식으로, 감속비를 낮춘다.
 일반적인 로봇 관절: 감속비 100:1 이상 (harmonic drive)
 QDD: 감속비 6:1 ~ 10:1 (유성기어 또는 belt)
 
-낮은 감속비의 장점은 세 방향에서 나타난다. 외력이 가해졌을 때 관절이 따라가기 쉬운 백드라이버빌리티(backdrivability)가 높아지고, 충돌 대응과 힘 제어 설계가 단순해질 수 있다. 감속기 마찰을 충분히 모델링하면 모터 전류에서 관절 토크를 근사하기도 쉽다. 감속기의 마찰과 탄성이 작을수록 높은 토크 응답 대역폭을 설계할 여지도 커진다.
+낮은 감속비에는 세 가지 장점이 있다. 외력이 가해졌을 때 관절이 따라가기 쉬운 백드라이버빌리티(backdrivability)가 높아지고, 충돌 대응과 힘 제어 설계가 단순해질 수 있다. 감속기 마찰을 충분히 모델링하면 모터 전류에서 관절 토크를 근사하기도 쉽다. 감속기의 마찰과 탄성이 작을수록 더 높은 토크 응답 대역폭을 설계할 여지도 커진다.
 
 단점: 동일 크기 대비 출력 토크가 낮다. 큰 토크가 필요하면 더 큰 모터를 써야 한다.
 
@@ -521,7 +527,7 @@ QDD를 사용하는 최근 시스템들:
 | Harmonic Drive | 30~320:1 | 매우 낮음 | 65-85% | 비쌈 | 산업용 로봇, 정밀 |
 | Cycloidal | 6~120:1 | 낮음 | 85-93% | 중간 | 최근 대안으로 부상 |
 
-감속비·효율·백래시는 구조와 제품에 따라 크게 달라진다. 표의 범위는 계열을 비교하기 위한 출발점이며, 선정할 때는 제조사 데이터시트의 정격 부하 조건을 사용한다.
+감속비·효율·백래시는 구조와 제품에 따라 크게 달라진다. 제시된 수치 범위는 감속기 계열별 특징을 비교하기 위한 참고 기준이며, 실제 부품을 선정할 때는 각 제조사 데이터시트의 정격 부하 조건을 면밀히 검토해야 한다.
 
 **액추에이터 선정 기준:**
 
@@ -572,7 +578,7 @@ print(f"모터 필요 RPM: {motor_rpm:.0f}")
 
 *Incremental encoder*: A, B 두 채널의 펄스를 세어 상대적 회전량을 측정한다. 전원이 꺼지면 위치를 잊는다 (homing 필요). 가격이 저렴하고, 분해능이 높다 (10,000 PPR 이상도 흔함).
 
-*Absolute encoder*: 현재 위치를 절대값으로 출력한다. 전원을 켜자마자 위치를 안다. Multi-turn absolute encoder는 여러 바퀴를 기억한다. 가격이 비싸지만 homing이 필요 없어, 재기동 뒤 위치 복원이 중요한 산업용 로봇에 널리 쓰인다.
+*Absolute encoder*: 현재 각도를 절대값으로 출력하는 방식이다. 전원을 켜자마자 위치를 즉각 파악할 수 있다. Multi-turn absolute encoder는 여러 바퀴를 기억한다. 가격이 상대적으로 높지만 별도의 원점 복귀(homing) 절차가 필요 없어, 재기동 후 위치 복원이 필수적인 산업용 로봇에 널리 쓰인다.
 
 ```
 분해능 계산 예시:
@@ -701,7 +707,7 @@ print(f"현재 위치: {pos} (= {pos * 360 / 4096:.1f}°)")
 
 ### 4.5.4 실시간 시스템
 
-로봇 제어에서 "실시간(real-time)"은 "빠른"이 아니라 "정해진 시간 안에 반드시 완료되는"을 의미한다. 1kHz 제어 루프라면, 매 1ms마다 센서 읽기 → 제어 계산 → 모터 명령 전송이 완료되어야 한다. 한 번이라도 지연되면 로봇이 불안정해질 수 있다.
+로봇 제어에서 "실시간(real-time)"이란 단순히 연산 속도가 "빠르다"는 의미를 넘어, 주어진 deadline 이내에 모든 처리가 결정론적으로 완료됨을 보장하는 특성을 뜻한다. 1kHz 제어 루프라면 매 1ms마다 센서 읽기 → 제어 계산 → 모터 명령 전송이 완료되어야 한다. 한 번이라도 지연되면 로봇이 불안정해질 수 있다.
 
 **RTOS (Real-Time Operating System):**
 
@@ -812,7 +818,7 @@ plt.savefig('workspace.png', dpi=150)
 
 σ_max, σ_min은 자코비안의 최대/최소 특이값(singular value)이다.
 
-- κ = 1: 완벽한 등방성 (isotropic). 모든 방향으로 균일하게 움직인다. 실현 불가능하지만 이상적.
+- κ = 1: 완벽한 등방성 (isotropic). 모든 방향으로 균일하게 움직인다. 설계와 자세에 따라 실현 가능하다.
 - κ → ∞: 특이점. 한 방향으로는 전혀 움직이지 못한다.
 
 로봇 설계 시 작업 영역 전체에 걸쳐 condition number를 최소화하는 것이 목표가 될 수 있다. 이를 **kinematic optimization** 또는 **optimal design**이라 한다.
@@ -968,7 +974,7 @@ $$\theta' = \theta + \hat{\omega}\Delta t + \hat{\gamma}\Delta t$$
 
 주의: $|\hat{\omega}| < \epsilon$이면 위 식이 발산한다. 실제 구현에서는 직선 fallback $x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$로 처리해야 한다.
 
-`sample(b)`는 분산 $b$의 zero-mean 표본을 뽑는 함수이다. 정규 근사: $\frac{b}{6}\sum_{i=1}^{12}\text{rand}(-1,1)$ (중심극한정리 기반, 12개 균등 합).
+`sample(b)`는 분산 $b$의 zero-mean 표본을 뽑는 함수이다. 정규 근사: $\frac{\sqrt{b}}{2}\sum_{i=1}^{12}\text{rand}(-1,1)$ (중심극한정리 기반, 12개 균등 합).
 
 알고리즘 박스 (PR Table 5.3: `sample_motion_model_velocity`).
 
@@ -992,14 +998,14 @@ Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
   return (x', y', θ')ᵀ
 ```
 
-**Closed-form vs Sampling 용도 차이.** Closed-form(`motion_model_velocity`)은 확률밀도 수치를 반환한다. EKF·UKF의 prediction 단계에서 자코비안과 함께 쓰인다. Sampling(`sample_motion_model_velocity`)은 pose 하나를 생성한다. Particle filter(MCL, §14.7)에서 각 입자를 propagate할 때 직접 호출된다. 두 알고리즘은 같은 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유하지만, 방향이 반대이다: closed-form은 *가설 pose를 평가*하고, sampling은 *다음 pose를 생성*한다.
+**Closed-form vs Sampling 용도 차이.** Closed-form(`motion_model_velocity`)은 확률밀도 수치를 직접 계산해 반환한다. 주로 EKF·UKF의 prediction 단계에서 자코비안과 결합하여 활용된다. 이에 비해 Sampling(`sample_motion_model_velocity`) 기법은 구체적인 pose 표본 하나를 추출하는 데 목적이 있다. Particle filter(MCL, §14.7)에서 각 입자를 시간 축에 따라 전개할 때 직접 호출되는 형태다. 두 알고리즘은 동일한 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유하면서도 서로 반대되는 연산 방향을 취한다. closed-form 수식이 주어진 가설 pose의 우도를 평가하는 데 집중하는 한편, sampling 기법은 다음 시점의 새로운 pose를 순차적으로 생성해 나간다.
 
 ```python
 import numpy as np
 
 def sample_normal(b):
     """분산 b의 zero-mean 정규 근사 표본 (12개 균등 합)."""
-    return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+    return (np.sqrt(b) / 2.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
 
 def sample_motion_model_velocity(v, omega, x, y, theta, dt,
                                   alpha, eps=1e-6):
@@ -1129,7 +1135,7 @@ def sample_motion_model_odometry(bar_x_prev, bar_x_curr, x, y, theta,
     d_rot2  = bt_ - bt - d_rot1
 
     def sample_normal(b):
-        return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+        return (np.sqrt(b) / 2.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
 
     dh_rot1  = d_rot1  - sample_normal(alpha[0]*abs(d_rot1)  + alpha[1]*abs(d_trans))
     dh_trans = d_trans - sample_normal(alpha[2]*abs(d_trans) + alpha[3]*(abs(d_rot1) + abs(d_rot2)))

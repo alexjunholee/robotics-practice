@@ -133,7 +133,7 @@ T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
 
 Where:
 - S_i is the screw axis of the i-th joint (6×1 vector)
-- [S_i] is the 4×4 skew-symmetric matrix representation of S_i (an element of se(3))
+- [S_i] is the 4×4 matrix representation of S_i (an element of se(3), with a skew-symmetric upper-left 3×3 rotation block)
 - M is the end-effector pose when all joints are at the zero (home) configuration
 - θ_i is the joint variable
 
@@ -356,7 +356,7 @@ where ẋ = [v; ω] ∈ ℝ^6 (for a 6-axis case)
       J(q) ∈ ℝ^{6×n}
 ```
 
-n < 6 is under-actuated, n = 6 is fully-actuated, n > 6 is redundant.
+For a six-dimensional end-effector task, n < 6 provides too few joint degrees of freedom, n = 6 matches the task dimension, and n > 6 provides redundant degrees of freedom. The available motion depends on the rank of J(q), while underactuation compares the number of independent control inputs with the system degrees of freedom.
 
 
 ### 4.4.2 Force/Torque Relation (Duality)
@@ -386,7 +386,7 @@ The Jacobian also tells how "well" the robot can move at its current configurati
 manipulability index = √det(J * J^T)
 ```
 
-When this value is zero, the robot is at a singularity. The larger it is, the more evenly the robot can move in all directions.
+For a robot whose J normally has full row rank for the six-dimensional task, a zero value indicates a singularity. A larger value means a larger manipulability ellipsoid volume, while uniformity across directions depends on the ratios of its axis lengths.
 
 The eigenvalues and eigenvectors of J * J^T trace out an ellipsoid. Large eigenvalues mean fast motion in that direction; small ones mean slow. If the eigenvalues are all similar the motion is isotropic; if they differ greatly it is anisotropic.
 
@@ -824,7 +824,7 @@ The Jacobian's condition number (κ) indicates how "well" the robot can move at 
 
 σ_max and σ_min are the maximum and minimum singular values of the Jacobian.
 
-- κ = 1: perfect isotropy. Uniform motion in every direction. Unattainable but ideal.
+- κ = 1: perfect isotropy. Uniform motion in every direction. Attainable for suitable designs and configurations.
 - κ → ∞: singularity. No motion at all in one direction.
 
 In robot design, minimizing the condition number across the entire workspace can be the goal. This is called **kinematic optimization** or **optimal design**.
@@ -980,7 +980,7 @@ $$\theta' = \theta + \hat{\omega}\Delta t + \hat{\gamma}\Delta t$$
 
 Note: when $|\hat{\omega}| < \epsilon$ the above diverges. The implementation must fall back to a straight-line approximation: $x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$.
 
-`sample(b)` draws a zero-mean sample with variance $b$. Normal approximation: $\frac{b}{6}\sum_{i=1}^{12}\text{rand}(-1,1)$ (central-limit-theorem approximation using 12 uniform draws).
+`sample(b)` draws a zero-mean sample with variance $b$. Normal approximation: $\frac{\sqrt{b}}{2}\sum_{i=1}^{12}\text{rand}(-1,1)$ (central-limit-theorem approximation using 12 uniform draws).
 
 **Algorithm box (PR Table 5.3: `sample_motion_model_velocity`).**
 
@@ -1011,7 +1011,7 @@ import numpy as np
 
 def sample_normal(b):
     """Zero-mean normal approximation sample with variance b (12 uniform draws)."""
-    return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+    return (np.sqrt(b) / 2.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
 
 def sample_motion_model_velocity(v, omega, x, y, theta, dt,
                                   alpha, eps=1e-6):
@@ -1141,7 +1141,7 @@ def sample_motion_model_odometry(bar_x_prev, bar_x_curr, x, y, theta,
     d_rot2  = bt_ - bt - d_rot1
 
     def sample_normal(b):
-        return (b / 6.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
+        return (np.sqrt(b) / 2.0) * sum(np.random.uniform(-1, 1) for _ in range(12))
 
     dh_rot1  = d_rot1  - sample_normal(alpha[0]*abs(d_rot1)  + alpha[1]*abs(d_trans))
     dh_trans = d_trans - sample_normal(alpha[2]*abs(d_trans) + alpha[3]*(abs(d_rot1) + abs(d_rot2)))

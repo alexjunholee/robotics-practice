@@ -1,6 +1,6 @@
 # Ch.16 — Development Environment & Tools
 
-Robotics research code is sensitive to combinations of CUDA, Python, ROS, and system-library versions. This chapter covers language tools, package environments, and Docker for isolating and reproducing those environments.
+Robotics research code depends heavily on precise combinations of CUDA, Python, ROS, and system library versions. Reproducible workflows rely on disciplined language toolchains, isolated package environments, and containerized Docker images.
 
 ## 16.1 Programming Languages
 

@@ -40,13 +40,13 @@
 
 ### A.2 용어
 
-**Keyframe**: 중요 정보를 포함하는 선택된 프레임. 모든 프레임을 처리하면 너무 느리니까, 의미 있는 변화가 있는 프레임만 골라서 사용한다.
+**Keyframe**: 중요 정보를 포함하도록 선택한 프레임. 모든 프레임을 처리하면 너무 느리므로 의미 있는 변화가 있는 프레임만 골라 쓴다.
 
-**Loop Closure**: 이전 방문 장소 재인식을 통한 드리프트 보정. "아, 여기 아까 왔던 곳이네" → 누적 오차를 한꺼번에 교정.
+**Loop Closure**: 이전에 방문한 장소를 다시 인식해 drift를 보정하는 과정. "아, 여기 아까 왔던 곳이네"라고 알아차려 누적 오차를 한꺼번에 교정한다.
 
-**Drift**: 오차의 누적. 100m를 걸어가면서 매 걸음마다 1cm씩 오차가 나면, 도착할 때는 100cm 오차가 된다.
+**Drift**: 오차가 누적되는 현상. 100 m를 걸으며 매 걸음마다 1 cm씩 오차가 나면, 도착할 때는 100 cm의 오차가 된다.
 
-**Reprojection Error**: 3D 점을 이미지에 재투영했을 때의 오차. "이 3D 점이 카메라 이미지 어디에 보여야 하는가"의 예측값과 실제값의 차이.
+**Reprojection Error**: 3D 점을 이미지에 재투영했을 때의 오차. "이 3D 점이 카메라 이미지의 어디에 보여야 하는가"라는 예측값과 실제값의 차이다.
 
 **Feature Descriptor**: 특징점 주변을 설명하는 벡터. 두 이미지에서 같은 점을 찾을 때, 이 벡터를 비교한다.
 
@@ -60,7 +60,7 @@
 
 **Zero-shot**: 학습 없이 새로운 태스크 수행. "고양이"를 학습 안 했는데 "고양이 찾아줘"가 되는 것.
 
-**Few-shot**: 적은 예제로 새로운 태스크 학습. 예시 3-5개만 주면 학습.
+**Few-shot**: 적은 예제로 새로운 태스크 학습. 예시 3~5개만 주면 학습.
 
 **Fine-tuning**: 사전학습 모델을 특정 태스크에 맞게 재학습. 대형 모델을 내 데이터에 맞게 조정.
 
@@ -82,7 +82,7 @@ A: SLAM, ROS 패키지, 실시간 제어 모듈에는 C++가 널리 쓰이므로
 
 **Q: GPU가 없으면 연구를 할 수 없나요?**
 
-A: 간단한 실험은 CPU로 가능하다. 하지만 딥러닝 학습에는 GPU가 필수이다. Google Colab(무료)이나 연구실 서버를 활용하자. Colab 무료 버전으로도 YOLO fine-tuning 정도는 충분히 가능하다.
+A: 간단한 실험은 CPU로도 가능하다. 다만 딥러닝 모델을 학습하려면 대개 GPU가 필요하다. Google Colab(무료)이나 연구실 서버를 활용할 수 있고, Colab 무료 버전으로도 YOLO fine-tuning 정도는 가능하다.
 
 **Q: ROS1과 ROS2 중 어떤 것을 배워야 하나요?**
 
@@ -90,11 +90,11 @@ A: 새로 배운다면 ROS2를 권장한다. ROS1은 2025년에 공식 지원이
 
 **Q: 논문을 어디서 찾나요?**
 
-A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/) (논문 검색)를 주로 활용하자. 코드가 같이 필요하면 [Papers With Code](https://paperswithcode.com/)가 편하다. 학회별로 보고 싶으면 [CVPR Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)도 유용하다.
+A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/) (논문 검색)를 주로 활용한다. 코드도 필요하면 [Papers With Code](https://paperswithcode.com/)가 편하고, 학회별로 보고 싶다면 [CVPR Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)도 유용하다.
 
 **Q: SLAM을 공부하려면 어디서 시작해야 하나요?**
 
-A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작하고, ORB-SLAM3 코드를 분석해보자. 그 전에 본 문서의 9장(카메라 모델)과 14장(Visual Odometry)을 읽으면 강의가 훨씬 잘 들릴 것이다.
+A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작해 ORB-SLAM3 코드를 분석해 보자. 그전에 본 문서의 9장(카메라 모델)과 14장(Visual Odometry)을 읽으면 강의를 이해하기가 한결 쉽다.
 
 **Q: 연구 아이디어는 어떻게 찾나요?**
 
@@ -102,7 +102,7 @@ A: 최신 학회 논문의 Limitation 섹션을 읽어보자. 해결되지 않�
 
 **Q: 어떤 GPU를 사야 하나요?**
 
-A: 먼저 모델·optimizer state·activation·batch가 VRAM에 들어가는지 실제 설정으로 측정한다. 그다음 precision 지원, memory bandwidth, 전력, framework 호환성, 실제 benchmark를 본다. 표의 용도는 구매 순위를 정하는 것이 아니라 후보를 VRAM 등급별로 좁히는 것이다.
+A: 연구 대상 모델과 옵티마이저 상태, activation, 배치 크기가 VRAM에 적재되는지 실제 설정으로 먼저 실측한다. 이어 정밀도 지원 범위, 메모리 대역폭, 소비 전력, 프레임워크 호환성 및 실측 벤치마크를 종합 점검한다. 본 표는 일률적인 서열 매기기가 목적이 아니며, VRAM 등급별 적정 후보군을 합리적으로 압축하기 위한 참조 기준이다.
 
 개인용 (데스크톱)
 
@@ -151,7 +151,7 @@ ORB-SLAM3, Ultralytics, HuggingFace Transformers 같은 오픈소스를 읽고 �
 A: 학회 발표는 크게 구두 발표(oral)와 포스터 발표(poster)로 나뉜다. 발표 시간·포스터 크기·언어는 학회마다 다르므로 공식 발표자 안내가 우선한다.
 
 - 포스터: A0는 자주 보이는 크기지만 학회 지정 규격을 확인한다. Figure를 크게 두고 텍스트를 줄여, 지나가는 사람이 짧은 시간에 주제와 결과를 찾을 수 있게 한다. 발표 전에는 연구실 동료들 앞에서 연습한다.
-- 구두 발표: 15-20분은 흔한 예일 뿐이며 세션별 제한 시간이 우선한다. 시간에 맞춰 슬라이드 수를 정하고 한 장의 메시지를 하나로 좁힌다. 데모 영상과 질문용 보충 슬라이드는 필요할 때 준비한다.
+- 구두 발표: 15~20분은 흔한 예일 뿐이며 세션별 제한 시간이 우선한다. 시간에 맞춰 슬라이드 수를 정하고 한 장의 메시지를 하나로 좁힌다. 데모 영상과 질문용 보충 슬라이드는 필요할 때 준비한다.
 - 공통: 발표 언어를 확인한 뒤 스크립트로 연습하되 문장 암기보다 내용 전달과 시간 준수에 집중한다.
 
 **Q: 영어 논문 읽기가 너무 힘든데요?**
@@ -222,28 +222,38 @@ sudo systemctl restart cpufrequtils
 **해결**:
 
 ```python
+import torch
+
 # 1. 배치 사이즈 줄이기 (가장 먼저 시도)
 batch_size = 16  # → 8 또는 4
 
 # 2. 메모리 정리
 torch.cuda.empty_cache()
 
-# 3. Gradient accumulation 사용 (배치 효과는 유지하면서 메모리 절약)
+# 3. Gradient accumulation + AMP
 accumulation_steps = 4
-for i, (inputs, labels) in enumerate(dataloader):
-    loss = model(inputs, labels) / accumulation_steps
-    loss.backward()
-    if (i + 1) % accumulation_steps == 0:
-        optimizer.step()
-        optimizer.zero_grad()
+num_batches = len(dataloader)
+scaler = torch.amp.GradScaler("cuda")
+optimizer.zero_grad()
 
-# 4. Mixed Precision Training (메모리 절반으로)
-from torch.cuda.amp import autocast, GradScaler
-scaler = GradScaler()
-with autocast():
-    output = model(input)
-    loss = criterion(output, target)
+for i, (inputs, labels) in enumerate(dataloader):
+    group_start = (i // accumulation_steps) * accumulation_steps
+    group_size = min(accumulation_steps, num_batches - group_start)
+
+    with torch.autocast(device_type="cuda", dtype=torch.float16):
+        output = model(inputs)
+        loss = criterion(output, labels) / group_size
+
+    scaler.scale(loss).backward()
+
+    is_update_step = ((i + 1) % accumulation_steps == 0) or ((i + 1) == num_batches)
+    if is_update_step:
+        scaler.step(optimizer)
+        scaler.update()
+        optimizer.zero_grad()
 ```
+
+AMP가 절약하는 메모리와 속도는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
 
 **문제**: `CUDA version mismatch`
 
@@ -262,7 +272,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 
 **문제**: `RuntimeError: CUDA error: device-side assert triggered`
 
-**해결**: 이건 보통 라벨 인덱스가 범위를 벗어났을 때 발생한다. CPU에서 돌려보면 더 자세한 에러 메시지가 나온다.
+**해결**: 이건 보통 라벨 인덱스가 범위를 벗어났을 때 발생한다. CPU에서 돌려보면 더 자세한 에러 메시지를 얻을 수 있다. 아래 명령은 GPU에서 CUDA 호출을 동기화하여 오류가 발생한 코드 위치를 찾는 별도의 방법이다.
 
 ```bash
 CUDA_LAUNCH_BLOCKING=1 python train.py
@@ -394,7 +404,7 @@ sudo apt-get install libglew-dev libpython2.7-dev
 # 시스템 Eigen 버전 확인
 pkg-config --modversion eigen3
 
-# 특정 버전 필요 시 직접 설치
+# 저장소에서 제공하는 Eigen 개발 패키지 설치
 sudo apt-get install libeigen3-dev
 ```
 
@@ -407,7 +417,7 @@ sudo apt-get install libeigen3-dev
 - [ ] CUDA / cuDNN 설치 (`nvcc --version`으로 확인)
 - [ ] Conda 또는 venv 환경 설정
 - [ ] PyTorch GPU 동작 확인 (`torch.cuda.is_available()`)
-- [ ] ROS2 설치 (필요시, Humble 또는 Jazzy)
+- [ ] ROS2 설치 (필요 시, Humble 또는 Jazzy)
 - [ ] Git 설정 (`git config --global user.name/email`)
 - [ ] Docker 설치 (선택, 재현성을 위해 권장)
 - [ ] VS Code + 필수 확장 설치 (Python, Remote-SSH, Jupyter)
@@ -422,7 +432,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-논문 읽기·쓰기 도구는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 도구는 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
+논문 읽기·쓰기 도구는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 도구는 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
 
 ### D.4 데이터셋 준비
 
@@ -433,9 +443,9 @@ sudo apt-get install libeigen3-dev
 
 ## E. 첫 주 생존 가이드
 
-첫 주에는 계정과 실행 환경을 준비하고, 연구 대상의 코드·데이터·문서를 찾는 최소 작업 목록이 필요하다. 아래 Day 1-7 배치는 예시이며 계정 발급, 장비 일정, 연구실 onboarding 방식에 맞춰 순서를 바꾼다.
+첫 주에는 계정과 실행 환경을 준비하고, 연구 대상의 코드·데이터·문서를 찾는 최소 작업 목록이 필요하다. 아래 Day 1~7 배치는 예시이며 계정 발급, 장비 일정, 연구실 onboarding 방식에 맞춰 순서를 바꾼다.
 
-### Day 1-2: 환경 구축
+### Day 1~2: 환경 구축
 
 ```
 [ ] 연구실 서버 계정 받기 (관리자에게 요청)
@@ -449,7 +459,7 @@ sudo apt-get install libeigen3-dev
 
 > 팁: 서버 환경 설정에서 막히면 시도한 명령과 예상·실제 결과를 함께 정리해 선배에게 묻는다. 확인한 내용을 보여 주면 문제를 훨씬 빨리 좁힐 수 있다.
 
-### Day 3-4: 기존 코드 파악
+### Day 3~4: 기존 코드 파악
 
 ```
 [ ] 연구실의 기존 코드/프로젝트 리포지토리 클론
@@ -467,7 +477,7 @@ sudo apt-get install libeigen3-dev
 
 > 팁: 처음 읽는 논문은 이해가 안 되는 게 정상이다. "이 논문이 무슨 문제를 풀려고 하는가?"만 파악해도 첫 주로서는 충분하다.
 
-### Day 6-7: 연구 방향 파악
+### Day 6~7: 연구 방향 파악
 
 Ch.18의 연구 방향을 읽고 연구실의 최근 논문과 프로젝트가 어느 주제에 해당하는지 정리한다. 선배들의 연구 주제와 겹치는 지점도 함께 표시한다.
 

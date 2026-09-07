@@ -28,7 +28,7 @@ ping 192.168.1.201
 sudo tcpdump -i eth0 udp port 2368 -c 10
 ```
 
-For cameras, inspect the device and exposure settings.
+Use the commands below to inspect camera devices and supported video formats.
 
 ```bash
 v4l2-ctl --list-devices

@@ -55,7 +55,7 @@ def astar_2d(grid, start, goal):
     g_score = {start: 0}
 
     def heuristic(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])  # Manhattan distance
+        return np.hypot(a[0] - b[0], a[1] - b[1])  # Euclidean distance consistent with diagonal step costs
 
     neighbors = [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]
 
@@ -272,7 +272,7 @@ CasADi is a widely used framework combining symbolic computation, automatic diff
 import casadi as ca
 import numpy as np
 
-# Simple example: time-optimal trajectory for a 1D double integrator
+# Simple example: minimize squared control effort for a 1D double integrator over a fixed duration
 # x = [position, velocity], u = force
 # x_dot = [velocity, force/mass]
 
@@ -286,10 +286,10 @@ opti = ca.Opti()
 X = opti.variable(2, N + 1)  # state trajectory
 U = opti.variable(1, N)      # input trajectory
 
-# cost: minimize energy + time penalty
+# cost: minimize squared control effort over a fixed duration
 cost = 0
 for k in range(N):
-    cost += U[0, k]**2 * dt  # energy
+    cost += U[0, k]**2 * dt  # squared control effort integral
 opti.minimize(cost)
 
 # dynamics constraint (Euler integration)
@@ -464,7 +464,7 @@ The policy is:
 
 $$\pi^T(b) = \arg\max_a \int \left[ c(b') + C^{T-1}(b') \right] P(b' \mid a, b)\, db' \tag{16.3}$$
 
-The problem is that $b'$ is a distribution over distributions. $b$ is a probability distribution over the state space $\mathcal{S}$, and $b'$ is itself a distribution over that space of distributions. The integral dimension diverges.
+Both $b$ and $b'$ are probability distributions over the state space $\mathcal{S}$. The belief transition distribution $P(b' \mid a,b)$ is defined over the space of these distributions, and the equation integrates over that belief space. For a finite state space its dimension is $|\mathcal{S}|-1$, while a general belief over a continuous state space is infinite-dimensional.
 
 In the infinite-horizon limit, if this recursion converges, we get the standard Bellman equation:
 
@@ -537,7 +537,7 @@ $$V(b) = \max_\phi \langle \phi, b \rangle$$
 
 With $\Phi$ the set of alpha-vectors, $V(b) = \max_{\phi \in \Phi} \sum_i \phi_i\, p_i$.
 
-Each alpha-vector corresponds to one *conditional policy* (current action plus subsequent policy contingent on observations). The count $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$ grows doubly exponentially. Starting from $|\Phi^1| = 1$: $|\Phi^2| = 2 \cdot 2^1 = 4$, $|\Phi^3| = 2 \cdot 2^4 = 32$, $|\Phi^4| = 2 \cdot 2^{32} \approx 10^{10}$. By horizon 4 we are already above ten billion vectors. This is why exact solutions are impractical.
+Each alpha-vector corresponds to one *conditional policy* (current action plus subsequent policy contingent on observations). Before pruning, the candidate count $|\Phi^T| = |A| \cdot |\Phi^{T-1}|^{|\mathcal{O}|}$ grows doubly exponentially. With two actions, two observations, and $|\Phi^0| = 1$, the counts are $|\Phi^1| = 2$, $|\Phi^2| = 2 \cdot 2^2 = 8$, $|\Phi^3| = 2 \cdot 8^2 = 128$, and $|\Phi^4| = 2 \cdot 128^2 = 32768$. This rapid growth makes exact solutions impractical for long horizons.
 
 ### 7.9.5 LP Solution
 
@@ -549,7 +549,7 @@ POMDP horizon $T$ constraints (eq. 16.67):
 
 $$\bigcup_a \bigcup_{k(o'):1 \leq k(o') \leq |\Phi^{T-1}|} \left\{ C^T(b) \geq \gamma \sum_{o'} \sum_i \left(c_i + C^{T-1}_{k(o'),i}\right) P(o' \mid s_i') \sum_j P(s_i' \mid a, s_j)\, p_j \right\}$$
 
-The number of constraints is $|\Phi^T| = |A| \cdot |\mathcal{O}|^{|\Phi^{T-1}|}$.
+Before pruning, the number of constraints is $|\Phi^T| = |A| \cdot |\Phi^{T-1}|^{|\mathcal{O}|}$.
 
 ---
 

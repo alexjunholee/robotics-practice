@@ -200,7 +200,7 @@ What a factor graph is: a graph that represents the relationships between variab
 > - [Shan et al., "LIO-SAM: Tightly-coupled Lidar Inertial Odometry via Smoothing and Mapping" (2020)](https://arxiv.org/abs/2007.00258) — The LIO-SAM paper.
 > - [Vizzo et al., "KISS-ICP: In Defense of Point-to-Point ICP" (RA-L 2023, arXiv:2209.15397)](https://arxiv.org/abs/2209.15397) — A well-built vanilla ICP matches complex LiDAR odometry in performance. The power of simplicity.
 > - [LIO-SAM GitHub](https://github.com/TixiaoShan/LIO-SAM) — Official code, with ROS support.
-> - [GTSAM Documentation](https://gtsam.org/) — Factor graph optimization library. Used as the back-end of many SLAM systems including LIO-SAM and ORB-SLAM3.
+> - [GTSAM Documentation](https://gtsam.org/) — Factor graph optimization library. Used as the back-end of many SLAM systems including LIO-SAM.
 > - [Frank Dellaert — Factor Graphs for Perception and Action (MIT Robotics)](https://www.youtube.com/watch?v=-yCC7mpgL4w) — The GTSAM developer explaining factor graphs himself.
 > - [Giseop Kim's blog — Scan Context-based LiDAR Pose-graph SLAM implementation](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — A walk-through of integrating Scan Context into LiDAR SLAM.
 
@@ -754,8 +754,8 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 | Library | Characteristics | Primary uses |
 |---|---|---|
 | **g2o** | Dedicated to pose graph / BA, lightweight, C++ only | ORB-SLAM2/3, LSD-SLAM |
-| **GTSAM** | Factor graph based, supports Bayes tree (iSAM2), strong at incremental optimization | LIO-SAM, VINS-Fusion, research |
-| **Ceres Solver** | General-purpose nonlinear least squares, supports auto-diff, developed by Google | Cartographer, various projects |
+| **GTSAM** | Factor graph based, supports Bayes tree (iSAM2), strong at incremental optimization | LIO-SAM, research |
+| **Ceres Solver** | General-purpose nonlinear least squares, supports auto-diff, developed by Google | Cartographer, VINS-Fusion, various projects |
 
 Selection criteria:
 - SLAM-only and want to stay lightweight → g2o

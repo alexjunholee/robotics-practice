@@ -1,7 +1,7 @@
 # Ch.14 — SLAM & Odometry
 
 
-SLAM은 낯선 환경에서 로봇의 위치를 추정하면서 주변 지도를 함께 만드는 문제다. 실내나 지하처럼 GPS를 사용할 수 없는 공간에서 자율 이동의 기반이 된다.
+SLAM은 낯선 환경에서 로봇의 위치를 추정하는 동시에 주변 지도를 만드는 문제다. 실내나 지하처럼 GPS를 사용할 수 없는 공간에서 자율 이동의 기반이 된다.
 
 ---
 
@@ -19,7 +19,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하면서 주변 지도를
 - 위치를 알아야 지도를 만들 수 있음
 → 동시에 해결
 
-센서는 항상 노이즈가 있다. 바퀴가 미끄러지기도 하고, 카메라 이미지가 흔들리기도 한다. 이런 불확실성이 시간이 지날수록 누적되어 위치 추정이 점점 틀어진다(drift). SLAM의 핵심 도전은 이 drift를 보정하면서 일관된 지도를 만드는 것이다.
+센서는 항상 노이즈가 있다. 바퀴가 미끄러지기도 하고, 카메라 이미지가 흔들리기도 한다. 이런 불확실성이 시간이 지날수록 누적되어 위치 추정이 점점 틀어진다(drift). SLAM의 핵심 과제는 이 drift를 보정하면서 일관된 지도를 만드는 것이다.
 
 **Odometry vs SLAM**:
 | 특징 | Odometry | SLAM |
@@ -44,7 +44,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하면서 주변 지도를
 
 ### 14.2 Visual Odometry (VO)
 
-카메라만으로 상대적 이동을 추정한다. SLAM의 "front-end"에 해당하며, 여기서 추정한 이동이 부정확하면 SLAM 전체가 무너진다.
+카메라만으로 상대적 이동을 추정한다. SLAM의 "front-end"에 해당하며, 이 단계의 이동 추정이 부정확하면 SLAM 전체의 추정 정확도가 떨어진다.
 
 #### 14.2.1 Feature-based vs Direct Method
 
@@ -64,7 +64,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하면서 주변 지도를
 
 #### 14.2.2 Mono vs Stereo vs RGB-D
 
-각 구성의 트레이드오프를 알아야 실제 로봇에 맞는 센서를 고를 수 있다.
+각 구성의 트레이드오프를 알아야 실제 로봇에 맞는 센서를 선택할 수 있다.
 
 | 구성 | Scale | 특징 | 적합 환경 |
 |---|---|---|---|
@@ -72,7 +72,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하면서 주변 지도를
 | **Stereo** | 가능 | 베이스라인이 측정 범위를 제한 | 일반 실내·실외 |
 | **RGB-D** | 가능 | 깊이 직접 측정, 실외·직사광선에 취약 | 실내 구조화 환경 |
 
-Scale ambiguity를 보충하면: 단안 카메라로는 "가까이 있는 작은 물체"와 "멀리 있는 큰 물체"를 구분할 수 없다. 모노 SLAM의 지도는 임의의 스케일로 나오며, IMU나 다른 센서로 복원해야 한다. 초기화 때 충분한 이동이 필요한 이유도 여기에 있다.
+Scale ambiguity는 단안 카메라가 "가까이 있는 작은 물체"와 "멀리 있는 큰 물체"를 구분하지 못하는 데서 생긴다. 모노 SLAM의 지도는 임의의 스케일로 나오므로 IMU나 다른 센서로 복원해야 한다. 초기화에 충분한 이동이 필요한 이유도 여기에 있다.
 
 > **추천 자료**
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — Visual Odometry에 필요한 다중 뷰 기하를 다루는 공개 강의
@@ -90,7 +90,7 @@ ORB-SLAM 계열은 Visual SLAM 논문에서 자주 쓰이는 공개 baseline 중
 2. **Local Mapping**: 키프레임 기반 지역 지도 관리
 3. **Loop Closing**: 루프 감지 및 전역 최적화
 
-이 세 스레드 구조가 ORB-SLAM의 핵심 설계다. Tracking은 매 프레임 실시간으로, Local Mapping은 키프레임이 들어올 때, Loop Closing은 루프가 감지될 때 동작한다. 각각 다른 주기로 병렬 실행되므로, 실시간 성능을 유지하면서도 글로벌 일관성을 확보할 수 있다.
+이 세 스레드 구조가 ORB-SLAM의 핵심 설계다. Tracking은 매 프레임 실시간으로, Local Mapping은 키프레임이 들어올 때, Loop Closing은 루프가 감지될 때 동작한다. 각기 다른 주기로 병렬 실행하므로 실시간 성능을 유지하면서 전역 일관성을 확보할 수 있다.
 
 **ORB-SLAM3 특징**:
 - Visual-Inertial 모드 지원
@@ -122,7 +122,7 @@ ORB-SLAM의 역사적 맥락:
 
 **Direct Method** + **Sparse Points**
 
-Direct Method는 dense(모든 픽셀)하게 쓰이는 경우가 많고, Sparse는 Feature-based에서 쓰이는 방식인데, DSO는 "Direct이면서 Sparse"라는 조합을 사용한다. 선별된 고품질 점들만 사용하면서 광도(photometric) 오차를 최소화한다.
+Direct Method는 대개 dense(모든 픽셀)하게 쓰이고 Sparse는 Feature-based에서 쓰이는 방식이지만, DSO는 "Direct이면서 Sparse"인 조합을 사용한다. 선별한 고품질 점만 사용하면서 광도(photometric) 오차를 최소화한다.
 
 - 특징점 추출 없이 픽셀 밝기 직접 사용
 - 선별된 점들만 사용 (Sparse)
@@ -157,7 +157,7 @@ VINS-Mono는 IMU preintegration을 사용해 두 키프레임 사이의 여러 I
 
 ### 14.4 LiDAR Odometry & SLAM
 
-카메라 기반 방법은 조명과 텍스처의 영향을 받는다. LiDAR는 3D 거리를 직접 측정하므로 영상의 밝기나 텍스처에 같은 방식으로 의존하지 않는다. 이 차이 때문에 자율주행과 실외 로봇에서 LiDAR SLAM을 사용한다.
+카메라 기반 방법은 조명과 텍스처의 영향을 받는다. LiDAR는 3D 거리를 직접 측정하므로 영상의 밝기나 텍스처에 같은 방식으로 의존하지 않는다. 이런 차이 때문에 자율주행과 실외 로봇에서 LiDAR SLAM을 쓴다.
 
 #### 14.4.1 LOAM (Lidar Odometry and Mapping)
 
@@ -201,7 +201,7 @@ Factor Graph가 뭐냐면: 변수(로봇 포즈, 랜드마크 위치)와 제약(
 > - [Shan et al., "LIO-SAM: Tightly-coupled Lidar Inertial Odometry via Smoothing and Mapping" (2020)](https://arxiv.org/abs/2007.00258) — LIO-SAM 논문
 > - [Vizzo et al., "KISS-ICP: In Defense of Point-to-Point ICP" (RA-L 2023, arXiv:2209.15397)](https://arxiv.org/abs/2209.15397) — 잘 만든 vanilla ICP가 복잡한 LiDAR odometry와 동등한 성능. 단순함의 힘
 > - [LIO-SAM GitHub](https://github.com/TixiaoShan/LIO-SAM) — 공식 코드, ROS 지원
-> - [GTSAM Documentation](https://gtsam.org/) — Factor Graph 최적화 라이브러리. LIO-SAM, ORB-SLAM3 등 다양한 SLAM 시스템의 백엔드로 사용된다
+> - [GTSAM Documentation](https://gtsam.org/) — Factor Graph 최적화 라이브러리. LIO-SAM 등의 SLAM 시스템의 백엔드로 사용된다
 > - [Frank Dellaert — Factor Graphs for Perception and Action (MIT Robotics)](https://www.youtube.com/watch?v=-yCC7mpgL4w) — GTSAM 개발자가 직접 설명하는 Factor Graph
 > - [김기섭 블로그 — Scan Context-based LiDAR Pose-graph SLAM 구현](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — Scan Context를 LiDAR SLAM에 통합한 구현 해설
 
@@ -212,7 +212,7 @@ Factor Graph가 뭐냐면: 변수(로봇 포즈, 랜드마크 위치)와 제약(
 - ikd-Tree: 동적 KD-트리로 빠른 매핑
 - 실시간 성능
 
-FAST-LIO가 왜 빠른지: LIO-SAM이 Factor Graph 최적화(비선형 최소자승법)를 사용하는 반면, FAST-LIO는 Iterated Extended Kalman Filter(IEKF)를 사용한다. 최적화 문제를 풀지 않고 필터링으로 처리하니, 계산이 훨씬 가볍다. 또한 ikd-Tree라는 증분적 KD-트리를 사용해서 맵에 새 점을 추가할 때도 빠르다.
+FAST-LIO가 고속으로 동작하는 이유: LIO-SAM이 비선형 최소자승 기반의 Factor Graph 최적화를 채택했다면, FAST-LIO는 반복 확장 칼만 필터(Iterated EKF, IEKF)를 적용한다. 최적화 문제를 풀지 않고 필터링으로 처리하니, 계산이 훨씬 가볍다. 또한 ikd-Tree라는 증분적 KD-트리를 사용해서 맵에 새 점을 추가할 때도 빠르다.
 
 > **추천 자료**
 > - [Xu & Zhang, "FAST-LIO: A Fast, Robust LiDAR-Inertial Odometry Package by Tightly-Coupled Iterated Kalman Filter" (2021)](https://arxiv.org/abs/2010.14709) — FAST-LIO 논문
@@ -256,13 +256,13 @@ SLAM을 오래 실행하면 지도가 점차 뒤틀린다. 로봇이 큰 원을 
 
 이전에 방문한 장소를 인식하여 drift를 보정한다.
 
-같은 장소라도 시간, 조명, 계절이 바뀌면 아예 다르게 보인다. 비슷하게 생긴 다른 장소를 같은 장소로 오인하면(false positive) 지도가 오히려 더 망가진다. Place Recognition의 정밀도(precision)가 매우 높아야 하는 이유다.
+같은 장소라도 시간, 조명, 계절이 바뀌면 아예 다르게 보인다. 비슷하게 생긴 서로 다른 장소를 동일 장소로 오인(false positive)할 경우 지도 전역에 심각한 왜곡이 유발된다. Place Recognition의 정밀도(precision)가 매우 높아야 하는 이유다.
 
 **Bag of Words (BoW)**: visual vocabulary를 기반으로 이미지 간 유사도를 계산한다. DBoW2 라이브러리가 대표적이며 ORB-SLAM에서 사용된다. 빠르고 검증되어 있지만 조명·시점 변화에 취약하다.
 
 **NetVLAD**: 딥러닝 기반 end-to-end 학습으로 조명·날씨 변화에 강건한 글로벌 디스크립터를 생성한다. (14.14절 참조)
 
-**LiDAR Place Recognition**: Scan Context는 포인트 클라우드를 bird-eye view 2D 디스크립터로 압축하고, PointNetVLAD는 포인트 클라우드에서 직접 학습한다.
+**LiDAR Place Recognition**: Scan Context는 3D 포인트 클라우드를 조감도(bird's-eye view) 형태의 2D 기술자로 압축 투영한다. 이와 달리 PointNetVLAD는 신경망 구조를 통해 원시 포인트 집합으로부터 직접 전역 임베딩을 학습한다.
 
 #### 14.6.2 Pose Graph Optimization
 
@@ -290,7 +290,7 @@ SLAM을 오래 실행하면 지도가 점차 뒤틀린다. 로봇이 큰 원을 
 
 ### 14.7 Localization
 
-사전 지도 기반으로 현재 위치를 추정한다. SLAM이 "지도를 만들면서 위치를 추정"하는 것이라면, Localization은 "이미 만들어진 지도에서 위치만 추정"하는 것이다. 실제 서비스 로봇은 SLAM으로 미리 지도를 만들고, 운용 중에는 Localization만 수행하는 경우가 많다.
+사전 지도 기반으로 현재 위치를 추정한다. SLAM이 "지도를 만들면서 위치를 추정"하는 것이라면, Localization은 "이미 만들어진 지도에서 위치만 추정"하는 것이다. 실제 현장의 서비스 로봇은 사전에 오프라인 SLAM으로 정밀 지도를 구축해 둔 뒤, 일상 운용 단계에서는 고정 지도 기반의 Localization에 집중하는 경우가 일반적이다.
 
 MCL 알고리즘의 *원리·유도*는 §3.11 비모수 필터 (Ch.3 참조). EKF의 수학적 기반은 §3.10 (Ch.3 참조), IMU와 결합한 위치추정 확장은 §14.10 참조. 아래에서는 위치추정 시나리오 분류와 알고리즘 변형을 본다.
 
@@ -360,7 +360,7 @@ Markov_localization(bel(x_{t-1}), u_t, z_t, m):
 
 #### 14.7.3 EKF Localization
 
-EKF Localization은 Markov localization의 특수 케이스로 belief을 $(\mu_t, \Sigma_t)$ 가우시안으로 표현한다. **단봉(unimodal) 가정 → position tracking 전용**이다. Global localization과 kidnapped 문제는 다봉 belief을 요구하므로 EKF로 풀 수 없다.
+EKF Localization은 Markov localization의 특수 케이스로 belief를 $(\mu_t, \Sigma_t)$ 가우시안으로 표현한다. **단봉(unimodal) 가정 → position tracking 전용**이다. Global localization과 kidnapped 문제는 다봉 belief를 요구하므로 EKF로 풀 수 없다.
 
 §3.10.2의 EKF를 위치추정에 적용한 것이므로 (Ch.3 참조), 여기서는 feature 기반 지도 + 알려진 랜드마크 대응이라는 가정 구조와 구체 알고리즘을 본다.
 
@@ -404,13 +404,13 @@ EKF는 단봉 Gaussian이라 데이터 연관 모호성을 표현하지 못한�
 
 각 가설 $h$는 독립적인 EKF를 구동한다. 측정이 들어오면 각 가설을 확장하고, 가중치(사후확률)가 임계값 $\psi_{\min}$ 아래로 떨어진 가설은 가지치기한다. 가설 수가 폭발하는 것을 막으려면 가지치기 정책이 필수다.
 
-자율주행 multi-object tracking(MOT)에서도 Mahalanobis gating과 Hungarian assignment를 자주 결합한다. 이는 단일 assignment를 고르는 방식이며, 여러 association 가설을 시간에 걸쳐 유지하는 MHT와는 구분해야 한다.
+자율주행 multi-object tracking(MOT)에서도 Mahalanobis gating과 Hungarian assignment를 자주 결합한다. 이는 단일 최적 매칭을 확정하는 결정론적 방식에 해당하므로, 다중 가설을 시간 축 상에서 유지하는 MHT와는 명확히 구분된다.
 
 #### 14.7.5 Grid Localization
 
 MHT가 가우시안 혼합으로 belief를 표현한다면, Grid Localization은 포즈 공간 전체를 격자로 나누고 셀마다 확률을 누산하는 더 직접적인 방법이다.
 
-포즈 공간을 셀로 이산화한 **히스토그램 필터**다. EKF가 풀지 못하는 global·multi-modal belief을 표현할 수 있지만, 셀 수 $K$에 비례하는 계산 비용이 단점이다.
+포즈 공간을 셀로 이산화한 **히스토그램 필터**다. EKF가 풀지 못하는 global·multi-modal belief를 표현할 수 있지만, 셀 수 $K$에 비례하는 계산 비용이 단점이다.
 
 ```
 Grid_localization({p_{k,t-1}}, u_t, z_t, m):
@@ -423,7 +423,7 @@ Grid_localization({p_{k,t-1}}, u_t, z_t, m):
 
 $\text{bel}(x_t) = \{p_{k,t}\}$이며 각 셀 $x_k$에 확률 하나, 합은 1이다.
 
-**해상도 트레이드오프**: 셀이 작을수록 추정 오차 감소 — 셀이 5 cm이면 LiDAR 오차 4 cm, 65 cm이면 오차 25 cm (PR 실험 기준). 반면 셀이 작을수록 global localization의 CPU 시간이 급증한다. 실시간 트릭으로는 raycast 결과 캐싱, 스캔 서브샘플링, 선택적 업데이트(임계 이상 셀만)가 있다.
+**해상도 트레이드오프**: 셀 크기가 작을수록 위치 오차가 감소한다 (셀 5 cm 기준 센서 오차 약 4 cm, 65 cm 기준 약 25 cm). 다만 격자가 세밀해질수록 global localization에 요구되는 CPU 연산량 역시 급격히 늘어난다. 실시간 트릭으로는 raycast 결과 캐싱, 스캔 서브샘플링, 선택적 업데이트(임계 이상 셀만)가 있다.
 
 이산 격자로 global을 표현하면서도, "왜 파티클 필터가 더 나은가"를 이해하는 교육적 다리 역할을 한다. ROS `amcl` 노드는 Grid Localization의 격자를 파티클로 교체한 것이다.
 
@@ -519,7 +519,7 @@ N은 랜드마크 수, H는 가설 수, K는 격자 셀 수, M은 파티클 수�
 
 실제 EKF Localization을 구현할 때 자주 부딪히는 문제들이 있다.
 
-**효율적 랜드마크 검색**: 지도에 N개 landmark가 있을 때 매 관측마다 전수 검색은 O(N)이다. 낮은 차원에서 균형 잡힌 KD-tree의 평균 query는 O(log N)에 가깝지만 최악에는 O(N)이며, grid index의 비용은 cell occupancy와 검색 반경에 달려 있다.
+**효율적 랜드마크 검색**: 지도에 N개 landmark가 있을 때 매 관측마다 전수 검색은 O(N)이다. 저차원에서 균형을 유지하는 KD-tree의 평균 탐색 비용은 O(log N) 수준이지만 최악의 경우 O(N)까지 치솟을 수 있다. 한편 격자 인덱싱 기법의 연산량은 셀 점유 밀도와 탐색 반경 설정에 좌우된다.
 
 **Mutual exclusion**: 한 프레임에서 두 측정이 동일 랜드마크에 대응될 수 없다. ML data association은 component-wise 최적화라 이 제약을 자동으로 강제하지 않는다. 충돌 쌍이 생기면 마할라노비스 거리가 더 작은 측정을 선택하고 나머지를 버리는 repair 단계가 필요하다.
 
@@ -531,7 +531,7 @@ N은 랜드마크 수, H는 가설 수, K는 격자 셀 수, M은 파티클 수�
 
 ### 14.7B Occupancy Grid Mapping
 
-§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하며, pose graph 최적화로 얻은 자세 궤적에서 최종 지도를 만드는 후처리 단계에서 핵심으로 쓰인다. 실제 SLAM 파이프라인에서는 두 단계가 번갈아 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
+§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하는 기법이다. 이는 pose graph 최적화로 정렬된 자세 궤적을 토대로 최종 점유 지도를 생성하는 후처리 단계에서 중추적인 역할을 수행한다. 실제 SLAM 파이프라인에서는 두 단계가 번갈아 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
 
 #### 14.7B.1 도입: 지도 작성의 어려움
 
@@ -641,7 +641,7 @@ MAP_occupancy_grid_mapping(x_{1:t}, z_{1:t}):
 - 텍스처 없는 환경·조명 변화 등 기존 방법이 실패하는 상황에서 robustness 향상
 - Differentiable한 Dense Bundle Adjustment(DBA) 레이어를 사용하여 end-to-end 학습
 
-DROID-SLAM이 왜 주목받는지: 기존 feature-based SLAM(ORB-SLAM)은 특징점이 없는 환경에서 실패하고, direct method(DSO)는 조명 변화에 약하다. DROID-SLAM은 학습된 representation을 사용하기 때문에 이런 한계를 상당 부분 극복한다. 다만 GPU가 필수이고 실시간 성능은 아직 기존 방법에 미치지 못하는 경우가 있다.
+DROID-SLAM이 주목받은 이유: 전통적 특징점 기반 SLAM(ORB-SLAM)은 텍스처가 부족한 환경에서 성능이 급감하며, 직접법(DSO)은 조명 변화에 취약성을 보인다. DROID-SLAM은 학습된 representation을 사용하기 때문에 이런 한계를 상당 부분 극복한다. 다만 GPU가 필수이고 실시간 성능은 아직 기존 방법에 미치지 못하는 경우가 있다.
 
 **3DGS-SLAM 융합**:
 13.5.2에서 다룬 3D Gaussian Splatting을 SLAM의 맵 표현(map representation)으로도 쓴다. SplaTAM, MonoGS 등이 대표적이며, 기존 SLAM의 sparse/dense 포인트 맵 대신 3D Gaussian으로 환경을 표현한다. 장면의 시각적 충실도가 높아지고, 렌더링 기반의 새로운 응용(가상 뷰 생성, AR 오버레이 등)이 가능해진다.
@@ -666,8 +666,8 @@ SLAM 프론트엔드가 센서 데이터를 처리해서 제약 조건(constrain
 SLAM 백엔드는 결국 **Ax = b를 푸는 문제**이다.
 
 로봇이 주행하면서 얻는 데이터는 두 종류다:
-1. **오도메트리**: "나는 1m 앞으로 갔다" (상대적 이동)
-2. **관측**: "저 랜드마크가 3m 거리에 보인다"
+1. **오도메트리**: "나는 1 m 앞으로 갔다" (상대적 이동)
+2. **관측**: "저 랜드마크가 3 m 거리에 보인다"
 
 이 측정값들을 모두 만족시키는 포즈와 랜드마크 위치를 찾고 싶지만, 센서 노이즈 때문에 완벽히 만족시키는 해는 없다. 대신 "모든 측정값과의 오차 제곱합을 최소화"하는 해를 찾는다. 이것이 nonlinear least squares 문제이고, 이걸 효율적으로 푸는 것이 SLAM 백엔드의 역할이다.
 
@@ -685,7 +685,7 @@ SLAM의 상태 변수(포즈)는 SE(3) 위에 있다. SE(3)는 유클리드 공�
 ```
 T ← exp(δξ^) · T
 ```
-여기서 `δξ ∈ R^6`는 se(3) 위의 작은 perturbation이고, `exp(·)`는 exponential map, `^`(hat operator)는 6-벡터를 4x4 행렬로 변환한다.
+여기서 `δξ ∈ R^6`는 se(3) 리 대수 위의 미소 섭동(perturbation) 벡터이며, `exp(·)`는 지수 사상(exponential map)을, `^`(hat 연산자)는 6차원 벡터를 4x4 행렬로 사상하는 연산자다.
 
 **Jacobian 계산**: 오차 함수 `e(T)`의 Jacobian을 `δξ`에 대해 계산한다.
 ```
@@ -755,8 +755,8 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 | 라이브러리 | 특징 | 주요 사용처 |
 |---|---|---|
 | **g2o** | Pose graph / BA 전용, 가벼움, C++ only | ORB-SLAM2/3, LSD-SLAM |
-| **GTSAM** | Factor graph 기반, Bayes tree(iSAM2) 지원, incremental 최적화에 강함 | LIO-SAM, VINS-Fusion, 연구용 |
-| **Ceres Solver** | 범용 nonlinear least squares, auto-diff 지원, Google 개발 | Cartographer, 다양한 프로젝트 |
+| **GTSAM** | Factor graph 기반, Bayes tree(iSAM2) 지원, incremental 최적화에 강함 | LIO-SAM, 연구용 |
+| **Ceres Solver** | 범용 nonlinear least squares, auto-diff 지원, Google 개발 | Cartographer, VINS-Fusion, 다양한 프로젝트 |
 
 선택 기준:
 - SLAM 전용이고 가볍게 쓰고 싶다 → g2o
@@ -778,7 +778,7 @@ IEKF·MSCKF의 EKF 기반 구조는 §3.10.2 EKF (Ch.3 참조).
 
 14.3.3에서 VINS-Mono를 소개할 때 IMU preintegration을 간단히 언급했다. 여기서는 그 수학적 배경을 본다.
 
-**문제 정의**: IMU는 보통 200~1000 Hz로 가속도와 각속도를 출력한다. 반면 SLAM 최적화는 키프레임 단위(수 Hz~수십 Hz)로 수행한다. 키프레임 사이에 수백 개의 IMU 측정이 존재하는데, 최적화할 때 이것을 전부 상태 변수로 넣으면 문제 크기가 폭발한다.
+**문제 정의**: IMU 센서는 통상 200~1000 Hz의 높은 주기로 가속도와 각속도를 연속 출력한다. 이와 대조적으로 비전 SLAM 백엔드 최적화는 수 Hz에서 수십 Hz 주기의 키프레임 단위로 실행된다. 키프레임 사이에 수백 개의 IMU 측정이 존재하는데, 최적화할 때 이것을 전부 상태 변수로 넣으면 문제 크기가 폭발한다.
 
 **Preintegration의 아이디어**: 두 키프레임 `i`와 `j` 사이의 IMU 측정값들을 하나의 "상대 운동 측정(relative motion measurement)"으로 압축한다. 이 압축된 측정값이 최적화의 factor로 들어간다.
 
@@ -839,32 +839,30 @@ VINS-Mono, ORB-SLAM3 (Visual-Inertial mode), LIO-SAM 등 현대 VIO/LIO 시스�
 
 SLAM/VIO 시스템을 돌려보면 "왜 이 상황에서 drift가 심한가?", "왜 가만히 서있으면 위치가 흔들리는가?" 같은 현상을 겪게 된다. 이런 현상의 상당수는 시스템의 **관측가능성(observability)** 한계에서 비롯된다.
 
-**Visual-Inertial 시스템의 관측 불가능한 상태**: VIO에서 추정할 수 없는(unobservable) 자유도가 4개 있다:
+**Visual-Inertial 시스템의 관측 불가능한 상태**: Hesch et al. (2014)이 임의의 운동을 하며 하나의 점 특징을 관측하는 이상적 선형화 VINS 모델을 분석한 결과, 다음 4개 방향이 관측 불가능했다:
 
 1. **Global position (3 DoF)** — 절대 위치를 알 수 없다. GPS 같은 절대 기준이 없으면 시작점을 원점으로 잡을 수밖에 없다
 2. **Global yaw (1 DoF)** — 중력 방향 축 기준의 회전(heading). 나침반 없이는 "어느 쪽이 북쪽인지" 알 수 없다
 
-반면 다음은 관측 가능하다:
-- **Roll/pitch**: IMU accelerometer가 중력 방향을 감지하므로, 중력 기준 roll/pitch는 추정 가능
-- **Scale** (stereo/IMU가 있는 경우): stereo 카메라의 baseline이나 IMU의 가속도 측정으로 스케일 복원 가능. 단, **monocular 카메라만으로는 scale이 관측 불가능**하다
+이 결과는 명시한 모델과 운동 조건에 대한 것이다. Roll/pitch, metric scale, IMU bias와 calibration 파라미터의 추정 가능성은 센서 구성과 운동 여기(excitation)에 따라 달라진다. Stereo baseline은 metric 기준을 주지만, monocular 영상만으로는 scale을 정할 수 없다. Monocular VIO는 정보가 충분한 운동에서 IMU 측정을 함께 써 scale을 추정한다.
 
 **Degenerate motion** — 특정 움직임 패턴에서 추가적인 상태가 관측 불가능해진다:
 
-- **순수 회전(pure rotation)**: Monocular VO에서 translation을 추정할 수 없다. Epipolar geometry에서 epipole이 무한원점으로 가기 때문이다. 실무에서 "카메라를 제자리에서 돌리면 트래킹이 깨진다"는 현상의 원인
-- **등속 직진(constant velocity)**: IMU의 accelerometer가 중력과 가속도를 구분하는데, 가속이 없으면(등속이면) accelerometer bias와 중력 방향의 미세한 오차를 구분할 수 없다. IMU bias가 관측 불가능해진다
-- **정지(stationary)**: 등속의 특수 케이스. 가만히 서있으면 visual feature의 parallax도 없고 IMU 가속도도 없어서, bias와 스케일 모두 관측 불가능. "왜 가만히 서있으면 VINS가 drift 하는가?"의 답
+- **순수 회전(pure rotation)**: 병진 parallax가 없으므로 monocular 영상만으로는 translation을 복원할 수 없다. 회전 자체의 추정과 트래킹 가능성은 별개이다.
+- **초기화 구간의 부족한 운동**: 단안 VIO 초기화에서 등속 운동이나 정지 상태만 관측하면 IMU bias에 대한 복수의 해가 남을 수 있다. 이때 scale·중력·bias 초기화가 약해질 수 있으며, 정확한 degeneracy는 상태와 측정 모델에 따라 다르다.
 
 **EKF 기반 시스템에서의 문제**: 표준 EKF를 VIO에 적용하면, linearization 오차로 인해 이론적으로 관측 불가능한 방향에서도 공분산이 줄어드는(uncertainty가 인위적으로 감소하는) 현상이 발생한다. 이것은 inconsistency의 주요 원인이다.
 
 **OC-EKF (Observability-Constrained EKF)**: 이 문제를 해결하기 위해, EKF의 Jacobian을 수정하여 관측 불가능한 방향의 null space를 보존한다. 추정기가 "모르는 것은 모른다고 유지"하도록 강제하는 것이다.
 
 실무적 함의:
-- VIO 시스템을 사용할 때는 **다양한 방향으로 움직이면서** 초기화해야 한다. 한 방향으로만 걸으면 IMU bias 추정이 제대로 되지 않는다
-- Loop closure가 없는 VIO는 장시간 운용 시 반드시 drift 한다. 관측 불가능한 yaw 방향의 오차가 축적되기 때문
-- Monocular VIO의 스케일은 가속/감속이 있어야 관측 가능. 일정 속도로만 움직이면 스케일 drift가 생긴다
+- VIO 초기화에서는 사용하는 구현의 조건에 맞는 충분한 회전·병진 운동을 제공하고, scale·중력·bias의 수렴 지표를 확인한다
+- Loop closure는 재방문 제약으로 누적 drift를 줄일 수 있지만, 그 자체가 절대 global position이나 yaw 기준을 새로 만들지는 않는다
+- Monocular VIO의 metric scale은 영상만으로는 정해지지 않으므로, 초기화 구간의 IMU 측정과 운동이 충분한 정보를 주는지 확인한다
 
 > **추천 자료**
 > - [Hesch et al., "Observability-constrained Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6672119) — OC-EKF/OC-VINS의 원본 논문
+> - [Hong & Lim, "Visual-Inertial Odometry with Robust Initialization and Online Scale Estimation" (Sensors 2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6308559/) — 등속·정지 구간에서 초기화가 약해지는 조건을 다루는 구현 예
 > - Barfoot, "State Estimation for Robotics" Ch.9 — 관측가능성 분석의 이론적 토대
 > - [Huang & Dissanayake, "A critique of current developments in Simultaneous Localization and Mapping" (IJRR 2016)](https://journals.sagepub.com/doi/10.1177/0278364916643566) — SLAM의 관측가능성/일관성 문제를 비판적으로 정리
 
@@ -889,7 +887,7 @@ VINS-Mono(최적화)와 MSCKF(필터)의 성능 차이는 solver보다 **시스�
 
 ### 14.12 심화: Semantic SLAM
 
-기존 SLAM은 순수하게 기하학적(geometric)인 지도를 만든다. 포인트 클라우드, 메쉬, occupancy grid 등 "공간의 형태"만 기록한다. 벽이 있다는 건 알지만 그것이 벽인지, 문인지, 책장인지는 모른다. Semantic SLAM은 지도에 의미(semantic) 정보를 결합한다.
+전통적 SLAM 파이프라인은 순수하게 기하학적(geometric) 형상을 복원하는 데 집중한다. 포인트 클라우드, 메쉬, 점유 격자처럼 공간의 외형적 구조를 기록하는 형태다. 장애물이 특정 위치에 존재한다는 사실은 파악하지만 그것이 벽인지, 출입문인지, 책장인지와 같은 기능적 정체는 구분하지 못한다. 이에 반해 Semantic SLAM은 기하학적 좌표계 위에 의미론적(semantic) 맥락을 결합한다.
 
 접근 방식은 랜드마크 표현 방식에 따라 나뉜다. **Object-level SLAM** (CubeSLAM, QuadricSLAM)은 점(point) 대신 3D cuboid·dual quadric 같은 물체 단위를 랜드마크로 추정한다. 물체 검출기에 의존하지만, data association이 점 기반보다 견고하고 물체 수준의 추론이 가능하다. **Panoptic SLAM**은 panoptic segmentation 결과를 3D로 융합하여 모든 픽셀에 semantic label이 붙은 지도를 만든다. 로봇이 "이 방에 의자가 3개"를 지도에서 바로 쿼리할 수 있다. **Open-vocabulary SLAM** (ConceptGraphs)은 CLIP 같은 vision-language model의 feature를 지도에 저장하여 자연어로 장소를 검색할 수 있게 한다. 13장에서 다룬 3D Scene Graph (Hydra 등)와 직접 연결되는 주제다.
 
@@ -920,7 +918,7 @@ for feature in detected_features:
 
 **Distributed 접근**은 각 로봇이 local SLAM을 수행하고 rendezvous나 inter-robot loop closure에서 relative pose constraint를 만든다. 원본 data 대신 descriptor나 submap을 교환하면 통신량을 줄일 수 있지만 검증에 필요한 정보도 줄어든다. 각 robot이 어떤 변수와 factor를 보유·교환하는지, 그리고 asynchronous optimization이 어떤 조건에서 수렴하는지는 algorithm마다 다르다.
 
-분산 시스템에서는 **inter-robot loop closure**, **좌표계 정렬**, **outlier rejection**을 함께 다뤄야 한다. Relative SE(3)는 하나의 검증된 6-DoF pose constraint로 주어질 수도 있고, 3D point correspondence로 구한다면 퇴화하지 않는 최소 세 점과 충분한 inlier가 필요하다. PCM(Pairwise Consistency Maximization), GNC(Graduated Non-Convexity), distributed Gauss-Seidel, ADMM 등은 각기 다른 가정과 통신 비용을 가지므로 system 조건에 맞춰 선택한다.
+분산 시스템에서는 **inter-robot loop closure**, **좌표계 정렬**, **outlier rejection**을 함께 다뤄야 한다. Relative SE(3) 변환은 사전에 검증된 6자유도 포즈 제약으로 직접 주어질 수 있으며, 3차원 점 대응쌍으로 계산할 경우 퇴화(degenerate)하지 않는 최소 세 점과 충분한 인라이어 집합이 요구된다. PCM(Pairwise Consistency Maximization), GNC(Graduated Non-Convexity), distributed Gauss-Seidel, ADMM 등은 각기 다른 가정과 통신 비용을 가지므로 system 조건에 맞춰 선택한다.
 
 **대표 시스템**:
 | 시스템 | 특징 |
@@ -950,7 +948,7 @@ DBoW2 라이브러리가 대표적이며 ORB-SLAM2/3에서 사용된다.
 
 **학습 기반 방법: Global Descriptor**
 
-이미지 전체를 하나의 compact vector로 압축하는 방식이다. **NetVLAD** (2016)는 CNN feature와 VLAD aggregation을 결합했고, 논문의 도시 규모 benchmark에서 비교 방법보다 높은 recall을 보고했다. **CosPlace** (2022)와 **MixVPR** (2023)은 각 논문의 dataset·protocol에서 descriptor 학습과 aggregation의 개선을 평가했다. **AnyLoc** (2023)은 DINOv2 feature를 활용해 여러 indoor·outdoor·aerial dataset에서 별도 place-recognition fine-tuning 없는 결과를 보고했다. 이 결과는 모든 환경에서 BoVW보다 robust하다는 보장이 아니므로 target domain에서 recall과 false positive를 다시 측정해야 한다.
+이미지 전체를 하나의 compact vector로 압축하는 방식이다. **NetVLAD** (2016)는 합성곱 신경망 특징과 VLAD 집계 기법을 통합 설계한 모델로, 도시 규모 벤치마크 평가에서 기존 비교 대상 대비 향상된 재현율(recall)을 입증했다. **CosPlace** (2022)와 **MixVPR** (2023)은 각 논문의 dataset·protocol에서 descriptor 학습과 aggregation의 개선을 평가했다. **AnyLoc** (2023)은 DINOv2 feature를 활용해 여러 indoor·outdoor·aerial dataset에서 별도 place-recognition fine-tuning 없는 결과를 보고했다. 이 결과는 모든 환경에서 BoVW보다 robust하다는 보장이 아니므로 target domain에서 recall과 false positive를 다시 측정해야 한다.
 
 **LiDAR 기반 Place Recognition**:
 
@@ -1000,7 +998,7 @@ iSAM2(Kaess et al., IJRR 2012)는 Bayes tree 구조를 도입하여 이 한계�
 
 **Removert** (Kim et al., 2020): multi-resolution range image를 이용해 static/dynamic을 분류한다. Point cloud를 range image로 투영한 뒤, 다른 시점에서 관측한 range와 비교하여 동적 여부를 판단한다. 먼저 static point를 보수적으로 확보하고, 잘못 제거한 point를 복원하는 two-stage 방식을 사용한다. 여러 confidence level을 두어 이 두 단계의 trade-off를 조절할 수 있다.
 
-기존 접근과 비교하면: voxel ray-casting은 정확하지만 연산이 비싸고, visibility-based는 뒤의 static point를 보존한다는 가정이 필요하며, segmentation-based는 unknown label에 약하고 scan-to-map 관계를 무시한다. Removert는 이 세 방법의 단점을 multi-resolution range image 비교로 보완한다.
+기존 동적 물체 제거 기법들과 대비되는 지점은 다음과 같다. 복셀 레이캐스팅은 정밀한 대신 연산 비용이 과다하며, 가시성(visibility) 기반 방식은 후면의 정적 포인트 보존이라는 제약 가정을 둔다. 또한 시맨틱 세분화 기반 방식은 미등록 레이블에 취약하고 스캔과 지도 간 기하학적 정합 관계를 충분히 살리지 못한다. Removert는 이 세 방법의 단점을 multi-resolution range image 비교로 보완한다.
 
 **SuMa++** (Chen et al., IROS 2019): surfel-based mapping에 semantic label을 추가한 시스템이다. LiDAR point에 normal과 semantic 정보를 더하고, semantic과 motion 양쪽에서 dynamic으로 판정된 surfel만 제거한다. Motion-degenerate 환경에서는 움직이는 point도 geometric constraint로 유용할 수 있기 때문이다.
 
@@ -1024,7 +1022,7 @@ iSAM2(Kaess et al., IJRR 2012)는 Bayes tree 구조를 도입하여 이 한계�
 
 *§14.9 factor graph 최적화(양방향 참조).*
 
-2005년 *Probabilistic Robotics*가 출간될 무렵에는 SLAM의 정보 표현을 두고 여러 접근이 경쟁했다. EKF-SLAM은 결합 상태와 공분산을 사용했고, EIF/SEIF는 정보형의 가산성을 활용했으며, EM mapping은 미지 data association을 통계적으로 다뤘다. 2010년대의 factor graph와 GTSAM/iSAM2는 이 계보에서 정보형의 가산성, 변수 소거, 증분 갱신을 이어받아 현대적인 최적화 구조로 정리했다.
+2005년 *Probabilistic Robotics*가 출간될 무렵에는 SLAM의 정보 표현을 두고 여러 접근이 경쟁했다. EKF-SLAM이 결합 상태 벡터와 공분산 행렬을 추적했다면, EIF/SEIF는 정보 행렬의 가산적 특성을 바탕으로 계산 효율을 도모했고 EM mapping은 미지 데이터 연관 문제를 기댓값 최대화로 풀어냈다. 2010년대의 factor graph와 GTSAM/iSAM2는 이 계보에서 정보형의 가산성, 변수 소거, 증분 갱신을 이어받아 현대적인 최적화 구조로 정리했다.
 
 #### 14.16.1 EKF-SLAM (PR §10)
 
@@ -1106,9 +1104,9 @@ $$\bar\Omega_{xx} = \Omega_{xx} - \Omega_{xy} \Omega_{yy}^{-1} \Omega_{yx}$$
 
 Thrun & Montemerlo (2006, IJRR)의 GraphSLAM은 전체 trajectory와 map posterior를 sparse information graph로 batch 최적화한다. EIF와 정보형 가산성을 공유하지만 online filtering과 batch smoothing은 구분해야 한다. Lu & Milios (1997)는 pose relation을 전역 최적화하는 앞선 연구다.
 
-GraphSLAM의 한 unknown-correspondence 절차는 feature 쌍 $(m_j, m_k)$의 동일성 후보를 평가하고 선택한 제약을 graph에 추가한 뒤 다시 최적화한다. Factor를 명시적으로 보관하면 선택한 제약을 제거하고 재최적화할 수 있다. Switchable constraints (Sünderhauf & Protzel 2012)는 loop factor의 활성도를 연속 변수로 함께 최적화하는 별도 robust formulation이며, 단순한 계보 관계로 동일시해서는 안 된다.
+GraphSLAM의 한 unknown-correspondence 절차는 feature 쌍 $(m_j, m_k)$의 동일성 후보를 평가하고 선택한 제약을 graph에 추가한 뒤 다시 최적화한다. Factor를 명시적으로 보관하면 선택한 제약을 제거하고 재최적화할 수 있다. Switchable constraints (Sünderhauf & Protzel 2012)의 경우 loop factor의 활성도를 연속 최적화 변수로 직접 모델링하는 독립된 견고성(robustness) 정식화다. 따라서 단순한 역사적 파생 관계로 동일시하는 해석은 피해야 한다.
 
-Initialize → factor 구성 → variable elimination → solve라는 단계는 현대 batch SLAM과 비교할 수 있다. iSAM/iSAM2는 새 factor가 들어올 때 linearization과 elimination의 영향을 받는 부분을 갱신하는 incremental smoothing이고, Bayes tree는 그 factorization을 관리하는 자료구조다. GraphSLAM이 단순히 이름만 바뀌어 진화한 것으로 보아서는 안 된다.
+Initialize → factor 구성 → variable elimination → solve라는 단계는 현대 batch SLAM과 비교할 수 있다. iSAM/iSAM2는 새로운 factor 유입 시 선형화와 소거 영향권을 국소 갱신하는 증분 평활화(incremental smoothing) 기법을 기반으로 삼는다. 이때 Bayes tree는 이러한 행렬 분해 구조를 트리 형태로 체계화하여 관리하는 핵심 자료구조다. GraphSLAM이 단순히 이름만 바뀌어 진화한 것으로 보아서는 안 된다.
 
 #### 14.16.3 SEIF — Sparse Extended Information Filter (PR §12)
 
@@ -1191,9 +1189,9 @@ EM_mapping(d):
   return m
 ```
 
-$\alpha$는 forward localization (Markov localization), $\beta$는 backward (미래 데이터로 과거 belief 보정). $\beta$ 덕분에 루프를 닫을 때 과거 belief가 거꾸로 수정된다 — 이것이 EM mapping의 통계적 핵심이자, PR Figure 13.10-13.12에서 가장 명확히 드러나는 특성이다. forward-backward 구조는 HMM의 Baum-Welch와 동일하다.
+$\alpha$는 forward localization (Markov localization), $\beta$는 backward (미래 데이터로 과거 belief 보정). $\beta$ 덕분에 루프를 닫는 시점에 시간 역방향으로 과거 belief가 소급 수정된다 — 이것이 EM mapping의 통계적 핵심이자, PR Figure 13.10-13.12에서 가장 명확히 드러나는 특성이다. forward-backward 구조는 HMM의 Baum-Welch와 동일하다.
 
-M-step은 frequentist count: "셀이 property l로 관측된 횟수 / 무엇이든 관측된 횟수", belief로 가중. 3-5회 반복이면 보통 수렴한다.
+M-step은 frequentist count: "셀이 property l로 관측된 횟수 / 무엇이든 관측된 횟수", belief로 가중. 3~5회 반복이면 보통 수렴한다.
 
 ##### Layered EM Mapping
 
@@ -1253,7 +1251,7 @@ MCL, linear distribution, nested ML을 그대로 결합한 구현은 현재 널�
 | EM Mapping | latent data association, forward-backward localization, submap | EM 기반 mapping, submap system | 통계 기법·구조의 비교이며 직접 계보는 아님 |
 | Cycle Posterior | online closure detection과 correction 결합 | place recognition + graph optimization | 기능 분할이 유사함 |
 
-정보형의 **가산성**은 현대 factor cost의 합과 직접 비교할 수 있다. 반면 SEIF의 **sparsification**, sliding-window marginalization, Bayes-tree elimination은 모두 계산량을 관리하지만 서로 다른 연산이다. Cycle posterior의 detector/corrector 구분과 EM mapping의 submap은 현대 시스템과 구조적으로 비교할 수 있으나, 이를 특정 구현의 직접 계보로 단정하지 않는다(§14.9 참조).
+정보형의 **가산성**은 현대 factor cost의 합과 직접 비교할 수 있다. 이에 비해 SEIF의 **sparsification**, sliding-window marginalization, Bayes-tree elimination은 연산 부담 완화라는 공통 목적을 공유할 뿐 엄연히 구별되는 연산 절차다. Cycle posterior의 detector/corrector 구분과 EM mapping의 submap은 현대 시스템과 구조적으로 비교할 수 있으나, 이를 특정 구현의 직접 계보로 단정하지 않는다(§14.9 참조).
 
 > **참고 자료**
 > - [Thrun et al., "Simultaneous Localization and Mapping with Sparse Extended Information Filters" (IJRR 2004)](https://journals.sagepub.com/doi/10.1177/0278364904045026) — SEIF 원본 논문
@@ -1263,4 +1261,4 @@ MCL, linear distribution, nested ML을 그대로 결합한 구현은 현재 널�
 
 ---
 
-서비스 로봇의 localization은 belief를 어떻게 표현하느냐에 따라 방법이 갈리고, pose graph 최적화 결과는 별도의 map generation 과정을 거쳐 최종 지도가 된다. Factor graph가 널리 쓰이게 된 역사도 이 흐름 안에서 이해할 수 있다. 천장 마커나 계산 자원이 제한된 시스템에서는 EKF localization의 골격도 여전히 선택할 수 있다. 두 방식의 공존은 한 구조로의 수렴이 모든 운용 조건의 답은 아니라는 점을 보여준다.
+서비스 로봇의 localization은 belief 표현 체계에 따라 접근법이 갈린다. 또한 pose graph 최적화 결과는 별도의 지도 생성(map generation) 절차를 거쳐 최종 내비게이션 지도로 완성된다. Factor graph가 널리 쓰이게 된 역사도 이 흐름 안에서 이해할 수 있다. 천장 마커나 계산 자원이 제한된 시스템에서는 EKF localization의 골격도 여전히 선택할 수 있다. 두 방식의 공존은 한 구조로의 수렴이 모든 운용 조건의 답은 아니라는 점을 보여준다.

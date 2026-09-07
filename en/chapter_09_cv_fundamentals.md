@@ -133,7 +133,7 @@ To invert the projection and recover a real-world 3D position from a pixel coord
 
 **Intrinsic Parameters**:
 - f_x, f_y: Focal length (in pixels)
-- c_x, c_y: Principal point (image center)
+- c_x, c_y: Principal point (intersection of the optical axis with the image plane, which can differ from the image center)
 - Intrinsic Matrix K (3x3)
 
 **Extrinsic Parameters**:
@@ -322,7 +322,7 @@ matches = bf.knnMatch(des1, des2, k=2)
 good = [m for m, n in matches if m.distance < 0.75 * n.distance]
 ```
 
-Lowe's ratio test uses kNN to find the two nearest matches and keeps a match only when the ratio of the first distance to the second falls below a threshold. This removes ambiguous cases in which the two distances are similar. Lowe proposed 0.75 in the original paper; the threshold can be adjusted between 0.6 and 0.8 for the application.
+Lowe's ratio test uses kNN to find the two nearest matches and keeps a match only when the ratio of the first distance to the second falls below a threshold. This removes ambiguous cases in which the two distances are similar. Lowe used 0.8 in the original paper, while the example above uses 0.75; the threshold can be adjusted between 0.6 and 0.8 for the application.
 
 > **Further reading**
 > - [OpenCV Feature Matching](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html) — Examples of BFMatcher, FLANN, and ratio test.
@@ -352,7 +352,7 @@ x2^T E x1 = 0
 
 **5-point algorithm**: estimates E from at least 5 correspondence pairs (used with RANSAC)
 
-Decomposing the essential matrix into R and t gives the relative rotation and translation between the two cameras. This is the core principle of Visual Odometry.
+Decomposing the essential matrix into R and t gives candidate relative rotations and translation directions between the two cameras. The positive-depth condition selects a candidate, while the translation magnitude requires separate scale information. This is the core principle of Visual Odometry.
 
 > **Exercise**: [Epipolar Geometry Visualization](https://alexjunholee.github.io/robotics-practice/app.html#epipolar)
 > Examine interactively the epipolar lines and epipoles between two camera viewpoints, and understand the geometric meaning of the essential/fundamental matrix.
@@ -518,7 +518,7 @@ camera_position = -R.T @ tvec
 Things to watch out for:
 - The result of `solvePnP` is the **world-to-camera transform**. To get the camera's world position, you need to invert it.
 - At least 4 points are required, but the more points, the more robust to noise. The RANSAC version `cv2.solvePnPRansac()` filters outliers automatically.
-- The `flags` parameter selects the algorithm: `cv2.SOLVEPNP_ITERATIVE` (default, LM), `cv2.SOLVEPNP_P3P` (minimum 3 points), `cv2.SOLVEPNP_EPNP` (fast and stable, good when there are many points).
+- The `flags` parameter selects the algorithm: `cv2.SOLVEPNP_ITERATIVE` (default, LM), `cv2.SOLVEPNP_P3P` (exactly 4 points in `solvePnP`), `cv2.SOLVEPNP_EPNP` (fast and stable, good when there are many points).
 
 The direction of the Rodrigues vector is the rotation axis, and its magnitude (norm) is the rotation angle. This is exactly the axis-angle representation from the Lie algebra so(3) in Ch.3. `cv2.Rodrigues()` is an implementation of the exp/log map.
 

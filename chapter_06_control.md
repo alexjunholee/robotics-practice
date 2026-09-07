@@ -1,7 +1,7 @@
 # Ch.6 — 제어 이론 (Control Theory)
 
 
-인식은 로봇의 상태와 환경을 추정하고, 제어는 그 정보를 이용해 원하는 동작을 만든다. 제어 입력을 잘못 계산하면 로봇이 불안정해지거나 충돌할 수 있으므로 정확한 모델과 feedback이 필요하다.
+인식은 로봇의 상태와 환경을 추정하고, 제어는 그 정보를 바탕으로 원하는 동작을 만든다. 제어 입력을 잘못 계산하면 로봇이 불안정해지거나 충돌할 수 있으므로 정확한 모델과 feedback이 필요하다.
 
 ---
 
@@ -15,9 +15,9 @@
 - **외란 대응**: 미끄러운 바닥, 바람, 예상과 다른 payload처럼 모델에 포함되지 않은 변화가 생긴다. 센서-actuator loop를 닫아 이런 불확실성에 대응한다.
 - **안전한 접촉**: 사람과 함께 일하는 산업용 로봇은 위치뿐 아니라 접촉력도 제한해야 한다.
 
-이 장은 PID에서 출발해 상태공간 제어, MPC, 임피던스 제어, Whole-Body Control로 이어진다.
-
-행렬 연산, 고유값(eigenvalue), 미분방정식이 이 장의 선수지식이다.
+기본 흐름은 PID에서 출발해 상태공간 제어, MPC, 임피던스 제어, Whole-Body Control로 이어진다.
+ 
+행렬 연산, 고유값(eigenvalue), 미분방정식을 바탕에 둔다.
 
 ---
 
@@ -110,7 +110,7 @@ for step in range(5000):
     error = target - position
     force = pid.compute(error)
 
-    # 간단한 1차 동역학: F = ma, 감쇠 포함
+    # 간단한 2차 위치 동역학: F = ma, 감쇠 포함
     acceleration = (force - 0.5 * velocity) / mass
     velocity += acceleration * dt
     position += velocity * dt
@@ -131,10 +131,10 @@ Ziegler-Nichols 튜닝은 오버슈트가 크게 나올 수 있다. 따라서 �
 
 **실무에서의 경험적 튜닝**: 다음은 경험적으로 게인을 조정하는 순서다.
 
-1. D, I를 0으로 놓는다.
-2. P를 올린다. 시스템이 빠르게 반응하되 진동하지 않는 선에서 멈춘다.
-3. 정상상태 오차가 있으면 I를 조금씩 올린다. Wind-up 조심.
-4. 오버슈트가 크면 D를 조금 넣는다. 노이즈 필터 확인.
+1. D, I를 0으로 설정한다.
+2. P를 높여 시스템이 빠르게 반응하되 진동하지 않는 지점을 찾는다.
+3. 정상상태 오차가 남으면 I를 점진적으로 올린다. 적분 누적(wind-up) 방지가 필수적이다.
+4. 오버슈트가 크면 D를 소량 추가하고 노이즈 필터를 함께 확인한다.
 
 시스템 모델을 쓸 수 있다면 시뮬레이션에서 먼저 게인을 조정한 뒤 실기에 적용한다.
 
@@ -183,7 +183,7 @@ D = [[0]]
 
 ### 전달함수와의 관계
 
-전달함수 G(s) = C * (sI - A)^(-1) * B + D 이다. 전달함수는 SISO 시스템에서 편리하고, 여러 입력과 출력을 함께 다루는 로봇 제어에서는 상태공간 표현이 변수 사이의 결합을 직접 나타내기 좋다. 어느 표현을 쓸지는 시스템의 입출력 구조와 분석 목적에 따라 정한다.
+전달함수 G(s) = C * (sI - A)^(-1) * B + D 이다. 전달함수는 SISO 시스템 분석에 유용하며, 다입출력 로봇 제어에서는 상태공간 표현이 변수 사이의 결합 관계를 직관적으로 드러낸다. 어느 표현을 쓸지는 시스템의 입출력 구조와 분석 목적에 따라 정한다.
 
 ### 가제어성 (Controllability)
 
@@ -193,7 +193,7 @@ D = [[0]]
 C_ctrl = [B, A*B, A^2*B, ..., A^(n-1)*B]
 ```
 
-이 행렬의 rank가 n이면 가제어이다. rank가 n보다 작으면, 제어 입력으로 도달할 수 없는 상태가 존재한다는 뜻이다. 그런 시스템에 LQR을 적용하면 안 된다.
+이 행렬의 rank가 n이면 가제어이다. rank가 n보다 작으면, 제어 입력으로 도달할 수 없는 상태가 존재한다는 뜻이다. 무한시간 LQR의 안정화 해에는 완전한 가제어성 대신 안정화 가능성(stabilizability)이 필요하다. 또한 상태 비용의 검출 가능성(detectability)과 양의 정부호 입력 비용 같은 조건을 확인해야 한다.
 
 ### 가관측성 (Observability)
 
@@ -377,13 +377,13 @@ MPC(Model Predictive Control)는 매 제어 주기마다 유한 구간(finite ho
 
 ### 기본 개념
 
-매 time step k에서 다음을 수행한다:
+매 time step k에서 다음 절차를 거친다:
 
-1. 현재 상태 x(k)를 측정 또는 추정한다.
-2. 모델을 이용하여 N step 앞까지 미래를 예측한다.
-3. 비용 함수를 최소화하는 입력 시퀀스 {u(k), u(k+1), ..., u(k+N-1)}을 구한다. 이때 제약 조건을 명시적으로 반영한다.
-4. 첫 번째 입력 u(k)만 실제로 적용하고, 나머지는 버린다.
-5. 다음 time step에서 1로 돌아간다.
+1. 현재 상태 x(k)를 센서로 측정하거나 필터로 추정한다.
+2. 시스템 모델을 바탕으로 N step 앞까지 미래 거동을 예측한다.
+3. 제약 조건을 명시적으로 반영하며 비용 함수를 최소화하는 입력 시퀀스 {u(k), u(k+1), ..., u(k+N-1)}을 구하는 최적화 단계다.
+4. 산출된 수열 가운데 첫 번째 입력 u(k)만 실제로 인가하고 나머지는 폐기한다.
+5. 다음 time step에서 1단계로 순환한다.
 
 이것을 "receding horizon" 전략이라 한다. 매번 최적화를 새로 풀기 때문에, 모델 오차나 외란에 대한 피드백 효과가 자연스럽게 생긴다.
 
@@ -396,7 +396,7 @@ MPC(Model Predictive Control)는 매 제어 주기마다 유한 구간(finite ho
 
 ### Linear MPC vs Nonlinear MPC
 
-Linear MPC: 선형 모델(x(k+1) = A*x(k) + B*u(k))을 사용하고, 비용 함수가 이차(quadratic), 제약이 선형이면 문제가 QP(Quadratic Program)가 된다. feasible한 convex QP는 전역 최적해를 구할 수 있으며, 실제 계산 시간은 문제 크기·희소성·solver와 hardware에 달려 있다.
+Linear MPC: 선형 모델(x(k+1) = A*x(k) + B*u(k))을 사용하고, 비용 함수가 이차(quadratic), 제약이 선형이면 문제가 QP(Quadratic Program)가 된다. feasible한 convex QP는 전역 최적해 계산이 보장된다. 다만 실제 연산 시간은 문제 크기, 희소성 구조, solver와 실행 하드웨어에 좌우된다.
 
 Nonlinear MPC (NMPC): 비선형 동역학 모델을 사용한다. 문제가 비볼록(non-convex)이 되어 풀기 어렵고, 전역 최적해를 보장하지 못한다. CasADi + IPOPT는 자동 미분과 NLP solver를 연결하는 한 가지 널리 쓰이는 조합이며, acados·FORCESPRO·SNOPT 등 다른 선택지도 있다.
 
@@ -536,9 +536,7 @@ print(f"예측 궤적 (위치): {x_pred[:5, 0]}")
 
 ### 산업 사례
 
-- **Boston Dynamics Atlas (2019~)**: MPC + Whole-Body Control 조합. 비선형 MPC로 접촉 시퀀스를 예측하고, WBC로 관절 토크를 실시간 분배한다.
-- **Unitree H1/G1 (2023~)**: 학습 기반 정책(reinforcement learning)이 high-level 명령을 생성하고, MPC가 low-level 궤적 추종을 담당하는 하이브리드 구조.
-- **Figure 01 (2024)**: LLM이 태스크 레벨 계획을 세우고, MPC가 manipulation 궤적을 최적화한다. 제어와 AI의 결합 사례.
+- **Boston Dynamics Atlas**: 제조사의 공개 설명에 따르면 Atlas의 컨트롤러 중심에는 MPC가 있다. 물체를 들고 던지는 실험에서는 전신 관절의 운동, 각 링크의 운동량, 로봇과 물체 사이의 힘을 모델에 포함했다.
 
 ---
 
@@ -654,7 +652,7 @@ x_d_new = x_d + (1 / K_d) * F_ext + (1 / D_d) * F_ext_dot
 
 산업용 로봇에서 어드미턴스 제어가 많이 쓰이는 이유: 산업용 로봇은 이미 매우 정밀한 위치 제어기가 내장되어 있고, 대부분 외부에서 토크 명령을 직접 줄 수 없다. 그래서 힘 센서(F/T sensor)로 외력을 측정하고, 위치 명령을 수정하는 어드미턴스 방식이 더 실용적이다.
 
-반면 연구용 토크 제어 가능 로봇(Franka Emika Panda 등)에서는 임피던스 제어가 더 자연스럽다.
+외부 토크 제어가 개방된 Franka Emika Panda 같은 연구용 로봇에서는 임피던스 제어가 한층 자연스럽게 맞아떨어진다.
 
 ---
 
@@ -792,7 +790,7 @@ V_dot(x) < 0이면 점근적 안정(asymptotically stable), 즉 시간이 지남
 M(q)*q_ddot + C(q,q_dot)*q_dot + g(q) = Y(q, q_dot, q_ddot) * theta
 ```
 
-여기서 Y는 regressor matrix이고, theta는 동역학 파라미터 벡터(질량, 관성, 마찰 등)이다.
+여기서 Y는 regressor matrix이며, theta는 질량·관성·마찰 등을 묶은 동역학 파라미터 벡터다.
 
 적응 제어 법칙:
 
@@ -823,7 +821,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 | 안전 인증이 필요함 | Lyapunov 기반 증명 | "시뮬레이션에서 됐으니까 OK" |
 | 빠르게 프로토타입 | PID + feedforward | 처음부터 H-infinity |
 
-적응 제어와 sliding mode는 불확실성의 구조와 요구되는 보장에 따라 선택한다. 제어기의 안정성을 주장하려면 Lyapunov 함수나 그에 준하는 수학적 근거가 필요하며, 안전 인증이 필요한 시스템에서는 그 근거가 설계 조건이 된다.
+적응 제어와 sliding mode는 불확실성의 구조와 요구되는 보장에 따라 선택한다. 제어기 안정성을 체계적으로 입증하려면 Lyapunov 함수나 동등한 수학적 분석이 뒷받침되어야 하고, 안전 인증 대상 시스템에서는 이러한 해석 결과 자체가 필수 설계 규격이 된다.
 
 ---
 
@@ -873,9 +871,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 1987 ── Operational Space Control (Khatib)
 1990s ─ Robust control (H-infinity) 산업 적용
 2004 ── 실시간 MPC 실용화 시작
-2019 ── Boston Dynamics Atlas: MPC + WBC
-2023 ── Unitree H1/G1: 학습 기반 + MPC 하이브리드
-2024 ── Figure 01: LLM + MPC + manipulation
+2020s ─ Boston Dynamics Atlas: 전신 동작과 물체에 가하는 힘을 포함한 MPC 공개
 ```
 
 ---
