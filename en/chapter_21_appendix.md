@@ -78,7 +78,7 @@
 
 **Q: Should I learn Python or C++ first?**
 
-A: C++ is common in SLAM, ROS packages, and real-time control modules, so researchers need it to read and modify lab code. Python is used mainly for deep-learning scripts and data preprocessing. AI coding agents can assist with writing either language, but researchers must still understand existing code and verify its behavior.
+A: Start with the language of the lab code you need to read and run first. C++ is common in SLAM, ROS packages, and real-time control modules, so researchers need it to read and modify lab code. Python is used mainly for deep-learning scripts and data preprocessing. AI coding agents can assist with writing either language, but researchers must still understand existing code and verify its behavior.
 
 **Q: Can I do research without a GPU?**
 
