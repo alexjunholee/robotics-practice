@@ -178,7 +178,7 @@ sudo make install
 
 `CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus)에서 확인.
 
-주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (19장 AI 에이전트 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
+주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (21장 부록 C.4 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
 
 (참고: [다크 프로그래머 — OpenCV + CUDA 직접 빌드하기](https://darkpgmr.tistory.com/184))
 
@@ -690,7 +690,7 @@ TEST(MyTest, BasicTest) {
 2018 ─── Weights & Biases 출시
   │       실험 추적·시각화·팀 협업을 클라우드로
   │
-2020 ─── Ruff 등장 (2022), Black 대중화
+2020~2022 ─── Black 대중화, Ruff 등장 (2022)
   │       Python 코드 품질 도구의 고속화
   │
 2023+ ── AI-assisted 개발 도구 확산

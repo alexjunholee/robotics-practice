@@ -682,7 +682,7 @@ $$\bar{b} = \langle \arg\max_s b(s),\; H[b] \rangle$$
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-무한 차원 belief를 스칼라 하나로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation·heaven/hell 실험에서 합리적 행동 선택에 충분함이 확인된다.
+무한 차원 belief를 최빈 상태와 엔트로피의 쌍으로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation·heaven/hell 실험에서 합리적 행동 선택에 충분함이 확인된다.
 
 $\arg\max_s b(s)$만 쓰면 표준 MDP 그대로다. 거기에 엔트로피를 더해 "내가 얼마나 모르는가"를 상태에 포함시켰다.
 
@@ -705,7 +705,7 @@ Algorithm Augmented_MDP_value_iteration():
 
 ---
 
-MDP_value_iteration (§15.3.3)과 외형이 동일하다. 상태가 $s$ 대신 $\bar{b}$라는 점만 다르다.
+MDP_value_iteration (원전 Probabilistic Robotics §15.3.3)과 외형이 동일하다. 상태가 $s$ 대신 $\bar{b}$라는 점만 다르다.
 
 전이 확률 $P(\bar{b}' \mid a, \bar{b})$ 계산 (식 16.85):
 
@@ -717,7 +717,7 @@ $$P(\bar{b}' \mid a, \bar{b}) = \int\!\!\int\!\!\int I_{f(b)=\bar{b}}\, I_{f(B(o
 
 coastal navigation은 AMDP가 낳는 emergent 행동 중 설명이 가장 쉬운 사례다.
 
-동기: 넓은 open space를 가로지를 때 conventional MDP planner는 직선 경로를 택한다. 거리가 짧아서다. 하지만 open space에서는 라이더나 카메라가 특징이 없는 벽만 보이므로 위치 belief의 엔트로피가 크게 증가한다. 목적지에 도착해도 어디 있는지 모른다.
+동기: 넓은 open space를 가로지를 때 conventional MDP planner는 직선 경로를 택한다. 거리가 짧아서다. 하지만 open space에서는 라이더나 카메라에 특징이 없는 벽만 보이므로 위치 belief의 엔트로피가 크게 증가한다. 목적지에 도착해도 어디 있는지 모른다.
 
 AMDP planner는 같은 환경에서 벽을 따라 도는 곡선 경로를 선택한다. 벽 근처에서 라이더 측정이 위치를 잘 제약하여 엔트로피가 낮게 유지된다. 비용 함수에 엔트로피가 포함되어 있으므로, 정보가 많은 경로를 선호하는 동작이 자동으로 나온다.
 

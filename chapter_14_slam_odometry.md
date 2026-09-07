@@ -531,7 +531,7 @@ N은 랜드마크 수, H는 가설 수, K는 격자 셀 수, M은 파티클 수�
 
 ### 14.7B Occupancy Grid Mapping
 
-§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하는 기법이다. 이는 pose graph 최적화로 정렬된 자세 궤적을 토대로 최종 점유 지도를 생성하는 후처리 단계에서 중추적인 역할을 수행한다. 실제 SLAM 파이프라인에서는 두 단계가 번갈아 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
+§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하는 기법이다. 이는 pose graph 최적화로 정렬된 자세 궤적을 토대로 최종 점유 지도를 생성하는 후처리 단계에서 중추적인 역할을 수행한다. 이 후처리 구성에서는 두 단계가 순서대로 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
 
 #### 14.7B.1 도입: 지도 작성의 어려움
 
@@ -618,7 +618,7 @@ MAP_occupancy_grid_mapping(x_{1:t}, z_{1:t}):
   return m
 ```
 
-실용적 한계: batch라 incremental SLAM에 맞지 않고, hill-climbing이 local maximum에 갇힌다. 후방 불확실성도 사라진다. 그러나 **"셀 독립 가정을 깨야 한다"는 통찰은 이후에 이어진다**.
+실용적 한계: batch라 incremental SLAM에 맞지 않고, hill-climbing이 local maximum에 갇힌다. 사후 불확실성도 사라진다. 그러나 **"셀 독립 가정을 깨야 한다"는 통찰은 이후에 이어진다**.
 
 #### 14.7B.6 다른 공간 표현과의 비교: OctoMap·Voxblox·NeRF·3DGS
 

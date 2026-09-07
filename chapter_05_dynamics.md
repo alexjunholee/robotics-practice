@@ -274,7 +274,7 @@ print("T =", T)
 print("V =", V)
 ```
 
-이 코드를 직접 실행해보면 위에서 손으로 유도한 결과와 일치하는 것을 확인할 수 있다. SymPy가 trigsimp을 적용하면 깔끔한 형태가 나온다.
+이 코드는 운동에너지 T와 위치에너지 V를 출력하므로, 위에서 유도한 에너지 식과 비교할 수 있다. SymPy가 trigsimp을 적용하면 깔끔한 형태가 나온다.
 
 > **추천 자료**
 > - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation*, Ch. 4 (https://www.cds.caltech.edu/~murray/mlswiki/) — 라그랑주 역학을 로보틱스 맥락에서 가장 엄밀하게 다룬 교재. 무료 PDF 제공.
@@ -618,7 +618,7 @@ Manipulator equation을 base와 joints로 나누면:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
 ```
 
-왼쪽 위의 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
+등호 오른쪽 입력 벡터의 위 성분 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
 
 이 구속 조건이 locomotion 제어를 어렵게 만든다. 고정 base 매니퓰레이터는 원하는 관절 토크를 그냥 모터에 명령하면 되지만, 보행 로봇은 적절한 접촉력을 만들어내야 base를 원하는 대로 움직일 수 있다.
 

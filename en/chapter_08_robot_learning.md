@@ -110,7 +110,7 @@ Algorithm MDP_value_iteration():
 
 Variable summary: $V_k$ is the value estimate at iteration $k$; $V^*$ is the optimal value after convergence; $\pi^*$ is the optimal policy; $r$ is reward; $\gamma$ is the discount factor; $p(x'|x,a)$ is the transition probability.
 
-The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. In a discrete state space, the integral in the formula becomes a sum (Σ).
+The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. The formula above uses a sum (Σ) for a discrete state space; the corresponding continuous-state expression uses an integral.
 
 Convergence guarantee: the Bellman update operator is a contraction mapping with contraction rate $\gamma$, so the iteration converges to the unique fixed point $V^*$. After $k$ iterations, the error is at most $\gamma^k$ times the initial error: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
 
@@ -156,7 +156,7 @@ Learning a value function separately reduces variance. Most modern RL algorithms
 
 ### On-policy vs Off-policy
 
-- **On-policy**: Trains only on data collected by the current policy. Data is used once and discarded. PPO is representative. Stable but with low sample efficiency.
+- **On-policy**: Trains only on data collected by the current policy. A current rollout can be used for multiple epochs, but data from old policies is not retained in a replay buffer for continued reuse. PPO is representative. Stable but with low sample efficiency.
 - **Off-policy**: Reuses data collected by past policies (replay buffer). SAC and TD3 are representative. Sample efficient but training can be unstable.
 
 In robotics, data collection is costly, so the sample efficiency of off-policy methods is attractive. However, if large-scale parallel environments can be run in simulation, on-policy PPO is also sufficiently competitive.
@@ -551,7 +551,7 @@ Foundation models for robotics are still in an early stage. To be honest:
 - On specific tasks, task-specialized traditional methods or task-specific learning often do better.
 - The cost of large-scale robot data collection is very high. The scale is different from internet text/image data.
 - There is no safety guarantee. It is hard to predict foundation model behavior.
-- Inference latency may not be sufficient for real-time control.
+- Inference latency may exceed the time allowed for real-time control.
 
 ### Research Directions
 

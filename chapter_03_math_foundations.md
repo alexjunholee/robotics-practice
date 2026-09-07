@@ -1104,7 +1104,7 @@ KF 5줄은 §3.9.5의 베이즈 필터 두 적분을 선형 가우시안 가정 
 
 **Part 1 (Prediction).** 베이즈 필터의 prediction 적분에서, 지수 $L_t$가 $x_{t-1}$과 $x_t$ 모두에 대해 quadratic임을 확인한다. $L_t$를 $x_{t-1}$에 대한 quadratic 부분과 $x_t$에만 의존하는 부분으로 분해하면 $x_{t-1}$ 적분은 상수가 되어 정규화에 흡수된다. 남은 $x_t$ quadratic의 1차·2차 계수에서 바로 $\bar\mu_t = A_t \mu_{t-1} + B_t u_t$와 $\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$가 읽힌다.
 
-**Part 2 (Measurement update).** Correction 적분 $\text{bel}(x_t) \propto \exp\{-J_t\}$에서, $J_t$의 1차·2차 도함수로부터 $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$을 얻는다. 이를 직접 역행렬하면 $n \times n$ 연산이 필요하지만, **inversion lemma** (Woodbury identity, §3.1 선형대수 참조)로:
+**Part 2 (Measurement update).** Correction 적분 $\text{bel}(x_t) \propto \exp\{-J_t\}$에서, $J_t$의 1차·2차 도함수로부터 $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$을 얻는다. 이를 직접 역행렬하면 $n \times n$ 연산이 필요하지만, **inversion lemma** (Woodbury identity)로:
 $$K_t = \bar\Sigma_t C_t^T (C_t \bar\Sigma_t C_t^T + Q_t)^{-1}$$
 처럼 $k \times k$ ($k$ = 측정 차원) 역행렬로 치환할 수 있다. $k \ll n$이면 계산 비용이 크게 줄어든다.
 
@@ -1351,7 +1351,7 @@ log-odds 갱신식은 ch.14 Occupancy Grid Mapping에서 그대로 셀별로 적
 
 $$\mathcal{X}_t = \{x_t^{[1]},\, x_t^{[2]},\, \ldots,\, x_t^{[M]}\}$$
 
-각 입자 $x_t^{[m]}$은 belief가 높은 곳에 더 밀집한다. 가우시안 가정 없이 임의 형태의 분포 — 다봉 분포, 긴 꼬리 분포 — 를 표현할 수 있다.
+입자 $x_t^{[m]}$들은 belief가 높은 곳에 더 밀집한다. 가우시안 가정 없이 임의 형태의 분포 — 다봉 분포, 긴 꼬리 분포 — 를 표현할 수 있다.
 
 #### 입자 필터 알고리즘: sampling → weighting → resampling
 
@@ -1400,13 +1400,13 @@ $$\left[\sum_{m=1}^M w^{[m]}\right]^{-1} \sum_{m=1}^M \mathbf{1}(x^{[m]} \in A)\
 
 이 직관의 엄밀한 유도는 입자를 단일 시점 $x_t^{[m]}$이 아니라 상태 시퀀스 $x_{0:t}^{[m]}$으로 볼 때 깔끔하게 나온다. Target의 시퀀스 분해(Bayes + Markov 두 번)와 proposal의 귀납 분해의 비율이 $\eta\, p(z_t \mid x_t^{[m]})$으로 정확하게 떨어진다. 단, $M \to \infty$에서만 정확하다.
 
-구현: resampling이 없으면 가중치가 소수의 입자에 집중되는 **weight degeneracy**가 발생한다 — 이것이 Step 3가 필요한 이유다. §3.11.4에서 이 resampling이 만드는 새로운 문제들을 다룬다.
+구현: resampling이 없으면 가중치가 소수의 입자에 집중되는 **weight degeneracy**가 발생한다 — 이것이 Step 3가 필요한 이유다. §3.11.4에서 입자 필터의 오차 원천을 다룬다.
 
 <!-- DEMO: particle_filter_1d.html -->
 
 ### 3.11.4 입자 필터의 4가지 오차 원천
 
-입자 필터는 근사이므로 구조적 오차가 있다. Resampling은 가중치 기반 selection으로, §3.4 최적화의 candidate pruning과 유사하게 낮은 가중치 입자를 버린다. 이 selection이 만드는 4가지 오차를 이해하면 PF 디버깅이 체계적으로 된다.
+입자 필터는 근사이므로 구조적 오차가 있다. Resampling은 가중치 기반 selection으로, 낮은 가중치 입자가 덜 선택되게 한다. 입자 필터의 4가지 오차 원천을 이해하면 PF 디버깅이 체계적으로 된다.
 
 #### (1) 유한 $M$의 체계적 편향 (Systematic Bias)
 

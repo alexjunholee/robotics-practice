@@ -180,7 +180,7 @@ sudo make install
 
 `CUDA_ARCH_BIN` must match your GPU. If it is wrong, the build succeeds but you get slow runtime or errors. Check [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
-Caveat: pip opencv and apt cv_bridge conflict in ROS environments (see Ch.19, AI agent troubleshooting). Building CUDA OpenCV directly can make this problem more tangled, so isolating it with Docker is recommended.
+Caveat: pip opencv and apt cv_bridge conflict in ROS environments (see Ch.21 Appendix C.4, troubleshooting). Building CUDA OpenCV directly can make this problem more tangled, so isolating it with Docker is recommended.
 
 (Reference: [Dark Programmer — building OpenCV + CUDA from source](https://darkpgmr.tistory.com/184))
 
@@ -700,7 +700,7 @@ TEST(MyTest, BasicTest) {
 2018 ─── Weights & Biases launches
   │       experiment tracking, visualization, and team collaboration in the cloud
   │
-2020 ─── Ruff appears (2022), Black goes mainstream
+2020~2022 ─── Black goes mainstream, Ruff appears (2022)
   │       Python code-quality tooling speeds up
   │
 2023+ ── AI-assisted development tools spread

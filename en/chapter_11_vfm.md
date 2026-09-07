@@ -345,7 +345,7 @@ Add learnable virtual tokens to the input. The model itself is left untouched; o
 
 **Adapting SAM to specific domains**:
 
-A common strategy is to attach a domain-specific automatic prompt generator to SAM's prompt encoder.
+Domain adaptation for SAM can adjust the prompts and their generator or fine-tune the image encoder.
 
 1. **Grid prompt**: split the image into an NxN grid and use each intersection as a point prompt.
 2. **Learned prompt generator**: train a lightweight network that takes an image as input and automatically generates point/box prompts.

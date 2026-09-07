@@ -75,7 +75,7 @@ Together with nuScenes, it is one of the two main benchmarks in current autonomo
 > - [Waymo Open Dataset official site](https://waymo.com/open/) — dataset download and challenge participation.
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — official tools and example code.
 
-### 17.1.4 Datasets for VIO / VINS
+### 17.1.4 Datasets for RGB-D SLAM and VIO / VINS
 
 TUM RGB-D and EuRoC MAV are used for indoor RGB-D SLAM and drone VIO evaluation, respectively.
 

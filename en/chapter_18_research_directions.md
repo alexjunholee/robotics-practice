@@ -32,7 +32,7 @@ The **time constraints** also differ. Obstacle avoidance must respond within ten
 
 The two modules divide their roles accordingly:
 
-1. **The reality of compute**: on-board computers on the robot (Jetson, etc.) do not have the headroom to run large models
+1. **The reality of compute**: on-board computers on the robot (Jetson, etc.) may be unable to run large models in real time, depending on model size, power, and response-time requirements
 2. **Real-time requirements**: obstacle avoidance needs a response within tens of milliseconds
 3. **Semantic understanding**: VFMs and VLAs distinguish an object's class and state, such as identifying a broken glass
 4. **Complementary roles**: combine geometric precision in the Local Module with semantic understanding in the Global Module
@@ -278,7 +278,7 @@ The research topics below are ones our lab is actively working on or could take 
     - **Prerequisites**: a whole-system understanding is needed. Read at least Ch.3–14 first
 3. **Consistency maintenance**
     - Local/Global map synchronization — if the two modules' maps disagree, the robot gets confused
-    - Semantic consistency — "that is a chair" should not later flip to "table"
+    - Semantic consistency — prevent unsupported flips from "chair" to "table" while allowing updates supported by new observations
     - **Prerequisites**: Ch.3 (optimization) and Ch.14 (SLAM, map management) required
 
 ## 18.6 Questions That Separate Motivation from Novelty

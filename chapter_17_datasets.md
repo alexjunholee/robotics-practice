@@ -75,7 +75,7 @@ nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이�
 > - [Waymo Open Dataset 공식 사이트](https://waymo.com/open/) — 데이터셋 다운로드 및 챌린지 참가
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — 공식 도구 및 예제 코드
 
-### 17.1.4 VIO / VINS용 데이터셋
+### 17.1.4 RGB-D SLAM 및 VIO / VINS용 데이터셋
 
 TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰이는 데이터셋이다.
 

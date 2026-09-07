@@ -536,7 +536,7 @@ RANSAC was introduced in the robust estimation section of Ch.3. In actual resear
 |------|-------------|------|
 | **Lo-RANSAC** | local optimization on inliers | converges in fewer iterations than vanilla |
 | **PROSAC** | samples in order of matching confidence | tries good matches first, accelerating convergence |
-| **MAGSAC++** | marginalizes over σ (inlier threshold) | no threshold tuning needed, adapts automatically |
+| **MAGSAC++** | marginalizes over σ (inlier threshold) | less sensitive to threshold tuning; still requires validation on the data |
 
 **Lo-RANSAC (Locally Optimized RANSAC)**:
 - When a good model is found, it re-estimates the model from that model's inliers (local optimization).
@@ -668,6 +668,6 @@ SuperPoint+LightGlue is worth evaluating when a GPU is available and learned-mat
 > **Technical Timeline: Computer Vision Fundamentals (Classical Methods)**
 > - **~2004**: the era of classical features. Hand-crafted features like Harris Corner (1988) and SIFT (2004) dominate. Mathematically precise but computationally heavy.
 > - **2006~2011**: lightweighting for real time. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) arrive. Patent and speed issues get resolved, and real-time SLAM becomes feasible.
-> - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) and SuperGlue (2020) begin to surpass classical methods in performance.
-> - **2020~**: fusion of geometry and learning. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
+> - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) begin to surpass classical methods in performance.
+> - **2020~**: fusion of geometry and learning. Learned matchers such as SuperGlue (2020) appear. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
 > - **Recent direction**: learned features and matchers are entering the front-end, while the back-end still uses epipolar geometry and triangulation. The two families therefore coexist in the same systems.

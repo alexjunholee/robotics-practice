@@ -56,7 +56,7 @@ Depth (Z) = (focal_length × baseline) / disparity
 - **Baseline**: 두 카메라 사이의 거리
 
 **장점**:
-- 패시브 센서 (조명 불필요)
+- 패시브 센서 (능동 조명 장치 불필요)
 - 실외 환경에서도 사용 가능
 - RGB 정보와 깊이를 동시에 획득
 
@@ -449,7 +449,7 @@ $$p(z_t^k \mid x_t, m) = \begin{pmatrix} z_{\text{hit}} \\ z_{\text{short}} \\ z
 
 ### 2.7.3 빔 모델 — 파라미터 EM 학습
 
-센서 종류, 환경 구성, 마운팅 위치가 바뀔 때마다 hit/short/max/rand의 비율과 분산이 달라진다. 파라미터를 손으로 정하면 특정 환경에서 맞추기 위해 다른 환경에서 어긋난다.
+센서 종류, 환경 구성, 마운팅 위치가 바뀔 때마다 hit/short/max/rand의 비율과 분산이 달라진다. 파라미터를 손으로 정하면 특정 환경에 맞춘 값이 다른 환경에서는 어긋날 수 있다.
 
 내재 파라미터는 6개다: $z_{\text{hit}}, z_{\text{short}}, z_{\text{max}}, z_{\text{rand}}, \sigma_{\text{hit}}, \lambda_{\text{short}}$. PR §6.3.2는 로봇이 알려진 환경을 주행하며 수집한 데이터 $\{(z_t^k, z_t^{k*})\}$로부터 EM 알고리즘으로 이 파라미터를 최대우도 추정한다.
 

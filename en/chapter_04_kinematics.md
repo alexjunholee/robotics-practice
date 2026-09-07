@@ -1186,7 +1186,7 @@ The sampled velocity and odometry formulations describe motion priors for partic
 
 ---
 
-Deterministic FK/IK maps input to a single output point. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
+Deterministic FK maps joint angles to a single pose, while IK finds the set of joint-angle solutions for a target pose. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
 
 One question remains. Every model here stacks noise on top of the kinematic constraint that wheels do not slip. In mud or on inclines — environments where that constraint itself breaks down — how far can $\alpha_i$ calibration compensate? §4.8 collects the textbooks and software referenced across this chapter.
 

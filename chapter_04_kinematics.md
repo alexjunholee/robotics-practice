@@ -44,7 +44,7 @@ T = | R  p |
 ```
 T_02 = T_01 * T_12
 ```
-## 4.1 포워드 키네마틱스 (Forward Kinematics)
+순기구학은 이 변환을 베이스에서 로봇 끝단까지 차례로 적용한다.
 
 관절 각도가 주어졌을 때, 로봇 끝단(End-Effector)의 위치와 자세를 구하는 문제이다.
 
@@ -54,7 +54,7 @@ q = [θ_1, θ_2, ..., θ_n]^T  →  T = [R, t; 0, 1] ∈ SE(3)
 
 FK는 **유일한 해**를 갖는다. 관절 각도가 정해지면 끝단 위치는 물리적으로 하나만 존재한다.
 
-### 4.1.1 Denavit-Hartenberg (DH) 파라미터
+### 4.2.2 Denavit-Hartenberg (DH) 파라미터
 
 로봇 링크 사이의 상대적 위치 관계를 4개의 파라미터로 표준화한 방법이다:
 
@@ -1180,7 +1180,7 @@ Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 partic
 
 ---
 
-결정론적 FK/IK는 "입력 → 출력 한 점"이다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
+결정론적 FK는 관절 각도를 하나의 자세로 보내고, IK는 목표 자세에 대응하는 관절 각도의 해 집합을 구한다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
 
 한 가지 물음을 남긴다. 여기서 다룬 모든 모델은 바퀴가 미끄러지지 않는다는 운동학적 제약 위에 노이즈를 얹는 구조다. 진흙탕이나 경사 주행처럼 그 제약 자체가 무너지는 환경에서 $\alpha_i$ calibration은 어느 정도까지 보상할 수 있을까.
 

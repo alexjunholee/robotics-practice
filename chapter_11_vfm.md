@@ -345,7 +345,7 @@ Prompt Tuning:
 
 SAM을 특정 도메인에 맞추기:
 
-SAM의 prompt encoder에 도메인 특화 자동 prompt 생성기를 붙이는 전략이 자주 쓰인다.
+SAM의 도메인 적응에는 prompt 구성과 생성기를 조정하거나 image encoder를 미세 조정하는 전략을 쓴다.
 
 1. Grid prompt: 이미지를 NxN 그리드로 나누고 각 교차점을 point prompt로 사용한다.
 2. 학습된 prompt generator: 이미지를 입력받아 자동으로 point/box prompt를 생성하는 경량 네트워크를 학습한다.

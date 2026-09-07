@@ -253,7 +253,7 @@ for i, (inputs, labels) in enumerate(dataloader):
         optimizer.zero_grad()
 ```
 
-AMP가 절약하는 메모리와 속도는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
+AMP의 메모리 절감과 속도 향상 효과는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
 
 **문제**: `CUDA version mismatch`
 

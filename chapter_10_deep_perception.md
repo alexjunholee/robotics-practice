@@ -602,7 +602,7 @@ for batch in test_loader:
 
 > **기술 흐름: 딥러닝 기반 인식 (Deep Learning for Perception)**
 > - 2012: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. hand-crafted feature 시대의 전환점
-> - 2014~2015: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
+> - 2014~2016: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
 > - 2017: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
 > - 2020~2021: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 접근이 확산됐고 DETR은 detection에 Transformer를 적용했다. Swin Transformer 원 논문은 당시 여러 공개 비전 benchmark에서 비교 모델보다 높은 점수를 보고했다.
 > - 2022~: ConvNeXt가 CNN 기반 모델도 여전히 경쟁력이 있음을 보였다. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. 이후 depth estimation, 3D scene understanding이 딥러닝의 다음 영역으로 부상

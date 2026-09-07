@@ -529,7 +529,7 @@ Spatial AI는 다음 분야의 핵심 기술이다:
 - 코드 버그가 충돌로 이어지면 장비가 파손되거나 사람이 다칠 수 있어 소프트웨어처럼 간단히 롤백할 수 없다.
 - 코드 수정, 업로드, 환경 초기화, 안전 확보, 실행, 물리적 확인을 거치는 한 차례의 실험에 수 분에서 수십 분이 걸린다.
 - 센서 데이터에는 역광, 모션 블러, 드리프트, 프레임 드롭이 섞인다. 깨끗한 데이터에서의 성능만으로는 실제 환경의 동작을 판단하기 어렵다.
-- 장애물 회피처럼 실시간성이 필요한 기능은 정확도뿐 아니라 응답 지연도 충족해야 한다.
+- 장애물 회피처럼 실시간성이 필요한 기능은 정확도와 응답 지연에 대한 요구를 함께 충족해야 한다.
 - 드물게 발생하는 엣지 케이스도 충돌이나 안전사고로 이어질 수 있다.
 - 시뮬레이터의 마찰 계수, 관성, 노이즈는 현실의 근사치이므로 오차가 누적되면 실제 로봇의 행동이 달라질 수 있다.
 
@@ -727,7 +727,7 @@ Depth (Z) = (focal_length × baseline) / disparity
 - **Baseline**: 두 카메라 사이의 거리
 
 **장점**:
-- 패시브 센서 (조명 불필요)
+- 패시브 센서 (능동 조명 장치 불필요)
 - 실외 환경에서도 사용 가능
 - RGB 정보와 깊이를 동시에 획득
 
@@ -1120,7 +1120,7 @@ $$p(z_t^k \mid x_t, m) = \begin{pmatrix} z_{\text{hit}} \\ z_{\text{short}} \\ z
 
 ### 2.7.3 빔 모델 — 파라미터 EM 학습
 
-센서 종류, 환경 구성, 마운팅 위치가 바뀔 때마다 hit/short/max/rand의 비율과 분산이 달라진다. 파라미터를 손으로 정하면 특정 환경에서 맞추기 위해 다른 환경에서 어긋난다.
+센서 종류, 환경 구성, 마운팅 위치가 바뀔 때마다 hit/short/max/rand의 비율과 분산이 달라진다. 파라미터를 손으로 정하면 특정 환경에 맞춘 값이 다른 환경에서는 어긋날 수 있다.
 
 내재 파라미터는 6개다: $z_{\text{hit}}, z_{\text{short}}, z_{\text{max}}, z_{\text{rand}}, \sigma_{\text{hit}}, \lambda_{\text{short}}$. PR §6.3.2는 로봇이 알려진 환경을 주행하며 수집한 데이터 $\{(z_t^k, z_t^{k*})\}$로부터 EM 알고리즘으로 이 파라미터를 최대우도 추정한다.
 
@@ -2408,7 +2408,7 @@ KF 5줄은 §3.9.5의 베이즈 필터 두 적분을 선형 가우시안 가정 
 
 **Part 1 (Prediction).** 베이즈 필터의 prediction 적분에서, 지수 $L_t$가 $x_{t-1}$과 $x_t$ 모두에 대해 quadratic임을 확인한다. $L_t$를 $x_{t-1}$에 대한 quadratic 부분과 $x_t$에만 의존하는 부분으로 분해하면 $x_{t-1}$ 적분은 상수가 되어 정규화에 흡수된다. 남은 $x_t$ quadratic의 1차·2차 계수에서 바로 $\bar\mu_t = A_t \mu_{t-1} + B_t u_t$와 $\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$가 읽힌다.
 
-**Part 2 (Measurement update).** Correction 적분 $\text{bel}(x_t) \propto \exp\{-J_t\}$에서, $J_t$의 1차·2차 도함수로부터 $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$을 얻는다. 이를 직접 역행렬하면 $n \times n$ 연산이 필요하지만, **inversion lemma** (Woodbury identity, §3.1 선형대수 참조)로:
+**Part 2 (Measurement update).** Correction 적분 $\text{bel}(x_t) \propto \exp\{-J_t\}$에서, $J_t$의 1차·2차 도함수로부터 $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$을 얻는다. 이를 직접 역행렬하면 $n \times n$ 연산이 필요하지만, **inversion lemma** (Woodbury identity)로:
 $$K_t = \bar\Sigma_t C_t^T (C_t \bar\Sigma_t C_t^T + Q_t)^{-1}$$
 처럼 $k \times k$ ($k$ = 측정 차원) 역행렬로 치환할 수 있다. $k \ll n$이면 계산 비용이 크게 줄어든다.
 
@@ -2655,7 +2655,7 @@ log-odds 갱신식은 ch.14 Occupancy Grid Mapping에서 그대로 셀별로 적
 
 $$\mathcal{X}_t = \{x_t^{[1]},\, x_t^{[2]},\, \ldots,\, x_t^{[M]}\}$$
 
-각 입자 $x_t^{[m]}$은 belief가 높은 곳에 더 밀집한다. 가우시안 가정 없이 임의 형태의 분포 — 다봉 분포, 긴 꼬리 분포 — 를 표현할 수 있다.
+입자 $x_t^{[m]}$들은 belief가 높은 곳에 더 밀집한다. 가우시안 가정 없이 임의 형태의 분포 — 다봉 분포, 긴 꼬리 분포 — 를 표현할 수 있다.
 
 #### 입자 필터 알고리즘: sampling → weighting → resampling
 
@@ -2704,13 +2704,13 @@ $$\left[\sum_{m=1}^M w^{[m]}\right]^{-1} \sum_{m=1}^M \mathbf{1}(x^{[m]} \in A)\
 
 이 직관의 엄밀한 유도는 입자를 단일 시점 $x_t^{[m]}$이 아니라 상태 시퀀스 $x_{0:t}^{[m]}$으로 볼 때 깔끔하게 나온다. Target의 시퀀스 분해(Bayes + Markov 두 번)와 proposal의 귀납 분해의 비율이 $\eta\, p(z_t \mid x_t^{[m]})$으로 정확하게 떨어진다. 단, $M \to \infty$에서만 정확하다.
 
-구현: resampling이 없으면 가중치가 소수의 입자에 집중되는 **weight degeneracy**가 발생한다 — 이것이 Step 3가 필요한 이유다. §3.11.4에서 이 resampling이 만드는 새로운 문제들을 다룬다.
+구현: resampling이 없으면 가중치가 소수의 입자에 집중되는 **weight degeneracy**가 발생한다 — 이것이 Step 3가 필요한 이유다. §3.11.4에서 입자 필터의 오차 원천을 다룬다.
 
 <!-- DEMO: particle_filter_1d.html -->
 
 ### 3.11.4 입자 필터의 4가지 오차 원천
 
-입자 필터는 근사이므로 구조적 오차가 있다. Resampling은 가중치 기반 selection으로, §3.4 최적화의 candidate pruning과 유사하게 낮은 가중치 입자를 버린다. 이 selection이 만드는 4가지 오차를 이해하면 PF 디버깅이 체계적으로 된다.
+입자 필터는 근사이므로 구조적 오차가 있다. Resampling은 가중치 기반 selection으로, 낮은 가중치 입자가 덜 선택되게 한다. 입자 필터의 4가지 오차 원천을 이해하면 PF 디버깅이 체계적으로 된다.
 
 #### (1) 유한 $M$의 체계적 편향 (Systematic Bias)
 
@@ -2825,7 +2825,7 @@ T = | R  p |
 ```
 T_02 = T_01 * T_12
 ```
-## 4.1 포워드 키네마틱스 (Forward Kinematics)
+순기구학은 이 변환을 베이스에서 로봇 끝단까지 차례로 적용한다.
 
 관절 각도가 주어졌을 때, 로봇 끝단(End-Effector)의 위치와 자세를 구하는 문제이다.
 
@@ -2835,7 +2835,7 @@ q = [θ_1, θ_2, ..., θ_n]^T  →  T = [R, t; 0, 1] ∈ SE(3)
 
 FK는 **유일한 해**를 갖는다. 관절 각도가 정해지면 끝단 위치는 물리적으로 하나만 존재한다.
 
-### 4.1.1 Denavit-Hartenberg (DH) 파라미터
+### 4.2.2 Denavit-Hartenberg (DH) 파라미터
 
 로봇 링크 사이의 상대적 위치 관계를 4개의 파라미터로 표준화한 방법이다:
 
@@ -3961,7 +3961,7 @@ Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 partic
 
 ---
 
-결정론적 FK/IK는 "입력 → 출력 한 점"이다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
+결정론적 FK는 관절 각도를 하나의 자세로 보내고, IK는 목표 자세에 대응하는 관절 각도의 해 집합을 구한다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
 
 한 가지 물음을 남긴다. 여기서 다룬 모든 모델은 바퀴가 미끄러지지 않는다는 운동학적 제약 위에 노이즈를 얹는 구조다. 진흙탕이나 경사 주행처럼 그 제약 자체가 무너지는 환경에서 $\alpha_i$ calibration은 어느 정도까지 보상할 수 있을까.
 
@@ -4291,7 +4291,7 @@ print("T =", T)
 print("V =", V)
 ```
 
-이 코드를 직접 실행해보면 위에서 손으로 유도한 결과와 일치하는 것을 확인할 수 있다. SymPy가 trigsimp을 적용하면 깔끔한 형태가 나온다.
+이 코드는 운동에너지 T와 위치에너지 V를 출력하므로, 위에서 유도한 에너지 식과 비교할 수 있다. SymPy가 trigsimp을 적용하면 깔끔한 형태가 나온다.
 
 > **추천 자료**
 > - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation*, Ch. 4 (https://www.cds.caltech.edu/~murray/mlswiki/) — 라그랑주 역학을 로보틱스 맥락에서 가장 엄밀하게 다룬 교재. 무료 PDF 제공.
@@ -4635,7 +4635,7 @@ Manipulator equation을 base와 joints로 나누면:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
 ```
 
-왼쪽 위의 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
+등호 오른쪽 입력 벡터의 위 성분 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
 
 이 구속 조건이 locomotion 제어를 어렵게 만든다. 고정 base 매니퓰레이터는 원하는 관절 토크를 그냥 모터에 명령하면 되지만, 보행 로봇은 적절한 접촉력을 만들어내야 base를 원하는 대로 움직일 수 있다.
 
@@ -4929,7 +4929,7 @@ PID는 분명한 한계가 있다:
 - SISO(Single-Input Single-Output) 전용이다. 6축 로봇 팔처럼 관절 간 커플링이 있는 시스템에서는 각 관절에 독립적으로 PID를 걸면 성능이 떨어진다. 한 관절의 움직임이 다른 관절에 외란으로 작용하기 때문이다.
 - 비선형 시스템에 약하다. PID는 선형 제어기다. 로봇 동역학은 비선형이므로 작동점(operating point) 근처에서만 잘 동작한다.
 - 제약 조건을 처리할 수 없다. 토크 제한, 관절 각도 제한, 속도 제한 같은 물리적 제약을 PID 구조 안에서 명시적으로 다룰 방법이 없다.
-- 미래를 예측하지 않는다. 현재 오차만 보고 반응한다. Feedforward가 없으면 추종 성능이 제한된다.
+- 미래를 예측하지 않는다. 현재 오차와 누적 오차, 오차의 변화율에 반응한다. Feedforward가 없으면 추종 성능이 제한된다.
 
 PID는 구현과 해석이 비교적 단순하다. 제어 대상의 결합이 약하고 성능 요구를 만족한다면 PID로 충분할 수 있으며, 산업용 로봇의 관절 서보에도 PID 계열 제어기가 쓰인다.
 
@@ -6349,7 +6349,7 @@ $$\bar{b} = \langle \arg\max_s b(s),\; H[b] \rangle$$
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-무한 차원 belief를 스칼라 하나로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation·heaven/hell 실험에서 합리적 행동 선택에 충분함이 확인된다.
+무한 차원 belief를 최빈 상태와 엔트로피의 쌍으로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation·heaven/hell 실험에서 합리적 행동 선택에 충분함이 확인된다.
 
 $\arg\max_s b(s)$만 쓰면 표준 MDP 그대로다. 거기에 엔트로피를 더해 "내가 얼마나 모르는가"를 상태에 포함시켰다.
 
@@ -6372,7 +6372,7 @@ Algorithm Augmented_MDP_value_iteration():
 
 ---
 
-MDP_value_iteration (§15.3.3)과 외형이 동일하다. 상태가 $s$ 대신 $\bar{b}$라는 점만 다르다.
+MDP_value_iteration (원전 Probabilistic Robotics §15.3.3)과 외형이 동일하다. 상태가 $s$ 대신 $\bar{b}$라는 점만 다르다.
 
 전이 확률 $P(\bar{b}' \mid a, \bar{b})$ 계산 (식 16.85):
 
@@ -6384,7 +6384,7 @@ $$P(\bar{b}' \mid a, \bar{b}) = \int\!\!\int\!\!\int I_{f(b)=\bar{b}}\, I_{f(B(o
 
 coastal navigation은 AMDP가 낳는 emergent 행동 중 설명이 가장 쉬운 사례다.
 
-동기: 넓은 open space를 가로지를 때 conventional MDP planner는 직선 경로를 택한다. 거리가 짧아서다. 하지만 open space에서는 라이더나 카메라가 특징이 없는 벽만 보이므로 위치 belief의 엔트로피가 크게 증가한다. 목적지에 도착해도 어디 있는지 모른다.
+동기: 넓은 open space를 가로지를 때 conventional MDP planner는 직선 경로를 택한다. 거리가 짧아서다. 하지만 open space에서는 라이더나 카메라에 특징이 없는 벽만 보이므로 위치 belief의 엔트로피가 크게 증가한다. 목적지에 도착해도 어디 있는지 모른다.
 
 AMDP planner는 같은 환경에서 벽을 따라 도는 곡선 경로를 선택한다. 벽 근처에서 라이더 측정이 위치를 잘 제약하여 엔트로피가 낮게 유지된다. 비용 함수에 엔트로피가 포함되어 있으므로, 정보가 많은 경로를 선호하는 동작이 자동으로 나온다.
 
@@ -6584,7 +6584,7 @@ Algorithm MDP_value_iteration():
 
 변수 정리: $V_k$는 k번째 반복의 가치 추정값, $V^*$는 수렴 후 최적 가치, $\pi^*$는 최적 정책, $r$은 보상, $\gamma$는 할인 인자, $p(x'|x,a)$는 전이 확률.
 
-갱신 순서는 임의여도 된다. Sutton &amp; Barto(2018) §4.4에 따르면 각 상태가 무한히 자주 갱신되기만 하면 수렴이 보장된다. 이산 상태 공간에서는 위 수식의 적분이 합(Σ)으로 대체된다.
+갱신 순서는 임의여도 된다. Sutton &amp; Barto(2018) §4.4에 따르면 각 상태가 무한히 자주 갱신되기만 하면 수렴이 보장된다. 위 수식은 이산 상태 공간의 합(Σ)으로 썼으며, 연속 상태 공간에서는 적분으로 표현한다.
 
 수렴 보장: Bellman 갱신 연산자는 $\gamma$를 수축률(contraction rate)로 하는 수축 사상(contraction mapping)이다. 따라서 반복은 반드시 유일한 고정점 $V^*$로 수렴한다. $k$번 반복 후 오차는 초기 오차의 $\gamma^k$배 이하로 감소한다: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
 
@@ -6630,7 +6630,7 @@ Value function을 따로 학습해두면 variance를 줄일 수 있다. 대부�
 
 ### On-policy vs Off-policy
 
-- **On-policy**: 현재 policy가 수집한 데이터로만 학습한다. 데이터를 한번 쓰고 버린다. PPO가 대표적이다. 안정적이지만 sample efficiency가 낮다.
+- **On-policy**: 현재 policy가 수집한 데이터로만 학습한다. 현재 rollout을 여러 epoch에 사용할 수 있지만, 오래된 정책의 데이터를 replay buffer에 쌓아 계속 재사용하지는 않는다. PPO가 대표적이다. 안정적이지만 sample efficiency가 낮다.
 - **Off-policy**: 과거 policy가 수집한 데이터도 재사용한다 (replay buffer). SAC, TD3가 대표적이다. sample efficient하지만 학습이 불안정할 수 있다.
 
 로봇에서는 데이터 수집 비용이 크기 때문에 off-policy 방법의 sample efficiency가 매력적이다. 하지만 시뮬레이션에서 대규모 병렬 환경을 돌릴 수 있다면 on-policy(PPO)도 충분히 경쟁력이 있다.
@@ -7020,7 +7020,7 @@ UC Berkeley 등에서 개발한 오픈소스 범용 로봇 정책이다. Open X-
 
 ### 현실적 평가
 
-로보틱스 분야의 파운데이션 모델은 여전히 기술 발전의 초입에 서 있다. 단일 도메인의 특정 태스크를 다룰 때는 전통적 제어 기법이나 태스크 특화 학습 모델이 더 높은 완성도를 보여주기도 한다. 물리 환경에서의 대규모 로봇 데이터 수집 비용 역시 만만치 않으며, 인터넷 텍스트나 웹 이미지와는 수집 단가 자체가 판이하다. 안전성 보장이 없고, 행동을 예측하기 어렵다는 점도 실사용의 장벽이다. 추론 속도(inference latency)가 실시간 제어에 충분하지 않을 수 있다.
+로보틱스 분야의 파운데이션 모델은 여전히 기술 발전의 초입에 서 있다. 단일 도메인의 특정 태스크를 다룰 때는 전통적 제어 기법이나 태스크 특화 학습 모델이 더 높은 완성도를 보여주기도 한다. 물리 환경에서의 대규모 로봇 데이터 수집 비용 역시 만만치 않으며, 인터넷 텍스트나 웹 이미지와는 수집 단가 자체가 판이하다. 안전성 보장이 없고, 행동을 예측하기 어렵다는 점도 실사용의 장벽이다. 추론 지연(inference latency)이 실시간 제어의 허용 시간을 넘을 수 있다.
 
 ### 연구 방향
 
@@ -7188,7 +7188,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 ---
 
-모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 실제 로봇에 적용할 때는 어느 접근이든 sim-to-real gap을 따로 평가해야 한다. OpenAI Dactyl은 이를 줄이기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 생성했다.
+모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 시뮬레이션에서 학습한 모델을 실제 로봇에 적용할 때는 어느 접근이든 sim-to-real gap을 따로 평가해야 한다. OpenAI Dactyl은 이를 줄이기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 생성했다.
 
 로봇이 학습하려면 먼저 환경을 지각해야 한다. Ch.9에서는 카메라 이미지에서 정보를 뽑아내는 컴퓨터 비전 기초를 다룬다.
 
@@ -7733,7 +7733,7 @@ Rodrigues 벡터의 방향이 회전축, 크기(norm)가 회전 각도다. 3장�
 |------|-------------|------|
 | Lo-RANSAC | inlier로 로컬 최적화 수행 | vanilla보다 적은 iteration으로 수렴 |
 | PROSAC | 매칭 신뢰도 순으로 샘플링 | 좋은 매칭부터 먼저 시도하여 수렴 가속 |
-| MAGSAC++ | σ(inlier threshold)를 marginalization | threshold 설정 불필요, 자동 적응 |
+| MAGSAC++ | σ(inlier threshold)를 marginalization | threshold 설정에 덜 민감하지만 데이터별 검증 필요 |
 
 Lo-RANSAC (Locally Optimized RANSAC):
 - 좋은 모델을 찾으면, 그 모델의 inlier들로 다시 모델을 추정(local optimization)한다.
@@ -7865,8 +7865,8 @@ SuperPoint+LightGlue는 GPU를 사용할 수 있고 학습 기반 매칭의 강�
 > 기술 흐름: 컴퓨터 비전 기초 (Classical Methods)
 > - **~2004**: 고전적 특징점의 시대. Harris Corner (1988), SIFT (2004) 등 hand-crafted feature가 주류. 수학적으로 정교하지만 계산이 무거움
 > - **2006~2011**: 실시간을 위한 경량화. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) 등이 등장. 특허 문제와 속도 문제를 해결하면서 실시간 SLAM이 가능해짐
-> - **2015~2019**: 딥러닝의 침투. SuperPoint (2018), SuperGlue (2020) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
-> - **2020~**: Geometry + Learning의 융합. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
+> - **2015~2019**: 딥러닝의 침투. SuperPoint (2018) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
+> - **2020~**: Geometry + Learning의 융합. SuperGlue (2020) 같은 학습 기반 매처가 등장. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
 > - **최근 흐름**: 학습 기반 특징점과 매칭이 front-end에 도입되고 있지만, back-end에서는 여전히 epipolar geometry와 triangulation을 사용한다. 두 계열은 한 시스템 안에서 함께 쓰인다.
 
 
@@ -8476,7 +8476,7 @@ for batch in test_loader:
 
 > **기술 흐름: 딥러닝 기반 인식 (Deep Learning for Perception)**
 > - 2012: AlexNet이 ImageNet 대회에서 기존 방법을 큰 차이로 이기며 우승. hand-crafted feature 시대의 전환점
-> - 2014~2015: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
+> - 2014~2016: VGGNet, GoogLeNet, ResNet 등장. ResNet (2015)의 residual connection은 수백 층 네트워크의 학습을 가능하게 만들었다. Faster R-CNN (2015), YOLO (2016)로 실시간 object detection이 가능해짐
 > - 2017: "Attention Is All You Need" — Transformer 발표. 원래 NLP용이었지만, 이후 비전까지 확장
 > - 2020~2021: ViT (Vision Transformer) 등장. 이미지를 패치 시퀀스로 처리하는 접근이 확산됐고 DETR은 detection에 Transformer를 적용했다. Swin Transformer 원 논문은 당시 여러 공개 비전 benchmark에서 비교 모델보다 높은 점수를 보고했다.
 > - 2022~: ConvNeXt가 CNN 기반 모델도 여전히 경쟁력이 있음을 보였다. Segment Anything(SAM)이 segmentation을 foundation model로 끌어올림. 이후 depth estimation, 3D scene understanding이 딥러닝의 다음 영역으로 부상
@@ -8832,7 +8832,7 @@ Prompt Tuning:
 
 SAM을 특정 도메인에 맞추기:
 
-SAM의 prompt encoder에 도메인 특화 자동 prompt 생성기를 붙이는 전략이 자주 쓰인다.
+SAM의 도메인 적응에는 prompt 구성과 생성기를 조정하거나 image encoder를 미세 조정하는 전략을 쓴다.
 
 1. Grid prompt: 이미지를 NxN 그리드로 나누고 각 교차점을 point prompt로 사용한다.
 2. 학습된 prompt generator: 이미지를 입력받아 자동으로 point/box prompt를 생성하는 경량 네트워크를 학습한다.
@@ -9571,7 +9571,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS는 NeRF의 느린 렌더링 속도를 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 실시간 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
+3DGS는 NeRF에서 오래 걸리던 렌더링 시간을 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 실시간 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
 
 **개념**: 장면을 수백만 개의 3D Gaussian으로 표현
 
@@ -10386,7 +10386,7 @@ N은 랜드마크 수, H는 가설 수, K는 격자 셀 수, M은 파티클 수�
 
 ### 14.7B Occupancy Grid Mapping
 
-§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하는 기법이다. 이는 pose graph 최적화로 정렬된 자세 궤적을 토대로 최종 점유 지도를 생성하는 후처리 단계에서 중추적인 역할을 수행한다. 실제 SLAM 파이프라인에서는 두 단계가 번갈아 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
+§14.7은 지도가 *주어졌을 때* 위치를 추정했다. 여기서는 반대 방향, 즉 위치가 알려진 상태에서 지도를 *만드는* 문제인 Occupancy Grid Mapping을 다룬다. Occupancy Grid Mapping은 **위치가 알려진 상태에서 셀별 점유 확률을 추정**하는 기법이다. 이는 pose graph 최적화로 정렬된 자세 궤적을 토대로 최종 점유 지도를 생성하는 후처리 단계에서 중추적인 역할을 수행한다. 이 후처리 구성에서는 두 단계가 순서대로 작동한다: pose graph 최적화로 자세 궤적을 확정한 뒤, 이 절의 알고리즘으로 최종 지도를 완성한다. binary Bayes 필터의 기반은 §3.11.2 (Ch.3 참조).
 
 #### 14.7B.1 도입: 지도 작성의 어려움
 
@@ -10473,7 +10473,7 @@ MAP_occupancy_grid_mapping(x_{1:t}, z_{1:t}):
   return m
 ```
 
-실용적 한계: batch라 incremental SLAM에 맞지 않고, hill-climbing이 local maximum에 갇힌다. 후방 불확실성도 사라진다. 그러나 **"셀 독립 가정을 깨야 한다"는 통찰은 이후에 이어진다**.
+실용적 한계: batch라 incremental SLAM에 맞지 않고, hill-climbing이 local maximum에 갇힌다. 사후 불확실성도 사라진다. 그러나 **"셀 독립 가정을 깨야 한다"는 통찰은 이후에 이어진다**.
 
 #### 14.7B.6 다른 공간 표현과의 비교: OctoMap·Voxblox·NeRF·3DGS
 
@@ -11617,7 +11617,7 @@ sudo make install
 
 `CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus)에서 확인.
 
-주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (19장 AI 에이전트 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
+주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (21장 부록 C.4 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
 
 (참고: [다크 프로그래머 — OpenCV + CUDA 직접 빌드하기](https://darkpgmr.tistory.com/184))
 
@@ -12129,7 +12129,7 @@ TEST(MyTest, BasicTest) {
 2018 ─── Weights & Biases 출시
   │       실험 추적·시각화·팀 협업을 클라우드로
   │
-2020 ─── Ruff 등장 (2022), Black 대중화
+2020~2022 ─── Black 대중화, Ruff 등장 (2022)
   │       Python 코드 품질 도구의 고속화
   │
 2023+ ── AI-assisted 개발 도구 확산
@@ -12218,7 +12218,7 @@ nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이�
 > - [Waymo Open Dataset 공식 사이트](https://waymo.com/open/) — 데이터셋 다운로드 및 챌린지 참가
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — 공식 도구 및 예제 코드
 
-### 17.1.4 VIO / VINS용 데이터셋
+### 17.1.4 RGB-D SLAM 및 VIO / VINS용 데이터셋
 
 TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰이는 데이터셋이다.
 
@@ -12512,7 +12512,7 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 
 두 모듈은 이 차이에 맞춰 역할을 나눈다.
 
-1. **계산 자원의 현실**: 로봇 온보드 컴퓨터(Jetson 등)는 대형 모델을 돌릴 여력이 없다.
+1. **계산 자원의 현실**: 로봇 온보드 컴퓨터(Jetson 등)는 모델 크기와 전력·응답 시간에 따라 대형 모델의 실시간 실행이 제한될 수 있다.
 2. **실시간 요구사항**: 장애물 회피에는 수십 ms 단위의 응답이 필요하다.
 3. **의미 이해**: VFM/VLA로 "깨진 유리컵"처럼 물체의 종류와 상태를 구분한다.
 4. **상호 보완**: Local의 기하학적 정밀도와 Global의 의미론적 이해를 결합한다.
@@ -12742,7 +12742,7 @@ class GlobalModule:
     - 통신 끊김 시 Local-only 동작 — 서버 연결 없이도 기본 임무 수행
     - Graceful degradation — 기능이 점진적으로 줄어들되, 갑자기 멈추지는 않기
     - 선행 학습: 시스템 전체 이해 필요. 최소 3~14장은 읽고 오자
-3. **일관성 유지**: Local이 "여기 빈 공간"이라 보고, Global이 "거기 의자 있음"이라 기억하면 로봇은 어느 쪽을 믿어야 할지 모른다. 두 지도를 동기화하고, 의미 정보("저건 의자"가 나중에 "테이블"로 바뀌는 일)를 억제하는 문제다. 선행 학습: 3장(최적화), 14장(SLAM, 맵 관리) 필수.
+3. **일관성 유지**: Local이 "여기 빈 공간"이라 보고, Global이 "거기 의자 있음"이라 기억하면 로봇은 어느 쪽을 믿어야 할지 모른다. 두 지도를 동기화하고, 의미 정보의 근거 없는 변동("저건 의자"가 근거 없이 "테이블"로 바뀌는 일)을 억제하되 새 관측에 따른 갱신은 허용하는 문제다. 선행 학습: 3장(최적화), 14장(SLAM, 맵 관리) 필수.
 
 ## 18.6 Motivation과 Novelty를 가르는 질문
 
@@ -13537,7 +13537,7 @@ for i, (inputs, labels) in enumerate(dataloader):
         optimizer.zero_grad()
 ```
 
-AMP가 절약하는 메모리와 속도는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
+AMP의 메모리 절감과 속도 향상 효과는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
 
 **문제**: `CUDA version mismatch`
 
@@ -13809,7 +13809,7 @@ Ch.18의 연구 방향을 읽고 연구실의 최근 논문과 프로젝트가 �
 
 로보틱스를 처음 접하는 학부 3~4학년이라면 Ch.1 → Ch.3 → Ch.9 → Ch.14 순서가 알맞다. Spatial AI의 범위를 파악하고 수학적 표현을 익힌 뒤 이미지와 SLAM을 통해 각 요소가 어떻게 연결되는지 볼 수 있다. Ch.16의 실습 환경도 함께 준비하면 예제를 바로 실행할 수 있다.
 
-딥러닝 배경의 석사 신입생은 Ch.2 → Ch.3 → Ch.10 → Ch.11부터 읽을 수 있다. 익숙한 딥러닝에서 출발해 센서와 수학을 보완하고, foundation model이 로보틱스에 쓰이는 방식을 확인하는 순서다. 이후 Ch.13과 Ch.14에서 3D 비전과 SLAM으로 범위를 넓힌다.
+딥러닝 배경의 석사 신입생은 Ch.2 → Ch.3 → Ch.10 → Ch.11부터 읽을 수 있다. 딥러닝 배경을 바탕으로 센서와 수학을 먼저 보완하고, foundation model이 로보틱스에 쓰이는 방식을 확인하는 순서다. 이후 Ch.13과 Ch.14에서 3D 비전과 SLAM으로 범위를 넓힌다.
 
 고전 로보틱스에 익숙하지만 딥러닝 경험이 적다면 Ch.8 → Ch.10 → Ch.11 → Ch.12를 먼저 읽는다. 이미 아는 Ch.4~7은 필요한 부분만 확인하고, 로봇 학습에서 VFM과 VLA로 이어지는 방법을 집중해서 살펴본다.
 
@@ -14092,7 +14092,7 @@ Depth (Z) = (focal_length × baseline) / disparity
 - **Baseline**: the distance between the two cameras
 
 **Pros**:
-- Passive sensor (no illumination required)
+- Passive sensor (no active illumination device required)
 - Usable in outdoor environments
 - Acquires RGB information and depth simultaneously
 
@@ -15764,7 +15764,7 @@ The five lines of the KF are the closed-form solution to the two integrals of th
 
 **Part 1 (Prediction).** In the prediction integral of the Bayes filter, the exponent $L_t$ is quadratic in both $x_{t-1}$ and $x_t$. Splitting $L_t$ into a part quadratic in $x_{t-1}$ and a part depending only on $x_t$ makes the $x_{t-1}$ integral a constant, absorbed into normalization. The first- and second-order coefficients in the remaining $x_t$ quadratic yield directly $\bar\mu_t = A_t \mu_{t-1} + B_t u_t$ and $\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$.
 
-**Part 2 (Measurement update).** From the correction integral $\text{bel}(x_t) \propto \exp\{-J_t\}$, the first and second derivatives of $J_t$ give $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$. Inverting this directly requires $n \times n$ operations, but the **inversion lemma** (Woodbury identity; see §3.1 linear algebra) transforms it into:
+**Part 2 (Measurement update).** From the correction integral $\text{bel}(x_t) \propto \exp\{-J_t\}$, the first and second derivatives of $J_t$ give $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$. Inverting this directly requires $n \times n$ operations, but the **inversion lemma** (Woodbury identity) transforms it into:
 $$K_t = \bar\Sigma_t C_t^T (C_t \bar\Sigma_t C_t^T + Q_t)^{-1}$$
 which needs only a $k \times k$ ($k$ = measurement dimension) inversion. When $k \ll n$, the computational cost drops considerably.
 
@@ -16010,7 +16010,7 @@ The particle filter represents belief with $M$ random samples (particles):
 
 $$\mathcal{X}_t = \{x_t^{[1]},\, x_t^{[2]},\, \ldots,\, x_t^{[M]}\}$$
 
-Each particle $x_t^{[m]}$ is more densely concentrated where belief is high. Without any Gaussian assumption, arbitrary distribution shapes — multi-modal, heavy-tailed — can be represented.
+The particles $x_t^{[m]}$ are more densely concentrated where belief is high. Without any Gaussian assumption, arbitrary distribution shapes — multi-modal, heavy-tailed — can be represented.
 
 #### Particle Filter Algorithm: Sampling, Weighting, Resampling
 
@@ -16059,13 +16059,13 @@ Why this falls out to exactly $p(z_t \mid x_t^{[m]})$ becomes clear when the arg
 
 The rigorous derivation works by treating each particle not as a single state $x_t^{[m]}$ but as a state sequence $x_{0:t}^{[m]}$. Two applications of Bayes plus the Markov property factorize the target; the proposal factorizes inductively; their ratio reduces to exactly $\eta\, p(z_t \mid x_t^{[m]})$. This holds exactly only as $M \to \infty$.
 
-Without resampling, weights concentrate on a small number of particles — **weight degeneracy** — which is why Step 3 is needed. §3.11.4 covers the new problems that resampling itself introduces.
+Without resampling, weights concentrate on a small number of particles — **weight degeneracy** — which is why Step 3 is needed. §3.11.4 covers the sources of error in particle filters.
 
 <!-- DEMO: particle_filter_1d.html -->
 
 ### 3.11.4 Four Sources of Error in Particle Filters
 
-The particle filter is an approximation and carries structural errors. Resampling is a weight-based selection, similar to how low-weight candidates get pruned in the optimization of §3.4. Understanding the four error sources makes particle filter debugging systematic.
+The particle filter is an approximation and carries structural errors. Resampling is a weight-based selection that makes low-weight particles less likely to be selected. Understanding the four error sources makes particle filter debugging systematic.
 
 #### (1) Systematic Bias from Finite $M$
 
@@ -17322,7 +17322,7 @@ The sampled velocity and odometry formulations describe motion priors for partic
 
 ---
 
-Deterministic FK/IK maps input to a single output point. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
+Deterministic FK maps joint angles to a single pose, while IK finds the set of joint-angle solutions for a target pose. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
 
 One question remains. Every model here stacks noise on top of the kinematic constraint that wheels do not slip. In mud or on inclines — environments where that constraint itself breaks down — how far can $\alpha_i$ calibration compensate? §4.8 collects the textbooks and software referenced across this chapter.
 
@@ -17654,7 +17654,7 @@ print("T =", T)
 print("V =", V)
 ```
 
-Running this code confirms that the result matches the hand derivation above. After SymPy applies trigsimp, the form comes out cleanly.
+This code prints the kinetic energy T and potential energy V, which can be compared with the energy expressions derived above. After SymPy applies trigsimp, the form comes out cleanly.
 
 > **Further reading**
 > - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation*, Ch. 4 (https://www.cds.caltech.edu/~murray/mlswiki/) — the most rigorous treatment of Lagrangian mechanics in a robotics context. Free PDF available.
@@ -18013,7 +18013,7 @@ Splitting the manipulator equation into base and joints:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
 ```
 
-The `0` at the top left indicates that no joint torque acts on the base. λ is the contact force and J_c is the contact Jacobian. Contact forces and gravity accelerate the base.
+The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force and J_c is the contact Jacobian. Contact forces and gravity accelerate the base.
 
 This constraint is what makes locomotion control hard. For a fixed-base manipulator, the desired joint torque can simply be commanded to the motors; a legged robot, in contrast, must generate appropriate contact forces to make the base move as desired.
 
@@ -18309,7 +18309,7 @@ PID is powerful but has clear limits:
 - **It is SISO (Single-Input Single-Output) only.** In systems with inter-joint coupling like a 6-axis robot arm, applying independent PID to each joint degrades performance. The motion of one joint acts as a disturbance on the others.
 - **It is weak on nonlinear systems.** PID is a linear controller, whereas robot dynamics are nonlinear. It performs well only near an operating point.
 - **It cannot handle constraints.** Within the PID structure there is no way to explicitly handle physical constraints such as torque limits, joint angle limits, or velocity limits.
-- **It does not predict the future.** It reacts only to the current error. Without feedforward, tracking performance is limited.
+- **It does not predict the future.** It reacts to the current error, accumulated error, and rate of change of the error. Without feedforward, tracking performance is limited.
 
 PID is comparatively simple to implement and analyze. It can be sufficient when plant coupling is weak and the performance requirements are met, and PID-family controllers are also used for industrial robot joint servos.
 
@@ -19737,7 +19737,7 @@ Most likely state plus belief entropy. Entropy:
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-An infinite-dimensional belief summarized by a single scalar. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
+An infinite-dimensional belief is summarized by the pair of its most likely state and entropy. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
 
 Using $\arg\max_s b(s)$ alone is a standard MDP. Adding entropy to the state encodes "how much I do not know."
 
@@ -19760,7 +19760,7 @@ Algorithm Augmented_MDP_value_iteration():
 
 ---
 
-The form is identical to MDP_value_iteration (§15.3.3). The only difference is that the state is $\bar{b}$ instead of $s$.
+The form is identical to MDP_value_iteration (Probabilistic Robotics §15.3.3). The only difference is that the state is $\bar{b}$ instead of $s$.
 
 Transition probability $P(\bar{b}' \mid a, \bar{b})$ (eq. 16.85):
 
@@ -19972,7 +19972,7 @@ Algorithm MDP_value_iteration():
 
 Variable summary: $V_k$ is the value estimate at iteration $k$; $V^*$ is the optimal value after convergence; $\pi^*$ is the optimal policy; $r$ is reward; $\gamma$ is the discount factor; $p(x'|x,a)$ is the transition probability.
 
-The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. In a discrete state space, the integral in the formula becomes a sum (Σ).
+The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. The formula above uses a sum (Σ) for a discrete state space; the corresponding continuous-state expression uses an integral.
 
 Convergence guarantee: the Bellman update operator is a contraction mapping with contraction rate $\gamma$, so the iteration converges to the unique fixed point $V^*$. After $k$ iterations, the error is at most $\gamma^k$ times the initial error: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
 
@@ -20018,7 +20018,7 @@ Learning a value function separately reduces variance. Most modern RL algorithms
 
 ### On-policy vs Off-policy
 
-- **On-policy**: Trains only on data collected by the current policy. Data is used once and discarded. PPO is representative. Stable but with low sample efficiency.
+- **On-policy**: Trains only on data collected by the current policy. A current rollout can be used for multiple epochs, but data from old policies is not retained in a replay buffer for continued reuse. PPO is representative. Stable but with low sample efficiency.
 - **Off-policy**: Reuses data collected by past policies (replay buffer). SAC and TD3 are representative. Sample efficient but training can be unstable.
 
 In robotics, data collection is costly, so the sample efficiency of off-policy methods is attractive. However, if large-scale parallel environments can be run in simulation, on-policy PPO is also sufficiently competitive.
@@ -20413,7 +20413,7 @@ Foundation models for robotics are still in an early stage. To be honest:
 - On specific tasks, task-specialized traditional methods or task-specific learning often do better.
 - The cost of large-scale robot data collection is very high. The scale is different from internet text/image data.
 - There is no safety guarantee. It is hard to predict foundation model behavior.
-- Inference latency may not be sufficient for real-time control.
+- Inference latency may exceed the time allowed for real-time control.
 
 ### Research Directions
 
@@ -21120,7 +21120,7 @@ RANSAC was introduced in the robust estimation section of Ch.3. In actual resear
 |------|-------------|------|
 | **Lo-RANSAC** | local optimization on inliers | converges in fewer iterations than vanilla |
 | **PROSAC** | samples in order of matching confidence | tries good matches first, accelerating convergence |
-| **MAGSAC++** | marginalizes over σ (inlier threshold) | no threshold tuning needed, adapts automatically |
+| **MAGSAC++** | marginalizes over σ (inlier threshold) | less sensitive to threshold tuning; still requires validation on the data |
 
 **Lo-RANSAC (Locally Optimized RANSAC)**:
 - When a good model is found, it re-estimates the model from that model's inliers (local optimization).
@@ -21252,8 +21252,8 @@ SuperPoint+LightGlue is worth evaluating when a GPU is available and learned-mat
 > **Technical Timeline: Computer Vision Fundamentals (Classical Methods)**
 > - **~2004**: the era of classical features. Hand-crafted features like Harris Corner (1988) and SIFT (2004) dominate. Mathematically precise but computationally heavy.
 > - **2006~2011**: lightweighting for real time. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) arrive. Patent and speed issues get resolved, and real-time SLAM becomes feasible.
-> - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) and SuperGlue (2020) begin to surpass classical methods in performance.
-> - **2020~**: fusion of geometry and learning. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
+> - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) begin to surpass classical methods in performance.
+> - **2020~**: fusion of geometry and learning. Learned matchers such as SuperGlue (2020) appear. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
 > - **Recent direction**: learned features and matchers are entering the front-end, while the back-end still uses epipolar geometry and triangulation. The two families therefore coexist in the same systems.
 
 
@@ -21863,7 +21863,7 @@ Using all three stages is not a standard recipe. A system may use domain randomi
 
 > **Technical Timeline: Deep Learning for Perception**
 > - **2012**: AlexNet wins the ImageNet competition by a large margin over prior methods. The start of the "deep learning revolution." The era of hand-crafted features begins to end.
-> - **2014~2015**: VGGNet, GoogLeNet, and ResNet appear. In particular, ResNet's (2015) residual connection makes it possible to train networks hundreds of layers deep. During this period, Faster R-CNN (2015) and YOLO (2016) make real-time object detection possible.
+> - **2014~2016**: VGGNet, GoogLeNet, and ResNet appear. In particular, ResNet's (2015) residual connection makes it possible to train networks hundreds of layers deep. During this period, Faster R-CNN (2015) and YOLO (2016) make real-time object detection possible.
 > - **2017**: "Attention Is All You Need" — Transformer is announced. Originally for NLP, but later extended to vision.
 > - **2020~2021**: ViT (Vision Transformer) appears and patch-sequence processing spreads; DETR applies a Transformer to detection. The original Swin Transformer paper reports scores above its comparison models on several public vision benchmarks of that period.
 > - **2022~**: ConvNeXt shows that "CNNs are not dead yet." Segment Anything (SAM) elevates segmentation to a foundation model. Extension to Spatial AI — depth estimation and 3D scene understanding become the next battleground for deep learning.
@@ -22219,7 +22219,7 @@ Add learnable virtual tokens to the input. The model itself is left untouched; o
 
 **Adapting SAM to specific domains**:
 
-A common strategy is to attach a domain-specific automatic prompt generator to SAM's prompt encoder.
+Domain adaptation for SAM can adjust the prompts and their generator or fine-tune the image encoder.
 
 1. **Grid prompt**: split the image into an NxN grid and use each intersection as a point prompt.
 2. **Learned prompt generator**: train a lightweight network that takes an image as input and automatically generates point/box prompts.
@@ -25010,7 +25010,7 @@ sudo make install
 
 `CUDA_ARCH_BIN` must match your GPU. If it is wrong, the build succeeds but you get slow runtime or errors. Check [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
-Caveat: pip opencv and apt cv_bridge conflict in ROS environments (see Ch.19, AI agent troubleshooting). Building CUDA OpenCV directly can make this problem more tangled, so isolating it with Docker is recommended.
+Caveat: pip opencv and apt cv_bridge conflict in ROS environments (see Ch.21 Appendix C.4, troubleshooting). Building CUDA OpenCV directly can make this problem more tangled, so isolating it with Docker is recommended.
 
 (Reference: [Dark Programmer — building OpenCV + CUDA from source](https://darkpgmr.tistory.com/184))
 
@@ -25530,7 +25530,7 @@ TEST(MyTest, BasicTest) {
 2018 ─── Weights & Biases launches
   │       experiment tracking, visualization, and team collaboration in the cloud
   │
-2020 ─── Ruff appears (2022), Black goes mainstream
+2020~2022 ─── Black goes mainstream, Ruff appears (2022)
   │       Python code-quality tooling speeds up
   │
 2023+ ── AI-assisted development tools spread
@@ -25619,7 +25619,7 @@ Together with nuScenes, it is one of the two main benchmarks in current autonomo
 > - [Waymo Open Dataset official site](https://waymo.com/open/) — dataset download and challenge participation.
 > - [Waymo Open Dataset GitHub](https://github.com/waymo-research/waymo-open-dataset) — official tools and example code.
 
-### 17.1.4 Datasets for VIO / VINS
+### 17.1.4 Datasets for RGB-D SLAM and VIO / VINS
 
 TUM RGB-D and EuRoC MAV are used for indoor RGB-D SLAM and drone VIO evaluation, respectively.
 
@@ -25913,7 +25913,7 @@ The **time constraints** also differ. Obstacle avoidance must respond within ten
 
 The two modules divide their roles accordingly:
 
-1. **The reality of compute**: on-board computers on the robot (Jetson, etc.) do not have the headroom to run large models
+1. **The reality of compute**: on-board computers on the robot (Jetson, etc.) may be unable to run large models in real time, depending on model size, power, and response-time requirements
 2. **Real-time requirements**: obstacle avoidance needs a response within tens of milliseconds
 3. **Semantic understanding**: VFMs and VLAs distinguish an object's class and state, such as identifying a broken glass
 4. **Complementary roles**: combine geometric precision in the Local Module with semantic understanding in the Global Module
@@ -26159,7 +26159,7 @@ The research topics below are ones our lab is actively working on or could take 
     - **Prerequisites**: a whole-system understanding is needed. Read at least Ch.3–14 first
 3. **Consistency maintenance**
     - Local/Global map synchronization — if the two modules' maps disagree, the robot gets confused
-    - Semantic consistency — "that is a chair" should not later flip to "table"
+    - Semantic consistency — prevent unsupported flips from "chair" to "table" while allowing updates supported by new observations
     - **Prerequisites**: Ch.3 (optimization) and Ch.14 (SLAM, map management) required
 
 ## 18.6 Questions That Separate Motivation from Novelty
@@ -27217,7 +27217,7 @@ The best starting point depends on the reader's background.
 
 For a **third- or fourth-year undergraduate new to robotics**, Ch.1 → Ch.3 → Ch.9 → Ch.14 is a useful sequence. It introduces the scope of Spatial AI and its mathematical language before connecting images, 3D geometry, and SLAM. Setting up the environment in Ch.16 alongside these chapters makes it possible to run the examples immediately.
 
-A **new master's student with a deep-learning background** can begin with Ch.2 → Ch.3 → Ch.10 → Ch.11. This sequence starts from familiar learning-based methods, fills in the sensor and mathematical foundations, and then shows how robotics uses foundation models. Ch.13 and Ch.14 extend the path to 3D vision and SLAM.
+A **new master's student with a deep-learning background** can begin with Ch.2 → Ch.3 → Ch.10 → Ch.11. Building on the reader’s deep-learning background, this sequence first fills in the sensor and mathematical foundations and then shows how robotics uses foundation models. Ch.13 and Ch.14 extend the path to 3D vision and SLAM.
 
 Readers with a **classical robotics background and less experience in deep learning** can start with Ch.8 → Ch.10 → Ch.11 → Ch.12. They can consult Ch.4–7 as needed and concentrate on the progression from robot learning to VFMs and VLAs.
 

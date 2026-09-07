@@ -276,7 +276,7 @@ print("T =", T)
 print("V =", V)
 ```
 
-Running this code confirms that the result matches the hand derivation above. After SymPy applies trigsimp, the form comes out cleanly.
+This code prints the kinetic energy T and potential energy V, which can be compared with the energy expressions derived above. After SymPy applies trigsimp, the form comes out cleanly.
 
 > **Further reading**
 > - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation*, Ch. 4 (https://www.cds.caltech.edu/~murray/mlswiki/) — the most rigorous treatment of Lagrangian mechanics in a robotics context. Free PDF available.
@@ -635,7 +635,7 @@ Splitting the manipulator equation into base and joints:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
 ```
 
-The `0` at the top left indicates that no joint torque acts on the base. λ is the contact force and J_c is the contact Jacobian. Contact forces and gravity accelerate the base.
+The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force and J_c is the contact Jacobian. Contact forces and gravity accelerate the base.
 
 This constraint is what makes locomotion control hard. For a fixed-base manipulator, the desired joint torque can simply be commanded to the motors; a legged robot, in contrast, must generate appropriate contact forces to make the base move as desired.
 

@@ -19,7 +19,7 @@ The best starting point depends on the reader's background.
 
 For a **third- or fourth-year undergraduate new to robotics**, Ch.1 → Ch.3 → Ch.9 → Ch.14 is a useful sequence. It introduces the scope of Spatial AI and its mathematical language before connecting images, 3D geometry, and SLAM. Setting up the environment in Ch.16 alongside these chapters makes it possible to run the examples immediately.
 
-A **new master's student with a deep-learning background** can begin with Ch.2 → Ch.3 → Ch.10 → Ch.11. This sequence starts from familiar learning-based methods, fills in the sensor and mathematical foundations, and then shows how robotics uses foundation models. Ch.13 and Ch.14 extend the path to 3D vision and SLAM.
+A **new master's student with a deep-learning background** can begin with Ch.2 → Ch.3 → Ch.10 → Ch.11. Building on the reader’s deep-learning background, this sequence first fills in the sensor and mathematical foundations and then shows how robotics uses foundation models. Ch.13 and Ch.14 extend the path to 3D vision and SLAM.
 
 Readers with a **classical robotics background and less experience in deep learning** can start with Ch.8 → Ch.10 → Ch.11 → Ch.12. They can consult Ch.4–7 as needed and concentrate on the progression from robot learning to VFMs and VLAs.
 

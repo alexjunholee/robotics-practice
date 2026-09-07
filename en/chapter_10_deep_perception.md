@@ -602,7 +602,7 @@ Using all three stages is not a standard recipe. A system may use domain randomi
 
 > **Technical Timeline: Deep Learning for Perception**
 > - **2012**: AlexNet wins the ImageNet competition by a large margin over prior methods. The start of the "deep learning revolution." The era of hand-crafted features begins to end.
-> - **2014~2015**: VGGNet, GoogLeNet, and ResNet appear. In particular, ResNet's (2015) residual connection makes it possible to train networks hundreds of layers deep. During this period, Faster R-CNN (2015) and YOLO (2016) make real-time object detection possible.
+> - **2014~2016**: VGGNet, GoogLeNet, and ResNet appear. In particular, ResNet's (2015) residual connection makes it possible to train networks hundreds of layers deep. During this period, Faster R-CNN (2015) and YOLO (2016) make real-time object detection possible.
 > - **2017**: "Attention Is All You Need" — Transformer is announced. Originally for NLP, but later extended to vision.
 > - **2020~2021**: ViT (Vision Transformer) appears and patch-sequence processing spreads; DETR applies a Transformer to detection. The original Swin Transformer paper reports scores above its comparison models on several public vision benchmarks of that period.
 > - **2022~**: ConvNeXt shows that "CNNs are not dead yet." Segment Anything (SAM) elevates segmentation to a foundation model. Extension to Spatial AI — depth estimation and 3D scene understanding become the next battleground for deep learning.

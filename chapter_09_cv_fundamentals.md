@@ -536,7 +536,7 @@ Rodrigues 벡터의 방향이 회전축, 크기(norm)가 회전 각도다. 3장�
 |------|-------------|------|
 | Lo-RANSAC | inlier로 로컬 최적화 수행 | vanilla보다 적은 iteration으로 수렴 |
 | PROSAC | 매칭 신뢰도 순으로 샘플링 | 좋은 매칭부터 먼저 시도하여 수렴 가속 |
-| MAGSAC++ | σ(inlier threshold)를 marginalization | threshold 설정 불필요, 자동 적응 |
+| MAGSAC++ | σ(inlier threshold)를 marginalization | threshold 설정에 덜 민감하지만 데이터별 검증 필요 |
 
 Lo-RANSAC (Locally Optimized RANSAC):
 - 좋은 모델을 찾으면, 그 모델의 inlier들로 다시 모델을 추정(local optimization)한다.
@@ -668,6 +668,6 @@ SuperPoint+LightGlue는 GPU를 사용할 수 있고 학습 기반 매칭의 강�
 > 기술 흐름: 컴퓨터 비전 기초 (Classical Methods)
 > - **~2004**: 고전적 특징점의 시대. Harris Corner (1988), SIFT (2004) 등 hand-crafted feature가 주류. 수학적으로 정교하지만 계산이 무거움
 > - **2006~2011**: 실시간을 위한 경량화. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) 등이 등장. 특허 문제와 속도 문제를 해결하면서 실시간 SLAM이 가능해짐
-> - **2015~2019**: 딥러닝의 침투. SuperPoint (2018), SuperGlue (2020) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
-> - **2020~**: Geometry + Learning의 융합. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
+> - **2015~2019**: 딥러닝의 침투. SuperPoint (2018) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
+> - **2020~**: Geometry + Learning의 융합. SuperGlue (2020) 같은 학습 기반 매처가 등장. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
 > - **최근 흐름**: 학습 기반 특징점과 매칭이 front-end에 도입되고 있지만, back-end에서는 여전히 epipolar geometry와 triangulation을 사용한다. 두 계열은 한 시스템 안에서 함께 쓰인다.

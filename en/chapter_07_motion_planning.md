@@ -686,7 +686,7 @@ Most likely state plus belief entropy. Entropy:
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-An infinite-dimensional belief summarized by a single scalar. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
+An infinite-dimensional belief is summarized by the pair of its most likely state and entropy. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
 
 Using $\arg\max_s b(s)$ alone is a standard MDP. Adding entropy to the state encodes "how much I do not know."
 
@@ -709,7 +709,7 @@ Algorithm Augmented_MDP_value_iteration():
 
 ---
 
-The form is identical to MDP_value_iteration (§15.3.3). The only difference is that the state is $\bar{b}$ instead of $s$.
+The form is identical to MDP_value_iteration (Probabilistic Robotics §15.3.3). The only difference is that the state is $\bar{b}$ instead of $s$.
 
 Transition probability $P(\bar{b}' \mid a, \bar{b})$ (eq. 16.85):
 

@@ -1098,7 +1098,7 @@ The five lines of the KF are the closed-form solution to the two integrals of th
 
 **Part 1 (Prediction).** In the prediction integral of the Bayes filter, the exponent $L_t$ is quadratic in both $x_{t-1}$ and $x_t$. Splitting $L_t$ into a part quadratic in $x_{t-1}$ and a part depending only on $x_t$ makes the $x_{t-1}$ integral a constant, absorbed into normalization. The first- and second-order coefficients in the remaining $x_t$ quadratic yield directly $\bar\mu_t = A_t \mu_{t-1} + B_t u_t$ and $\bar\Sigma_t = A_t \Sigma_{t-1} A_t^T + R_t$.
 
-**Part 2 (Measurement update).** From the correction integral $\text{bel}(x_t) \propto \exp\{-J_t\}$, the first and second derivatives of $J_t$ give $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$. Inverting this directly requires $n \times n$ operations, but the **inversion lemma** (Woodbury identity; see §3.1 linear algebra) transforms it into:
+**Part 2 (Measurement update).** From the correction integral $\text{bel}(x_t) \propto \exp\{-J_t\}$, the first and second derivatives of $J_t$ give $\Sigma_t^{-1} = C_t^T Q_t^{-1} C_t + \bar\Sigma_t^{-1}$. Inverting this directly requires $n \times n$ operations, but the **inversion lemma** (Woodbury identity) transforms it into:
 $$K_t = \bar\Sigma_t C_t^T (C_t \bar\Sigma_t C_t^T + Q_t)^{-1}$$
 which needs only a $k \times k$ ($k$ = measurement dimension) inversion. When $k \ll n$, the computational cost drops considerably.
 
@@ -1344,7 +1344,7 @@ The particle filter represents belief with $M$ random samples (particles):
 
 $$\mathcal{X}_t = \{x_t^{[1]},\, x_t^{[2]},\, \ldots,\, x_t^{[M]}\}$$
 
-Each particle $x_t^{[m]}$ is more densely concentrated where belief is high. Without any Gaussian assumption, arbitrary distribution shapes — multi-modal, heavy-tailed — can be represented.
+The particles $x_t^{[m]}$ are more densely concentrated where belief is high. Without any Gaussian assumption, arbitrary distribution shapes — multi-modal, heavy-tailed — can be represented.
 
 #### Particle Filter Algorithm: Sampling, Weighting, Resampling
 
@@ -1393,13 +1393,13 @@ Why this falls out to exactly $p(z_t \mid x_t^{[m]})$ becomes clear when the arg
 
 The rigorous derivation works by treating each particle not as a single state $x_t^{[m]}$ but as a state sequence $x_{0:t}^{[m]}$. Two applications of Bayes plus the Markov property factorize the target; the proposal factorizes inductively; their ratio reduces to exactly $\eta\, p(z_t \mid x_t^{[m]})$. This holds exactly only as $M \to \infty$.
 
-Without resampling, weights concentrate on a small number of particles — **weight degeneracy** — which is why Step 3 is needed. §3.11.4 covers the new problems that resampling itself introduces.
+Without resampling, weights concentrate on a small number of particles — **weight degeneracy** — which is why Step 3 is needed. §3.11.4 covers the sources of error in particle filters.
 
 <!-- DEMO: particle_filter_1d.html -->
 
 ### 3.11.4 Four Sources of Error in Particle Filters
 
-The particle filter is an approximation and carries structural errors. Resampling is a weight-based selection, similar to how low-weight candidates get pruned in the optimization of §3.4. Understanding the four error sources makes particle filter debugging systematic.
+The particle filter is an approximation and carries structural errors. Resampling is a weight-based selection that makes low-weight particles less likely to be selected. Understanding the four error sources makes particle filter debugging systematic.
 
 #### (1) Systematic Bias from Finite $M$
 

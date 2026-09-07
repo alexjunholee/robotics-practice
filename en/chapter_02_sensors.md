@@ -57,7 +57,7 @@ Depth (Z) = (focal_length × baseline) / disparity
 - **Baseline**: the distance between the two cameras
 
 **Pros**:
-- Passive sensor (no illumination required)
+- Passive sensor (no active illumination device required)
 - Usable in outdoor environments
 - Acquires RGB information and depth simultaneously
 

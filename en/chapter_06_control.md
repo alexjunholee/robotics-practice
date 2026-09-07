@@ -145,7 +145,7 @@ PID is powerful but has clear limits:
 - **It is SISO (Single-Input Single-Output) only.** In systems with inter-joint coupling like a 6-axis robot arm, applying independent PID to each joint degrades performance. The motion of one joint acts as a disturbance on the others.
 - **It is weak on nonlinear systems.** PID is a linear controller, whereas robot dynamics are nonlinear. It performs well only near an operating point.
 - **It cannot handle constraints.** Within the PID structure there is no way to explicitly handle physical constraints such as torque limits, joint angle limits, or velocity limits.
-- **It does not predict the future.** It reacts only to the current error. Without feedforward, tracking performance is limited.
+- **It does not predict the future.** It reacts to the current error, accumulated error, and rate of change of the error. Without feedforward, tracking performance is limited.
 
 PID is comparatively simple to implement and analyze. It can be sufficient when plant coupling is weak and the performance requirements are met, and PID-family controllers are also used for industrial robot joint servos.
 
