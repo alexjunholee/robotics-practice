@@ -198,7 +198,7 @@ OMPL itself does not perform collision checking. The user supplies a state valid
 
 ```python
 # OMPL-based motion planning in MoveIt2 (ROS2 Python API, simplified)
-from moveit_py import MoveItPy
+from moveit.planning import MoveItPy
 
 moveit = MoveItPy(node_name="motion_planner")
 arm = moveit.get_planning_component("manipulator")
@@ -389,7 +389,7 @@ F_n * d = 0                (zero force when separated, zero distance when in con
 
 Mathematically this is an MPCC (Mathematical Program with Complementarity Constraints), and it is hard to solve. Relaxation techniques or smoothed contact models are used.
 
-Drake's `ContactImplicitDirectCollocation` implements this method.
+Drake has no class that wraps this method as-is; it is built by adding the contact complementarity constraints directly to a `MathematicalProgram`.
 
 ### Connection to Real-Time Re-planning and MPC
 
@@ -410,7 +410,7 @@ To carry out "place the cup on the shelf":
 3. Plan the sequence approach → grasp → lift → move → place.
 4. Motion plan each stage.
 
-Steps 1-3 are **symbolic planning** (which actions, in what order); step 4 is **motion planning** (which concrete trajectory to move along). TAMP combines the two.
+Step 1 is perception, step 2 is a continuous geometric decision (which grasp pose to take), step 3 is **symbolic planning** (which actions, in what order), and step 4 is **motion planning** (which concrete trajectory to move along). TAMP combines symbolic and motion planning, and PDDLStream below handles the choice of continuous parameters — the kind step 2 calls for — by factoring it out into streams.
 
 ### PDDLStream
 
@@ -422,7 +422,7 @@ Recently, attempts to replace the symbolic planner with an LLM have been active:
 
 - **SayCan** (Google, 2022): the LLM scores natural-language descriptions of possible actions, and an affordance model filters for actions executable in the current state. The product of the two picks the next action.
 - **Code as Policies** (Google, 2023): the LLM generates robot control code directly. Natural-language command → Python code → robot execution.
-- **Inner Monologue** (Google, 2023): completes a task through iterative dialogue between the LLM and environment feedback.
+- **Inner Monologue** (Google, 2022): completes a task through iterative dialogue between the LLM and environment feedback.
 
 Practical limits: LLM-based TAMP is still experimental. Complex geometric constraints (manipulation in tight spaces, precision assembly) are hard for LLMs to handle, and traditional motion planners are still needed in the end. A realistic division of labor: LLM for high-level planning, motion planner for low-level execution.
 
@@ -510,12 +510,12 @@ $C^1(b)$ is the max of two linear functions. It bends at $p_1 = 0.5$. If $p_1 > 
 **Horizon 2 computation:**
 
 Integrating over the probabilities of observing $o_1, o_2$ after $a_1$:
-$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 7.78 p_2\}$$
+$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 13.61 p_2\}$$
 
 (Coefficients are computed through the observation probabilities and the belief update.)
 
 Full $T=2$:
-$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 7.78 p_2,\; 72 p_1 - 72 p_2 \}$$
+$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 13.61 p_2,\; 72 p_1 - 72 p_2 \}$$
 
 The max of three linear pieces. As the horizon grows, more pieces are added.
 
@@ -541,7 +541,7 @@ Each alpha-vector corresponds to one *conditional policy* (current action plus s
 
 ### 7.9.5 LP Solution
 
-If the doubly exponential growth in alpha-vector count is the problem, there is a way to reduce the max–sum–max structure to a linear program (LP) directly, computing an exact solution without enumerating alpha-vectors.
+If the doubly exponential growth in alpha-vector count is the problem, there is a way to reduce the max–sum–max structure to a linear program (LP) that identifies and prunes dominated alpha-vectors while computing an exact solution.
 
 **Reduction principle**: $C = \max_a x(a)$ is solved as $\min C$ subject to $\{C \geq x(a) \;\forall a\}$. For $C = \sum_i \max_a x(a,i)$, introduce a function $a(\cdot)$ selecting an action per state and add $\{C \geq \sum_i x(a(i),i)\}$ for every combination. The number of constraints is $|A|^{|\mathcal{S}|}$.
 
@@ -575,7 +575,7 @@ Algorithm finite_world_POMDP(T):
 
 ---
 
-$|\Phi^T|$ grows doubly exponentially. With a horizon of 5, 3 actions, and 5 observations, millions of alpha-vectors are already needed, and even with pruning the number is unmanageable in realistic domains. The exact solution is a proof of concept; approximation is essential in practice.
+$|\Phi^T|$ grows doubly exponentially. With a horizon of 3, 3 actions, and 5 observations, the pre-pruning alpha-vector count is already on the order of $10^{14}$, and even with pruning the number is unmanageable in realistic domains. The exact solution is a proof of concept; approximation is essential in practice.
 
 ### 7.9.6 General POMDP
 
@@ -658,7 +658,7 @@ Policy (eq. 16.79):
 
 $$\sigma^Q(\theta) = \arg\max_{\bar{a}} Q(\theta, \bar{a})$$
 
-Q-value function approximation uses nearest-neighbor lookup. Because belief $\theta$ is a particle set, it cannot be fed directly into a feedforward network. Instead a database of $\langle \theta, a, Q \rangle$ tuples is maintained, and for a new belief $\theta'$ the $k$ nearest neighbors by KL divergence yield the average Q-value.
+Q-value function approximation uses nearest-neighbor lookup. Because belief $\theta$ is an unordered particle set, it could not be fed as-is into the feedforward networks of the time, which take a vector with a fixed ordering. Thrun et al. maintain a database of $\langle \theta, a, Q \rangle$ tuples, and for a new belief $\theta'$ the $k$ nearest neighbors by KL divergence yield the average Q-value. Today a set-based encoder could also turn the belief into a network input.
 
 KL divergence between two beliefs is approximated with Gaussian KDE. KL-based kNN acts as the function approximator. Modern implementations replace this with neural function approximation, but the algorithmic skeleton is the same.
 
@@ -686,7 +686,7 @@ Most likely state plus belief entropy. Entropy:
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-An infinite-dimensional belief is summarized by the pair of its most likely state and entropy. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but coastal navigation and heaven/hell experiments confirm it is enough to select reasonable actions.
+An infinite-dimensional belief is summarized by the pair of its most likely state and entropy. Whether this is a *sufficient statistic* is not guaranteed — Thrun et al. explicitly note that "the sufficient statistic assumption rarely holds" — but the coastal navigation experiments confirm it is enough to select reasonable actions.
 
 Using $\arg\max_s b(s)$ alone is a standard MDP. Adding entropy to the state encodes "how much I do not know."
 
@@ -749,7 +749,7 @@ The same principle appears in other methods. Bayes-adaptive MDP (BAMDP) uses the
 
 Ch.8 §8.3's deep RL methods (PPO, SAC) learn from experience and need no model (transition probabilities, observation model). POMDP planning computes the optimal policy when the model is known. Without a model, MC-POMDP does not run either. MC-POMDP sits at the intersection: belief tracked with the model, Q-values learned from experience.
 
-Value iteration over belief is mathematically clean but scales doubly exponentially in the number of states — that is why approximate solvers exist. MC-POMDP represents belief with a particle filter and learns Q-values from samples. AMDP summarizes belief as a (most likely state, entropy) pair and reduces to a standard MDP. The methods differ, but the goal is one: active information gathering. Its modern forms are MCTS-based POMCP, Deep POMDP, and entropy-augmented planning in Active SLAM.
+Value iteration over belief is mathematically clean but scales doubly exponentially in the horizon and the number of observations — that is why approximate solvers exist. MC-POMDP represents belief with a particle filter and learns Q-values from samples. AMDP summarizes belief as a (most likely state, entropy) pair and reduces to a standard MDP. The methods differ, but the goal is one: active information gathering. Its modern forms are MCTS-based POMCP, Deep POMDP, and entropy-augmented planning in Active SLAM.
 
 ---
 
@@ -798,7 +798,7 @@ Value iteration over belief is mathematically clean but scales doubly exponentia
 2000 ── RRT-Connect (Kuffner & LaValle) — a variant widely provided by practical motion-planning libraries
 2009 ── CHOMP (Ratliff et al.) — gradient-based trajectory optimization
 2011 ── RRT* (Karaman & Frazzoli) — asymptotic optimality guarantee
-2012 ── OMPL 1.0 released — unified library of sampling-based planners
+2012 ── OMPL introductory paper (IEEE RAM) — unified library of sampling-based planners (1.0 release in 2014)
 2014 ── TrajOpt (Schulman et al.) — sequential convex optimization
 2019 ── MoveIt2 (ROS2) — an open motion-planning framework used in research and industry
 2022 ── SayCan (Google) — LLM + motion planning

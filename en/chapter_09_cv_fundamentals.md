@@ -163,7 +163,7 @@ Camera lenses are not perfect pinholes. Light bends as it passes through the len
 
 **Radial distortion**: gets worse as you move away from the image center. Modeled by parameters k1, k2, k3. When k1 < 0, you get barrel distortion (straight lines bulge outward); when k1 > 0, pincushion distortion (straight lines curve inward). Most lenses have barrel distortion, and it is more pronounced in wider lenses.
 
-**Tangential distortion**: occurs when the lens is not perfectly parallel to the image sensor. Parameters p1, p2. Usually smaller in effect than radial distortion, but with cheap cameras it is not negligible.
+**Tangential distortion**: occurs when the lens is not perfectly parallel to the image sensor. Parameters p1, p2. Usually smaller in effect than radial distortion, but it is not negligible in modules with loose lens-to-sensor alignment tolerances.
 
 **Distortion correction**:
 
@@ -477,7 +477,7 @@ camera_matrix = np.array([[fx, 0, cx],
                           [0,  0,  1]], dtype=np.float64)
 dist_coeffs = np.zeros(4)
 
-# Basic PnP (iterative, no initial guess needed)
+# EPnP: a non-iterative closed-form solver, so no initial guess is needed
 success, rvec, tvec = cv2.solvePnP(
     object_points, image_points, camera_matrix, dist_coeffs,
     flags=cv2.SOLVEPNP_EPNP
@@ -496,7 +496,7 @@ success, rvec, tvec, inliers = cv2.solvePnPRansac(
 3. Match them against the observed 2D keypoints.
 4. Solve PnP on these 3D-2D correspondences to obtain the camera pose of the new frame.
 
-The Tracking stage of ORB-SLAM3 is exactly this process.
+Tracking in ORB-SLAM3 broadly follows this flow. Note, however, that in monocular mode, creating new map points by triangulating between keyframes is mainly handled by Local Mapping (in stereo and RGB-D, Tracking creates close points directly at keyframe insertion).
 
 > **Further reading**
 > - [Lepetit et al., "EPnP: An Accurate O(n) Solution to the PnP Problem" (2009)](https://doi.org/10.1007/s11263-008-0152-6) — The original EPnP paper.
@@ -548,7 +548,7 @@ RANSAC was introduced in the robust estimation section of Ch.3. In actual resear
 
 **MAGSAC++ (Marginalizing Sample Consensus)**:
 - Marginalizes the most troublesome hyperparameter, the inlier threshold σ.
-- Instead of fixing the threshold, it integrates over multiple σ values, so manual tuning is almost unnecessary.
+- Instead of fixing the threshold, it integrates over multiple σ values, so it is less sensitive to the threshold choice. An upper bound on σ still has to be specified.
 - OpenCV exposes it through the `USAC_MAGSAC` option.
 
 **Using MAGSAC++ in OpenCV**:
@@ -574,7 +574,7 @@ H, mask = cv2.findHomography(
 ```
 
 **Practical tips**:
-- Iteration count: controlled by the `confidence` parameter. 0.999 means "find the correct model with 99.9% probability". The lower the inlier ratio, the more iterations are needed, growing exponentially.
+- Iteration count: controlled by the `confidence` parameter. 0.999 sets the iteration count so that, at the assumed inlier ratio, the probability of drawing at least one all-inlier minimal sample is 99.9% — it is not the probability that the finally selected model is correct. The lower the inlier ratio, the more iterations are needed, growing exponentially.
 - Threshold: with MAGSAC++ you are less sensitive to the threshold, but you still need to provide an initial value. The values in the example are starting points and should be validated for the image resolution and noise level.
 - The speed-accuracy relationship between PROSAC and MAGSAC++ depends on match-score quality, outlier ratio, and implementation. Compare them on the same data and time budget.
 
@@ -631,32 +631,33 @@ SuperPoint (2018) -> SuperGlue (2020) -> LightGlue (2023)
 **Code example — LightGlue (using kornia)**:
 
 ```python
+import torch
 import kornia
 from kornia.feature import LightGlueMatcher, KeyNetAffNetHardNet
 
 # Build the extractor and matcher
 extractor = KeyNetAffNetHardNet(num_features=2048).eval()
-matcher = LightGlueMatcher("keynetaffnethardnet").eval()
+matcher = LightGlueMatcher("keynet_affnet_hardnet").eval()
 
 # Move to GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 extractor = extractor.to(device)
 matcher = matcher.to(device)
 
-# Load images (kornia format: B x C x H x W, 0-1 range)
-img0 = kornia.io.load_image(path0).unsqueeze(0).to(device)
-img1 = kornia.io.load_image(path1).unsqueeze(0).to(device)
+# Load images (kornia format: B x C x H x W, 0-1 range; KeyNet takes 1-channel grayscale input)
+img0 = kornia.io.load_image(path0, kornia.io.ImageLoadType.GRAY32).unsqueeze(0).to(device)
+img1 = kornia.io.load_image(path1, kornia.io.ImageLoadType.GRAY32).unsqueeze(0).to(device)
 
 # Feature extraction
 with torch.no_grad():
-    feats0 = extractor(img0)
-    feats1 = extractor(img1)
+    lafs0, resp0, desc0 = extractor(img0)   # (lafs, responses, descriptors) tuple
+    lafs1, resp1, desc1 = extractor(img1)
 
-# Matching
-dists, match_idxs = matcher(feats0["descriptors"], feats1["descriptors"])
+    # Matching — LightGlue takes the keypoint geometry (lafs) along with the descriptors
+    dists, match_idxs = matcher(desc0[0], desc1[0], lafs0, lafs1)
 ```
 
-SuperPoint+LightGlue is worth evaluating when a GPU is available and learned-matching robustness matters. When there is no GPU or the latency and power budgets are tight, a classical feature such as ORB is a simpler baseline. Make the final choice by measuring accuracy, latency, and memory on the target data.
+The LightGlue family (SuperPoint+LightGlue, or KeyNetAffNetHardNet+LightGlue as in the example above) is worth evaluating when a GPU is available and learned-matching robustness matters. When there is no GPU or the latency and power budgets are tight, a classical feature such as ORB is a simpler baseline. Make the final choice by measuring accuracy, latency, and memory on the target data.
 
 > **Further reading**
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — The original SuperPoint paper.
@@ -667,7 +668,7 @@ SuperPoint+LightGlue is worth evaluating when a GPU is available and learned-mat
 
 > **Technical Timeline: Computer Vision Fundamentals (Classical Methods)**
 > - **~2004**: the era of classical features. Hand-crafted features like Harris Corner (1988) and SIFT (2004) dominate. Mathematically precise but computationally heavy.
-> - **2006~2011**: lightweighting for real time. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) arrive. Patent and speed issues get resolved, and real-time SLAM becomes feasible.
+> - **2006~2011**: lightweighting for real time. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) arrive. The speed problem gets solved, and the ORB family also escapes the patent constraints of SIFT and SURF, so real-time SLAM becomes feasible.
 > - **2015~2019**: deep learning seeps in. Learning-based features like SuperPoint (2018) begin to surpass classical methods in performance.
 > - **2020~**: fusion of geometry and learning. Learned matchers such as SuperGlue (2020) appear. Detector-free matching such as LoFTR (2021) and lightweight learned matching such as LightGlue (2023) appear. Classical geometry remains central in the SLAM/VO back-end.
 > - **Recent direction**: learned features and matchers are entering the front-end, while the back-end still uses epipolar geometry and triangulation. The two families therefore coexist in the same systems.

@@ -35,7 +35,7 @@ u(t) = Kp * e(t) + Ki * integral(e(τ)dτ, 0, t) + Kd * de(t)/dt
 
 각 항의 역할:
 
-- P (Proportional): 현재 오차에 비례하여 제어 입력을 생성한다. Kp가 크면 반응이 빠르지만, 오버슈트가 커지고 진동이 발생한다. P 항만으로는 정상상태 오차(steady-state error)가 남는다. 목표값 근처에서 오차가 작아지면 제어 입력도 작아지기 때문이다.
+- P (Proportional): 현재 오차에 비례하여 제어 입력을 생성한다. Kp가 크면 반응이 빠르지만, 오버슈트가 커지고 진동이 발생한다. 적분기가 없는 플랜트에 계단 입력을 주면 P 항만으로는 정상상태 오차(steady-state error)가 남는다. 목표값 근처에서 오차가 작아지면 제어 입력도 작아지기 때문이다. 플랜트에 자유 적분기가 있으면 계단 추종의 정상 오차가 0이 될 수 있고, 중력 같은 정상 외란은 별개의 오차 원인이다.
 
 - I (Integral): 오차의 누적값에 비례한다. 정상상태 오차를 제거하는 역할을 한다. 중력이나 마찰 같은 상수 외란이 있을 때 필수적이다. 다만 과도하면 wind-up 현상이 발생한다. 오차가 오랫동안 누적되어 제어 입력이 포화(saturation)된 상태에서, 목표에 도달한 후에도 누적된 적분값 때문에 큰 오버슈트가 생기는 문제다. 실무에서는 anti-windup 로직을 반드시 구현해야 한다.
 
@@ -454,7 +454,7 @@ def linear_mpc(A, B, Q, R, Q_f, x0, N, x_min, x_max, u_min, u_max):
     # --- 등식 제약: 동역학 ---
     # x(k+1) = A*x(k) + B*u(k)
     # → A*x(k) + B*u(k) - x(k+1) = 0
-    Ax_eq = sparse.kron(sparse.eye(N + 1), -sparse.eye(n))
+    Ax_eq = sparse.kron(sparse.eye(N + 1), -sparse.eye(n), format='lil')  # 슬라이스 대입이 가능한 포맷
     Au_shift = sparse.kron(sparse.eye(N, N + 1, 1), sparse.eye(n))
     # 수정: 좌하단에 A 추가
     for i in range(N):
@@ -546,7 +546,7 @@ print(f"예측 궤적 (위치): {x_pred[:5, 0]}")
 
 ### 위치 제어 vs 힘 제어 vs 임피던스 제어
 
-- 위치 제어(Position Control): 목표 위치를 추종한다. 환경이 없거나 매우 강성(rigid)인 환경에서 적합하다. 하지만 로봇 팔이 테이블 위의 컵을 집으려는데, 테이블 높이가 1mm만 달라도 위치 제어기는 이를 모른 채 계속 밀어 넣으려 하고, 과도한 힘이 발생한다.
+- 위치 제어(Position Control): 목표 위치를 추종한다. 자유 공간이나 컴플라이언트한 환경에서 적합하다. 강성 환경에서는 접촉력이 환경 강성과 위치 오차의 곱으로 커지므로 오히려 위험하다. 로봇 팔이 테이블 위의 컵을 집으려는데 테이블 높이가 1mm만 달라도 위치 제어기는 이를 모른 채 계속 밀어 넣으려 하고, 과도한 힘이 발생한다.
 
 - 힘 제어(Force Control): 목표 힘을 추종한다. 연마, 조립 같은 접촉 태스크에서 필요하다. 그러나 순수 힘 제어는 비접촉 상태에서 불안정하다. 힘 센서 노이즈에도 민감하다.
 
@@ -645,7 +645,8 @@ print(f"최종 접촉력: {contact_forces[-1]:.2f} N")
 임피던스 제어가 "위치 편차 → 힘 출력"이라면, 어드미턴스 제어는 반대다: "힘 입력 → 위치 출력."
 
 ```
-x_d_new = x_d + (1 / K_d) * F_ext + (1 / D_d) * F_ext_dot
+x_d_new = x_d + (1 / K_d) * F_ext      # 강성 항: 힘 → 위치 오프셋
+x_dot_d = (1 / D_d) * F_ext             # 감쇠 항: 힘 → 목표 속도 (힘의 미분이 아니다)
 ```
 
 좀 더 정확히, 외력 F_ext가 측정되면 이를 가상 임피던스 모델에 넣어서 목표 위치를 수정하고, 그 수정된 목표를 기존 (강성이 높은) 위치 제어기에 전달한다.
@@ -687,7 +688,7 @@ Lambda(q) * x_ddot + mu(q, q_dot) * x_dot + p(q) = F + F_ext
 태스크 공간에서 원하는 가속도 x_ddot_d를 달성하기 위한 관절 토크:
 
 ```
-tau = J^T * Lambda * x_ddot_d + C * q_dot + g(q)
+tau = J^T * Lambda * (x_ddot_d - J_dot * q_dot) + C * q_dot + g(q)
 ```
 
 이 프레임워크 위에 임피던스 제어를 결합하면, 태스크 공간에서 원하는 동적 행동(impedance)을 구현할 수 있다.
@@ -807,7 +808,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 
 모델 불확실성이 있지만 그 범위(bound)는 아는 경우에 쓴다.
 
-- H-infinity control: 최악의 외란에 대한 성능을 최적화한다. "어떤 외란이 들어오든 출력 오차가 이 이하로 유지된다"는 보장을 준다. 수학이 무겁고 (Riccati 부등식, LMI), 보수적인 경향이 있다. 1990년대에 산업 현장에서 널리 적용했다.
+- H-infinity control: 최악의 외란에 대한 성능을 최적화한다. 보장의 형태는 유도 L2 노름의 상한으로, 외란에서 오차로 가는 에너지 이득이 $\gamma$ 이하라는 뜻이다. 외란의 에너지가 커지면 오차도 그에 비례해 커질 수 있으므로 절대 상한이 아니다. 수학이 무겁고 (Riccati 부등식, LMI), 보수적인 경향이 있다.
 
 - Sliding Mode Control: 상태를 슬라이딩 면(sliding surface)으로 유한 시간 내에 끌어온 뒤, 슬라이딩 면 위에서 원하는 동특성을 따르게 한다. 모델 불확실성에 매우 강건하다. 문제는 chattering: 슬라이딩 면 근처에서 고주파 스위칭이 발생하여 액추에이터에 부담을 준다. Boundary layer approach나 higher-order sliding mode로 완화한다.
 
@@ -821,7 +822,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 | 안전 인증이 필요함 | Lyapunov 기반 증명 | "시뮬레이션에서 됐으니까 OK" |
 | 빠르게 프로토타입 | PID + feedforward | 처음부터 H-infinity |
 
-적응 제어와 sliding mode는 불확실성의 구조와 요구되는 보장에 따라 선택한다. 제어기 안정성을 체계적으로 입증하려면 Lyapunov 함수나 동등한 수학적 분석이 뒷받침되어야 하고, 안전 인증 대상 시스템에서는 이러한 해석 결과 자체가 필수 설계 규격이 된다.
+적응 제어와 sliding mode는 불확실성의 구조와 요구되는 보장에 따라 선택한다. 제어기 안정성을 체계적으로 입증하려면 Lyapunov 함수나 동등한 수학적 분석이 뒷받침되어야 한다. 기능안전 규격은 위험 분석과 안전 등급 결정, 검증·확인 증거의 체계를 요구하며 특정 증명 기법을 지정하지는 않는다. 이런 해석 결과는 그 증거를 구성하는 유력한 수단이다.
 
 ---
 
@@ -869,7 +870,7 @@ Lyapunov 함수를 적절히 잡으면 (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamm
 1960 ── LQR (Kalman)
 1985 ── Impedance Control 개념 (Hogan)
 1987 ── Operational Space Control (Khatib)
-1990s ─ Robust control (H-infinity) 산업 적용
+1990s ─ Robust control (H-infinity) 이론 정립과 적용 시도
 2004 ── 실시간 MPC 실용화 시작
 2020s ─ Boston Dynamics Atlas: 전신 동작과 물체에 가하는 힘을 포함한 MPC 공개
 ```

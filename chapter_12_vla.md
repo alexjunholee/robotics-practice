@@ -67,7 +67,7 @@ action = model.predict(
 )
 ```
 
-RT-X 프로젝트도 OpenVLA와 함께 살펴볼 만하다. 여러 연구 기관이 수집한 로봇 데이터를 모은 Open X-Embodiment 데이터셋으로 범용 로봇 정책을 학습한다. 이 데이터셋에는 22개 이상의 로봇 유형에서 나온 데이터가 포함된다.
+RT-X 프로젝트도 OpenVLA와 함께 살펴볼 만하다. 여러 연구 기관이 수집한 로봇 데이터를 모은 Open X-Embodiment 데이터셋으로 범용 로봇 정책을 학습한다. 이 데이터셋에는 21개 기관이 모은 22개 로봇 유형의 데이터가 포함된다.
 
 **Octo**: RT-X 데이터로 학습한 또 다른 오픈소스 모델이다. OpenVLA보다 작은 93M 파라미터 규모라 더 가볍게 활용할 수 있으며, 다양한 로봇 플랫폼에 빠르게 파인튜닝하도록 설계됐다.
 
@@ -81,7 +81,7 @@ RT-X 프로젝트도 OpenVLA와 함께 살펴볼 만하다. 여러 연구 기관
 
 물체 조작(manipulation)뿐 아니라 환경 안에서의 이동(navigation)도 Embodied AI의 핵심 과제다. 아래 연구들은 LLM의 언어 이해 능력을 navigation에 활용한다.
 
-LINGO는 Language-guided Indoor Navigation이다.
+LINGO는 Wayve가 공개한 주행 도메인 VLA 계열이다. LINGO-1은 주행 장면을 언어로 해설하는 개방 루프 모델이고, LINGO-2는 언어 지시와 주행 제어를 함께 다루는 폐쇄 루프 모델이다.
 
 **SayCan**: LLM이 "할 수 있는 것"과 "해야 하는 것"을 분리
 - Affordance function: 로봇이 현재 할 수 있는 행동
@@ -239,7 +239,7 @@ DAgger는 distribution shift를 완화하는 대표적 방법이다. 학습된 �
 > **추천 자료**
 > - [Ross et al., "A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning" (2011)](https://arxiv.org/abs/1011.0686) — DAgger 원 논문
 > - [Florence et al., "Implicit Behavioral Cloning" (CoRL 2021)](https://arxiv.org/abs/2109.00137) — BC의 한계를 극복하기 위한 implicit 접근
-> - [Zare et al., "A Survey of Imitation Learning" (2024)](https://arxiv.org/abs/2309.15894) — IL 전반 서베이
+> - Zare et al., "A Survey of Imitation Learning: Algorithms, Recent Developments, and Challenges" (IEEE Trans. Cybernetics, 2024) — IL 전반 서베이
 
 ## 12.8 심화: Diffusion Policy
 
@@ -258,7 +258,7 @@ Diffusion Policy는 denoising 과정을 이용해 이 multi-modal 분포를 표�
 3. 최종 a_0가 실행할 action trajectory
 ```
 
-Action trajectory는 단일 action이 아니라 미래 수 스텝의 action 시퀀스 `[a_0, a_1, ..., a_H]`이다. 이 중 처음 몇 스텝만 실행하고(receding horizon), 다시 새 관측으로 다음 trajectory를 생성한다.
+Action trajectory는 단일 action이 아니라 미래 수 스텝의 action 시퀀스 `[a(0), a(1), ..., a(H)]`이다. 괄호 안 숫자는 실행 시간 인덱스이며, 앞 의사코드의 아래첨자(diffusion step)와는 다른 축이다. 이 중 처음 몇 스텝만 실행하고(receding horizon), 다시 새 관측으로 다음 trajectory를 생성한다.
 
 이 방식은 multi-modal action distribution의 모드 수를 미리 정할 필요가 없고, action sequence를 한 번에 생성해 시간적으로 이어진 행동을 만들 수 있다. 학습에는 denoising score matching을 쓴다.
 
@@ -301,7 +301,7 @@ DR의 한계: 랜덤화 범위를 너무 넓히면 학습 자체가 어려워지
 
 **3. Real-to-Sim-to-Real (R2S2R)**
 
-DR의 다양성과 SysID의 정밀도를 결합하는 접근이다.
+실제 데이터로 시뮬레이터를 교정한 뒤 그 시뮬레이터에서 정책을 학습해 현실로 되돌리는 접근이다. 무작위화를 함께 쓰려면 어느 파라미터를 어느 범위로 흔들지 단계에 명시해야 한다.
 
 ```
 1. 실제 데이터를 소량 수집
@@ -315,7 +315,7 @@ DR의 다양성과 SysID의 정밀도를 결합하는 접근이다.
 
 정량적 판단 기준은 sim과 real에서 동일 태스크의 성공률 비교다.
 
-- Sim 성공률 ≈ Real 성공률: transfer 성공. 시뮬레이터가 현실을 잘 반영.
+- Sim 성공률 ≈ Real 성공률: 두 값이 모두 충분히 높고 실패 양상도 비슷하면 transfer가 된 것으로 본다. 둘 다 낮은 경우에는 근접 자체가 근거가 되지 않으므로 절대 성능과 시행 수를 함께 본다.
 - Sim >> Real: reality gap이 큼. DR 범위 확장 또는 SysID 보정 필요.
 - Sim < Real: 드물지만 발생. 시뮬레이터가 오히려 더 어려운 조건(보수적)으로 설정된 경우.
 
@@ -323,15 +323,15 @@ DR의 다양성과 SysID의 정밀도를 결합하는 접근이다.
 
 > **추천 자료**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — DR 원 논문
-> - [Muratore et al., "Robot Learning from Randomized Simulations" (2022)](https://arxiv.org/abs/2111.00137) — DR 체계적 정리
-> - [Hanna & Stone, "Grounded Action Transformation for Sim-to-Real" (AAAI 2017)](https://arxiv.org/abs/1511.07461) — transfer 방법론
+> - Muratore et al., "Robot Learning from Randomized Simulations: A Review" (Frontiers in Robotics and AI, 2022) — DR 체계적 정리
+> - [Hanna & Stone, "Grounded Action Transformation for Robot Learning in Simulation" (AAAI 2017)](https://ojs.aaai.org/index.php/AAAI/article/view/11044) — transfer 방법론
 > - [NVIDIA Isaac Lab Tutorials](https://isaac-sim.github.io/IsaacLab/) — 실습용 DR/SysID 파이프라인
 
 > **추가 논문 (3D/Spatial 이해 + 벤치마크)**
 > - [Hong et al., "3D-LLM: Injecting the 3D World into Large Language Models" (NeurIPS 2023, arXiv:2307.12981)](https://arxiv.org/abs/2307.12981) — LLM에 3D 공간 이해 능력을 부여. 3D captioning, QA, navigation
 > - [Chen et al., "SpatialVLM: Endowing Vision-Language Models with Spatial Reasoning" (CVPR 2024, arXiv:2401.12168)](https://arxiv.org/abs/2401.12168) — VLM에 거리/크기 등 공간 추론 능력 추가
 > - [Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots" (RSS 2024, arXiv:2406.02523)](https://arxiv.org/abs/2406.02523) — 100개 주방 태스크, 150+ 물체 카테고리. 가정용 로봇 벤치마크
-> - [Szot et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — 사람-로봇 공존 시뮬레이션. Social navigation, 협업 태스크
+> - [Puig et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — 사람-로봇 공존 시뮬레이션. Social navigation, 협업 태스크
 
 > **기술 흐름: VLA & Embodied AI**
 > - **~2015**: 개별 태스크별 모방학습(imitation learning), 단일 물체 grasping 연구 중심

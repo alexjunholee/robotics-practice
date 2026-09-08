@@ -30,7 +30,7 @@ Scaling law는 성능과 모델 크기·데이터·연산량 사이에서 관찰
 
 ## 11.2 주요 VFM
 
-DINOv2, SAM, CLIP, Depth Anything을 각각 표현 학습, 분할, 이미지-텍스트 정렬, 단안 깊이 추정의 관점에서 비교한다.
+DINOv2, SAM, CLIP, Depth Anything, GroundingDINO를 각각 표현 학습, 분할, 이미지-텍스트 정렬, 단안 깊이 추정, open-vocabulary 검출의 관점에서 비교한다.
 
 ### 11.2.1 DINOv2
 
@@ -39,7 +39,7 @@ DINOv2, SAM, CLIP, Depth Anything을 각각 표현 학습, 분할, 이미지-텍
 DINOv2는 라벨 없이도 범용적인 시각 특징을 학습한다. 이 특징은 분류, 분할, 매칭 등 다양한 태스크에 그대로 쓸 수 있다. 특히 로보틱스에서는 DINOv2의 dense feature가 텍스처 없는 영역에서도 안정적인 매칭을 제공하여, SLAM이나 Visual Odometry에서 textureless 환경의 tracking failure rate를 줄이는 데 쓰인다.
 
 특징:
-- Contrastive learning + Self-distillation
+- Self-distillation (DINO) + masked image modeling (iBOT) + KoLeo 정규화
 - 다양한 태스크에서 우수한 전이 성능
 - Dense visual features 제공
 
@@ -71,9 +71,9 @@ features = outputs.last_hidden_state  # (1, num_patches+1, 768): CLS + 패치 fe
 
 ### 11.2.2 SAM (Segment Anything Model)
 
-**Promptable Segmentation**: 점, 박스, 텍스트 등의 프롬프트로 어떤 객체든 분할한다.
+**Promptable Segmentation**: 점, 박스, 마스크 프롬프트로 어떤 객체든 분할한다. 텍스트 프롬프트는 원 논문의 탐색적 실험이고 공개 checkpoint와 API는 지원하지 않아, 뒤에 나오는 GroundingDINO가 텍스트를 박스로 바꿔 주는 결합으로 다룬다.
 
-기존 segmentation 모델은 학습에 사용된 클래스만 분할할 수 있었다. "의자, 테이블, 사람"으로 학습하면 "컵"은 분할하지 못한다. SAM은 1.1B개의 마스크로 학습되어, 본 적 없는 어떤 물체든 분할할 수 있다. 로봇이 새로운 환경에서 처음 보는 물체를 조작해야 할 때, SAM 이후로 segmentation 접근 방식이 달라졌다.
+기존 segmentation 모델은 학습에 사용된 클래스만 분할할 수 있었다. "의자, 테이블, 사람"으로 학습하면 "컵"은 분할하지 못한다. SAM은 1.1B개의 마스크로 학습되어, 학습 클래스에 묶이지 않고 임의의 물체를 분할하려 한다. 의료·위성·수중처럼 분포가 다른 도메인에서는 성능이 떨어진다(§11.5). 로봇이 새로운 환경에서 처음 보는 물체를 조작해야 할 때, SAM 이후로 segmentation 접근 방식이 달라졌다.
 
 구성:
 - Image Encoder: ViT로 이미지 임베딩
@@ -98,7 +98,7 @@ masks, scores, logits = predictor.predict(
 )
 ```
 
-`multimask_output=True`로 하면 3개의 마스크 후보가 나온다(전체 물체, 부분, 더 작은 부분). `scores`로 가장 적합한 마스크를 고르면 된다.
+`multimask_output=True`로 하면 3개의 마스크 후보가 나온다(전체 물체, 부분, 더 작은 부분). `scores`는 예측된 마스크 품질(IoU) 추정치이므로, 원하는 범위를 고르려면 프롬프트를 바꾸거나 세 후보를 직접 비교해야 한다.
 
 > **추천 자료**
 > - [Kirillov et al., "Segment Anything" (2023)](https://arxiv.org/abs/2304.02643) — SAM 원논문
@@ -136,11 +136,14 @@ with torch.no_grad():
     image_features = model.encode_image(image)
     text_features = model.encode_text(text)
 
-    similarity = (image_features @ text_features.T).softmax(dim=-1)
+    # CLIP은 L2 정규화 후 내적해야 코사인 유사도가 된다
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+    similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)  # 100.0 ≈ model.logit_scale.exp(), 학습된 온도 스케일
     print(similarity)  # 각 텍스트와 이미지 간 유사도
 ```
 
-`@`는 행렬 곱(dot product)이다. 이미지 feature와 텍스트 feature의 코사인 유사도를 계산하는 것인데, 이미지와 각 텍스트가 얼마나 의미적으로 가까운지를 수치로 나타낸다. 이것이 zero-shot classification의 원리이다.
+`@`는 행렬 곱이다. CLIP은 두 feature를 L2 정규화한 뒤 내적하므로 그 값이 코사인 유사도가 되고, 여기에 학습된 스케일을 곱해 softmax를 취한다. 정규화를 건너뛰면 코사인이 아니라 단순 내적이 된다. 이것이 zero-shot classification의 원리이다.
 
 > **추천 자료**
 > - [Radford et al., "Learning Transferable Visual Models From Natural Language Supervision" (2021)](https://arxiv.org/abs/2103.00020) — CLIP 원논문
@@ -157,7 +160,7 @@ Depth Anything은 1.5M 라벨 데이터와 62M 비라벨 데이터를 활용한 
 특징:
 - 1.5M 라벨 데이터 + 62M 비라벨 데이터 학습
 - 다양한 도메인에서 강건
-- V2: metric depth 모델 제공
+- V1·V2 모두 metric depth 모델 제공 (V2의 차별점은 합성 라벨 기반 재학습으로 개선된 상대 깊이 품질)
 
 Depth Anything V2는 metric depth(절대 깊이)를 추정하는 모델도 제공한다. 물리 단위의 거리가 필요한 로봇 시스템에서는 상대적 깊이 순서와 metric depth를 구분해 사용한다.
 
@@ -234,7 +237,7 @@ Dense Feature for SLAM:
 
 로봇의 Local Module에서 사용하려면 경량화가 필요하다.
 
-VFM은 탁월한 성능을 자랑하지만 수억 개에 달하는 파라미터 탓에 대규모 GPU 서버 없이 실시간 구동이 어렵다. 하지만 현장 로봇은 온보드 Jetson 환경에서 30 FPS 이상의 처리율을 확보해야 한다. 이 간극을 메우는 것이 경량화와 Edge 배포 기술이다. 아무리 좋은 모델도 로봇에서 실시간으로 돌릴 수 없으면 논문 안에서만 빛난다.
+VFM은 파라미터가 수억 개에 이르러 연산과 메모리 요구가 크다. ViT-B급 모델은 데스크톱 GPU에서 돌지만, 온보드 연산 장치에서 다른 모듈과 자원을 나눠 쓰며 실시간을 맞추기는 어렵다. 반면 현장 로봇은 온보드 연산 장치에서 돌려야 하고, 필요한 처리율은 제어 루프와 작업이 정한다. 검색·지도 갱신·조작은 각각 다른 지연 예산을 갖는다. 이 간극을 메우는 것이 경량화와 Edge 배포 기술이다. 아무리 좋은 모델도 로봇에서 실시간으로 돌릴 수 없으면 논문 안에서만 빛난다.
 
 경량화 기법:
 | 기법 | 설명 |
@@ -323,7 +326,7 @@ lora_config = LoraConfig(
 # PEFT 모델 생성
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
-# 출력 예: trainable params: 294,912 || all params: 86,567,178 || trainable%: 0.34%
+# 출력 예: trainable params: 589,824 || all params: 86,567,178 || trainable%: 0.68%
 ```
 
 Adapter:
@@ -392,8 +395,8 @@ VFM adaptation을 비교할 때는 다음과 같은 protocol matrix를 사용할
 ---
 
 > **기술 흐름: Vision Foundation Models**
-> - **2021**: CLIP(OpenAI) 발표. 4억 쌍의 이미지-텍스트 데이터로 공유 임베딩을 학습하고 zero-shot 분류를 시연
-> - **2022**: Masked Autoencoders (MAE) 등 self-supervised 사전학습 방법이 주목받기 시작. DINO가 self-supervised ViT의 가능성을 보여줌
+> - **2021**: CLIP(OpenAI) 발표. 4억 쌍의 이미지-텍스트 데이터로 공유 임베딩을 학습하고 zero-shot 분류를 시연. DINO(ICCV 2021)가 self-supervised ViT의 가능성을 보여줌
+> - **2022**: Masked Autoencoders (MAE, CVPR 2022) 등 self-supervised 사전학습 방법이 주목받기 시작
 > - **2023**: SAM (Segment Anything Model) 발표. 11M 이미지, 1.1B 마스크로 학습. "어떤 물체든 분할"이라는 foundation model 수준의 범용성 달성. 같은 해 DINOv2 발표 — self-supervised 비전 feature의 새 기준
 > - **2024**: SAM2 (비디오 segmentation 확장), Depth Anything V2 (metric depth 지원), Florence-2 (통합 비전 모델) 등 VFM이 빠르게 진화. 모델들의 경량화와 edge 배포가 활발해짐
 > - **2025~**: VFM들의 3D 확장과 멀티모달 통합이 가속. 하나의 foundation model이 detection, segmentation, depth, tracking을 통합 처리하는 방향. 로보틱스에서는 VFM이 perception의 표준 백본으로 자리잡는 추세

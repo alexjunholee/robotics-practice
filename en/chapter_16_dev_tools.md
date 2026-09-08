@@ -91,7 +91,7 @@ sudo apt install -y vim tmux htop
 
 ### 16.2.2 CUDA / cuDNN
 
-Deep-learning models are usually trained with GPU acceleration. In an NVIDIA environment, an incompatible combination of CUDA and PyTorch can fail at the first `import torch`.
+Deep-learning models are usually trained with GPU acceleration. In an NVIDIA environment, if the driver does not support the CUDA runtime bundled with PyTorch, the GPU will not be picked up.
 
 **Installation check**:
 
@@ -127,11 +127,11 @@ sudo reboot
 nvidia-smi
 ```
 
-If the GPU does not show up in `nvidia-smi` after installation: (1) check whether Secure Boot is on (turn it off in the BIOS); (2) check driver module status with `sudo dkms status`. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
+If the GPU does not show up in `nvidia-smi` after installation: (1) check with `sudo dkms status` whether the module was built and installed, and with `lsmod | grep nvidia` whether it is actually loaded; (2) if Secure Boot is on, unsigned modules will not load, so enroll a MOK key, use a distribution-signed driver package, or turn Secure Boot off. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
 
 **CUDA/cuDNN version compatibility**
 
-If PyTorch and the CUDA version do not match, a single `import torch` errors out. Check in this order:
+Official PyTorch wheels ship their own CUDA runtime, so the host's CUDA toolkit (`nvcc`) version does not have to match. What actually matters is whether the driver supports the CUDA runtime bundled in the wheel. When that condition breaks, `import torch` still succeeds but `torch.cuda.is_available()` returns False or the first CUDA call errors out. Check in this order:
 
 ```bash
 # 1. Check the GPU
@@ -143,7 +143,8 @@ nvcc --version
 # 3. Check which CUDA PyTorch is using
 python -c "import torch; print(torch.version.cuda)"
 
-# All three versions must be compatible. Check combinations on the PyTorch official site:
+# With wheels there is only one condition: does the driver (1) support PyTorch's CUDA runtime (3)?
+# nvcc (2) only matters when building from source or compiling custom CUDA extensions. Check combinations on the PyTorch official site:
 # https://pytorch.org/get-started/locally/
 ```
 
@@ -155,9 +156,10 @@ python -c "import torch; print(torch.version.cuda)"
 
 ```bash
 # Install dependencies
-sudo apt install -y cmake git libgtk2.0-dev pkg-config \
+sudo apt install -y build-essential cmake git libgtk2.0-dev pkg-config \
     libavcodec-dev libavformat-dev libswscale-dev \
-    libtbb-dev libjpeg-dev libpng-dev
+    libtbb-dev libjpeg-dev libpng-dev \
+    python3-dev python3-numpy   # required for BUILD_opencv_python3=ON. Check the Python 3 entry in the cmake summary
 
 # OpenCV + contrib source
 git clone https://github.com/opencv/opencv.git
@@ -165,11 +167,12 @@ git clone https://github.com/opencv/opencv_contrib.git
 
 # Build (enable CUDA)
 cd opencv && mkdir build && cd build
+# Adjust CUDA_ARCH_BIN to your GPU (RTX 3090=8.6, RTX 4090=8.9). A comment cannot follow a line continuation (\)
 cmake -D CMAKE_BUILD_TYPE=Release \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
       -D WITH_CUDA=ON \
-      -D CUDA_ARCH_BIN="8.6"  \  # adjust to your GPU (RTX 3090=8.6, RTX 4090=8.9)
+      -D CUDA_ARCH_BIN="8.6" \
       -D WITH_CUDNN=ON \
       -D OPENCV_DNN_CUDA=ON \
       -D BUILD_opencv_python3=ON \
@@ -200,7 +203,8 @@ conda create -n myenv python=3.10
 conda activate myenv
 
 # Install packages
-conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
+# PyTorch stopped publishing to the pytorch Anaconda channel as of 2.6. Use the pip index inside the conda environment
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
 **venv** (lightweight):
@@ -300,7 +304,7 @@ sudo apt-get install -y xauth
 xhost +local:docker
 ```
 
-`xhost +local:docker` allows X server access only from Docker containers. Safer than `xhost +` (allow all), but in security-sensitive environments `xauth`-based authentication is the right choice.
+`xhost +local:docker` adds an entry that allows local connections. xhost is host-based access control and cannot tell containers apart, so this does not open access to Docker alone. To restrict access to a specific container, use `xauth` cookie-based authentication.
 
 **Step 2: Run script**
 
@@ -336,9 +340,9 @@ What each flag does:
 | `-e QT_X11_NO_MITSHM=1` | Without this, RViz crashes with a segfault. MIT-SHM does not work in Docker |
 | `-e ROS_DOMAIN_ID=42` | Isolates from other ROS2 systems on the same network. Essential when multiple people use the lab |
 | `-v /dev:/dev` | Sensor USB may be plugged in at any time, so mount all of /dev. Pairs with `--privileged` |
-| `-v .Xauthority` | X11 authentication. Without it you get `cannot open display` |
+| `-v .Xauthority` | X11 authentication. If you are not using the xhost setup from Step 1, without it you get `cannot open display` |
 
-**Step 3: Save the container after work**
+**Step 3: Save the container after work** — if you ran Step 2 with `--rm`, the container is deleted the moment you leave the shell, so nothing is left to commit. Either commit from another shell while the container is still running, or run it without `--rm`.
 
 ```bash
 # If you installed packages or did other work inside the container, commit it
@@ -685,7 +689,7 @@ TEST(MyTest, BasicTest) {
 2008 ─── GitHub launches
   │       becomes the hub of open-source collaboration
   │
-2010 ─── Conda (Anaconda) appears
+2012 ─── Conda (Anaconda) appears
   │       becomes a widely used Python environment manager in data science
   │
 2013 ─── Docker released

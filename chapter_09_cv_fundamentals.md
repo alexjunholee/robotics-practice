@@ -163,7 +163,7 @@ K는 카메라의 렌즈 특성을, [R|t]는 카메라가 세상 어디에 어�
 
 Radial distortion (방사 왜곡): 이미지 중심에서 멀어질수록 심해진다. 파라미터 k1, k2, k3로 모델링한다. k1 < 0이면 barrel distortion (직선이 바깥으로 볼록), k1 > 0이면 pincushion distortion (직선이 안쪽으로 오목). 대부분의 렌즈는 barrel distortion을 가진다. 광각 렌즈일수록 심하다.
 
-Tangential distortion (접선 왜곡): 렌즈가 이미지 센서와 완벽하게 평행하지 않을 때 발생한다. 파라미터 p1, p2. 보통 radial보다 영향이 작지만, 저가 카메라에서는 무시할 수 없다.
+Tangential distortion (접선 왜곡): 렌즈가 이미지 센서와 완벽하게 평행하지 않을 때 발생한다. 파라미터 p1, p2. 보통 radial보다 영향이 작지만, 렌즈와 센서의 정렬 공차가 큰 모듈에서는 무시할 수 없다.
 
 왜곡 보정:
 
@@ -477,7 +477,7 @@ camera_matrix = np.array([[fx, 0, cx],
                           [0,  0,  1]], dtype=np.float64)
 dist_coeffs = np.zeros(4)
 
-# 기본 PnP (iterative, 초기값 필요 없음)
+# EPnP: 비반복 폐쇄형 해법이라 초기값이 필요 없다
 success, rvec, tvec = cv2.solvePnP(
     object_points, image_points, camera_matrix, dist_coeffs,
     flags=cv2.SOLVEPNP_EPNP
@@ -496,7 +496,7 @@ SLAM과의 연결: Visual SLAM에서 매 프레임마다 수행하는 과정은 
 3. 실제 관측된 2D 키포인트와 매칭한다.
 4. 이 3D-2D 대응으로 PnP를 풀어 새 프레임의 카메라 포즈를 구한다.
 
-ORB-SLAM3의 Tracking 단계가 정확히 이 네 단계다.
+ORB-SLAM3의 Tracking도 대체로 이 흐름을 따른다. 다만 단안 모드에서 키프레임 사이의 삼각측량으로 새 맵 포인트를 만드는 일은 주로 Local Mapping이 담당한다(스테레오·RGB-D는 키프레임 삽입 시 Tracking이 근거리 점을 바로 만든다).
 
 > 추천 자료
 > - [Lepetit et al., "EPnP: An Accurate O(n) Solution to the PnP Problem" (2009)](https://doi.org/10.1007/s11263-008-0152-6) — EPnP 원논문
@@ -548,7 +548,7 @@ PROSAC (Progressive Sample Consensus):
 
 MAGSAC++ (Marginalizing Sample Consensus):
 - 가장 골치 아픈 하이퍼파라미터인 inlier threshold σ를 marginalize한다.
-- Threshold를 고정하지 않고 여러 σ 값에 대해 적분하므로, 수동 튜닝이 거의 필요 없다.
+- Threshold를 고정하지 않고 여러 σ 값에 대해 적분하므로 임계값 선택에 덜 민감하다. σ의 상한은 여전히 지정해야 한다.
 - OpenCV에서는 `USAC_MAGSAC` 옵션으로 사용할 수 있다.
 
 OpenCV에서 MAGSAC++ 사용:
@@ -574,7 +574,7 @@ H, mask = cv2.findHomography(
 ```
 
 실무 팁:
-- Iteration 수: `confidence` 파라미터로 제어한다. 0.999면 "99.9% 확률로 올바른 모델을 찾겠다"는 의미. inlier ratio가 낮을수록 필요한 iteration이 기하급수적으로 증가한다.
+- Iteration 수: `confidence` 파라미터로 제어한다. 0.999는 주어진 inlier 비율에서 "전부 inlier인 최소 표본을 적어도 한 번 뽑을 확률이 99.9%"가 되도록 반복 수를 정한다는 뜻이며, 최종 채택 모델이 옳을 확률은 아니다. inlier ratio가 낮을수록 필요한 iteration이 기하급수적으로 증가한다.
 - Threshold: MAGSAC++를 쓰면 threshold에 덜 민감하지만, 초기값은 여전히 줘야 한다. 예시 코드의 값은 시작점일 뿐이며 영상 해상도와 노이즈에 맞춰 검증해야 한다.
 - PROSAC과 MAGSAC++의 속도·정확도 관계는 매칭 점수의 품질, outlier 비율, 구현에 따라 달라진다. 같은 데이터와 시간 예산으로 비교해 고른다.
 
@@ -631,32 +631,33 @@ LoFTR (Detector-Free Local Feature Matching):
 코드 예시 — LightGlue (kornia 사용):
 
 ```python
+import torch
 import kornia
 from kornia.feature import LightGlueMatcher, KeyNetAffNetHardNet
 
 # 특징 추출기 + 매칭기 구성
 extractor = KeyNetAffNetHardNet(num_features=2048).eval()
-matcher = LightGlueMatcher("keynetaffnethardnet").eval()
+matcher = LightGlueMatcher("keynet_affnet_hardnet").eval()
 
 # GPU로 이동
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 extractor = extractor.to(device)
 matcher = matcher.to(device)
 
-# 이미지 로드 (kornia 형식: B x C x H x W, 0-1 범위)
-img0 = kornia.io.load_image(path0).unsqueeze(0).to(device)
-img1 = kornia.io.load_image(path1).unsqueeze(0).to(device)
+# 이미지 로드 (kornia 형식: B x C x H x W, 0-1 범위; KeyNet은 1채널 grayscale 입력)
+img0 = kornia.io.load_image(path0, kornia.io.ImageLoadType.GRAY32).unsqueeze(0).to(device)
+img1 = kornia.io.load_image(path1, kornia.io.ImageLoadType.GRAY32).unsqueeze(0).to(device)
 
 # 특징 추출
 with torch.no_grad():
-    feats0 = extractor(img0)
-    feats1 = extractor(img1)
+    lafs0, resp0, desc0 = extractor(img0)   # (lafs, responses, descriptors) 튜플
+    lafs1, resp1, desc1 = extractor(img1)
 
-# 매칭
-dists, match_idxs = matcher(feats0["descriptors"], feats1["descriptors"])
+    # 매칭 — LightGlue는 디스크립터와 함께 키포인트 기하(lafs)를 받는다
+    dists, match_idxs = matcher(desc0[0], desc1[0], lafs0, lafs1)
 ```
 
-SuperPoint+LightGlue는 GPU를 사용할 수 있고 학습 기반 매칭의 강건성이 필요한 경우 검토할 수 있다. GPU가 없거나 지연·전력 예산이 작다면 ORB 같은 고전 특징이 더 단순한 기준선이 된다. 최종 선택은 목표 데이터에서 정확도, 지연, 메모리를 함께 측정해 결정한다.
+LightGlue 계열(SuperPoint+LightGlue, 위 예제의 KeyNetAffNetHardNet+LightGlue)은 GPU를 사용할 수 있고 학습 기반 매칭의 강건성이 필요한 경우 검토할 수 있다. GPU가 없거나 지연·전력 예산이 작다면 ORB 같은 고전 특징이 더 단순한 기준선이 된다. 최종 선택은 목표 데이터에서 정확도, 지연, 메모리를 함께 측정해 결정한다.
 
 > 추천 자료
 > - [DeTone et al., "SuperPoint: Self-Supervised Interest Point Detection and Description" (2018)](https://arxiv.org/abs/1712.07629) — SuperPoint 원논문
@@ -667,7 +668,7 @@ SuperPoint+LightGlue는 GPU를 사용할 수 있고 학습 기반 매칭의 강�
 
 > 기술 흐름: 컴퓨터 비전 기초 (Classical Methods)
 > - **~2004**: 고전적 특징점의 시대. Harris Corner (1988), SIFT (2004) 등 hand-crafted feature가 주류. 수학적으로 정교하지만 계산이 무거움
-> - **2006~2011**: 실시간을 위한 경량화. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) 등이 등장. 특허 문제와 속도 문제를 해결하면서 실시간 SLAM이 가능해짐
+> - **2006~2011**: 실시간을 위한 경량화. SURF (2006), FAST (2006), BRIEF (2010), ORB (2011) 등이 등장. 속도 문제를 풀고, ORB 계열이 SIFT·SURF의 특허 제약까지 벗어나면서 실시간 SLAM이 가능해짐
 > - **2015~2019**: 딥러닝의 침투. SuperPoint (2018) 등 학습 기반 특징점이 고전 방법의 성능을 넘어서기 시작
 > - **2020~**: Geometry + Learning의 융합. SuperGlue (2020) 같은 학습 기반 매처가 등장. LoFTR (2021) 같은 detector-free matching, LightGlue (2023) 같은 경량 학습 매칭이 등장. 고전 기하학은 여전히 SLAM/VO의 백엔드에서 핵심
 > - **최근 흐름**: 학습 기반 특징점과 매칭이 front-end에 도입되고 있지만, back-end에서는 여전히 epipolar geometry와 triangulation을 사용한다. 두 계열은 한 시스템 안에서 함께 쓰인다.

@@ -405,7 +405,7 @@ Suppose we have a matrix R(t) that rotates continuously over time (R(0) = I). R(
 
 ```
 d/dt (R R^T) = R_dot R^T + R R_dot^T = 0
-→  R_dot R^T = -(R R_dot^T)^T
+→  R_dot R^T = -(R_dot R^T)^T
 ```
 
 So `R_dot R^T` is skew-symmetric. It can be written as the hat form of some vector w(t):
@@ -550,7 +550,7 @@ xi_a = Ad_{T_ab} * xi_b
 
 ### 3.5.7 Use in Practice
 
-**Sophus (C++)**: A Lie group library written by Strasdat. It implements SO(3), SE(3), their exponential/logarithmic maps, the adjoint, and more. Major SLAM systems like ORB-SLAM3 and Kimera use it.
+**Sophus (C++)**: A Lie group library written by Strasdat. It implements SO(3), SE(3), their exponential/logarithmic maps, the adjoint, and more. Several SLAM systems, including ORB-SLAM3, use it. Kimera handles Lie group operations through GTSAM's Pose3/Rot3 instead.
 
 ```cpp
 #include <sophus/se3.hpp>
@@ -651,7 +651,7 @@ Optimizing a factor graph requires solving the normal equation `H d = -b` (H is 
 
 **Variable ordering**: optimizing the elimination order matters. Heuristics like COLAMD (Column Approximate Minimum Degree) are widely used. Intuitively, eliminating variables with few connections first keeps fill-in low.
 
-**Bayes tree**: a data structure proposed by Kaess et al. (2012), the core of iSAM2. Eliminating a factor graph yields a Bayes net, and reorganizing it into a tree gives the Bayes tree. When a new measurement arrives, only the affected subtree needs re-elimination.
+**Bayes tree**: a data structure proposed by Kaess et al. (WAFR 2010), the core of iSAM2 (Kaess et al., IJRR 2012). Eliminating a factor graph yields a Bayes net, and reorganizing it into a tree gives the Bayes tree. When a new measurement arrives, only the affected subtree needs re-elimination.
 
 In real-time SLAM, new factors are added every frame. Re-solving the entire system from scratch is O(n^3), but incremental updates via the Bayes tree refresh only the affected part, making real-time processing possible.
 
@@ -812,7 +812,7 @@ In OpenCV, you can use MAGSAC++ via the `cv::USAC_MAGSAC` flag in functions like
 
 > **Further reading**
 > - [State Estimation for Robotics, Ch.5 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — A practical chapter on biases, correspondence problems, and outliers.
-> - [Hartley & Zisserman, Ch.4 -- Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — The original treatment of RANSAC and robust estimation theory.
+> - [Hartley & Zisserman, Ch.4 -- Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — A textbook treatment of RANSAC (originally proposed by Fischler & Bolles, 1981) and robust estimation theory.
 > - [Dark Programmer — Understanding RANSAC and Its Use in Image Processing](https://darkpgmr.tistory.com/61) — Explains the principle of RANSAC, threshold setting, and iteration-count computation in Korean.
 > - [Jinyong Jeong's blog — Jacobian Computation in Bundle Adjustment](https://jinyongjeong.github.io/2020/03/01/Jacobian_of_BA/) — Derives the BA reprojection error Jacobian with Lie algebra and quaternions. Includes handwritten equations.
 
@@ -857,7 +857,7 @@ Here a is the action, Z_a is the observation obtained through that action, and X
 
 > **Further reading**
 > - [Elements of Information Theory (Cover & Thomas)](https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X) — An information theory textbook.
-> - [Placed: An exploration planner using information gain (2022)](https://arxiv.org/abs/2206.05193) — An example of using information theory in active SLAM.
+> - Placed et al., "A Survey on Active Simultaneous Localization and Mapping: State of the Art and New Frontiers" (IEEE T-RO 2023) — A survey of how information theory is used in active SLAM.
 
 > **Technical Timeline: robotics math and optimization**
 > - **~2005**: State estimation centered on the Kalman filter (EKF). Linear-approximation-based, suited to small-scale problems. Real-time processing was difficult, which constrained problem size.
@@ -872,7 +872,7 @@ Here a is the action, Z_a is the observation obtained through that action, and X
 
 Source: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.2 (Recursive State Estimation).
 
-§3.8 information theory gave us a tool to *measure* uncertainty. The question now is how to *update* that uncertainty as new observations accumulate over time. Running the Bayes' rule of §3.3.2 recursively along the time axis produces the structure that answers "where is the robot right now?" Where the factor graph of §3.6 assembled spatial constraints into a graph, the Bayes filter extends that estimation structure along the time direction.
+§3.8 information theory gave us a tool to *measure* uncertainty. The question now is how to *update* that uncertainty as new observations accumulate over time. Running the Bayes' rule of §3.3.2 recursively along the time axis produces the structure that answers "where is the robot right now?" The factor graph of §3.6 already carries time relations of its own, through the odometry and IMU factors that tie consecutive poses together. What separates the Bayes filter is not whether time is handled at all, but whether past states are marginalized out so that only the current belief is kept — filtering.
 
 Estimating the robot's current location is a **recursive estimation** problem because each new state depends on the previous belief and the latest observation. The Bayes filter gives the general form of this recursion, and both the Kalman filter and particle filter implement it under different representations.
 
@@ -1238,7 +1238,7 @@ As with the EKF, replacing linear $g, h$ with Jacobians $G_t, H_t$ for nonlinear
 
 The measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$ adds one term to $\Omega$ for each measurement. Independent measurements from several robots can likewise be combined as $\Omega_{\text{total}} = \sum_i \Omega_i$ and $\xi_{\text{total}} = \sum_i \xi_i$.
 
-This additivity generalizes in §3.6 factor graphs to "one measurement factor = one term $H^T Q^{-1} H$ and one term $H^T Q^{-1} z$ added." The reason factor graphs solve efficiently via sparse Cholesky, and the reason the information matrices in GTSAM and iSAM2 are sparse, both trace back to this additive structure.
+This additivity generalizes in §3.6 factor graphs to "one measurement factor = one term $H^T Q^{-1} H$ and one term $H^T Q^{-1} z$ added." What makes the information matrix sparse, however, is not additivity itself but locality: each factor connects only a handful of variables. Few non-zero columns in $H$ mean that the blocks being summed are themselves sparse. Whether sparse Cholesky actually preserves that sparsity is settled by the fill-in the elimination order produces.
 
 EIF-SLAM and SEIF use this information-form additivity in their SLAM representations. Ch.14 §14.16 traces the historical connection.
 
@@ -1290,7 +1290,7 @@ $$p(x_t) = \frac{p_{k,t}}{|\mathbf{x}_{k,t}|} \quad x_t \in \mathbf{x}_{k,t}$$
 Approximate the model using a representative value (mean state) $\hat x_{k,t}$ per region:
 
 $$p(z_t \mid \mathbf{x}_{k,t}) \approx p(z_t \mid \hat x_{k,t})$$
-$$p(\mathbf{x}_{k,t} \mid u_t, \mathbf{x}_{i,t-1}) \approx \frac{\eta}{|\mathbf{x}_{k,t}|}\, p(\hat x_{k,t} \mid u_t, \hat x_{i,t-1})$$
+$$p(\mathbf{x}_{k,t} \mid u_t, \mathbf{x}_{i,t-1}) \approx \eta\,|\mathbf{x}_{k,t}|\, p(\hat x_{k,t} \mid u_t, \hat x_{i,t-1})$$
 
 When all regions have equal size, the $|\mathbf{x}_{k,t}|$ factors are absorbed into normalization. The resulting discrete Bayes filter is called a **histogram filter**.
 
@@ -1407,7 +1407,7 @@ Imagine $M = 1$. The single weight normalizes against itself: $w/w = 1$. The mea
 
 #### (2) Sample Impoverishment from Resampling
 
-In a static state ($x_t = x_{t-1}$) with no motion, all particles follow identical trajectories. Unbounded resampling drives particle diversity to zero and the filter collapses to a single state.
+In a static state ($x_t = x_{t-1}$) with no transition noise, each particle simply holds on to its own initial state. The problem is what happens next. With no new diversity injected, repeated resampling thins out the variety of surviving particles through sampling variance alone (sample impoverishment), until the filter collapses to a single state.
 
 Mitigation: hold resampling when the robot is stationary. Alternatively, resample only when weight variance is high and otherwise accumulate weights multiplicatively:
 

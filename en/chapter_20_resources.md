@@ -39,7 +39,7 @@ The resources are grouped by topic, and the **Learning Path** section at the bot
 **Deep Learning** (Goodfellow, Bengio, Courville)
 - The standard textbook on deep learning theory
 - **Free online** edition
-- Free PDF: https://www.deeplearningbook.org/
+- Free online (HTML, chapter by chapter): https://www.deeplearningbook.org/
 
 **Dive into Deep Learning** (d2l.ai)
 - Hands-on — you learn alongside code
@@ -86,7 +86,7 @@ The resources are grouped by topic, and the **Learning Path** section at the bot
 - YouTube: https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4
 
 **SLAM introduction (Korean)**:
-- Study materials from the SLAM KR community: https://github.com/slam-kr
+- Study materials from the SLAM KR community (a Korean SLAM researchers' group)
 
 ### ROS
 
@@ -142,7 +142,7 @@ These YouTube channels divide the material into shorter segments than a textbook
 
 ### How to read them
 
-[*Research Notes* Ch.6–12 — Reading](../../research-notes/guide.html#chapter-6) covers how to select papers, Keshav's three-pass method, the 5 Cs, the reviewer perspective, and the CCC lens *(Korean only)*.
+[*Research Notes* Ch.6–15 — Reading](../../research-notes/guide.html#chapter-6) covers how to select papers, Keshav's three-pass method, the 5 Cs, the reviewer perspective, and the CCC lens *(Korean only)*.
 
 ### Must-read paper list
 
@@ -168,10 +168,10 @@ These YouTube channels divide the material into shorter segments than a textbook
 
 **Recent trends**:
 - RT-2: Brohan et al., 2023 — [arXiv:2307.15818](https://arxiv.org/abs/2307.15818)
-- 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.14737](https://arxiv.org/abs/2308.14737)
+- 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.04079](https://arxiv.org/abs/2308.04079)
 - Depth Anything: Yang et al., 2024 — [arXiv:2401.10891](https://arxiv.org/abs/2401.10891)
 
-> For paper search, use [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [Papers With Code](https://paperswithcode.com/), and [arXiv](https://arxiv.org/). Papers With Code is especially convenient because it shows benchmark rankings alongside code links.
+> For paper search, use [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), and [arXiv](https://arxiv.org/). Papers With Code, which used to show benchmark rankings alongside code links, shut down in 2025; its domain now redirects to Hugging Face.
 
 ### Paper-writing tools
 
@@ -352,9 +352,9 @@ This extends the learning path from Section 1.4. Each stage lists concrete mater
 
 | Topic | What to learn | Recommended resources |
 | --- | --- | --- |
-| Understanding and using VFMs | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
+| VFMs in depth (extending the intermediate-stage item from Section 1.4) | DINOv2, SAM, CLIP | Chapters 10-11 of this document + read the papers directly |
 | Advanced 3D reconstruction | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + Chapter 13 of this document |
-| Reading and implementing papers | Analyzing the latest papers | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [*Research Notes* Ch.6–15 — Reading](../../research-notes/guide.html#chapter-6)* |
+| Reading and implementing papers | Analyzing the latest papers | [Hugging Face Papers](https://huggingface.co/papers/trending) + [Yannic Kilcher's channel](https://www.youtube.com/@YannicKilcher) — *the full guide is [*Research Notes* Ch.6–15 — Reading](../../research-notes/guide.html#chapter-6)* |
 | Experimenting with new ideas | Hypothesis formulation, experimental design | Lab seminars + attending conference workshops — *the full guide is [*Research Notes* Ch.1–5 — Starting](../../research-notes/guide.html#chapter-1)* |
 | Benchmark evaluation | Quantitative comparison | Standard benchmarks per subfield (KITTI, ScanNet, Replica, etc.) — *the result-interpretation frame is [Research Notes Ch.32](../../research-notes/guide.html#chapter-32)* |
 
@@ -404,7 +404,7 @@ SLAM and CV experiments require ablation, control of variables, repeated trials,
 
 ### 20.8.3 Conference Presentations
 
-A 1+1+3+3+1-minute talk structure, one message per slide, poster legibility at 3 m, and a 30-second to one-minute demo are discussed more fully in [*Research Notes* Part 4 — Presenting](../../research-notes/guide.html#chapter-33).
+Slide budgets for 5-minute and 20-minute talks, and the 30-second elevator pitch and 2-minute walk-through for posters, are discussed more fully in [*Research Notes* Part 4 — Presenting](../../research-notes/guide.html#chapter-33).
 
 ### 20.8.4 Reviewing a Paper — Peer Review
 

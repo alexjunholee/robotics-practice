@@ -97,7 +97,7 @@ tau_g = pin.rnea(model, data, q, np.zeros(model.nv), np.zeros(model.nv))
 print("Gravity compensation torques:", tau_g)
 ```
 
-중력 보상(gravity compensation)은 RNEA에서 v=0, a=0을 넣으면 바로 나온다. 이것만으로도 로봇이 중력에 처지지 않는다. 로봇 팔을 처음 세울 때 첫 번째로 구현하는 제어기다.
+중력 보상(gravity compensation)은 RNEA에서 관절 속도·가속도를 0으로 두고 베이스 가속도를 a[0] = -g로 초기화하면 바로 나온다. 위 의사 코드는 이 초기화를 생략했다. 이것만으로도 로봇이 중력에 처지지 않는다. 로봇 팔을 처음 세울 때 첫 번째로 구현하는 제어기다.
 
 Drake에서의 동일한 계산:
 
@@ -153,7 +153,7 @@ d/dt (∂L/∂q̇_i) - ∂L/∂q_i = τ_i
 
 각 일반화 좌표(generalized coordinate) q_i에 대해 이 방정식을 세우면, 시스템의 운동 방정식이 나온다.
 
-좌표계를 자유롭게 선택할 수 있다. 뉴턴 역학에서는 각 링크의 질량중심 위치와 자세를 월드 프레임에서 표현하고 구속 조건(constraint)을 별도로 관리해야 한다. 라그랑주 역학에서는 관절 각도를 일반화 좌표로 선택하면 구속 조건이 자동으로 사라진다.
+좌표계를 자유롭게 선택할 수 있다. 뉴턴-오일러 방식은 링크마다 힘과 모멘트를 주고받으며 풀기 때문에 어떤 프레임에서 표현할지와 구속을 어떻게 다룰지를 정해야 한다. 라그랑주 역학에서 관절 각도를 일반화 좌표로 잡으면 구속 조건이 식에서 사라지는데, 이는 홀로노믹 구속과 독립 일반화 좌표가 존재하는 개방 사슬에 한한 이야기다. 폐쇄 사슬이나 비홀로노믹 구속에서는 Lagrange 승수가 남는다.
 
 ### Manipulator Equation
 
@@ -217,7 +217,7 @@ M(q) = [ (m_1+m_2)l_1^2 + m_2 l_2^2 + 2 m_2 l_1 l_2 cos(q_2)    m_2 l_2^2 + m_2 
         [ m_2 l_2^2 + m_2 l_1 l_2 cos(q_2)                          m_2 l_2^2                          ]
 ```
 
-M(q)는 q_2에 따라 달라진다. q_2 = 0일 때는 팔이 완전히 펴져 관성이 최댓값에 도달하며, q_2 = \pi로 접혔을 때는 관성이 최솟값까지 줄어든다.
+M(q)는 q_2에 따라 달라진다. base 관절에 대한 유효 관성인 M_{11}을 보면, q_2 = 0으로 팔이 완전히 펴졌을 때 최댓값이고 q_2 = \pi로 접혔을 때 최솟값이다.
 
 **C(q, q̇) 행렬:**
 
@@ -415,7 +415,7 @@ RNEA와 ABA는 서로 역연산 관계이다. RNEA(q, v, ABA(q, v, τ)) ≈ τ �
 - 물체가 서로 관통하지 않는다는 구속 조건을 직접 부과한다.
 - 접촉력은 구속 조건의 Lagrange multiplier로 나온다.
 - 수학적으로 깔끔하지만, 수치적으로 어렵다 — 접촉/비접촉 전환 시 불연속성이 생기고, 이를 처리하기 위해 LCP(Linear Complementarity Problem)나 NCP(Nonlinear Complementarity Problem)를 풀어야 한다.
-- Drake의 time-stepping 방식이 이 계열이다.
+- Stewart-Trinkle 계열의 LCP time-stepping 방법이 이 계열이다.
 
 **Compliant contact (연성 접촉):**
 - 접촉면에 가상의 스프링-댐퍼를 놓는다. 관통 깊이에 비례하는 반발력을 생성한다.
@@ -446,9 +446,9 @@ RNEA와 ABA는 서로 역연산 관계이다. RNEA(q, v, ABA(q, v, τ)) ≈ τ �
 
 접촉을 수치적으로 근사하는 방식이 여러 가지이기 때문이다. 각 시뮬레이터는 정확도, 속도, 안정성 사이의 트레이드오프를 다르게 선택한다.
 
-**MuJoCo**는 compliant contact + convex optimization 방식을 쓴다. 빠르고 안정적이지만 물리적으로 완벽하지는 않다. 특히 관통이 허용되는데, 이를 "soft contact"의 일부로 받아들인다. RL 환경으로 인기 많은 이유 중 하나가 이 안정성이다. **Drake**는 rigid contact + time-stepping(Stewart-Trinkle) 또는 hydroelastic contact을 지원한다. 물리적으로 더 엄밀하지만 계산 비용이 높을 수 있다. Hydroelastic contact은 접촉면의 압력 분포까지 계산한다.
+**MuJoCo**는 compliant contact + convex optimization 방식을 쓴다. 빠르고 안정적이지만 물리적으로 완벽하지는 않다. 특히 관통이 허용되는데, 이를 "soft contact"의 일부로 받아들인다. RL 환경으로 인기 많은 이유 중 하나가 이 안정성이다. **Drake**는 compliant point contact(TAMSI/SAP 이산 솔버)과 hydroelastic contact을 지원하며, 둘 다 compliant 계열이다. 물리적으로 더 엄밀하지만 계산 비용이 높을 수 있다. Hydroelastic contact은 접촉면의 압력 분포까지 계산한다.
 
-**Bullet**은 velocity-level LCP + sequential impulse 방식으로, 게임/VR에서 출발한 엔진이라 속도에 최적화되어 있으나 정밀한 접촉이 필요한 로보틱스 작업에서는 한계가 있다. **DART**는 LCP 기반 rigid contact으로 학술적으로 엄밀한 구현이지만, MuJoCo나 Drake에 비해 사용자 기반이 작다.
+**Bullet**은 velocity-level LCP + sequential impulse 방식으로, 게임/VR에서 출발한 엔진이라 속도에 최적화되어 있다. 접촉 정밀도는 설정과 작업에 따라 갈리므로 MuJoCo·Drake와의 우열은 목표 작업에서 직접 비교한다. **DART**는 LCP 기반 rigid contact으로 학술적으로 엄밀한 구현이지만, MuJoCo나 Drake에 비해 사용자 기반이 작다.
 
 어떤 시뮬레이터를 쓸지는 연구 목적에 따라 달라진다. MuJoCo가 locomotion 분야의 강화학습에서 주도적으로 활용된다면, contact-rich manipulation 영역에서는 Drake와 MuJoCo가 모두 강력한 해석 능력을 제공한다. 필요한 접촉 모델, gradient, 처리 속도, 재현할 hardware와 검증 사례를 기준으로 고른다.
 
@@ -472,7 +472,7 @@ for i in range(n_contacts):
     print(f"Contact {i}:")
     print(f"  Position: {contact.pos}")
     print(f"  Normal: {contact.frame[:3]}")  # 접촉 법선
-    print(f"  Penetration depth: {contact.dist}")
+    print(f"  Signed distance (음수면 관통): {contact.dist}")
     print(f"  Geom pair: ({contact.geom1}, {contact.geom2})")
 ```
 
@@ -609,16 +609,16 @@ q_base는 SE(3)의 원소이다 — 위치(3) + 자세(3, 또는 quaternion으�
 
 ### Underactuated Systems
 
-부유 base 시스템은 **underactuated**다. Base에는 직접 구동기(actuator)가 없어서, 보행 로봇은 발이 지면을 밀어야 base가 움직이고, 드론은 프로펠러의 추력으로 base를 움직인다.
+부유 base 시스템은 대개 **underactuated**다. 보행 로봇은 base에 직접 구동기가 없어 발이 지면을 밀어야 base가 움직이고, 쿼드로터는 base에 로터가 붙어 있지만 4개 입력으로 6자유도를 다뤄야 한다. underactuation은 부유 base라는 사실이 아니라 독립 입력 수와 접촉 조건이 정한다. 추력기를 6방향으로 갖춘 자유 비행체나 전방향 멀티로터는 완전 구동이고, 보행 로봇도 접촉이 충분하면 base 6자유도를 제어할 수 있다.
 
 Manipulator equation을 base와 joints로 나누면:
 
 ```
-[ M_bb  M_bj ] [ a_base  ]   [ C_b ]   [ g_b ]   [  0  ]   [ J_c^T ]
-[ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
+[ M_bb  M_bj ] [ a_base  ]   [ C_b ]   [ g_b ]   [  0  ]   [ J_{c,b}^T ]
+[ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_{c,j}^T ] λ
 ```
 
-등호 오른쪽 입력 벡터의 위 성분 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_c는 접촉 Jacobian이다. Base는 접촉력과 중력을 통해 가속한다.
+등호 오른쪽 입력 벡터의 위 성분 `0`은 base에 관절 토크가 없음을 나타낸다. λ는 접촉력이고, J_{c,b}(6×k)와 J_{c,j}(n×k)는 접촉 Jacobian J_c를 base 열과 관절 열로 나눈 블록이다. Base는 접촉력과 중력을 통해 가속한다.
 
 이 구속 조건이 locomotion 제어를 어렵게 만든다. 고정 base 매니퓰레이터는 원하는 관절 토크를 그냥 모터에 명령하면 되지만, 보행 로봇은 적절한 접촉력을 만들어내야 base를 원하는 대로 움직일 수 있다.
 
@@ -642,7 +642,7 @@ L = Σ (r_i - r_CoM) × (m_i v_i) + I_i ω_i
 L̇ = Σ (r_contact - r_CoM) × f_contact
 ```
 
-CoM 역학이 balance를 결정한다. 로봇이 넘어지지 않으려면 CoM의 궤적이 지지 영역(support polygon) 위에 있어야 한다(ZMP 조건). 더 정확히는 centroidal momentum이 적절히 조절되어야 한다.
+CoM 역학이 balance를 결정한다. 정지 상태에서는 CoM의 수직 투영이 지지 영역(support polygon) 안에 있어야 한다(정적 안정 조건). 걷는 동안에는 ZMP(= 접촉면의 압력 중심)가 지지 영역 안에 있어야 한다(ZMP 조건). 더 일반적으로는 centroidal momentum이 적절히 조절되어야 한다.
 
 차원 축소의 효과도 있다. n-DOF 보행 로봇의 전체 동역학은 n차원이지만, centroidal dynamics는 6차원(선운동량 3 + 각운동량 3)이다. 이 6차원 공간에서 원하는 운동량 궤적을 먼저 계획하고, 그다음 전체 관절 수준으로 분해하는 것이 일반적인 접근이다.
 
@@ -661,7 +661,7 @@ v = np.random.randn(model.nv)
 
 # Centroidal momentum
 pin.computeCentroidalMomentum(model, data, q, v)
-h = data.hg  # 6D centroidal momentum [angular; linear]
+h = data.hg  # 6D centroidal momentum, Pinocchio 순서는 [linear; angular]
 print("Angular momentum:", h.angular)
 print("Linear momentum:", h.linear)
 
@@ -694,7 +694,7 @@ print("CoM velocity:", data.vcom[0])
 
 > **추천 자료**
 > - Orin et al., "Centroidal Dynamics of a Humanoid Robot", Autonomous Robots 2013 — Humanoid의 centroidal dynamics를 분석한 논문
-> - Wensing et al., "Optimization-Based Control for Dynamic Legged Locomotion", 2023 — Locomotion 제어 survey
+> - Wensing et al., "Optimization-Based Control for Dynamic Legged Robots", IEEE T-RO 2024 (arXiv 2022) — Locomotion 제어 survey
 > - Russ Tedrake, *Underactuated Robotics*, Ch. "Walking" (https://underactuated.csail.mit.edu/) — Underactuated 시스템과 보행의 관계
 > - Carpentier, Mansard, "Pinocchio: fast forward and inverse dynamics for poly-articulated systems" (https://github.com/stack-of-tasks/pinocchio) — Pinocchio의 centroidal dynamics 구현
 
@@ -720,10 +720,10 @@ print("CoM velocity:", data.vcom[0])
 
 **라이브러리 & 도구:**
 
-> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — 순수 동역학 계산용 C++/Python 라이브러리. RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives 등을 지원한다. CasADi/JAX를 통한 autodiff도 가능하다 (Pinocchio 3.x).
+> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — 순수 동역학 계산용 C++/Python 라이브러리. RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives 등을 지원한다. CasADi·CppAD를 통한 autodiff도 가능하다 (Pinocchio 3.x).
 > - Drake (https://drake.mit.edu/) — 시뮬레이션 + 최적화 + 제어를 통합한 프레임워크. MultibodyPlant가 동역학 엔진이다. Mathematical programming 인터페이스가 강력하여 trajectory optimization에 특히 유용하다.
 > - MuJoCo (https://mujoco.org/) — DeepMind가 관리하는 물리 시뮬레이터. 접촉을 포함한 로봇 학습 연구에 널리 쓰인다.
-> - PyBullet (https://pybullet.org/) — Bullet Physics의 Python 인터페이스. 진입 장벽이 낮아 교육용으로 적합하지만, 접촉 물리의 정밀도는 MuJoCo나 Drake에 미치지 못한다.
+> - PyBullet (https://pybullet.org/) — Bullet Physics의 Python 인터페이스. 진입 장벽이 낮아 교육용으로 적합하지만, 접촉 물리의 정확도와 속도는 관절체(articulated body) 구성, 접촉 설정, 적분 시간 간격에 따라 갈리므로 목표 작업에서 직접 비교해야 한다.
 
 ---
 
@@ -741,11 +741,11 @@ print("CoM velocity:", data.vcom[0])
 2012 ── MuJoCo 공개 (Todorov, Erez, Tassa)
 2015 ── Bullet Physics 2.x → PyBullet 인터페이스
 2016 ── Pinocchio 1.0 공개 (LAAS-CNRS)
-2021 ── MuJoCo 오픈소스화 (DeepMind 인수 후)
+2021 ── DeepMind가 MuJoCo 인수, 무료 공개 (소스 공개는 2022년 5월 Apache 2.0)
 2022 ── Drake 1.0 (MIT → Toyota Research Institute)
-2022 ── MuJoCo 2.3: implicit integration, elliptic friction cone
-2023 ── Pinocchio 3.0: CasADi/JAX autodiff 지원
+2022 ── MuJoCo 2.3 릴리스 (implicitfast 적분기는 2023년 2.3.x에서 추가, elliptic friction cone은 이전부터 제공)
 2023 ── MuJoCo 3.0: MJX (JAX backend for GPU parallelism)
+2024 ── Pinocchio 3.0 정식 릴리스: CasADi·CppAD autodiff 지원
 ```
 
 ---

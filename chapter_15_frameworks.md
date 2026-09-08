@@ -13,7 +13,7 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크다. 
 
 | 특징 | ROS1 | ROS2 |
 | --- | --- | --- |
-| 출시 | 2007 | 2017 |
+| 첫 공개 릴리스 | 2010 (ROS 1.0 Box Turtle; 개발 시작 2007) | 2017 (Ardent Apalone) |
 | 통신 | Custom (TCPROS) | DDS 기반 |
 | 실시간 | 미지원 | 지원 |
 | 보안 | 없음 | SROS2 |
@@ -37,7 +37,7 @@ ROS는 로봇 소프트웨어 개발을 위한 오픈소스 프레임워크다. 
 Topic, Service, Action은 통신 시점과 응답 방식이 다르다. 센서 스트림, 짧은 요청-응답, 오래 걸리며 중간 상태가 필요한 작업을 각각 다른 인터페이스로 표현한다.
 
 **Node (노드)**:
-- 실행 가능한 프로세스
+- 그래프에 참여하는 기능 단위. ROS 1에서는 사실상 프로세스 하나였고, ROS 2에서는 component로 묶어 한 프로세스에 여러 노드를 담을 수 있다
 - 단일 목적 (sensor driver, controller 등)
 
 **Topic (토픽)**:
@@ -64,7 +64,7 @@ class MinimalPublisher(Node):
 ```
 
 **Service (서비스)**:
-- 동기 요청/응답
+- 요청/응답 인터페이스. ROS 2 클라이언트 API는 비동기 호출이 기본이며, executor를 돌리는 스레드(콜백 안)에서 동기로 기다리면 교착이 생긴다
 - 일회성 작업에 적합
 - 예: 설정 변경, 상태 조회
 
@@ -80,7 +80,7 @@ Topic은 카메라 영상처럼 계속 흐르는 데이터에 쓴다. Service는
 - 노드 설정값
 - 런타임 변경 가능
 
-> **⚠ 생성된 코드 점검**: ROS2 코드를 요청할 때는 센서 토픽의 QoS를 함께 제공한다. 생성된 subscriber가 publisher와 같은 reliability와 durability 설정을 쓰는지 확인해야, 오류 메시지 없이 데이터가 끊기는 상황을 피할 수 있다.
+> **⚠ 생성된 코드 점검**: ROS2 코드를 요청할 때는 센서 토픽의 QoS를 함께 제공한다. 생성된 subscriber의 reliability와 durability가 publisher와 호환되는지 확인해야, 오류 메시지 없이 데이터가 끊기는 상황을 피할 수 있다. 조건은 동일이 아니라 호환이다. RELIABLE publisher는 BEST_EFFORT subscriber와 연결되지만 그 반대는 연결되지 않고, durability도 TRANSIENT_LOCAL publisher와 VOLATILE subscriber는 되지만 반대는 안 된다.
 
 > **추천 자료**
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — 공식 개념 문서
@@ -121,18 +121,29 @@ ros2 bag play my_bag
 
 ```python
 # tf2 리스너 예시
-from tf2_ros import Buffer, TransformListener
+import rclpy
+from rclpy.node import Node
+from tf2_ros import Buffer, TransformListener, LookupException, ExtrapolationException
 
-tf_buffer = Buffer()
-tf_listener = TransformListener(tf_buffer, self)
+class TfDemo(Node):
+    def __init__(self):
+        super().__init__('tf_demo')
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        # 리스너가 버퍼를 채울 시간을 주기 위해 타이머 안에서 조회한다
+        self.create_timer(0.1, self.lookup)
 
-# camera_link 좌표를 base_link 좌표로 변환하는 변환 조회
-transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Time())
+    def lookup(self):
+        try:
+            # camera_link 좌표를 base_link 좌표로 변환하는 변환 조회
+            t = self.tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Time())
+        except (LookupException, ExtrapolationException) as e:
+            self.get_logger().warn(f'tf not ready: {e}')
 ```
 
 > **추천 자료**
 > - [ROS2 tf2 Tutorials](https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Tf2-Main.html) — 좌표 변환 공식 튜토리얼
-> - [The Construct - rviz2 Complete Guide](https://www.youtube.com/@TheConstruct) — rviz2 활용 영상
+> - [The Construct 채널](https://www.youtube.com/@TheConstruct) — rviz2 활용 영상을 포함한 ROS2 강의 채널
 > - [ros2 bag CLI 문서](https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html) — 데이터 녹화/재생 공식 가이드
 
 ### 15.1.4 주요 패키지
@@ -220,7 +231,7 @@ Isaac Sim 외에도 Embodied AI 연구에 많이 쓰이는 시뮬레이터들이
 
 > **추천 자료**
 > - [CARLA Documentation](https://carla.readthedocs.io/) — 공식 문서 및 Python API 레퍼런스
-> - [CARLA Simulator YouTube](https://www.youtube.com/@intaborlado5265) — 시뮬레이터 활용 데모 영상
+> - [CARLA Simulator YouTube](https://www.youtube.com/channel/UC1llP9ekCwt8nEJzMJBQekg) — 시뮬레이터 활용 데모 영상
 
 ## 15.3 기타 프레임워크
 
@@ -254,7 +265,7 @@ Eigen과 Sophus는 로보틱스에서 좌표 변환을 다룰 때 핵심적으�
 15.4.1 Latency Budgeting
 - 전체 파이프라인의 latency를 구간별로 할당
 - 예시: 자율주행 — 센서 입력(10 ms) → 인식(50 ms) → 계획(30 ms) → 제어(10 ms) = 100 ms total
-- 각 구간이 budget을 초과하면 전체가 실패. 가장 느린 구간이 bottleneck
+- 구간별 값은 종단 deadline을 나눠 배분한 설계 목표다. 구간별로 강제 deadline을 두지 않았다면 한 구간의 초과를 다른 구간의 여유가 흡수할 수 있다. 처리율을 볼 때는 가장 느린 구간이 bottleneck이다
 - profiling 방법: ROS2 callback duration, `ros2 topic delay`, tracing (ros2_tracing)
 
 15.4.2 Behavior Tree
@@ -273,7 +284,8 @@ Eigen과 Sophus는 로보틱스에서 좌표 변환을 다룰 때 핵심적으�
 
 15.4.4 배포와 필드 테스트
 - CI/CD: colcon build + test 자동화, Docker 이미지 빌드
-- Hardware-in-the-Loop (HIL): 실제 센서 데이터를 재생하면서 새 코드 테스트
+- 로그 재생 테스트: 기록한 센서 데이터를 재생하면서 새 코드 테스트
+- Hardware-in-the-Loop (HIL): 실제 하드웨어를 폐루프에 넣고 플랜트 쪽을 실시간 시뮬레이션하며 테스트
 - 필드 테스트 프로토콜: 통제된 환경 → 반통제 → 실제 환경, 단계적으로
 - 로그 수집: rosbag + 시스템 로그 (journalctl) + 센서 상태 모니터링
 
@@ -284,7 +296,7 @@ Eigen과 Sophus는 로보틱스에서 좌표 변환을 다룰 때 핵심적으�
 ## 기술 흐름: 로봇 프레임워크의 과거 → 현재 → 미래
 
 ```
-2007 ─── ROS1 출시 (Willow Garage)
+2007 ─── ROS 개발 시작 (Stanford → Willow Garage; 1.0 릴리스는 2010)
   │       로봇 미들웨어로 널리 사용됨
   │
 2012 ─── Gazebo Classic 독립 프로젝트화

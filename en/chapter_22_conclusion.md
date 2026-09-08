@@ -35,7 +35,7 @@ SLAM and CV already have widely used public implementations, including ORB-SLAM3
 
 ## 22.4 A Sense of the Long Game
 
-The first year, the eighteen-month mark, and the five-year horizon of a PhD are discussed in [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) and [Grad Notes Ch.1](../../grad-notes/guide.html#chapter-1) *(Korean only)*.
+The first year, the first summer, and the five-year horizon of a PhD are discussed in [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) and [Grad Notes Ch.1](../../grad-notes/guide.html#chapter-1) *(Korean only)*.
 
 Robotics experiments can have long cycles because they require hardware preparation, safety procedures, data collection, and repeated runs. Since preparation time and cycle length vary widely by equipment, environment, and laboratory, planning around complete experiment cycles is more realistic than judging progress day by day.
 

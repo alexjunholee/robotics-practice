@@ -50,7 +50,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하는 동시에 주변 �
 
 두 방식은 장단점이 뚜렷하다. 운용 환경에 따라 선택이 달라진다.
 
-**Feature-based** (ORB-SLAM 계열)는 이미지에서 변하지 않는 특징적인 점(코너, 블롭 등)을 추출하고, 프레임 간 매칭으로 카메라 움직임을 역추정한다. 선형대수적으로는 Essential Matrix 또는 Fundamental Matrix를 구하는 문제다. 조명 변화에 강건하고 방법론이 검증되어 있지만, 흰 벽·텍스처 없는 바닥처럼 특징점을 뽑기 어려운 환경에서는 한계가 있다.
+**Feature-based** (ORB-SLAM 계열)는 이미지에서 변하지 않는 특징적인 점(코너, 블롭 등)을 추출하고, 프레임 간 매칭으로 카메라 움직임을 역추정한다. 선형대수적으로는 두 단계로 갈린다. 맵이 없는 초기화에서는 2D-2D 대응으로 Essential 또는 Fundamental Matrix(평면에서는 Homography)를 구하고, 맵이 생긴 뒤의 추적에서는 3D 맵 포인트와 2D 관측의 재투영 오차를 최소화한다. 조명 변화에 강건하고 방법론이 검증되어 있지만, 흰 벽·텍스처 없는 바닥처럼 특징점을 뽑기 어려운 환경에서는 한계가 있다.
 
 ```
 이미지 → 특징점 추출 → 매칭 → 움직임 추정
@@ -72,7 +72,7 @@ SLAM은 낯선 환경에서 로봇의 위치를 추정하는 동시에 주변 �
 | **Stereo** | 가능 | 베이스라인이 측정 범위를 제한 | 일반 실내·실외 |
 | **RGB-D** | 가능 | 깊이 직접 측정, 실외·직사광선에 취약 | 실내 구조화 환경 |
 
-Scale ambiguity는 단안 카메라가 "가까이 있는 작은 물체"와 "멀리 있는 큰 물체"를 구분하지 못하는 데서 생긴다. 모노 SLAM의 지도는 임의의 스케일로 나오므로 IMU나 다른 센서로 복원해야 한다. 초기화에 충분한 이동이 필요한 이유도 여기에 있다.
+Scale ambiguity는 단안 카메라가 "가까이 있는 작은 물체"와 "멀리 있는 큰 물체"를 구분하지 못하는 데서 생긴다. 모노 SLAM의 지도는 임의의 스케일로 나오므로 IMU나 다른 센서로 복원해야 한다. 초기화에 충분한 이동이 필요한 이유는 여기서 갈라진다. 단안 구조 초기화가 요구하는 것은 parallax를 만드는 translation이며 순수 회전에서는 two-view 기하가 퇴화한다. scale과 IMU bias, 중력 방향의 관측 가능성을 위해 운동 여기가 필요한 것은 visual-inertial 초기화 쪽이다. 순수 단안에서는 이동을 늘려도 절대 scale이 관측 가능해지지 않는다.
 
 > **추천 자료**
 > - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — Visual Odometry에 필요한 다중 뷰 기하를 다루는 공개 강의
@@ -208,14 +208,14 @@ Factor Graph가 뭐냐면: 변수(로봇 포즈, 랜드마크 위치)와 제약(
 #### 14.4.4 FAST-LIO / FAST-LIO2
 
 **Fast LiDAR-Inertial Odometry**:
-- Kalman Filter 기반 (optimization 대신)
+- Iterated Kalman Filter 기반 (Gauss-Newton과 동등한 반복 갱신)
 - ikd-Tree: 동적 KD-트리로 빠른 매핑
 - 실시간 성능
 
-FAST-LIO가 고속으로 동작하는 이유: LIO-SAM이 비선형 최소자승 기반의 Factor Graph 최적화를 채택했다면, FAST-LIO는 반복 확장 칼만 필터(Iterated EKF, IEKF)를 적용한다. 최적화 문제를 풀지 않고 필터링으로 처리하니, 계산이 훨씬 가볍다. 또한 ikd-Tree라는 증분적 KD-트리를 사용해서 맵에 새 점을 추가할 때도 빠르다.
+FAST-LIO가 고속으로 동작하는 이유: LIO-SAM이 비선형 최소자승 기반의 Factor Graph 최적화를 채택했다면, FAST-LIO는 반복 확장 칼만 필터(Iterated EKF, IEKF)를 적용한다. IEKF의 반복 갱신은 MAP 목적함수에 대한 Gauss-Newton과 동등하므로 최적화를 안 푸는 것이 아니다. 속도의 실제 근거는 Kalman gain 계산을 측정 차원이 아니라 상태 차원에 의존하도록 바꾼 정식화이며, 상태를 슬라이딩 윈도로 쌓지 않는 구조도 함께 작용한다. 후속작 FAST-LIO2는 여기에 증분적 KD-트리 ikd-Tree를 더해 맵에 새 점을 추가하는 비용도 줄였다.
 
 > **추천 자료**
-> - [Xu & Zhang, "FAST-LIO: A Fast, Robust LiDAR-Inertial Odometry Package by Tightly-Coupled Iterated Kalman Filter" (2021)](https://arxiv.org/abs/2010.14709) — FAST-LIO 논문
+> - [Xu & Zhang, "FAST-LIO: A Fast, Robust LiDAR-Inertial Odometry Package by Tightly-Coupled Iterated Kalman Filter" (2021)](https://arxiv.org/abs/2010.08196) — FAST-LIO 논문
 > - [Xu et al., "FAST-LIO2: Fast Direct LiDAR-Inertial Odometry" (2022)](https://arxiv.org/abs/2107.06829) — FAST-LIO2 논문
 > - [FAST-LIO2 GitHub](https://github.com/hku-mars/FAST_LIO) — 공식 코드
 
@@ -225,10 +225,10 @@ FAST-LIO가 고속으로 동작하는 이유: LIO-SAM이 비선형 최소자승 
 
 #### 14.5.1 Camera + IMU (VIO)
 
-Visual과 Inertial을 결합하는 방식에는 두 가지 전략이 있다. **Loosely-coupled**는 카메라와 IMU가 각자 상태를 추정한 뒤 결과를 covariance 기반으로 합친다. 구현이 단순하지만 정보를 충분히 활용하지 못한다. **Tightly-coupled**는 카메라 특징점의 재투영 오차와 IMU의 가속도/각속도 측정을 하나의 비용 함수에 넣고 동시에 최적화한다(VINS-Mono, MSCKF). 더 정확하지만 구현이 복잡하다.
+Visual과 Inertial을 결합하는 방식에는 두 가지 전략이 있다. **Loosely-coupled**는 카메라와 IMU가 각자 상태를 추정한 뒤 결과를 covariance 기반으로 합친다. 구현이 단순하지만 정보를 충분히 활용하지 못한다. **Tightly-coupled**는 카메라 특징점의 재투영 오차와 IMU 측정이 하나의 공유 상태를 직접 제약하는 결합 수준을 말한다. 그 상태를 어떻게 푸는지는 별개다. VINS-Mono는 단일 비용 함수를 최적화하고, MSCKF는 sliding window EKF에 feature null-space marginalization을 쓰는 필터다. 더 정확하지만 구현이 복잡하다.
 
 **IMU Preintegration**:
-두 키프레임 사이의 IMU 측정을 사전 적분하여 상대 변환 계산. 재선형화 없이 최적화 가능.
+두 키프레임 사이의 IMU 측정을 사전 적분하여 상대 변환 계산. 최적화 반복마다 원시 측정을 다시 적분하지 않아도 된다.
 
 #### 14.5.2 LiDAR + IMU (LIO)
 
@@ -423,7 +423,7 @@ Grid_localization({p_{k,t-1}}, u_t, z_t, m):
 
 $\text{bel}(x_t) = \{p_{k,t}\}$이며 각 셀 $x_k$에 확률 하나, 합은 1이다.
 
-**해상도 트레이드오프**: 셀 크기가 작을수록 위치 오차가 감소한다 (셀 5 cm 기준 센서 오차 약 4 cm, 65 cm 기준 약 25 cm). 다만 격자가 세밀해질수록 global localization에 요구되는 CPU 연산량 역시 급격히 늘어난다. 실시간 트릭으로는 raycast 결과 캐싱, 스캔 서브샘플링, 선택적 업데이트(임계 이상 셀만)가 있다.
+**해상도 트레이드오프**: 격자가 촘촘할수록 위치 추정의 양자화 오차가 줄어든다. 다만 격자가 세밀해질수록 global localization에 요구되는 CPU 연산량 역시 급격히 늘어난다. 실시간 트릭으로는 raycast 결과 캐싱, 스캔 서브샘플링, 선택적 업데이트(임계 이상 셀만)가 있다.
 
 이산 격자로 global을 표현하면서도, "왜 파티클 필터가 더 나은가"를 이해하는 교육적 다리 역할을 한다. ROS `amcl` 노드는 Grid Localization의 격자를 파티클로 교체한 것이다.
 
@@ -486,7 +486,7 @@ $$p_{\text{inject}} = \max\!\left(0,\, 1 - \frac{w_{\text{fast}}}{w_{\text{slow}
 
 평소에는 $w_{\text{fast}} \approx w_{\text{slow}}$ → 비율 $\approx 1$ → 주입 확률 $\approx 0$ → 표준 MCL과 동일. 납치 직후에는 측정이 어디에도 안 맞음 → $w_{\text{fast}}$ 급락 → 주입 확률 상승. 장기 평균이 따라잡으면 비율 다시 1 → 주입 멎음.
 
-단순 노이즈 스파이크는 $w_{\text{slow}}$가 반응하지 않으므로 false positive가 억제된다.
+일시적인 노이즈 스파이크도 $w_{\text{fast}}$를 떨어뜨려 주입 확률을 올린다. $w_{\text{slow}}$가 느리게 움직이는 것은 그 비율을 만들어 주는 조건이므로, 오탐을 줄이려면 $w_{\text{fast}}$의 평활 계수($\alpha_{\text{fast}}$)를 조절한다.
 
 ROS `amcl`의 `recovery_alpha_slow`·`recovery_alpha_fast` 파라미터가 이 적응형 random-pose 주입을 제어한다. 연구 시스템에서는 NetVLAD류 place recognition과 PnP가 낸 pose 후보를 particle proposal로 섞기도 하지만, 이는 기본 AMCL 동작이 아니며 목표 환경에서 별도로 검증해야 한다.
 
@@ -581,7 +581,7 @@ inverse_range_sensor_model(m_i, x_t, z_t):
     return l_free                // free (< l_0)
 ```
 
-$\alpha$는 장애물 두께 파라미터, $\beta$는 빔 개구각. ROS Nav2의 `costmap_2d`, SLAM Toolbox, Cartographer의 submap representation이 이 log-odds 누산을 그대로 사용한다.
+$\alpha$는 장애물 두께 파라미터, $\beta$는 빔 개구각. Cartographer의 submap probability grid가 이 누산을 odds 곱 형태로 구현한다(lookup table 기반). ROS Nav2의 `costmap_2d`는 0~254 cost 값에 raytracing 기반 marking/clearing을 쓰고, SLAM Toolbox(Karto 계열)는 셀별 hit/visit 카운트 비율에 임계를 적용하므로 표현과 갱신 방식이 다르다.
 
 #### 14.7B.3 다중 센서 융합
 
@@ -691,7 +691,7 @@ T ← exp(δξ^) · T
 ```
 J = ∂e / ∂δξ
 ```
-이것은 chain rule로 `∂e/∂T · ∂T/∂δξ`가 되는데, `∂T/∂δξ`가 바로 SE(3)의 left Jacobian이다.
+이것은 chain rule로 `∂e/∂(Tp) · ∂(exp(δξ^)Tp)/∂δξ`가 되는데, 뒤 항은 좌섭동에서 오는 group action의 미분으로 3차원 점에 대해 (δξ를 병진·회전 순으로 둘 때) `[I, -(Tp)^]` 형태다. SE(3)의 left Jacobian은 BCH 관계에서 Lie 대수 섭동을 잇는 6×6 행렬이므로 이 항과 다른 대상이다.
 
 **Normal equation**:
 ```
@@ -765,7 +765,7 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 
 > **추천 자료**
 > - Barfoot, "State Estimation for Robotics" Ch.4 (Nonlinear Estimation) — Manifold 위의 최적화를 체계적으로 설명
-> - [CMU 16-833 Robot Localization and Mapping Lecture Notes](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — Factor graph와 SLAM 백엔드 이론
+> - [Dellaert & Kaess, "Factor Graphs for Robot Perception" (Foundations and Trends in Robotics, 2017)](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — Factor graph와 SLAM 백엔드 이론
 > - [g2o Tutorial](https://github.com/RainerKuemmerle/g2o) / [GTSAM Tutorial](https://gtsam.org/tutorials/intro.html) — 라이브러리별 실습
 > - [김기섭 블로그 — Gauss-Newton Opt == IEKF update?](https://gisbi-kim.github.io/blog/2022/03/05/gn-iekf-same.html) — GN 최적화와 반복 칼만 필터의 수학적 동치성 설명. 필터 vs 최적화 논쟁에 대한 정리
 
@@ -778,7 +778,7 @@ IEKF·MSCKF의 EKF 기반 구조는 §3.10.2 EKF (Ch.3 참조).
 
 14.3.3에서 VINS-Mono를 소개할 때 IMU preintegration을 간단히 언급했다. 여기서는 그 수학적 배경을 본다.
 
-**문제 정의**: IMU 센서는 통상 200~1000 Hz의 높은 주기로 가속도와 각속도를 연속 출력한다. 이와 대조적으로 비전 SLAM 백엔드 최적화는 수 Hz에서 수십 Hz 주기의 키프레임 단위로 실행된다. 키프레임 사이에 수백 개의 IMU 측정이 존재하는데, 최적화할 때 이것을 전부 상태 변수로 넣으면 문제 크기가 폭발한다.
+**문제 정의**: IMU 센서는 통상 200~1000 Hz의 높은 주기로 가속도와 각속도를 연속 출력한다. 이와 대조적으로 비전 SLAM 백엔드 최적화는 수 Hz에서 수십 Hz 주기의 키프레임 단위로 실행된다. 키프레임 사이에 수백 개의 IMU 측정이 존재한다. IMU 측정 자체는 factor의 관측이지만, 그 시점마다 상태(포즈·속도·bias)를 추가하면 문제 크기가 폭발한다.
 
 **Preintegration의 아이디어**: 두 키프레임 `i`와 `j` 사이의 IMU 측정값들을 하나의 "상대 운동 측정(relative motion measurement)"으로 압축한다. 이 압축된 측정값이 최적화의 factor로 들어간다.
 
@@ -815,10 +815,10 @@ IEKF·MSCKF의 EKF 기반 구조는 §3.10.2 EKF (Ch.3 참조).
 
 `^0`은 이전 bias 추정치로 계산한 값, `δb`는 bias 변화량, 편미분들은 preintegration 과정에서 함께 축적해둔다. Bias 변화가 크지 않은 한(보통 그렇다) 이 근사는 충분히 정확하다.
 
-**왜 manifold에서 preintegration하는가**: 이전 방식은 IMU 측정을 가장 가까운 키프레임 timestamp에 interpolation해서 사용했다. 그런데 회전은 SO(3)에 있으므로 단순 선형 보간이 정확하지 않다. Lie group 위에서 미리 integration해두면, 1) 회전 누적이 수학적으로 정확하고, 2) 결과가 relative motion measurement로서 factor graph에 바로 들어갈 수 있다. Forster et al. (2015 RSS, 2017 TRO)의 핵심 기여가 이 부분이다.
+**왜 manifold에서 preintegration하는가**: 사전 적분 자체는 Lupton과 Sukkarieh가 먼저 제시했고, 그 정식화는 회전을 Euler angle로 매개화했다. Forster et al.이 이를 SO(3) 위에서 다시 세웠다. Lie group 위에서 미리 integration해두면, 1) 회전이 군 구조를 유지하고 Euler 각의 특이점을 피하며, 2) 결과가 relative motion measurement로서 factor graph에 바로 들어갈 수 있다. 이산 시간 적분 오차와 측정 잡음은 그대로 남는다. Forster et al. (2015 RSS, 2017 TRO)의 핵심 기여가 이 부분이다.
 
 **Tightly-coupled vs Loosely-coupled**: LIO-SAM을 예로 설명하면:
-- **Loosely-coupled**: IMU를 다음 포즈의 초기값(initial guess)으로만 사용한다. LiDAR odometry와 IMU가 각자 독립적으로 상태를 추정하고, 나중에 covariance 기반으로 합친다. LeGO-LOAM이 이 방식이다.
+- **Loosely-coupled**: 두 갈래가 있다. IMU를 포인트 클라우드 de-skew와 scan matching 초기값으로만 쓰는 방식과, LiDAR odometry와 IMU가 각자 상태를 추정한 뒤 covariance로 합치는 방식이다. LeGO-LOAM은 앞쪽에 해당한다.
 - **Tightly-coupled**: IMU preintegration factor를 LiDAR odometry factor와 같은 factor graph 안에서 동시에 최적화한다. IMU가 단순 초기값이 아니라, 키프레임 사이의 상대 포즈에 대한 독립적 관측으로 작용한다. LIO-SAM이 이 방식이다.
 
 Tightly-coupled의 장점은 모션이 심한 상황(빠른 회전, 급격한 가감속)에서 드러난다. LiDAR scan matching만으로는 잡기 어려운 빠른 변화를 IMU factor가 잡아주기 때문이다. Factor graph 형식이므로 GPS factor, loop closure factor 등을 모듈처럼 추가할 수 있다는 것도 실용적 장점이다.
@@ -828,7 +828,7 @@ Tightly-coupled의 장점은 모션이 심한 상황(빠른 회전, 급격한 �
 VINS-Mono, ORB-SLAM3 (Visual-Inertial mode), LIO-SAM 등 현대 VIO/LIO 시스템이 이 기법을 IMU factor 구현에 그대로 쓴다.
 
 > **추천 자료**
-> - [Forster et al., "On-Manifold Preintegration for Real-Time Visual-Inertial Odometry" (TRO 2017, arXiv:1512.02363)](https://arxiv.org/abs/1512.02363) — Preintegration의 원본 논문. 수식이 많지만 이 분야의 필수 논문
+> - [Forster et al., "On-Manifold Preintegration for Real-Time Visual-Inertial Odometry" (TRO 2017, arXiv:1512.02363)](https://arxiv.org/abs/1512.02363) — on-manifold preintegration의 원본 논문(사전 적분 개념 자체는 Lupton & Sukkarieh 2012). 수식이 많지만 이 분야의 필수 논문
 > - [Forster et al., "IMU Preintegration on Manifold for Efficient VIO" (2015 RSS)](https://rpg.ifi.uzh.ch/docs/RSS15_Forster.pdf) — 위 논문의 초기 버전으로, 방법을 더 간결하게 설명한다.
 > - [Shan et al., "LIO-SAM" (IROS 2020)](https://github.com/TixiaoShan/LIO-SAM) — Tightly-coupled LIO의 레퍼런스 구현. 코드와 논문 모두 읽을 것
 > - [Sola et al., "A micro Lie theory for state estimation in robotics" (arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Lie group/algebra의 실용적 정리. Preintegration 읽기 전에 이것부터 보면 좋다
@@ -861,7 +861,7 @@ SLAM/VIO 시스템을 돌려보면 "왜 이 상황에서 drift가 심한가?", "
 - Monocular VIO의 metric scale은 영상만으로는 정해지지 않으므로, 초기화 구간의 IMU 측정과 운동이 충분한 정보를 주는지 확인한다
 
 > **추천 자료**
-> - [Hesch et al., "Observability-constrained Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6672119) — OC-EKF/OC-VINS의 원본 논문
+> - [Hesch et al., "Consistency Analysis and Improvement of Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6672119) — OC-EKF/OC-VINS의 원본 논문
 > - [Hong & Lim, "Visual-Inertial Odometry with Robust Initialization and Online Scale Estimation" (Sensors 2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6308559/) — 등속·정지 구간에서 초기화가 약해지는 조건을 다루는 구현 예
 > - Barfoot, "State Estimation for Robotics" Ch.9 — 관측가능성 분석의 이론적 토대
 > - [Huang & Dissanayake, "A critique of current developments in Simultaneous Localization and Mapping" (IJRR 2016)](https://journals.sagepub.com/doi/10.1177/0278364916643566) — SLAM의 관측가능성/일관성 문제를 비판적으로 정리
@@ -929,7 +929,7 @@ for feature in detected_features:
 
 > **추천 자료**
 > - [Lajoie et al., "DOOR-SLAM: Distributed, Online, and Outlier Resilient SLAM for Robotic Teams" (RA-L 2020)](https://arxiv.org/abs/1909.12198) — Distributed SLAM + robust optimization
-> - [Tian et al., "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM" (ICRA 2022)](https://arxiv.org/abs/2106.14386) — Multi-robot semantic SLAM
+> - [Tian et al., "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM for Multi-Robot Systems" (T-RO 2022)](https://arxiv.org/abs/2106.14386) — Multi-robot semantic SLAM
 > - [Cieslewski et al., "Data-Efficient Decentralized Visual SLAM" (ICRA 2018)](https://arxiv.org/abs/1710.05772) — 통신 효율적인 분산 SLAM의 초기 연구
 
 ### 14.14 심화: Place Recognition
@@ -1006,7 +1006,7 @@ iSAM2(Kaess et al., IJRR 2012)는 Bayes tree 구조를 도입하여 이 한계�
 
 같은 환경을 여러 날에 걸쳐 매핑하면, 각 세션의 trajectory를 하나로 합쳐야 한다. 문제는 gauge freedom — 각 세션의 좌표계가 다르므로 단순히 합치면 안 맞는다.
 
-**LT-mapper** (Kim et al., 2021): Scan Context 기반 anchor node로 multi-session을 정렬하고, positive/negative change detection으로 지도를 업데이트한다. 변화 정도에 따라 high-dynamic, low-dynamic, weak non-dynamic, strong positive-dynamic을 구분하여 delta map을 관리한다.
+**LT-mapper** (Kim et al., 2021): Scan Context 기반 anchor node로 multi-session을 정렬하고, positive/negative change detection으로 지도를 업데이트한다. 변화를 high dynamic과 low dynamic으로 나누고, low dynamic을 다시 positive difference(새로 생긴 점)와 negative difference(사라진 점)로 구분하여 delta map을 관리한다.
 
 **Continuous-Time Estimation** (Furgale et al., ICRA 2012): discrete-time 대신 B-spline basis function으로 trajectory를 표현하면, 다른 Hz의 센서들을 더 적은 변수로 통합할 수 있다. 빠른 센서(IMU)와 느린 센서(LiDAR, 카메라) 사이의 self-calibration에도 활용 가능하다.
 
@@ -1060,7 +1060,7 @@ EKF-SLAM의 한계는 세 방향에서 드러났다. 공분산 행렬 $\Sigma \i
 
 대규모 landmark map에서는 dense covariance와 누적 선형화 오차 때문에 고전적 full-state EKF-SLAM보다 smoothing·factor-graph 방식이 흔하다. 그렇다고 EKF-SLAM이 특정 landmark 수 아래에서만 유효하다는 보편 경계가 있는 것은 아니다. 계산 예산, 관측 sparsity, consistency 요구에 따라 소규모 landmark system이나 fiducial mapping에서 사용할 수 있다. MSCKF류 sliding-window filter는 EKF 선형화와 covariance propagation을 쓰지만 landmark를 상태에 영구 보관하지 않는 별도 정식화다. JCBB는 ML data association의 대안이다. GTSAM/iSAM2는 같은 SLAM 문제를 smoothing과 factor graph로 푸는 후속 세대이지만 EKF-SLAM의 직계 알고리즘 후예는 아니다.
 
-#### 14.16.2 EIF SLAM / GraphSLAM (PR §11)
+#### 14.16.2 GraphSLAM — 정보형 배치 SLAM (PR §11)
 
 EKF-SLAM에서 $\Sigma$는 측정마다 dense한 상관관계를 갱신한다. 정보형 $\Omega = \Sigma^{-1}$에서는 독립 factor의 기여를 국소적으로 더할 수 있어 SLAM graph의 sparsity를 드러내기 쉽다. 다만 motion update와 marginalization은 fill-in을 만들 수 있으므로 정보 행렬이 자동으로 계속 sparse한 것은 아니다. 이것이 EIF와 sparse graph formulation을 살펴보는 동기다.
 
@@ -1080,10 +1080,10 @@ Measurement information은 **국소 덧셈**으로 추가할 수 있다. 다만 
 
 ##### 4단계 파이프라인
 
-EIF SLAM (= GraphSLAM)은 full posterior $p(x_{0:t}, m | z_{1:t}, u_{1:t})$를 배치(offline)로 푼다.
+GraphSLAM은 full posterior $p(x_{0:t}, m | z_{1:t}, u_{1:t})$를 정보형으로 배치(offline) 처리한다. 같은 정보형이지만 EIF·SEIF는 과거 상태를 marginalize하는 온라인 필터이므로 목표와 상태 보관이 다르다.
 
 ```
-EIF_SLAM_known_correspondence(u_{1:t}, z_{1:t}, c_{1:t}):
+GraphSLAM_known_correspondence(u_{1:t}, z_{1:t}, c_{1:t}):
   1. Initialize:  μ_{0:t} ← motion model만으로 초기 추정 (관측 무시)
   2. Construct:   Ω = 0, ξ = 0에서 출발,
                   prior·controls·measurements를 국소 덧셈으로 누적
@@ -1157,9 +1157,9 @@ $$\Omega^{\text{fused}} = \Omega^{j \leftarrow k\text{-aligned}} + \Omega^k, \qq
 
 SEIF와 iSAM2는 각각 approximate information filtering과 incremental smoothing이라는 다른 문제 설정이다. iSAM2도 비선형 문제에서는 linearization point와 relinearization 정책의 영향을 받는다. ESEIF는 SEIF의 sparsity를 더 정확히 다루는 계열이지만, VINS-Mono·OKVIS의 sliding-window marginalization과 MSCKF의 feature elimination은 제한된 상태를 유지하기 위한 별도 기법이다. 공통점은 sparsity와 계산량을 관리한다는 데 있다(§14.9.2 참조).
 
-#### 14.16.4 EM Mapping (PR §13)
+#### 14.16.4 EM Mapping
 
-정보형 가산성에 sparsification을 더한 것이 SEIF였다. 그러나 data association이 불확실할 때, 모호한 측정을 버리지 않고 통계적으로 다루는 방법은 아직 없었다. EM Mapping이 그 자리를 채운다.
+정보형 가산성에 sparsification을 더한 것이 SEIF다. 모호한 data association을 통계적으로 다루는 계열은 이보다 앞서 있었다. MHT와 JPDA가 다중 가설과 확률적 연관을 세웠고 FastSLAM은 입자마다 연관을 두었다. EM Mapping은 그중 지도 추정과 연관을 번갈아 푸는 접근이다.
 
 EKF-SLAM, EIF SLAM, SEIF는 모두 data association이 알려졌거나, ML greedy하게 결정한다고 가정했다. EM Mapping은 **unknown data association을 EM의 latent variable로 다뤄서 ambiguous한 데이터까지 활용**한다. Thrun, Burgard, Fox(1998–2000, AAAI/JAIR)의 원형은 RHINO 박물관 가이드 로봇(Burgard et al. 1999)에 변형되어 쓰였다.
 
@@ -1189,7 +1189,7 @@ EM_mapping(d):
   return m
 ```
 
-$\alpha$는 forward localization (Markov localization), $\beta$는 backward (미래 데이터로 과거 belief 보정). $\beta$ 덕분에 루프를 닫는 시점에 시간 역방향으로 과거 belief가 소급 수정된다 — 이것이 EM mapping의 통계적 핵심이자, PR Figure 13.10-13.12에서 가장 명확히 드러나는 특성이다. forward-backward 구조는 HMM의 Baum-Welch와 동일하다.
+$\alpha$는 forward localization (Markov localization), $\beta$는 backward (미래 데이터로 과거 belief 보정). $\beta$ 덕분에 루프를 닫는 시점에 시간 역방향으로 과거 belief가 소급 수정된다 — 이것이 EM mapping의 통계적 핵심이다. forward-backward 구조는 HMM의 Baum-Welch와 동일하다.
 
 M-step은 frequentist count: "셀이 property l로 관측된 횟수 / 무엇이든 관측된 횟수", belief로 가중. 3~5회 반복이면 보통 수렴한다.
 
@@ -1216,13 +1216,13 @@ Deterministic annealing과 GNC (Yang et al. 2020)·robust kernel scheduling은 �
 EM_mapping과 layered_EM_mapping은 현대 SLAM 시스템의 주류가 아니다. 이유:
 - pose와 map을 E/M-step으로 분리하려는 시도는 factor graph의 joint optimization이 대체하면서 설 자리를 잃었다.
 - batch·offline 성격이 실시간 SLAM과 맞지 않는다.
-- Cartographer (Hess et al. 2016), GMapping (Grisetti et al. 2007) 모두 EM 없이 scan matching + pose graph로 직접 풀었다.
+- Cartographer (Hess et al. 2016)는 EM 없이 scan matching과 pose graph 최적화로 직접 풀었다. GMapping (Grisetti et al. 2007)도 EM을 쓰지 않지만 구조가 다르다. scan matching으로 제안 분포를 개선한 Rao-Blackwellized particle filter이며 pose graph를 쓰지 않는다.
 
 다만 layered EM의 **submap + global alignment**와 Cartographer의 local/global SLAM은, 로컬 지도를 먼저 만들고 전역적으로 정렬한다는 구조적 공통점이 있다. 이것은 직접적인 계보를 뜻하기보다 같은 계산 문제를 나누는 두 설계로 이해하는 편이 정확하다.
 
-#### 14.16.5 Cycle Posterior (PR §14)
+#### 14.16.5 Cycle Posterior
 
-PR §14.3의 stepwise ML mapper는 두 가지 한계를 가진다: (1) 큰 odometry error를 견디지 못하고, (2) 과거 자세를 시간 역방향으로 보정할 수 없다. §14.4는 ML mapper와 *동시에* 자세 사후분포 추정기를 병행 구동하여 두 결함을 해결한다.
+stepwise ML mapper는 두 가지 한계를 가진다: (1) 큰 odometry error를 견디지 못하고, (2) 과거 자세를 시간 역방향으로 보정할 수 없다. cycle posterior 접근은 ML mapper와 *동시에* 자세 사후분포 추정기를 병행 구동하여 두 결함을 해결한다.
 
 **알고리즘 골격**:
 ```
@@ -1246,7 +1246,7 @@ MCL, linear distribution, nested ML을 그대로 결합한 구현은 현재 널�
 | PR 알고리즘 | 핵심 기여 | 비교할 현대 구조 | 관계의 범위 |
 |---|---|---|---|
 | EKF-SLAM | 통합 landmark state, off-diagonal covariance | MSCKF류 filter, fiducial mapping | EKF를 공유하지만 state 구성은 다름 |
-| EIF/GraphSLAM | 정보형 factor 가산, variable elimination, full trajectory | GTSAM, g2o, Ceres, iSAM2 | sparse least squares와 smoothing 관점이 이어짐 |
+| GraphSLAM | 정보형 factor 가산, variable elimination, full trajectory | GTSAM, g2o, Ceres, iSAM2 | sparse least squares와 smoothing 관점이 이어짐 |
 | SEIF | bounded active set, sparsification | ESEIF, bounded-state estimator | SEIF 계열과 다른 sparse estimator를 구분해야 함 |
 | EM Mapping | latent data association, forward-backward localization, submap | EM 기반 mapping, submap system | 통계 기법·구조의 비교이며 직접 계보는 아님 |
 | Cycle Posterior | online closure detection과 correction 결합 | place recognition + graph optimization | 기능 분할이 유사함 |

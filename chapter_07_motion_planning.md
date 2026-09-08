@@ -196,7 +196,7 @@ OMPL 자체는 충돌 검사를 하지 않는다. State validity checker를 사�
 
 ```python
 # MoveIt2에서 OMPL 기반 모션 플래닝 (ROS2 Python API, 간략화)
-from moveit_py import MoveItPy
+from moveit.planning import MoveItPy
 
 moveit = MoveItPy(node_name="motion_planner")
 arm = moveit.get_planning_component("manipulator")
@@ -387,7 +387,7 @@ F_n * d = 0                (떨어져 있으면 힘 0, 닿아 있으면 거리 0
 
 이 문제는 수학적으로 MPCC(Mathematical Program with Complementarity Constraints)이고, 풀기 어렵다. Relaxation 기법이나 smoothed contact model을 쓴다.
 
-Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
+Drake에는 이 방법을 그대로 감싼 클래스가 없으며, `MathematicalProgram`에 접촉 상보성 제약을 직접 추가해 구성한다.
 
 ### 실시간 Re-planning과 MPC의 연결
 
@@ -406,7 +406,7 @@ Drake의 `ContactImplicitDirectCollocation`이 이 방법을 구현한다.
 3. 접근 → 잡기 → 들기 → 이동 → 놓기 순서 계획
 4. 각 단계의 모션 플래닝
 
-1-3은 **symbolic planning** (어떤 순서로 어떤 action을 할지), 4는 **motion planning** (구체적으로 어떤 궤적으로 움직일지). TAMP는 이 둘을 결합한다.
+1은 인식, 2는 연속 기하 결정(어느 grasp pose를 잡을지), 3은 **symbolic planning**(어떤 순서로 어떤 action을 할지), 4는 **motion planning**(구체적으로 어떤 궤적으로 움직일지)이다. TAMP는 기호 계획과 운동 계획을 결합하며, 2번처럼 연속 파라미터를 고르는 자리를 아래 PDDLStream은 stream으로 분리해 다룬다.
 
 ### PDDLStream
 
@@ -418,7 +418,7 @@ MIT에서 개발한 TAMP 프레임워크. PDDL(Planning Domain Definition Langua
 
 - **SayCan** (Google, 2022): LLM이 가능한 action들의 자연어 설명을 평가하고, affordance model이 현재 상태에서 실행 가능한 action을 필터링한다. 둘의 곱으로 다음 action을 선택한다.
 - **Code as Policies** (Google, 2023): LLM이 직접 로봇 제어 코드를 생성한다. 자연어 명령 → Python 코드 → 로봇 실행.
-- **Inner Monologue** (Google, 2023): LLM + 환경 피드백의 반복적 대화로 태스크를 완수한다.
+- **Inner Monologue** (Google, 2022): LLM + 환경 피드백의 반복적 대화로 태스크를 완수한다.
 
 LLM 기반 TAMP는 아직 실험 단계이다. 복잡한 기하학적 제약(좁은 공간에서의 조작, 정밀 조립)은 LLM이 처리하기 어렵고, 결국 전통적 motion planner가 필요하다. LLM은 high-level 계획, motion planner는 low-level 실행이라는 역할 분담이 현실적이다.
 
@@ -506,12 +506,12 @@ $C^1(b)$는 두 선형 함수의 max다. $p_1 = 0.5$에서 꺾인다. $p_1 > 0.5
 **horizon 2 계산:**
 
 $a_1$ 후 관측 $o_1, o_2$가 올 확률을 적분하면:
-$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 7.78 p_2\}$$
+$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 13.61 p_2\}$$
 
 (계수는 관측 확률과 belief update를 통해 계산.)
 
 $T=2$ 전체:
-$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 7.78 p_2,\; 72 p_1 - 72 p_2 \}$$
+$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 13.61 p_2,\; 72 p_1 - 72 p_2 \}$$
 
 세 선형 조각의 max. horizon이 늘수록 조각이 추가된다.
 
@@ -537,7 +537,7 @@ $\Phi$가 alpha-vector 집합이면 $V(b) = \max_{\phi \in \Phi} \sum_i \phi_i\,
 
 ### 7.9.5 LP 해법
 
-alpha-vector 수가 이중지수적으로 증가한다는 것이 문제라면, 그 max·sum·max 구조를 LP(linear program)로 직접 환원하여 alpha-vector를 열거하지 않고 정확 해를 구하는 방법이 있다.
+alpha-vector 수가 이중지수적으로 증가한다는 것이 문제라면, 그 max·sum·max 구조를 LP(linear program)로 환원하여 지배되는 alpha-vector를 판별·가지치기하며 정확 해를 구하는 방법이 있다.
 
 **변환 원리**: $C = \max_a x(a)$는 $\{C \geq x(a) \;\forall a\}$ 제약에서 $\min C$로 풀린다. $C = \sum_i \max_a x(a,i)$는 각 $i$마다 행동을 선택하는 함수 $a(\cdot)$의 모든 조합에 대해 $\{C \geq \sum_i x(a(i),i)\}$ 제약을 만들면 된다. 제약 수는 $|A|^{|\mathcal{S}|}$.
 
@@ -571,7 +571,7 @@ Algorithm finite_world_POMDP(T):
 
 ---
 
-$|\Phi^T|$는 이중지수적으로 증가한다. horizon 5, 행동 3개, 관측 5개면 이미 수백만 개의 alpha-vector가 필요하고, pruning을 거치더라도 현실적인 도메인에서는 계산 한계를 넘는다. 정확 해법은 개념 증명 차원에 머물며, 실무에서는 근사 기법이 불가피하다.
+$|\Phi^T|$는 이중지수적으로 증가한다. horizon 3, 행동 3개, 관측 5개면 가지치기 전 alpha-vector가 이미 $10^{14}$개 규모이고, pruning을 거치더라도 현실적인 도메인에서는 계산 한계를 넘는다. 정확 해법은 개념 증명 차원에 머물며, 실무에서는 근사 기법이 불가피하다.
 
 ### 7.9.6 일반 POMDP
 
@@ -654,7 +654,7 @@ $$Q(\theta_t, a_t) \leftarrow \mathbb{E}\left[ R(o_{t+1}) + \gamma \max_{\bar{a}
 
 $$\sigma^Q(\theta) = \arg\max_{\bar{a}} Q(\theta, \bar{a})$$
 
-Q값 함수 근사는 nearest-neighbor 방식을 쓴다. belief $\theta$가 입자 집합이라 feedforward 네트워크의 입력으로 직접 쓸 수 없다. 대신 $\langle \theta, a, Q \rangle$ 데이터베이스를 유지하고, 새 belief $\theta'$가 들어오면 KL divergence로 $k$-nearest neighbor를 찾아 Q값 평균을 쓴다.
+Q값 함수 근사는 nearest-neighbor 방식을 쓴다. belief $\theta$가 순서가 없는 입자 집합이라, 고정 순서의 벡터를 받는 당시의 feedforward 네트워크에 그대로 넣을 수 없었다. Thrun et al.은 $\langle \theta, a, Q \rangle$ 데이터베이스를 유지하고, 새 belief $\theta'$가 들어오면 KL divergence로 $k$-nearest neighbor를 찾아 Q값 평균을 쓴다. 오늘날에는 집합을 다루는 인코더로 신경망 입력을 만들 수도 있다.
 
 두 belief 사이의 KL divergence는 Gaussian KDE로 근사한다. KL 기반 kNN이 함수 근사기 역할을 한다. 현대에서는 neural function approximation으로 대체되었지만 알고리즘 골격은 동일하다.
 
@@ -682,7 +682,7 @@ $$\bar{b} = \langle \arg\max_s b(s),\; H[b] \rangle$$
 
 $$H[b] = -\int b(s) \ln b(s)\, ds \tag{16.81}$$
 
-무한 차원 belief를 최빈 상태와 엔트로피의 쌍으로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation·heaven/hell 실험에서 합리적 행동 선택에 충분함이 확인된다.
+무한 차원 belief를 최빈 상태와 엔트로피의 쌍으로 요약한다. 이것이 *충분 통계*인지는 보장되지 않지만 ("충분 통계라는 가정이 거의 성립하지 않는다"고 Thrun et al.이 명시한다), coastal navigation 실험에서 합리적 행동 선택에 충분함이 확인된다.
 
 $\arg\max_s b(s)$만 쓰면 표준 MDP 그대로다. 거기에 엔트로피를 더해 "내가 얼마나 모르는가"를 상태에 포함시켰다.
 
@@ -745,7 +745,7 @@ AMDP에 담긴 원리는 여러 후속 연구에서도 확인된다. Bayes-adapt
 
 ch.8 §8.3의 PPO·SAC 등 deep RL은 경험에서 학습하고, 모델(전이 확률, 관측 모델)을 알 필요가 없다. POMDP planning은 모델을 알 때 최적 정책을 계산한다. 모델이 없으면 MC-POMDP도 돌아가지 않는다. MC-POMDP는 그 교집합에 있다 — belief는 모델로 추적하고, Q값은 경험에서 학습한다.
 
-belief 위의 가치 반복은 상태 수에 이중지수적으로 폭발하기 때문에 근사 solver가 등장했다. MC-POMDP는 particle filter로 belief를 표현하고 Q값을 표본으로 학습한다. AMDP는 belief를 (최대 가능 상태, 엔트로피) 쌍으로 요약해 표준 MDP로 환원한다. 방법은 다르지만 목적은 같다 — 능동적 정보 수집. 그 현대적 형태가 MCTS 기반 POMCP, Deep POMDP, Active SLAM의 entropy-augmented planning이다.
+belief 위의 가치 반복은 horizon과 관측 수에 대해 이중지수적으로 폭발하기 때문에 근사 solver가 등장했다. MC-POMDP는 particle filter로 belief를 표현하고 Q값을 표본으로 학습한다. AMDP는 belief를 (최대 가능 상태, 엔트로피) 쌍으로 요약해 표준 MDP로 환원한다. 방법은 다르지만 목적은 같다 — 능동적 정보 수집. 그 현대적 형태가 MCTS 기반 POMCP, Deep POMDP, Active SLAM의 entropy-augmented planning이다.
 
 ---
 
@@ -794,7 +794,7 @@ belief 위의 가치 반복은 상태 수에 이중지수적으로 폭발하기 
 2000 ── RRT-Connect (Kuffner & LaValle) — 실무 motion-planning 라이브러리에서 널리 제공되는 변종
 2009 ── CHOMP (Ratliff et al.) — gradient 기반 궤적 최적화
 2011 ── RRT* (Karaman & Frazzoli) — 점근적 최적성 보장
-2012 ── OMPL 1.0 공개 — 샘플링 기반 플래너 통합 라이브러리
+2012 ── OMPL 소개 논문 (IEEE RAM) — 샘플링 기반 플래너 통합 라이브러리 (1.0 릴리스는 2014)
 2014 ── TrajOpt (Schulman et al.) — sequential convex optimization
 2019 ── MoveIt2 (ROS2) — 산업·연구에서 쓰이는 공개 motion-planning framework
 2022 ── SayCan (Google) — LLM + motion planning

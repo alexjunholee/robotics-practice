@@ -67,7 +67,7 @@ action = model.predict(
 )
 ```
 
-The RT-X project is another project to know alongside OpenVLA. It combines robot data from many institutions into the Open X-Embodiment dataset and uses it to train general-purpose robot policies. The dataset includes data from more than 22 robot embodiments.
+The RT-X project is another project to know alongside OpenVLA. It combines robot data from many institutions into the Open X-Embodiment dataset and uses it to train general-purpose robot policies. The dataset includes data from 22 robot embodiments collected by 21 institutions.
 
 **Octo**: Another open-source model trained on RT-X data. It is smaller than OpenVLA (93M parameters) and therefore lighter to use. The model is designed for quick fine-tuning on diverse robot platforms.
 
@@ -81,7 +81,8 @@ The RT-X project is another project to know alongside OpenVLA. It combines robot
 
 Beyond manipulation, moving (navigation) within an environment is also a core problem for embodied AI. The studies below apply the language understanding of LLMs to navigation.
 
-**LINGO**: Language-guided Indoor Navigation
+LINGO is a family of driving-domain VLA models released by Wayve. LINGO-1 is an open-loop model that narrates driving scenes in language, while LINGO-2 is a closed-loop model that handles language instructions and driving control together.
+
 **SayCan**: separates what the LLM "can do" from what it "should do"
 - Affordance function: the actions the robot can currently perform
 - LLM: the actions required to achieve the goal
@@ -244,7 +245,7 @@ In robotics, designing a reward function properly is very hard. How do you defin
 > **Further reading**
 > - [Ross et al., "A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning" (2011)](https://arxiv.org/abs/1011.0686) — original DAgger paper
 > - [Florence et al., "Implicit Behavioral Cloning" (CoRL 2021)](https://arxiv.org/abs/2109.00137) — an implicit approach to overcome BC's limitations
-> - [Zare et al., "A Survey of Imitation Learning" (2024)](https://arxiv.org/abs/2309.15894) — a survey of IL
+> - Zare et al., "A Survey of Imitation Learning: Algorithms, Recent Developments, and Challenges" (IEEE Trans. Cybernetics, 2024) — a survey of IL
 
 ## 12.8 Advanced: Diffusion Policy
 
@@ -261,7 +262,7 @@ Diffusion Policy represents this multi-modal distribution naturally.
 3. The final a_0 is the action trajectory to execute
 ```
 
-An action trajectory is not a single action but a sequence of actions over several future steps `[a_0, a_1, ..., a_H]`. Only the first few steps are executed (receding horizon), and a new trajectory is generated from the next observation.
+An action trajectory is not a single action but a sequence of actions over several future steps `[a(0), a(1), ..., a(H)]`. The number in parentheses is the execution time index, a different axis from the subscript (diffusion step) in the pseudocode above. Only the first few steps are executed (receding horizon), and a new trajectory is generated from the next observation.
 
 This formulation represents a multi-modal action distribution without fixing the number of modes in advance, and it produces a temporally connected action sequence in one trajectory. Training uses denoising score matching.
 
@@ -304,7 +305,7 @@ Traditional and effective, but estimating every parameter accurately is hard, an
 
 **3. Real-to-Sim-to-Real (R2S2R)**
 
-This approach combines the diversity of DR with the precision of SysID.
+This approach calibrates the simulator with real data, trains the policy inside that calibrated simulator, and brings it back to the real robot. If randomization is used alongside it, the pipeline must state explicitly which parameters are perturbed, over which ranges, and at which stage.
 
 ```
 1. Collect a small amount of real data
@@ -318,7 +319,7 @@ This approach combines the diversity of DR with the precision of SysID.
 
 The most direct quantitative check: compare the success rate of the same task in sim and real.
 
-- **Sim success rate ≈ Real success rate**: transfer succeeded. The simulator reflects reality well.
+- **Sim success rate ≈ Real success rate**: treat transfer as successful only if both rates are high enough and the failure modes look similar. When both are low, closeness alone is no evidence of transfer, so read the absolute performance and the number of trials together.
 - **Sim >> Real**: large reality gap. Expand DR range or correct with SysID.
 - **Sim < Real**: rare but happens. The simulator was set to a harder (conservative) condition than reality.
 
@@ -326,15 +327,15 @@ Trajectory similarity, contact-force comparisons, and other metrics are sometime
 
 > **Further reading**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — original DR paper
-> - [Muratore et al., "Robot Learning from Randomized Simulations" (2022)](https://arxiv.org/abs/2111.00137) — a systematic treatment of DR
-> - [Hanna & Stone, "Grounded Action Transformation for Sim-to-Real" (AAAI 2017)](https://arxiv.org/abs/1511.07461) — transfer methodology
+> - Muratore et al., "Robot Learning from Randomized Simulations: A Review" (Frontiers in Robotics and AI, 2022) — a systematic treatment of DR
+> - [Hanna & Stone, "Grounded Action Transformation for Robot Learning in Simulation" (AAAI 2017)](https://ojs.aaai.org/index.php/AAAI/article/view/11044) — transfer methodology
 > - [NVIDIA Isaac Lab Tutorials](https://isaac-sim.github.io/IsaacLab/) — hands-on DR/SysID pipelines
 
 > **Additional papers (3D/spatial understanding + benchmarks)**
 > - [Hong et al., "3D-LLM: Injecting the 3D World into Large Language Models" (NeurIPS 2023, arXiv:2307.12981)](https://arxiv.org/abs/2307.12981) — gives LLMs 3D spatial understanding. 3D captioning, QA, navigation
 > - [Chen et al., "SpatialVLM: Endowing Vision-Language Models with Spatial Reasoning" (CVPR 2024, arXiv:2401.12168)](https://arxiv.org/abs/2401.12168) — adds spatial reasoning about distance/size to VLMs
 > - [Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots" (RSS 2024, arXiv:2406.02523)](https://arxiv.org/abs/2406.02523) — 100 kitchen tasks, 150+ object categories. A household-robot benchmark
-> - [Szot et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — human-robot coexistence simulation. Social navigation, collaborative tasks
+> - [Puig et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — human-robot coexistence simulation. Social navigation, collaborative tasks
 
 > **Technical Timeline: VLA & Embodied AI**
 > - **~2015**: per-task imitation learning, research centered on single-object grasping

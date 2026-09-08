@@ -44,7 +44,7 @@
 
 **Loop Closure**: Drift correction through recognition of a previously visited location. "Ah, we were here before" → accumulated error gets corrected all at once.
 
-**Drift**: Accumulation of error. Walking 100 m with 1 cm of error at every step yields 100 cm of error on arrival.
+**Drift**: Accumulation of error. Walking 100 m at a 1 m stride with 1 cm of error per step, if those errors all accumulate in the same direction, leaves 100 cm of error on arrival. If their directions are uncorrelated, the error grows with the square root of the number of steps and stays on the order of 10 cm.
 
 **Reprojection Error**: The error when a 3D point is reprojected onto the image. The difference between the predicted "where should this 3D point appear in the camera image" and the actual observation.
 
@@ -90,7 +90,7 @@ A: If you are learning from scratch, ROS2 is recommended. ROS1's official suppor
 
 **Q: Where do I find papers?**
 
-A: Use [arXiv](https://arxiv.org/) (free preprint server), [Google Scholar](https://scholar.google.com/) (paper search), and [Papers With Code](https://paperswithcode.com/) (paper search with code). If you want to browse by venue, [CVPR Open Access](https://openaccess.thecvf.com/) and [IEEE Xplore](https://ieeexplore.ieee.org/) are also useful.
+A: Use [arXiv](https://arxiv.org/) (free preprint server) and [Google Scholar](https://scholar.google.com/) (paper search). If you also need code, check the paper's GitHub link or [Hugging Face Papers](https://huggingface.co/papers/trending) (Papers With Code shut down in 2025). If you want to browse by venue, [CVPR Open Access](https://openaccess.thecvf.com/) and [IEEE Xplore](https://ieeexplore.ieee.org/) are also useful.
 
 **Q: Where should I start to study SLAM?**
 
@@ -98,7 +98,7 @@ A: Start with Cyrill Stachniss's [YouTube SLAM lectures](https://www.youtube.com
 
 **Q: How do I find research ideas?**
 
-A: Read the Limitations section of recent conference papers. You can get ideas from unresolved problems. Another approach: combining two fields that have not yet been merged, like "3D Gaussian Splatting + Semantic SLAM".
+A: Read the Limitations section of recent conference papers. You can get ideas from unresolved problems. Another approach is to connect two fields that have not yet been fully merged. The name of a combination alone, however, does not establish that the space is unexplored. Several papers on "3D Gaussian Splatting + Semantic SLAM" already exist, and Ch.18 of this document also covers Gaussian maps that carry semantic information. Survey the prior work first, then look for the space that is left.
 
 **Q: Which GPU should I buy?**
 
@@ -194,7 +194,7 @@ ssh-copy-id user@server_ip
 ssh user@server_ip
 ```
 
-Registering the same public key (`~/.ssh/id_ed25519.pub`) on GitHub also removes the need for a password on `git push`. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
+Registering the same public key (`~/.ssh/id_ed25519.pub`) on GitHub also removes the need for a password on `git push` for SSH remotes (`git@github.com:...`). A repository cloned over HTTPS uses a token or a credential helper instead, so this key does not apply to it. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
 
 **CPU performance mode setup (for experiments)**
 
@@ -245,7 +245,7 @@ with autocast():
     loss = criterion(output, target)
 ```
 
-**Problem**: `CUDA version mismatch`
+**Problem**: `CUDA version mismatch` (mostly when building CUDA extensions yourself)
 
 **Solution**:
 
@@ -256,7 +256,10 @@ nvcc --version
 # Check the CUDA version PyTorch sees
 python -c "import torch; print(torch.version.cuda)"
 
-# If they differ, reinstall PyTorch (matching the CUDA version)
+# The two values may differ, and that is normal. The wheel bundles its own CUDA
+# runtime, so if the driver supports that runtime, leave the install alone.
+# The exception is building CUDA extensions yourself: then the major versions of
+# nvcc and torch.version.cuda must match, and only then should you reinstall.
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```
 
@@ -339,8 +342,14 @@ docker run -it --env DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ...
 **Solution**:
 
 ```bash
-# Install nvidia-container-toolkit
-sudo apt-get install -y nvidia-container-toolkit
+# Install nvidia-container-toolkit — register the NVIDIA apt repository and key first, or the package will not be found
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker   # Register the hook with the Docker runtime
 sudo systemctl restart docker
 
 # Run with the GPU option added
@@ -404,10 +413,11 @@ sudo apt-get install libeigen3-dev
 
 - [ ] Ubuntu installed (22.04 LTS recommended)
 - [ ] NVIDIA driver installed (confirm with `nvidia-smi`)
-- [ ] CUDA / cuDNN installed (confirm with `nvcc --version`)
+- [ ] CUDA toolkit installed (confirm with `nvcc --version`)
+- [ ] cuDNN installed (confirm a system install with `cudnn_version.h`; `torch.backends.cudnn.version()` reports the cuDNN bundled with PyTorch)
 - [ ] Conda or venv environment set up
 - [ ] PyTorch GPU operation confirmed (`torch.cuda.is_available()`)
-- [ ] ROS2 installed (if needed, Humble or Jazzy)
+- [ ] ROS2 installed (if needed; Humble on Ubuntu 22.04, Jazzy on 24.04)
 - [ ] Git configured (`git config --global user.name/email`)
 - [ ] Docker installed (optional, recommended for reproducibility)
 - [ ] VS Code + essential extensions installed (Python, Remote-SSH, Jupyter)
@@ -422,7 +432,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 Research tools
 
-See [Research Notes Part 2](../../research-notes/guide.html#chapter-16) for tools used in reading and writing papers, and [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) for conference preparation *(Korean only)*. Sections 20.4 and 20.7 cover tools and learning paths specific to Spatial AI.
+See [Research Notes Ch.15](../../research-notes/guide.html#chapter-15) for paper-reading tools (note templates, citation management), [Research Notes Part 2](../../research-notes/guide.html#chapter-16) for writing tools, and [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) for conference preparation *(Korean only)*. Sections 20.4 and 20.7 cover tools and learning paths specific to Spatial AI.
 
 ### D.4 Dataset preparation
 

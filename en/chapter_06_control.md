@@ -35,7 +35,7 @@ u(t) = Kp * e(t) + Ki * integral(e(τ)dτ, 0, t) + Kd * de(t)/dt
 
 Role of each term:
 
-- **P (Proportional)**: generates the control input in proportion to the current error. A large Kp gives a fast response but causes more overshoot and oscillation. With the P term alone, a steady-state error remains. This is because as the error becomes small near the target, the control input also becomes small.
+- **P (Proportional)**: generates the control input in proportion to the current error. A large Kp gives a fast response but causes more overshoot and oscillation. Give a step input to a plant with no free integrator and the P term alone leaves a steady-state error. This is because as the error becomes small near the target, the control input also becomes small. If the plant does have a free integrator, the steady-state error for step tracking can be zero; constant disturbances such as gravity are a separate source of error.
 
 - **I (Integral)**: proportional to the accumulated error. Its role is to eliminate steady-state error. It is essential when there are constant disturbances like gravity or friction. However, excessive use produces wind-up. The issue is that when the error has been accumulating for a long time and the control input is saturated, the accumulated integral value causes a large overshoot even after reaching the target. In practice, anti-windup logic must be implemented.
 
@@ -454,7 +454,7 @@ def linear_mpc(A, B, Q, R, Q_f, x0, N, x_min, x_max, u_min, u_max):
     # --- Equality constraints: dynamics ---
     # x(k+1) = A*x(k) + B*u(k)
     # → A*x(k) + B*u(k) - x(k+1) = 0
-    Ax_eq = sparse.kron(sparse.eye(N + 1), -sparse.eye(n))
+    Ax_eq = sparse.kron(sparse.eye(N + 1), -sparse.eye(n), format='lil')  # format that allows slice assignment
     Au_shift = sparse.kron(sparse.eye(N, N + 1, 1), sparse.eye(n))
     # Fix: add A in the lower-left block
     for i in range(N):
@@ -548,7 +548,7 @@ The control techniques covered so far focus mostly on "sending the position to a
 
 ### Position Control vs Force Control vs Impedance Control
 
-- **Position Control**: tracks a target position. Suitable when there is no environment or when the environment is highly rigid. But when a robot arm tries to pick up a cup from a table and the table height differs by even 1 mm — the position controller does not know and tries to push in, so excessive force is generated.
+- **Position Control**: tracks a target position. Suitable in free space or in a compliant environment. In a stiff environment it is instead dangerous, because the contact force grows as the product of the environment stiffness and the position error. When a robot arm tries to pick up a cup from a table and the table height differs by even 1 mm, the position controller does not know and tries to push in, so excessive force is generated.
 
 - **Force Control**: tracks a target force. Needed in contact tasks such as grinding and assembly. But pure force control is unstable when not in contact. It is also sensitive to force sensor noise.
 
@@ -647,7 +647,8 @@ print(f"Final contact force: {contact_forces[-1]:.2f} N")
 If impedance control is "position deviation → force output," admittance control is the opposite: "force input → position output."
 
 ```
-x_d_new = x_d + (1 / K_d) * F_ext + (1 / D_d) * F_ext_dot
+x_d_new = x_d + (1 / K_d) * F_ext      # stiffness term: force -> position offset
+x_dot_d = (1 / D_d) * F_ext             # damping term: force -> desired velocity (not the force derivative)
 ```
 
 More precisely, the measured external force F_ext is fed into a virtual impedance model to modify the target position, and the modified target is passed to the existing (high-stiffness) position controller.
@@ -689,7 +690,7 @@ Here Lambda = (J * M^(-1) * J^T)^(-1) is the task-space inertia matrix.
 Joint torques to achieve a desired task-space acceleration x_ddot_d:
 
 ```
-tau = J^T * Lambda * x_ddot_d + C * q_dot + g(q)
+tau = J^T * Lambda * (x_ddot_d - J_dot * q_dot) + C * q_dot + g(q)
 ```
 
 Combining impedance control on top of this framework realizes desired dynamic behavior (impedance) in task space.
@@ -809,7 +810,7 @@ With a suitable Lyapunov function (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamma^(-1
 
 Used when there is model uncertainty but the bound is known.
 
-- **H-infinity control**: optimizes performance against the worst-case disturbance. Provides a guarantee of the form "whatever disturbance enters, the output error stays below this level." The math is heavy (Riccati inequalities, LMI) and tends to be conservative. Widely applied in industry in the 1990s.
+- **H-infinity control**: optimizes performance against the worst-case disturbance. The guarantee takes the form of a bound on the induced L2 norm: the energy gain from disturbance to error stays at or below $\gamma$. It is not an absolute bound on the error, since the error can grow in proportion as the energy of the disturbance grows. The math is heavy (Riccati inequalities, LMI) and tends to be conservative.
 
 - **Sliding Mode Control**: drives the state onto a sliding surface in finite time, then follows the desired dynamics on the sliding surface. Very robust to model uncertainty. The issue is chattering: high-frequency switching near the sliding surface stresses the actuator. Mitigated with a boundary layer approach or higher-order sliding mode.
 
@@ -823,7 +824,7 @@ Used when there is model uncertainty but the bound is known.
 | Safety certification required | Lyapunov-based proofs | "It worked in simulation so OK" |
 | Rapid prototyping | PID + feedforward | H-infinity from the start |
 
-Adaptive control and sliding mode are selected according to the structure of the uncertainty and the required guarantees. A stability claim requires a Lyapunov function or comparable mathematical argument, and systems subject to safety certification treat that argument as a design condition.
+Adaptive control and sliding mode are selected according to the structure of the uncertainty and the required guarantees. A stability claim requires a Lyapunov function or comparable mathematical argument. Functional safety standards call for hazard analysis, the assignment of a safety level, and a body of verification and validation evidence; they do not prescribe any particular proof technique. Analyses of this kind are a strong way to build that evidence.
 
 ---
 
@@ -871,7 +872,7 @@ Adaptive control and sliding mode are selected according to the structure of the
 1960 ── LQR (Kalman)
 1985 ── Impedance Control concept (Hogan)
 1987 ── Operational Space Control (Khatib)
-1990s ─ Robust control (H-infinity) applied in industry
+1990s ─ Robust control (H-infinity) theory established; early application attempts
 2004 ── Real-time MPC becomes practical
 2019 ── Boston Dynamics Atlas: MPC + WBC
 2023 ── Unitree H1/G1: learning-based + MPC hybrid

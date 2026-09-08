@@ -192,7 +192,7 @@ results[0].show()
 
 **SSD (Single Shot Detector)**:
 - 다양한 스케일의 feature map에서 예측
-- YOLO보다 작은 객체 탐지에 유리
+- 작은 객체는 SSD의 약점으로 알려져 있고, FPN을 도입한 YOLOv3 이후 세대가 이 부분에서 앞선다
 
 > **추천 자료**
 > - [Redmon et al., "You Only Look Once: Unified, Real-Time Object Detection" (2016)](https://arxiv.org/abs/1506.02640) — YOLO 원논문. 간결하고 읽기 좋다
@@ -308,7 +308,7 @@ $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(
 ```python
 import torch.optim as optim
 
-# Cosine Annealing with Warm-up (manual)
+# Cosine Annealing (warm-up 없음). warm-up이 필요하면 아래 OneCycleLR의 pct_start처럼 넣는다
 optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
 
@@ -367,11 +367,14 @@ torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
 ```python
 # DDP 최소 구조 (torchrun으로 실행)
+import os
+import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 dist.init_process_group("nccl")
 local_rank = int(os.environ["LOCAL_RANK"])
+torch.cuda.set_device(local_rank)
 model = model.to(local_rank)
 model = DDP(model, device_ids=[local_rank])
 
@@ -413,15 +416,15 @@ $$\mathcal{L} = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau)}{\sum_{k=1}^{2N} \
 ViT 기반으로, 이미지 패치의 75%를 랜덤 마스킹하고 나머지 25%에서 마스킹된 부분을 복원하는 방식이다. NLP의 BERT가 단어를 마스킹하고 복원하는 것과 같은 원리이다.
 
 - 마스킹 비율이 75%나 되는 이유: 이미지는 텍스트보다 redundancy가 크기 때문에, 높은 마스킹 비율이 더 어려운 과제를 만들어 좋은 표현을 학습시킨다.
-- 인코더는 visible 패치만 처리하므로 학습이 효율적이다 (75% 연산량 감소).
+- 패치의 75%를 가려 인코더가 25%만 처리하므로 학습이 효율적이다. 원 논문은 사전학습 시간이 3배 이상 줄었다고 보고한다. attention 비용이 토큰 수에 초선형이고 decoder 비용이 더해지므로 마스킹 비율과 연산량 감소율은 같지 않다.
 
 **DINOv2와의 연결**:
 
 DINOv2는 self-distillation 방식으로 학습한다. Teacher-student 구조이되, teacher는 student의 EMA(exponential moving average)이다.
 
 - Self-distillation: student와 teacher가 같은 구조. teacher의 weight는 student weight의 EMA.
-- Centering + Sharpening: teacher output에 centering(평균 빼기)과 sharpening(낮은 temperature)을 적용하여 mode collapse를 방지한다.
-- 결과물인 DINOv2 feature는 별도 학습 없이도 ImageNet k-NN 83.0%, ADE20K linear probe 82.0% 등 supervised 방법에 필적하는 성능을 보인다.
+- Sharpening + 배치 정규화: teacher output에 sharpening(낮은 temperature)을 적용하고, DINO v1의 centering(평균 빼기) 대신 SwAV의 Sinkhorn-Knopp 배치 정규화로 mode collapse를 방지한다.
+- 결과물인 DINOv2 feature는 backbone을 고정한 채로도 supervised 방법에 필적한다. ImageNet 분류는 학습 없는 k-NN으로 평가하고, ADE20K 의미 분할은 선형 head를 학습하는 linear probe에 mIoU로 평가한다. 두 평가는 학습 범위와 지표가 다르므로 모델 크기와 함께 원 논문의 수치를 확인해 인용한다.
 
 **실무 — HuggingFace에서 self-supervised backbone fine-tune**:
 
@@ -566,13 +569,17 @@ $$\mathcal{L} = \mathcal{L}_{task}(D_s) - \lambda \cdot \mathcal{L}_{domain}(D_s
 ```python
 # TENT 업데이트 과정 (간략화)
 model.eval()
-# BN의 affine parameter만 학습 가능하게
+model.requires_grad_(False)          # 먼저 전체를 얼린다
+params = []
 for m in model.modules():
     if isinstance(m, nn.BatchNorm2d):
-        m.requires_grad_(True)
-        m.track_running_stats = False  # batch statistics 사용
+        m.requires_grad_(True)       # BN의 affine parameter만 다시 켠다
+        m.track_running_stats = False
+        m.running_mean = None        # eval 모드에서 batch statistics를 쓰려면 running 버퍼를 비운다
+        m.running_var = None
+        params += [m.weight, m.bias]
 
-optimizer = optim.SGD(model.parameters(), lr=1e-4)
+optimizer = optim.SGD(params, lr=1e-4)  # BN 파라미터만 최적화
 
 # 추론 시 adaptation
 for batch in test_loader:

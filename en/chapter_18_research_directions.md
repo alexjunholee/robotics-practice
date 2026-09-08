@@ -73,7 +73,7 @@ The Local Module runs directly on the robot and processes the information needed
 
 ```bash
 # TensorRT optimization example
-trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --workspace=4096
+trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --memPoolSize=workspace:4096
 ```
 
 > TensorRT builds an inference engine for NVIDIA GPUs. FP16 can reduce memory and latency, but gains and task-metric changes depend on the model, input, batch, power mode, and software versions. Compare end-to-end latency and validation metrics on the target Jetson before adopting it.
@@ -88,10 +88,10 @@ class LocalModule:
         self.obstacle_detector = LightweightObstacleNet()  # TensorRT
 
     def process(self, sensor_data):
-        # 1. Odometry update (100 Hz)
+        # 1. Odometry update (IMU input, 100 Hz)
         pose = self.odometry.update(sensor_data.imu, sensor_data.lidar)
 
-        # 2. Obstacle detection (30 Hz)
+        # 2. Obstacle detection (camera input, 30 Hz)
         obstacles = self.obstacle_detector(sensor_data.image)
 
         # 3. Send keyframe to the Global Module
@@ -101,7 +101,7 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**Reading it as a scenario**: in the code above, `process()` is called every time sensor data arrives. IMU data comes in at 100 Hz (100 times per second), camera images at 30 Hz. Every frame, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame would saturate the network.
+**Reading it as a scenario**: assume that in the code above, `process()` is called once per fusion tick. IMU data comes in at 100 Hz (100 times per second) and camera images at 30 Hz, so the structure is one where each sensor's own callback drops its latest measurement into a buffer and the tick consumes them together. Every tick, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame would saturate the network.
 
 ## 18.3 Global Module: VFM-based Understanding
 
@@ -124,7 +124,7 @@ The Global Module runs on a server or in the cloud and interprets object classes
 ### 18.3.3 Tech Stack
 
 **Vision Foundation Models** (see Ch.11):
-- DINOv2: dense feature extraction — produces a meaningful feature vector for every pixel in an image
+- DINOv2: dense feature extraction — splits the image into a grid of patches and produces a feature vector per patch (using it at pixel resolution requires interpolation or upsampling)
 - SAM2: promptable image/video segmentation — tracks a target mask from point, box, or mask prompts
 - GroundingDINO: text-guided detection — say "red cup" and it finds it
 
@@ -153,7 +153,7 @@ class GlobalModule:
         # 1. Extract VFM features
         features = self.dinov2.extract(image)
 
-        # 2. Open-vocabulary segmentation
+        # 2. Promptable segmentation (text-vocabulary prompts come from GroundingDINO/CLIP)
         masks = self.sam.segment(image, prompts=self.get_prompts())
 
         # 3. Update the 3D Scene Graph
@@ -293,7 +293,7 @@ The following three papers illustrate the difference between posing a problem an
 
 - **Motivation**: Extend the map-reuse, loop-closing, and relocalization structure of monocular ORB-SLAM to stereo and RGB-D inputs.
 - **Direct extension**: Build a separate SLAM system for each input modality.
-- **Paper's design**: All three modalities share the tracking, local-mapping, and loop-closing structure and use ORB features. Stereo and RGB-D observations contribute depth from disparity and enter metric-scale bundle adjustment.
+- **Paper's design**: All three modalities share the tracking, local-mapping, and loop-closing structure and use ORB features. Stereo obtains depth from disparity, while RGB-D synthesizes a virtual right-image coordinate from the measured depth, so both are unified into the stereo observation form before entering metric-scale bundle adjustment.
 - **Design principle**: Preserve a common system architecture while placing modality-specific differences in observation construction and bundle-adjustment residuals.
 
 The primary source is [*ORB-SLAM2: An Open-Source SLAM System for Monocular, Stereo and RGB-D Cameras*](https://doi.org/10.1109/TRO.2017.2705103). The 2015 ORB-SLAM paper describes a monocular system and therefore cannot support the three-modality example.

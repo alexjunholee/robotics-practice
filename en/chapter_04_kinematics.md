@@ -232,7 +232,7 @@ if result:
 
 **Analytical IK of a 6R manipulator:**
 
-Among 6-axis robots, those satisfying Pieper's condition — where the last three axes meet at a single point (a spherical wrist) — can be solved analytically. Most industrial 6-axis robots (UR, KUKA, ABB, etc.) have this structure.
+Among 6-axis robots, those satisfying Pieper's condition — where the last three axes meet at a single point (a spherical wrist) — can be solved analytically. Traditional industrial 6-axis robots (KUKA, ABB, etc.) have this structure. UR arms have an offset wrist whose three wrist axes do not meet at a single point, so even though a closed-form solution exists, it requires a separate derivation.
 
 In this case the position problem (first three axes) and the orientation problem (last three axes) can be decoupled and solved. Up to eight solutions exist, and it is common to pick the one that respects joint limits and stays close to the previous joint angles.
 
@@ -323,7 +323,7 @@ It is rare to implement IK from scratch. Using a proven solver is the sensible c
 | **IKFast** (OpenRAVE) | Analytical (code generation) | auto-generates C++ code for specific structures. Fast |
 | **TRAC-IK** | KDL + SQP dual | higher solve rate than stock KDL on the paper's tested chains; ROS package available |
 | **MoveIt2 IK** | Integrates the solvers above | ROS2 ecosystem, integrated collision avoidance |
-| **pinocchio** | PoE-based | modern, fast, differentiable |
+| **pinocchio** | Jacobian-based numerical iteration (CLIK) | rigid-body dynamics library, fast, provides analytical derivatives |
 
 ```python
 # Beeson & Ames (2015) tested 10,000 reachable poses per robot model
@@ -481,7 +481,7 @@ A product that bundles motor + reducer + encoder + controller into a single unit
 
 | Model | Example advertised maximum torque (Nm) | Communication | Use |
 |------|-----------|------|------|
-| XL330 | 0.5 | TTL | small grippers, SO-ARM100, etc. |
+| XL330 | 0.5 | TTL | small grippers, small low-cost arms |
 | XM540 | 10.0 | RS-485 | mid-sized robot arms |
 | PH54  | 44.7 | RS-485 | large manipulators, mobile robots |
 
@@ -503,7 +503,6 @@ Drawbacks: lower output torque for the same size. For large torques, you must us
 
 Recent systems using QDD:
 - MIT Mini Cheetah / Cheetah 3
-- ALOHA (low-cost bimanual teleop)
 - Unitree robot series
 
 ```
@@ -622,7 +621,7 @@ These three are microcontroller-level basics. Robot systems need more robust pro
 Originating in the automotive industry, it is also used for motor and sensor networks in robots. Differential signaling makes it noise-resistant, and the multi-master architecture supports priority-based arbitration.
 
 - Speed: up to 1 Mbps (CAN 2.0), 5 Mbps (CAN FD)
-- Distance: up to 1 km (at 125 kbps)
+- Distance: up to about 1 km (at 50 kbps; about 500 m at 125 kbps, about 40 m at 1 Mbps)
 - Topology: bus (daisy-chain possible)
 
 Usage in robots: communication between motor drivers and the main controller. The MIT Cheetah and many legged robots use CAN.
@@ -678,7 +677,7 @@ Drawbacks: a dedicated master stack is required (SOEM, IgH EtherCAT Master, etc.
 
 **RS-485 / Dynamixel Protocol:**
 
-The communication scheme used by Dynamixel servos. RS-485 is differential-signal serial communication, up to 1 Mbps, with multiple devices daisy-chained.
+The communication scheme used by Dynamixel servos. RS-485 is differential-signal serial communication that can reach several Mbps or more over short distances (the 1 Mbps in the example below is the Dynamixel setting), with multiple devices daisy-chained.
 
 ```python
 # Example of servo control using the Dynamixel SDK
@@ -733,8 +732,8 @@ The solution: a Linux kernel patched with PREEMPT_RT. Most of the kernel's code 
 
 Setup overview:
 ```bash
-# 1. Install a kernel with PREEMPT_RT (Ubuntu example)
-sudo apt install linux-image-rt-amd64   # Debian/Ubuntu
+# 1. Install a kernel with PREEMPT_RT (Debian example)
+sudo apt install linux-image-rt-amd64   # Debian metapackage. Ubuntu has no package by this name; it uses a separate path such as the Ubuntu Pro real-time kernel
 
 # 2. Configure GRUB to boot the RT kernel
 
@@ -894,7 +893,7 @@ Everything so far has been deterministic kinematics. §4.7 layers probability on
 
 ### 4.7.1 From Determinism to Probability
 
-§4.2 forward kinematics and §4.3 inverse kinematics are deterministic. Feed in joint angles and one end-effector position comes out; feed in an end-effector position and a set of joint angles comes out. The output is a point estimate given the input. It is the world of manipulators where the math tells you exactly where the fingertip is.
+§4.2 forward kinematics and §4.3 inverse kinematics are deterministic. Feed in joint angles and one end-effector position comes out; feed in an end-effector position and a set of joint angles comes out. The output is a point estimate given the input. That is a property of the model, however, not of the platform. Manipulators have joint backlash, link compliance, and calibration error of their own, which is why the introduction listed calibration — correcting errors between the real robot and the model — among the uses of kinematics.
 
 Wheeled mobile robots are different. The wheels do not roll at precisely the commanded speed. There is slip, effective radius changes with wear, and asymmetric wear on left and right wheels generates straight-line error. The result: even after issuing a control command $u_t$, the next pose $x_t$ is not a single point but a probability distribution. Formalizing that distribution is what a **probabilistic motion model** does.
 
@@ -906,9 +905,9 @@ Two representations exist for this distribution.
 
 **Velocity model**: the control input is given as linear and angular velocity, $u_t = (v, \omega)^T$. Usable at the planning stage. The error between the robot's commanded speed and its actual speed is modeled as noise.
 
-**Odometry model**: the control input is a pair of poses measured by the wheel encoder, $u_t = (\bar{x}_{t-1}, \bar{x}_t)$. It is retrospective, so it cannot be used for planning, but since the encoder measures directly, it is more accurate than the velocity model.
+**Odometry model**: the control input is a pair of poses obtained by integrating the wheel encoders, $u_t = (\bar{x}_{t-1}, \bar{x}_t)$. It is retrospective, so it cannot be used for planning. The pose pair itself is obtained by integrating encoder rotations through the kinematic model; it is not a direct measurement of pose. Even so, it tends to be more accurate in practice than a velocity model that takes the commanded speed at face value.
 
-For each of the two models there are two ways to use it: **closed-form density evaluation** and **sampling**. Closed-form returns a probability density value answering "how plausible is this hypothesized pose $x_t$?" That is what EKF and UKF need in their prediction step. Sampling is forward simulation that generates the next pose. A particle filter (MCL) uses this form directly. The four combinations are covered in §4.7.2–§4.7.5.
+For each of the two models there are two ways to use it: **closed-form density evaluation** and **sampling**. Closed-form returns a probability density value answering "how plausible is this hypothesized pose $x_t$?" That is what is needed when the Bayes filter integral is evaluated directly, as in grid localization. EKF and UKF prediction does not use this density value; it propagates the mean and covariance through a Jacobian or through sigma points. Sampling is forward simulation that generates the next pose. A particle filter (MCL) uses this form directly. The four combinations are covered in §4.7.2–§4.7.5.
 
 
 ### 4.7.2 Velocity Motion Model — Closed-Form
@@ -1004,7 +1003,7 @@ Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
   return (x', y', θ')ᵀ
 ```
 
-**Closed-form vs. sampling.** `motion_model_velocity` returns a probability density value, used alongside the Jacobian in the EKF/UKF prediction step. `sample_motion_model_velocity` produces one pose and is called directly to propagate each particle in a particle filter (MCL, §14.7). Both algorithms share the same noise parameters $\alpha_1..\alpha_6$, but their directions are opposite: closed-form *evaluates* a hypothesized pose, sampling *generates* the next pose.
+**Closed-form vs. sampling.** `motion_model_velocity` returns a probability density value, used where the density itself is needed — for example grid localization, which evaluates the Bayes filter integral directly. `sample_motion_model_velocity` produces one pose and is called directly to propagate each particle in a particle filter (MCL, §14.7). Both algorithms share the same noise parameters $\alpha_1..\alpha_6$, but their directions are opposite: closed-form *evaluates* a hypothesized pose, sampling *generates* the next pose.
 
 ```python
 import numpy as np
@@ -1084,7 +1083,7 @@ Algorithm motion_model_odometry(x_t, u_t, x_{t-1}):
   return p1 · p2 · p3
 ```
 
-The three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ are treated as independent noise variables, so the result can be used directly to evaluate a hypothesized pose in the EKF/UKF prediction step.
+The three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ are treated as independent noise variables, which yields a density with support in all three directions, so the likelihood of a given hypothesized pose can be evaluated directly.
 
 ### 4.7.5 Odometry Model — Sampling for Particle Filters
 
@@ -1168,7 +1167,7 @@ $$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid 
 
 The first factor $p(x_t \mid u_t, x_{t-1})$ is the motion model from §4.7.2–§4.7.5. The second factor $p(x_t \mid m)$ is the map-conditioned probability: in an occupancy grid, it is close to 1 when $x_t$ lies in a free cell and close to 0 in a wall or occupied cell.
 
-**Effect.** Particles no longer walk through walls in the particle filter. The simplest implementation samples a new pose, queries the map, and sets that particle's weight to 0 (or very low) when the cell is occupied. Strictly, $p(x_t \mid m)$ acts as a prior rather than a likelihood here, so the approximation assumes the motion model and the map information are independent — a limitation worth noting.
+**Effect.** Particles in the particle filter are kept from ending up inside walls. The simplest implementation samples a new pose, queries the map, and sets that particle's weight to 0 (or very low) when the cell is occupied. Only the endpoint is checked, so with a large time step a path that jumped clear across a wall is not filtered out. Strictly, $p(x_t \mid m)$ acts as a prior rather than a likelihood here, so the approximation assumes the motion model and the map information are independent — a limitation worth noting.
 
 In practice an occupancy grid has unknown regions in addition to free space. Whether $p(x_t \mid m)$ is set to 1 or to some intermediate value for unknown cells affects localization quality. ROS2 Nav2's default treats unknown cells as free.
 
@@ -1186,7 +1185,7 @@ The sampled velocity and odometry formulations describe motion priors for partic
 
 ---
 
-Deterministic FK maps joint angles to a single pose, while IK finds the set of joint-angle solutions for a target pose. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, reading encoder data directly, is more accurate but cannot be used for planning; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; closed-form serves the EKF/UKF.
+Deterministic FK maps joint angles to a single pose, while IK finds the set of joint-angle solutions for a target pose. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, being retrospective information obtained by integrating encoder rotations, cannot be used for planning but is more accurate in practice; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; density evaluation serves cases such as grid localization, where the density value itself is needed.
 
 One question remains. Every model here stacks noise on top of the kinematic constraint that wheels do not slip. In mud or on inclines — environments where that constraint itself breaks down — how far can $\alpha_i$ calibration compensate? §4.8 collects the textbooks and software referenced across this chapter.
 
@@ -1198,7 +1197,7 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 **Textbooks:**
 
-- **Craig, "Introduction to Robotics: Mechanics and Planning"** — covers DH parameters and kinematics using the Modified DH convention. Check its prerequisites and examples against the course in which it will be used.
+- **Craig, "Introduction to Robotics: Mechanics and Control"** — covers DH parameters and kinematics using the Modified DH convention. Check its prerequisites and examples against the course in which it will be used.
 
 - **Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control"** — PoE-based. Provides a free PDF and Coursera course, making it highly accessible. Mathematically cleaner but hard on first read. https://modernrobotics.org
 
@@ -1225,8 +1224,8 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 ```
 1955 ── DH parameters proposed (Denavit & Hartenberg)
 1969 ── Stanford Arm (an early electric, computer-controlled robot arm)
+1970s–80s ── Harmonic Drive becomes the standard reducer for industrial articulated-robot joints
 1985 ── Product of Exponentials formalized
-1998 ── Harmonic Drive adoption spreads in robots
 2019 ── MIT Mini Cheetah: QDD actuator
 2019 ── MoveIt2 (ROS2-based motion planning framework)
 2023 ── ALOHA: low-cost bimanual teleoperation platform

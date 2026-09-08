@@ -29,7 +29,7 @@ In these situations, learning-based approaches approximate the input-output rela
 
 If a problem can be solved with traditional methods, use traditional methods. Learning is a tool to apply where traditional methods hit their limits. Combining the two appropriately is the most realistic approach in practice.
 
-Where, then, are these limits in concrete terms? *Probabilistic Robotics* (Thrun, Burgard, and Fox) frames the motivation by domain. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a prior model is not realistic. Autonomous helicopter flight contends with aerodynamic nonlinearities and external disturbances large enough that learning-based control has a measurable edge. A Mars rover must make decisions autonomously because of the communication delay with Earth, and no one can hand it a complete terrain model in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
+Where, then, are these limits in concrete terms? Chapter 15 of *Probabilistic Robotics* (Thrun, Burgard, and Fox) uses four domains — a manipulator, an underwater vehicle, a helicopter, and a team of planetary exploration robots — to show why action selection under uncertainty is necessary. Read from the perspective of learning, those examples go as follows. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a prior model is not realistic. A helicopter contends with disturbances such as gusts large enough that the question becomes how much clearance to keep from obstacles, and planetary exploration robots cannot know the terrain or their positions relative to one another in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
 
 
 ---
@@ -52,7 +52,7 @@ The goal is to find a policy π(a|s) that maximizes the cumulative discounted re
 J(π) = E[ Σ_{t=0}^{∞} γ^t · r_t ]
 ```
 
-The Markov property is the assumption that "the next state depends only on the current state and action." It means you do not need to look at the entire prior history, but in real robots this assumption can break down (partial observability, i.e., a POMDP situation). In that case, observation history is used as the state, or a recurrent policy is used.
+The Markov property is the assumption that "the next state depends only on the current state and action." It means you do not need to look at the entire prior history. What breaks down on a real robot is not the Markov property of the state transition but the assumption that the observation *is* the state (partial observability, i.e., a POMDP situation). The latent state still transitions in a Markovian way; a policy built from observations alone does not. In that case, observation history or a belief is used as the state, or a recurrent policy is used.
 
 The MDP definition establishes the criterion for what is optimal. How to *compute* that optimal policy when the environment model $p(x'|x,a)$ and reward $r$ are known is the subject of the next section.
 
@@ -110,7 +110,7 @@ Algorithm MDP_value_iteration():
 
 Variable summary: $V_k$ is the value estimate at iteration $k$; $V^*$ is the optimal value after convergence; $\pi^*$ is the optimal policy; $r$ is reward; $\gamma$ is the discount factor; $p(x'|x,a)$ is the transition probability.
 
-The update order is arbitrary. According to Sutton & Barto (2018) §4.4, convergence is guaranteed as long as each state is updated infinitely often. The formula above uses a sum (Σ) for a discrete state space; the corresponding continuous-state expression uses an integral.
+The update order is arbitrary. According to Sutton & Barto (2018) §4.5, convergence is guaranteed as long as each state is updated infinitely often. The formula above uses a sum (Σ) for a discrete state space; the corresponding continuous-state expression uses an integral.
 
 Convergence guarantee: the Bellman update operator is a contraction mapping with contraction rate $\gamma$, so the iteration converges to the unique fixed point $V^*$. After $k$ iterations, the error is at most $\gamma^k$ times the initial error: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
 
@@ -120,9 +120,9 @@ Convergence guarantee: the Bellman update operator is a contraction mapping with
 
 Imagine a $5 \times 5$ grid. Each cell is a state $x$, and the four actions are up, down, left, and right. Reaching the goal cell yields $r = +100$; hitting an obstacle cell yields $r = -10$; all other moves cost $r = -1$. Transitions go in the intended direction with probability 0.8 and in each orthogonal direction with probability 0.1 (stochastic transitions).
 
-Running Value Iteration produces a value function shaped like a contour map — high around the goal cell, low around obstacles. In the early iterations, only the states adjacent to the goal hold positive values; as the iterations proceed, the values propagate outward. After convergence, following the direction of maximum value from any cell yields the optimal path. The path automatically detours around obstacles.
+Running Value Iteration produces a value function shaped like a contour map — high around the goal cell, low around obstacles. In the early iterations, only the states adjacent to the goal hold positive values; as the iterations proceed, the values propagate outward. After convergence, picking in each cell the action with the largest sum of immediate reward and expected next-state value yields the optimal policy, and behavior that detours around obstacles emerges naturally. A policy is a mapping that assigns an action to every state; under stochastic transitions, the trajectory actually executed differs from run to run.
 
-That greedy path is $\pi^*$. No explicit path search (RRT, A*) is needed — following the gradient of the value function is enough.
+The resulting state-to-action mapping is $\pi^*$. No explicit path search (RRT, A*) is needed — the value function alone determines the action.
 
 MDP Value Iteration applies when the environment model $p(x'|x,a)$ and $r$ are *given*. Learning by experience when the model is *unknown* is covered in §8.3 (model-free RL). Planning under *partial observation* is in Ch.7 §7.9 (advanced POMDP).
 
@@ -168,7 +168,7 @@ In robotics, data collection is costly, so the sample efficiency of off-policy m
 
 ### PPO (Proximal Policy Optimization)
 
-PPO is an on-policy algorithm proposed by Schulman et al. (2017). It limits the size of policy updates and clips changes that move too far from the previous policy.
+PPO is an on-policy algorithm proposed by Schulman et al. (2017). It clips the probability ratio inside the surrogate objective so that changes far from the previous policy earn no gain. A trust-region constraint that binds the policy change itself belongs to TRPO; PPO fills that role through the design of the objective instead.
 
 ```
 L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
@@ -176,7 +176,7 @@ L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
 
 Here r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t) is the probability ratio, and ε has a default value of 0.2 in the original paper.
 
-PPO is popular because it is relatively simple to implement, insensitive to hyperparameters, and trains stably. When combined with large-scale parallel simulation such as NVIDIA Isaac Lab, data can be collected from thousands of environments simultaneously, so the sample efficiency problem can be solved by sheer volume.
+PPO is popular because it is relatively simple to implement and its defaults work reasonably well across a fairly wide range of settings. Reproducibility studies have shown, however, that its performance depends heavily on implementation details such as advantage normalization and value clipping. It also trains stably. When combined with large-scale parallel simulation such as NVIDIA Isaac Lab, data can be collected from thousands of environments simultaneously, so the sample efficiency problem can be solved by sheer volume.
 
 ### SAC (Soft Actor-Critic)
 
@@ -207,7 +207,7 @@ Performance is similar to SAC, but since entropy tuning is not needed, there are
 | Simulation, GPU parallelization possible | PPO | Parallel environments compensate for sample efficiency |
 | Real robot, little data | SAC | Off-policy, sample efficient |
 | Continuous action space, stability important | SAC or TD3 | Both strong in continuous spaces |
-| Discrete action space | PPO or DQN | SAC is continuous-space only |
+| Discrete action space | PPO or DQN | The original SAC targets continuous actions; a discrete variant requires a separate implementation |
 | Project just getting started | PPO | Easy to tune, easy to debug |
 
 ### Stable-Baselines3 Code Example
@@ -327,7 +327,7 @@ Even if you hit a reward of 10,000 in simulation, it is common for the real robo
 
 ### Domain Randomization
 
-The idea is to randomly vary the physical parameters of the simulation so that the policy is trained to be robust and does not depend on specific parameters. OpenAI's Dactyl (2019) randomized hundreds of physical parameters simultaneously and succeeded at sim-to-real, demonstrating the potential of this approach.
+The idea is to randomly vary the physical parameters of the simulation so that the policy is trained to be robust and does not depend on specific parameters. OpenAI's Dactyl (2018) randomized hundreds of physical parameters simultaneously and succeeded at sim-to-real, demonstrating the potential of this approach.
 
 Representative parameters to randomize:
 
@@ -368,7 +368,7 @@ def add_obs_noise(obs, config):
     return obs + noise
 ```
 
-With a wide enough randomization range, reality is likely to fall within that range. In exchange, the upper bound on policy performance drops. Performance will necessarily be lower than a policy optimized for specific parameters.
+With a wide enough randomization range, reality is likely to fall within that range. In exchange, performance measured at one specific parameter setting drops. On a real system those parameters are hard to identify exactly, so a randomized policy sometimes does better than a specialized one.
 
 ### System Identification (Sys-ID)
 
@@ -460,7 +460,7 @@ for epoch in range(100):
         print(f"Epoch {epoch+1}, Loss: {total_loss/len(loader):.4f}")
 ```
 
-**Compounding error problem**: A structural limitation of BC. Once the learned policy deviates even slightly from the expert trajectory, it reaches states not in the training data. Behavior there is unpredictable, deviation grows, and errors accumulate. Errors can grow exponentially over time.
+**Compounding error problem**: A structural limitation of BC. Once the learned policy deviates even slightly from the expert trajectory, it reaches states not in the training data. Behavior there is unpredictable, deviation grows, and errors accumulate. Over a horizon $T$ the error can grow as $O(\epsilon T^2)$ (Ross & Bagnell, 2010).
 
 ### DAgger (Dataset Aggregation)
 
@@ -487,9 +487,9 @@ The architecture uses a Transformer encoder-decoder, taking joint positions and 
 
 ### Diffusion Policy
 
-A method proposed by Chi et al. (2023) at CMU, applying diffusion models to action generation.
+A method proposed by Chi et al. (2023), applying diffusion models to action generation.
 
-Whereas traditional BC models actions with a unimodal Gaussian, diffusion policy can express arbitrarily complex action distributions through a denoising process. It handles multimodal distributions particularly well.
+Diffusion policy can express arbitrarily complex action distributions through a denoising process. BC implemented as MSE regression effectively assumes a unimodal Gaussian, whereas diffusion policy handles multimodal distributions naturally. BC is the name of a training scheme, not of a distribution family — implemented with an energy-based or mixture-density head, it can represent multiple modes.
 
 ```python
 # Action generation process of Diffusion Policy (pseudo-code)
@@ -670,7 +670,7 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
 
 > **Additional papers**
 > - [Andrychowicz et al., "Hindsight Experience Replay" (NeurIPS 2017, arXiv:1707.01495)](https://arxiv.org/abs/1707.01495) — A cornerstone for solving the sparse reward problem. Relabels failed trajectories as successes.
-> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — Trains 150+ domains with a single set of hyperparameters. A representative recent result in world-model-based RL.
+> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — Trains more than 150 tasks with a single fixed hyperparameter configuration. A representative recent result in world-model-based RL.
 > - [Chi et al., "Universal Manipulation Interface" (UMI, RSS 2024, arXiv:2402.10329)](https://arxiv.org/abs/2402.10329) — Data collection with a handheld gripper, zero-shot deployment across diverse robots.
 > - [Fu et al., "Mobile ALOHA" (CoRL 2024, arXiv:2401.02117)](https://arxiv.org/abs/2401.02117) — Mobile base + bimanual teleoperation. Co-training significantly improves success rate.
 
@@ -684,7 +684,8 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
          An influential early Monte Carlo policy-gradient method whose score-function estimator has high variance.
 
 2013 ── DQN (Mnih et al., Atari)
-         The beginning of Deep RL. Stable training via replay buffer + target network.
+         The beginning of Deep RL. A replay buffer mitigated the correlated-sample problem.
+         The fixed target network was added in the 2015 Nature version.
 
 2015 ── TRPO (Schulman et al.)
          Stable policy updates with a trust region constraint. Strong theory, complex implementation.
@@ -696,7 +697,7 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
          Entropy regularization + off-policy. Sample efficient in continuous spaces.
 
 2019 ── ANYmal: sim-to-real locomotion (ETH Zurich)
-         Succeeded at quadruped sim-to-real through large-scale domain randomization.
+         Succeeded at quadruped sim-to-real by modeling the drivetrain dynamics with an actuator network trained on real robot data.
 
 2020 ── Widespread practical adoption of DAgger
          Imitation learning proved practical. Applied across diverse robot platforms.
@@ -704,7 +705,7 @@ Useful for tasks where reward is hard to define numerically (e.g., "walk natural
 2022 ── RT-1 (Google)
          Large-scale robot data + Transformer. A multi-task generalist policy.
 
-2023 ── ACT/ALOHA (Stanford), Diffusion Policy (CMU)
+2023 ── ACT/ALOHA (Stanford), Diffusion Policy (Columbia / TRI / MIT)
          A new standard for imitation learning. Performance gains via action chunking and diffusion.
 
 2023 ── RT-2 (Google)

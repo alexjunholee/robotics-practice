@@ -97,7 +97,7 @@ tau_g = pin.rnea(model, data, q, np.zeros(model.nv), np.zeros(model.nv))
 print("Gravity compensation torques:", tau_g)
 ```
 
-Gravity compensation drops out of RNEA immediately by setting v=0, a=0. Even this alone keeps the robot from sagging under gravity. It is one of the first controllers implemented in practice.
+Gravity compensation drops out of RNEA immediately by setting the joint velocities and accelerations to zero and initializing the base acceleration to a[0] = -g. The pseudocode above omits this initialization. Even this alone keeps the robot from sagging under gravity. It is one of the first controllers implemented in practice.
 
 The same computation in Drake:
 
@@ -152,7 +152,7 @@ d/dt (∂L/∂q̇_i) - ∂L/∂q_i = τ_i
 
 Writing this equation for each generalized coordinate q_i yields the equations of motion of the system.
 
-The coordinate frame can be chosen freely. Newtonian mechanics expresses the position and orientation of each link's center of mass in the world frame and manages the constraints separately. In Lagrangian mechanics, choosing joint angles as generalized coordinates incorporates those constraints automatically.
+The coordinate frame can be chosen freely. The Newton-Euler approach solves link by link, passing forces and moments between neighbors, so one has to decide which frame to express them in and how to handle the constraints. In Lagrangian mechanics, choosing joint angles as generalized coordinates makes the constraints drop out of the equations — but only for open chains with holonomic constraints, where an independent set of generalized coordinates exists. With closed chains or nonholonomic constraints, Lagrange multipliers remain.
 
 ### Manipulator Equation
 
@@ -219,7 +219,7 @@ M(q) = [ (m_1+m_2)l_1^2 + m_2 l_2^2 + 2 m_2 l_1 l_2 cos(q_2)    m_2 l_2^2 + m_2 
         [ m_2 l_2^2 + m_2 l_1 l_2 cos(q_2)                          m_2 l_2^2                          ]
 ```
 
-M(q) depends on q_2. At q_2 = 0, the arm is fully extended and its inertia is maximal; at q_2 = π, the arm is folded and its inertia is minimal.
+M(q) depends on q_2. Look at M_{11}, the effective inertia seen by the base joint: it is maximal at q_2 = 0, with the arm fully extended, and minimal at q_2 = π, with the arm folded.
 
 **C(q, q̇) matrix:**
 
@@ -421,7 +421,7 @@ There are two large frameworks for modeling contact:
 - Directly imposes the constraint that bodies do not interpenetrate.
 - Contact forces come out as the Lagrange multipliers of the constraint.
 - Mathematically clean but numerically difficult — discontinuities appear at contact/non-contact transitions, and handling them requires solving an LCP (Linear Complementarity Problem) or NCP (Nonlinear Complementarity Problem).
-- Drake's time-stepping approach belongs to this family.
+- LCP time-stepping methods of the Stewart-Trinkle family belong to this category.
 
 **Compliant contact:**
 - Places a virtual spring-damper at the contact surface. It generates a restoring force proportional to penetration depth.
@@ -459,8 +459,8 @@ Why are tasks like grasping, rotating, and inserting objects (peg-in-hole, in-ha
 Because contact can be approximated numerically in several ways. Each simulator picks a different trade-off between accuracy, speed, and stability:
 
 - **MuJoCo**: compliant contact + convex optimization. Fast and stable, but not physically exact. In particular, interpenetration is allowed and treated as part of "soft contact". This stability is one reason MuJoCo is popular as an RL environment.
-- **Drake**: rigid contact + time-stepping (Stewart-Trinkle), or hydroelastic contact. More physically rigorous but potentially more expensive. Hydroelastic contact even computes the pressure distribution over the contact surface.
-- **Bullet**: velocity-level LCP + sequential impulse. Originating from games/VR, the engine is optimized for speed but has limitations for robotics tasks that require accurate contact.
+- **Drake**: compliant point contact (TAMSI/SAP discrete solvers) and hydroelastic contact, both of which are compliant approaches. More physically rigorous but potentially more expensive. Hydroelastic contact even computes the pressure distribution over the contact surface.
+- **Bullet**: velocity-level LCP + sequential impulse. Originating from games/VR, the engine is optimized for speed. Contact accuracy depends on the settings and the task, so how it ranks against MuJoCo and Drake has to be compared directly on the target task.
 - **DART**: LCP-based rigid contact. Academically rigorous, but with a smaller user base than MuJoCo or Drake.
 
 The choice of simulator depends on the research goal. MuJoCo is widely used for locomotion RL, while both Drake and MuJoCo can represent contact-rich manipulation. Choose from the required contact model, gradients, throughput, target hardware, and validation cases rather than from a universal ranking.
@@ -485,7 +485,7 @@ for i in range(n_contacts):
     print(f"Contact {i}:")
     print(f"  Position: {contact.pos}")
     print(f"  Normal: {contact.frame[:3]}")  # contact normal
-    print(f"  Penetration depth: {contact.dist}")
+    print(f"  Signed distance (negative means penetration): {contact.dist}")
     print(f"  Geom pair: ({contact.geom1}, {contact.geom2})")
 ```
 
@@ -626,16 +626,16 @@ Because q and v do not live in the same vector space, one cannot simply do q += 
 
 ### Underactuated Systems
 
-A core property of floating-base systems: **underactuation**. The base has no actuator directly attached to it. Legged robots must push against the ground with their feet to move the base; drones move the base through propeller thrust.
+Floating-base systems are usually **underactuated**. Legged robots have no actuator directly attached to the base, so they must push against the ground with their feet to move it, and a quadrotor, although its rotors are mounted on the base, has to cover 6 DOF with 4 inputs. What decides underactuation is not the floating base itself but the number of independent inputs and the contact conditions. A free-flyer with thrusters along all 6 directions, or an omnidirectional multirotor, is fully actuated, and a legged robot can control all 6 base DOF as well when it has enough contact.
 
 Splitting the manipulator equation into base and joints:
 
 ```
-[ M_bb  M_bj ] [ a_base  ]   [ C_b ]   [ g_b ]   [  0  ]   [ J_c^T ]
-[ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_c^T ] λ
+[ M_bb  M_bj ] [ a_base  ]   [ C_b ]   [ g_b ]   [  0  ]   [ J_{c,b}^T ]
+[ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_{c,j}^T ] λ
 ```
 
-The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force and J_c is the contact Jacobian. Contact forces and gravity accelerate the base.
+The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force, and J_{c,b} (6×k) and J_{c,j} (n×k) are the blocks of the contact Jacobian J_c split into its base columns and joint columns. Contact forces and gravity accelerate the base.
 
 This constraint is what makes locomotion control hard. For a fixed-base manipulator, the desired joint torque can simply be commanded to the motors; a legged robot, in contrast, must generate appropriate contact forces to make the base move as desired.
 
@@ -661,7 +661,7 @@ L̇ = Σ (r_contact - r_CoM) × f_contact
 
 Why this matters in locomotion control:
 
-1. **CoM dynamics determines balance.** For the robot not to fall, the CoM trajectory must stay over the support polygon (the ZMP condition). More precisely, centroidal momentum must be regulated appropriately.
+1. **CoM dynamics determines balance.** At rest, the vertical projection of the CoM must lie inside the support polygon (the static stability condition). While walking, it is the ZMP (the center of pressure over the contact surface) that must stay inside the support polygon (the ZMP condition). More generally, centroidal momentum must be regulated appropriately.
 
 2. **Dimensionality reduction.** The full dynamics of an n-DOF legged robot is n-dimensional, but centroidal dynamics is 6-dimensional (3 linear + 3 angular momentum). A common approach is to first plan the desired momentum trajectory in this 6D space, then decompose down to the full joint level.
 
@@ -680,7 +680,7 @@ v = np.random.randn(model.nv)
 
 # Centroidal momentum
 pin.computeCentroidalMomentum(model, data, q, v)
-h = data.hg  # 6D centroidal momentum [angular; linear]
+h = data.hg  # 6D centroidal momentum; Pinocchio orders it [linear; angular]
 print("Angular momentum:", h.angular)
 print("Linear momentum:", h.linear)
 
@@ -713,7 +713,7 @@ This structure applies to systems with a floating base. Drone trajectory optimiz
 
 > **Further reading**
 > - Orin et al., "Centroidal Dynamics of a Humanoid Robot", Autonomous Robots 2013 — an analysis of centroidal dynamics for humanoids
-> - Wensing et al., "Optimization-Based Control for Dynamic Legged Locomotion", 2023 — a survey of locomotion control
+> - Wensing et al., "Optimization-Based Control for Dynamic Legged Robots", IEEE T-RO 2024 (arXiv 2022) — a survey of locomotion control
 > - Russ Tedrake, *Underactuated Robotics*, Ch. "Walking" (https://underactuated.csail.mit.edu/) — the relationship between underactuated systems and walking
 > - Carpentier, Mansard, "Pinocchio: fast forward and inverse dynamics for poly-articulated systems" (https://github.com/stack-of-tasks/pinocchio) — Pinocchio's centroidal dynamics implementation
 
@@ -739,10 +739,10 @@ The recommended reading order depends on the reader's background.
 
 **Libraries and tools:**
 
-> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — a C++/Python library for pure dynamics computation. Supports RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives, and more. Autodiff via CasADi/JAX is also available (Pinocchio 3.x).
+> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — a C++/Python library for pure dynamics computation. Supports RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives, and more. Autodiff via CasADi and CppAD is also available (Pinocchio 3.x).
 > - Drake (https://drake.mit.edu/) — a framework integrating simulation + optimization + control. MultibodyPlant is the dynamics engine. Its powerful mathematical programming interface is particularly useful for trajectory optimization.
 > - MuJoCo (https://mujoco.org/) — a physics simulator maintained by DeepMind and widely used for robot learning with contact.
-> - PyBullet (https://pybullet.org/) — the Python interface to Bullet Physics. The low entry barrier makes it suitable for teaching, but its contact physics accuracy does not match MuJoCo or Drake.
+> - PyBullet (https://pybullet.org/) — the Python interface to Bullet Physics. The low entry barrier makes it suitable for teaching, but contact physics accuracy and speed depend on the articulated-body setup, the contact settings, and the integration time step, so they have to be compared directly on the target task.
 
 ---
 
@@ -760,11 +760,11 @@ The recommended reading order depends on the reader's background.
 2012 ── MuJoCo released (Todorov, Erez, Tassa)
 2015 ── Bullet Physics 2.x → PyBullet interface
 2016 ── Pinocchio 1.0 released (LAAS-CNRS)
+2021 ── DeepMind acquires MuJoCo and makes it free (source released May 2022 under Apache 2.0)
 2022 ── Drake 1.0 (MIT → Toyota Research Institute)
-2021 ── MuJoCo open-sourced (after DeepMind acquisition)
-2022 ── MuJoCo 2.3: implicit integration, elliptic friction cone
-2023 ── Pinocchio 3.0: CasADi/JAX autodiff support
+2022 ── MuJoCo 2.3 released (the implicitfast integrator arrived in 2.3.x in 2023; the elliptic friction cone was available earlier)
 2023 ── MuJoCo 3.0: MJX (JAX backend for GPU parallelism)
+2024 ── Pinocchio 3.0 stable release: CasADi and CppAD autodiff support
 ```
 
 ---

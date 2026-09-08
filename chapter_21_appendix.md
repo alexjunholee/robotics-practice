@@ -44,7 +44,7 @@
 
 **Loop Closure**: 이전에 방문한 장소를 다시 인식해 drift를 보정하는 과정. "아, 여기 아까 왔던 곳이네"라고 알아차려 누적 오차를 한꺼번에 교정한다.
 
-**Drift**: 오차가 누적되는 현상. 100 m를 걸으며 매 걸음마다 1 cm씩 오차가 나면, 도착할 때는 100 cm의 오차가 된다.
+**Drift**: 오차가 누적되는 현상. 보폭 1 m로 100 m를 걸으며 매 걸음 1 cm의 오차가 같은 방향으로 쌓이면 도착할 때 100 cm가 된다. 오차의 방향이 무상관이면 걸음 수의 제곱근에 비례해 10 cm 규모로 남는다.
 
 **Reprojection Error**: 3D 점을 이미지에 재투영했을 때의 오차. "이 3D 점이 카메라 이미지의 어디에 보여야 하는가"라는 예측값과 실제값의 차이다.
 
@@ -90,7 +90,7 @@ A: 새로 배운다면 ROS2를 권장한다. ROS1은 2025년에 공식 지원이
 
 **Q: 논문을 어디서 찾나요?**
 
-A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/) (논문 검색)를 주로 활용한다. 코드도 필요하면 [Papers With Code](https://paperswithcode.com/)가 편하고, 학회별로 보고 싶다면 [CVPR Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)도 유용하다.
+A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/) (논문 검색)를 주로 활용한다. 코드도 필요하면 논문의 GitHub 링크나 [Hugging Face Papers](https://huggingface.co/papers/trending)를 보고(Papers With Code는 2025년 종료), 학회별로 보고 싶다면 [CVPR Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)도 유용하다.
 
 **Q: SLAM을 공부하려면 어디서 시작해야 하나요?**
 
@@ -98,7 +98,7 @@ A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?li
 
 **Q: 연구 아이디어는 어떻게 찾나요?**
 
-A: 최신 학회 논문의 Limitation 섹션을 읽어보자. 해결되지 않은 문제에서 아이디어를 얻을 수 있다. 또 다른 방법은 아직 합쳐지지 않은 두 분야를 합치는 것이다. "3D Gaussian Splatting + Semantic SLAM"처럼.
+A: 최신 학회 논문의 Limitation 섹션을 읽어보자. 해결되지 않은 문제에서 아이디어를 얻을 수 있다. 또 다른 방법은 아직 덜 합쳐진 두 분야를 잇는 것이다. 다만 조합의 이름만으로 미개척을 판단할 수는 없다. "3D Gaussian Splatting + Semantic SLAM"은 이미 여러 연구가 나와 있고 이 책의 연구 방향 장도 의미 정보를 담은 Gaussian 지도를 다룬다. 선행 연구를 먼저 확인한 뒤 남은 자리를 찾아야 한다.
 
 **Q: 어떤 GPU를 사야 하나요?**
 
@@ -194,7 +194,7 @@ ssh-copy-id user@server_ip
 ssh user@server_ip
 ```
 
-GitHub에도 같은 공개키(`~/.ssh/id_ed25519.pub`)를 등록하면 `git push`에 비밀번호가 필요 없다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
+GitHub에도 같은 공개키(`~/.ssh/id_ed25519.pub`)를 등록하면 SSH remote(`git@github.com:...`)에서 `git push`에 비밀번호가 필요 없다. HTTPS로 clone한 저장소는 토큰이나 credential helper를 쓰므로 이 키가 적용되지 않는다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
 
 **CPU 성능 모드 설정 (실험 시)**
 
@@ -255,7 +255,7 @@ for i, (inputs, labels) in enumerate(dataloader):
 
 AMP의 메모리 절감과 속도 향상 효과는 모델·GPU·연산자에 따라 다르다. 같은 batch와 모델로 peak memory와 학습 안정성을 측정한다.
 
-**문제**: `CUDA version mismatch`
+**문제**: `CUDA version mismatch` (주로 CUDA 확장을 직접 빌드할 때)
 
 **해결**:
 
@@ -266,7 +266,9 @@ nvcc --version
 # PyTorch에서 인식하는 CUDA 버전 확인
 python -c "import torch; print(torch.version.cuda)"
 
-# 둘이 다르면 PyTorch 재설치 (CUDA 버전에 맞춰서)
+# 두 값은 달라도 정상이다. wheel이 자체 CUDA 런타임을 포함하므로
+# 드라이버가 그 런타임을 지원하면 그대로 쓴다. 단 CUDA 확장을 직접 빌드할 때는
+# nvcc와 torch.version.cuda의 메이저 버전을 맞춰야 하며, 그때만 재설치한다.
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```
 
@@ -349,8 +351,14 @@ docker run -it --env DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ...
 **해결**:
 
 ```bash
-# nvidia-container-toolkit 설치
-sudo apt-get install -y nvidia-container-toolkit
+# nvidia-container-toolkit 설치 — NVIDIA apt 저장소와 키를 먼저 등록해야 패키지가 보인다
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker   # Docker 런타임에 훅 등록
 sudo systemctl restart docker
 
 # GPU 옵션 추가해서 실행
@@ -414,10 +422,11 @@ sudo apt-get install libeigen3-dev
 
 - [ ] Ubuntu 설치 완료 (22.04 LTS 권장)
 - [ ] NVIDIA 드라이버 설치 (`nvidia-smi`로 확인)
-- [ ] CUDA / cuDNN 설치 (`nvcc --version`으로 확인)
+- [ ] CUDA toolkit 설치 (`nvcc --version`으로 확인)
+- [ ] cuDNN 설치 (시스템 설치는 `cudnn_version.h`로 확인. `torch.backends.cudnn.version()`은 PyTorch에 번들된 cuDNN을 보여준다)
 - [ ] Conda 또는 venv 환경 설정
 - [ ] PyTorch GPU 동작 확인 (`torch.cuda.is_available()`)
-- [ ] ROS2 설치 (필요 시, Humble 또는 Jazzy)
+- [ ] ROS2 설치 (필요 시. Ubuntu 22.04이면 Humble, 24.04이면 Jazzy)
 - [ ] Git 설정 (`git config --global user.name/email`)
 - [ ] Docker 설치 (선택, 재현성을 위해 권장)
 - [ ] VS Code + 필수 확장 설치 (Python, Remote-SSH, Jupyter)
@@ -432,7 +441,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-논문 읽기·쓰기 도구는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 도구는 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
+논문 읽기 도구(노트 양식·인용 관리)는 [「연구노트」 Ch.15](../research-notes/guide.html#chapter-15)에서, 쓰기 도구는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 도구는 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
 
 ### D.4 데이터셋 준비
 

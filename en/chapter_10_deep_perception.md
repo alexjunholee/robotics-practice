@@ -192,7 +192,7 @@ results[0].show()
 
 **SSD (Single Shot Detector)**:
 - Predicts from feature maps at various scales
-- Better at detecting small objects than YOLO
+- Small objects are a known weakness of SSD, and the YOLOv3-and-later generations, which adopted FPN, do better on them
 
 > **Further reading**
 > - [Redmon et al., "You Only Look Once: Unified, Real-Time Object Detection" (2016)](https://arxiv.org/abs/1506.02640) — the original YOLO paper. Concise and a good read.
@@ -308,7 +308,7 @@ $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(
 ```python
 import torch.optim as optim
 
-# Cosine Annealing with Warm-up (manual)
+# Cosine Annealing (no warm-up). If you need warm-up, add it like pct_start in OneCycleLR below
 optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
 
@@ -367,11 +367,14 @@ When the model gets large, a single GPU runs out of time. DistributedDataParalle
 
 ```python
 # Minimal DDP structure (launch with torchrun)
+import os
+import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 dist.init_process_group("nccl")
 local_rank = int(os.environ["LOCAL_RANK"])
+torch.cuda.set_device(local_rank)
 model = model.to(local_rank)
 model = DDP(model, device_ids=[local_rank])
 
@@ -413,15 +416,15 @@ Here, sim is cosine similarity and τ is the temperature. The numerator raises t
 Based on ViT, this approach randomly masks 75% of image patches and reconstructs the masked portions from the remaining 25%. It follows the same principle as BERT in NLP masking and recovering words.
 
 - Why the masking ratio is as high as 75%: images have much more redundancy than text, so a high masking ratio makes the task harder and forces better representations.
-- Since the encoder only processes the visible patches, training is efficient (75% reduction in compute).
+- Masking 75% of the patches leaves the encoder processing only 25% of them, which makes training efficient. The original paper reports that pre-training time drops by more than 3x. The masking ratio and the reduction in compute are not the same number: attention cost grows superlinearly in the number of tokens, and the decoder's cost is added on top.
 
 **Connection to DINOv2**:
 
 DINOv2 is trained via self-distillation. It uses a teacher-student structure, but the teacher is the EMA (exponential moving average) of the student.
 
 - **Self-distillation**: student and teacher share the same architecture. The teacher's weights are an EMA of the student's weights.
-- **Centering + Sharpening**: centering (subtracting the mean) and sharpening (low temperature) are applied to the teacher output to prevent mode collapse.
-- The resulting DINOv2 features achieve performance comparable to supervised methods without additional training — e.g., 83.0% ImageNet k-NN and 82.0% ADE20K linear probe.
+- **Sharpening + batch normalization**: sharpening (low temperature) is applied to the teacher output, and mode collapse is prevented with SwAV's Sinkhorn-Knopp batch normalization instead of the centering (subtracting the mean) used in DINO v1.
+- The resulting DINOv2 features are comparable to supervised methods even with the backbone frozen. ImageNet classification is evaluated with k-NN, which trains nothing, while ADE20K semantic segmentation is evaluated with a linear probe — a linear head is trained — and reported in mIoU. The two evaluations differ in what is trained and in what they measure, so check the original paper's numbers, together with the model size, before citing them.
 
 **Practice — Fine-tuning a self-supervised backbone on HuggingFace**:
 
@@ -566,13 +569,17 @@ A way for the model to adapt to new environments even after deployment. Without 
 ```python
 # Simplified TENT update
 model.eval()
-# Make only the BN affine parameters trainable
+model.requires_grad_(False)          # freeze everything first
+params = []
 for m in model.modules():
     if isinstance(m, nn.BatchNorm2d):
-        m.requires_grad_(True)
-        m.track_running_stats = False  # use batch statistics
+        m.requires_grad_(True)       # re-enable only the BN affine parameters
+        m.track_running_stats = False
+        m.running_mean = None        # clear the running buffers so batch statistics are used in eval mode
+        m.running_var = None
+        params += [m.weight, m.bias]
 
-optimizer = optim.SGD(model.parameters(), lr=1e-4)
+optimizer = optim.SGD(params, lr=1e-4)  # optimize only the BN parameters
 
 # Adaptation at inference time
 for batch in test_loader:

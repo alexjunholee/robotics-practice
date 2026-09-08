@@ -24,8 +24,8 @@ All of these techniques face a common obstacle: uncertainty. Thrun, Burgard, Fox
 
 > **Further reading**
 > - [Andrew Davison — From SLAM to Spatial AI (MIT Robotics)](https://www.youtube.com/watch?v=BRRtlR0C_CY) — Prof. Andrew Davison's talk laying out the vision for Spatial AI. Worth watching to orient yourself in this field.
-> - [FutureMapping paper (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — A 2018 paper proposing a Spatial AI system that combines object-level mapping with prediction of future states.
-> - [Cyrill Stachniss — Introduction to Mobile Robotics](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — Prof. Cyrill Stachniss's mobile robotics lectures at the University of Bonn. A well-organized treatment of the foundational concepts behind Spatial AI.
+> - [FutureMapping paper (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — A 2018 position paper discussing how SLAM is evolving into Spatial AI perception that unifies geometry and semantics, and examining the computational structure of those algorithms together with processor and sensor co-design.
+> - [Cyrill Stachniss — SLAM Course (2013)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — Prof. Cyrill Stachniss's SLAM lectures from his Freiburg years. Graduate-level material covering EKF-SLAM, FastSLAM, and graph SLAM. A well-organized treatment of the foundational concepts behind Spatial AI.
 
 ## 1.2 Why It Matters
 
@@ -72,7 +72,7 @@ In an era where AI writes code, summarizes papers, and proposes experiments, whe
 - **Problem definition**: AI can help solve a stated problem, but it cannot determine which problem deserves attention. Choosing a sensor suite for an environment, deciding what accuracy an application requires, and accepting the right trade-offs all demand domain knowledge. (*The general framework for problem definition is covered in [Research Notes Ch.1](../../research-notes/guide.html#chapter-1) and [Research Notes Ch.2](../../research-notes/guide.html#chapter-2) (Korean only).*)
 - **System integration**: Turning perception modules, control modules, communication stacks, and hardware into a single working system. AI can write code for each module, but designing the interfaces, timing, and exception handling between modules is the engineer's job.
 - **Interface with the physical world**: A loose cable, dust on a sensor lens, or an overheating motor can be difficult to diagnose through a remote connection alone. Someone must inspect the robot and its hardware directly.
-- **Judging reliability**: Even when AI reports "99% accuracy", whether that 1% leads to a safety incident is something an engineer must judge. 99% is not enough in autonomous driving, but 99% may be enough for an indoor serving robot.
+- **Judging reliability**: Even when AI reports "99% accuracy", the engineer has to check what that number counted and against what denominator, and what kind of failure the remaining 1% consists of. The same 99% carries different weight for a task whose failures injure people than for one whose failures end in a retry. The criterion is the cost of a failure and how often the system is exposed to it—not the name of the industry.
 
 Even when AI writes the code and summarizes the papers, it can't do these four things for you.
 

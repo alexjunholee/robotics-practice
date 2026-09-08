@@ -57,7 +57,7 @@ It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and
 
 ### 17.1.3 Waymo Open Dataset
 
-The Waymo Open Dataset is Google's large-scale autonomous driving dataset.
+The Waymo Open Dataset is a large-scale autonomous driving dataset released by Waymo (an Alphabet subsidiary).
 
 Together with nuScenes, it is one of the two main benchmarks in current autonomous driving research. It leads in data quality and scale, and its annual challenge lets you track the latest technical trends.
 
@@ -241,7 +241,7 @@ A 10 ms offset between camera and LiDAR timestamps produces a position error of 
 - Approximate synchronization based on timestamps
 - Use of interpolation
 
-**In ROS, filtering is only possible at reception time:**
+**In ROS, `message_filters` synchronizes on the stamp in the message header. It falls back to arrival time only for headerless messages, and only when `allow_headerless` is set:**
 
 ```python
 import message_filters
@@ -267,7 +267,7 @@ sync.registerCallback(self.callback)
 
 **Camera-IMU**: Kalibr is recommended.
 
-If calibration is inaccurate, the object position seen by the camera and the one seen by the LiDAR do not match. Sensor fusion accuracy depends on calibration quality. In linear algebra terms, the intrinsic corresponds to the 3×3 camera matrix K, and the extrinsic corresponds to the 4×4 transformation matrix [R|t].
+If calibration is inaccurate, the object position seen by the camera and the one seen by the LiDAR do not match. Sensor fusion accuracy depends on calibration quality. In linear algebra terms, the intrinsic is the 3×3 camera matrix K. The extrinsic is the 3×4 block [R|t] when it enters the camera projection, and a 4×4 homogeneous transformation — the same block with a [0 0 0 1] row appended below — when it is used as a coordinate transformation between sensors.
 
 > **Further reading**
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — checkerboard-based camera calibration.

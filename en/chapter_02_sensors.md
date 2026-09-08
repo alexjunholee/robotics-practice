@@ -153,7 +153,7 @@ Event-camera research has continued to expand around high-speed motion and HDR c
 - No motion blur
 
 **Cons**:
-- No output for static scenes
+- No output without a brightness change (i.e., when both the scene and the camera are static and the lighting is constant)
 - Difficult to apply traditional CV algorithms
 - Relatively expensive
 
@@ -169,11 +169,11 @@ Event-camera research has continued to expand around high-speed motion and HDR c
 
 ## 2.2 LiDAR
 
-**LiDAR (Light Detection and Ranging)** is a sensor that measures distance using lasers. It directly produces a 3D point cloud.
+**LiDAR (Light Detection and Ranging)** is a sensor that measures distance using lasers. The dimensionality of the output depends on the type: 3D LiDAR directly produces a point cloud, while 2D LiDAR returns a scan of a single plane.
 
-Cameras record color and texture, but passive monocular images do not directly determine metric depth. LiDAR measures the range of each return and forms 3D points. Range and error depend on the model, surface reflectivity, incidence angle, atmosphere, sunlight, and return mode; some long-range automotive units specify ranges beyond 100 m under stated reflectivity conditions. This direct range measurement is why LiDAR is used in autonomous-driving systems.
+Cameras record color and texture, but passive monocular images do not directly determine metric depth. LiDAR measures the range of each return and forms points (3D points for a 3D LiDAR, points on a plane for a 2D LiDAR). Range and error depend on the model, surface reflectivity, incidence angle, atmosphere, sunlight, and return mode; some long-range automotive units specify ranges beyond 100 m under stated reflectivity conditions. Compared with a passive monocular camera, this direct range measurement is LiDAR's core strength. ToF and structured-light RGB-D cameras and radar also measure range directly, so what sets LiDAR apart is not the measurement itself but its angular resolution and its range accuracy at long distances.
 
-Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications. With no moving parts, it offers advantages in durability and mass production for automotive systems. Scan patterns such as Livox's non-repetitive design also differ from those of spinning sensors, and point-cloud processing algorithms must account for those differences.
+Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications. With fewer moving parts, it offers advantages in durability and mass production for automotive systems. Scan patterns such as Livox's non-repetitive design also differ from those of spinning sensors, and point-cloud processing algorithms must account for those differences.
 
 ### 2.2.1 2D LiDAR vs. 3D LiDAR
 
@@ -185,7 +185,7 @@ Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications.
 **3D LiDAR**:
 - Generates 3D point clouds via multiple layers or rotational scanning
 - Use cases: autonomous driving, large-scale mapping
-- Examples: Velodyne VLP-16/32/64, Ouster OS1, Hesai
+- Examples: Velodyne VLP-16 / VLP-32C / HDL-64E, Ouster OS1, Hesai
 
 > **Further reading**
 > - [Cyrill Stachniss — LiDAR-based SLAM](https://www.youtube.com/watch?v=vrdlk2p9AZI) — Explains the principles of SLAM using LiDAR data.
@@ -200,7 +200,7 @@ Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications.
 - Examples: Velodyne, Ouster
 
 **Solid-State**:
-- No moving parts
+- No large spinning assembly (MEMS and flash designs have no moving parts; Livox's non-repetitive scan uses internal rotating prisms)
 - Limited FoV (usually under 120°)
 - Pros: high durability, potential for low cost
 - Examples: Livox (non-repetitive scan pattern), Innoviz
@@ -219,7 +219,7 @@ The difference directly affects algorithm design. Spinning LiDAR produces a unif
 
 > **Further reading**
 > - [Livox technical documents](https://www.livoxtech.com/downloads) — Technical material explaining the non-repetitive scan pattern of solid-state LiDAR and its advantages.
-> - [Xu et al. — FAST-LIO2 (RA-L 2022)](https://arxiv.org/abs/2107.06829) — A LiDAR-inertial odometry paper optimized for solid-state LiDAR.
+> - [Xu et al. — FAST-LIO2 (T-RO 2022)](https://arxiv.org/abs/2107.06829) — A LiDAR-inertial odometry paper that drops feature extraction in favor of direct registration and an ikd-Tree, handling both spinning and solid-state LiDAR.
 
 ## 2.3 IMU (Inertial Measurement Unit)
 
@@ -248,7 +248,7 @@ If you cannot model IMU errors, the entire sensor fusion system wobbles.
 
 **Bias**:
 - Nonzero output even at rest
-- Changes with temperature (bias instability)
+- Drifts slowly over time (bias instability, defined as the floor of the Allan deviation curve). Thermal drift with temperature change is a separate term
 
 **Noise**:
 - High-frequency random noise
@@ -264,7 +264,7 @@ Double-integrating acceleration accumulates noise, bias, scale-factor error, and
 **IMU grades** are not a single standardized price ladder. Compare bias stability, noise density, scale-factor error, temperature calibration, vibration tolerance, and certification requirements. Consumer MEMS prioritizes size and power; products described as industrial, tactical, or navigation grade generally add long-term stability and calibration. For devices such as the `VN-100`, `MTi`, `KVH 1750`, and `HG1700`, compare current datasheets in common units and confirm them with Allan measurements.
 
 > **Further reading**
-> - [Probabilistic Robotics, Ch.5 — Robot Motion (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — A leading reference on sensor noise modeling and motion models. Covers the theoretical basis of IMU error modeling.
+> - [Probabilistic Robotics, Ch.5–6 — Robot Motion / Robot Perception (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — A leading reference on motion models (Ch.5) and sensor measurement models (Ch.6). It does not cover IMU error models (bias, random walk, Allan variance); see Titterton & Weston for those.
 > - [Titterton & Weston — Strapdown Inertial Navigation Technology](https://ieeexplore.ieee.org/book/5765860) — The textbook on IMU principles and inertial navigation.
 > - [Cyrill Stachniss — IMU and Inertial Navigation](https://www.youtube.com/watch?v=uHbRKvD8TWg) — Explains IMU operating principles and error characteristics visually.
 > - [Allan Variance — IMU noise analysis guide (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--background/specifications--allan-variance) — How to extract IMU noise parameters using Allan variance.
@@ -533,7 +533,7 @@ Output: p(z_t | x_t, m)
 
 When the map is fixed, the distance transform can be computed once and stored as a table, making every $\text{dist}$ lookup $O(1)$. The table corresponds to the positive region of an SDF (Signed Distance Field). The likelihood is differentiable with respect to pose $x_t$, which makes it suitable for gradient-based scan matching.
 
-The model has limits. It does not model dynamic obstacles explicitly (no short component). It can "see through walls" — a beam endpoint landing in free space on the far side of a wall produces a large $\text{dist}$, not an impossibility signal. Occlusion is absent. Map uncertainty is ignored.
+The model has limits. It does not model dynamic obstacles explicitly (no short component). It also scores only the endpoint distance and never accounts for the path the beam traveled, so a beam that passes straight through occupied space on its way is not penalized at all. That is why it can "see through walls," and map uncertainty is ignored as well.
 
 In 2D LiDAR indoor navigation, AMCL uses the likelihood field as its default — not the beam model — because it is faster and produces a pose-continuous likelihood. For 3D LiDAR and RGB-D, ICP and NDT have taken over that role (Ch.3 §3.10; see also Ch.14 §14.7 for Kalman-filter integration).
 

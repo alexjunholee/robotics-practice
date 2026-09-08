@@ -156,7 +156,7 @@ Event camera 연구는 고속 운동과 HDR처럼 프레임 카메라가 어려�
 - 모션 블러 없음
 
 **단점**:
-- 정지 장면에서는 출력 없음
+- 밝기 변화가 없으면 출력 없음 (장면과 카메라가 모두 정지하고 조명이 일정할 때)
 - 전통적인 CV 알고리즘 적용 어려움
 - 비교적 높은 가격
 
@@ -172,9 +172,9 @@ Event camera 연구는 고속 운동과 HDR처럼 프레임 카메라가 어려�
 
 ## 2.2 LiDAR
 
-**LiDAR (Light Detection and Ranging)**는 레이저를 이용하여 거리를 측정하는 센서이다. 3D 포인트 클라우드를 직접 생성한다.
+**LiDAR (Light Detection and Ranging)**는 레이저를 이용하여 거리를 측정하는 센서이다. 출력의 차원은 종류에 따라 다르다. 3D LiDAR는 포인트 클라우드를 직접 만들고, 2D LiDAR는 단일 평면의 스캔을 낸다.
 
-카메라는 색과 texture를 기록하지만 수동 monocular 영상만으로 metric depth가 직접 정해지지는 않는다. LiDAR는 각 return의 range를 측정해 3D 점을 만든다. 측정 범위와 오차는 모델, 표면 반사율, 입사각, 대기, 햇빛, return mode에 따라 달라지며, 자동차용 장거리 LiDAR 가운데 일부는 지정 반사율 조건에서 100 m 이상의 range를 제공한다. 자율주행 환경에서 이와 같은 직접 거리 측정 능력은 LiDAR만이 지닌 핵심적인 강점이다.
+카메라는 색과 texture를 기록하지만 수동 monocular 영상만으로 metric depth가 직접 정해지지는 않는다. LiDAR는 각 return의 range를 측정해 점을 만든다(3D LiDAR는 3D 점, 2D LiDAR는 평면 위의 점). 측정 범위와 오차는 모델, 표면 반사율, 입사각, 대기, 햇빛, return mode에 따라 달라지며, 자동차용 장거리 LiDAR 가운데 일부는 지정 반사율 조건에서 100 m 이상의 range를 제공한다. 수동 단안 카메라와 비교하면 이 직접 거리 측정이 LiDAR의 핵심 강점이다. ToF·structured-light 방식 RGB-D와 radar도 거리를 직접 재므로, LiDAR의 차별점은 측정 자체가 아니라 각분해능과 장거리에서의 거리 정확도에 있다.
 
 Solid-State LiDAR와 Spinning(기계식) LiDAR는 요구 조건에 따라 함께 쓰이고 있다. Solid-State LiDAR는 움직이는 부품을 줄일 수 있어 내구성과 대량 생산 측면에서 자동차 양산에 유리할 수 있다. Livox의 비반복 스캔처럼 기존 회전식 센서와 다른 패턴도 등장하면서, 포인트 클라우드 처리 알고리즘은 이런 차이를 함께 고려해야 한다.
 
@@ -188,7 +188,7 @@ Solid-State LiDAR와 Spinning(기계식) LiDAR는 요구 조건에 따라 함께
 **3D LiDAR**:
 - 다중 레이어 또는 회전 스캔으로 3D 포인트 클라우드 생성
 - 용도: 자율주행, 대규모 매핑
-- 예시: Velodyne VLP-16/32/64, Ouster OS1, Hesai
+- 예시: Velodyne VLP-16·VLP-32C·HDL-64E, Ouster OS1, Hesai
 
 > **추천 자료**
 > - [Cyrill Stachniss — LiDAR-based SLAM](https://www.youtube.com/watch?v=vrdlk2p9AZI) — LiDAR 데이터를 이용한 SLAM의 원리를 설명
@@ -203,7 +203,7 @@ Solid-State LiDAR와 Spinning(기계식) LiDAR는 요구 조건에 따라 함께
 - 예시: Velodyne, Ouster
 
 **Solid-State**:
-- 움직이는 부품 없음
+- 대형 회전 기구 없음 (MEMS·flash 방식은 가동부가 없고, Livox의 비반복 스캔은 내부 회전 프리즘을 쓴다)
 - 제한된 FoV (보통 120° 이하)
 - 장점: 높은 내구성, 저비용 가능성
 - 예시: Livox (비반복 스캔 패턴), Innoviz
@@ -222,7 +222,7 @@ Solid-State LiDAR와 Spinning(기계식) LiDAR는 요구 조건에 따라 함께
 
 > **추천 자료**
 > - [Livox 기술 문서](https://www.livoxtech.com/downloads) — Solid-State LiDAR의 비반복 스캔 패턴과 그 장점을 설명하는 기술 자료
-> - [Xu et al. — FAST-LIO2 (RA-L 2022)](https://arxiv.org/abs/2107.06829) — Solid-State LiDAR에 최적화된 LiDAR-Inertial Odometry 논문
+> - [Xu et al. — FAST-LIO2 (T-RO 2022)](https://arxiv.org/abs/2107.06829) — 특징 추출을 없앤 direct 정합과 ikd-Tree로 spinning·solid-state LiDAR를 모두 다루는 LiDAR-Inertial Odometry 논문
 
 ## 2.3 IMU (Inertial Measurement Unit)
 
@@ -251,7 +251,7 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 
 **Bias (바이어스)**:
 - 정지 상태에서도 0이 아닌 출력
-- 온도에 따라 변화 (bias instability)
+- 시간에 따라 천천히 표류 (bias instability, Allan deviation 곡선의 바닥값으로 정의). 온도 변화에 따른 thermal drift는 별개 항목이다
 
 **Noise**:
 - 고주파 랜덤 노이즈
@@ -267,7 +267,7 @@ IMU 오차를 모델링하지 못하면 센서 퓨전 시스템 전체가 흔들
 **IMU 등급**은 단순한 가격대 구분을 넘어 bias stability, noise density, scale-factor error, 온도 보정, 진동 내성과 인증 요구로 구분한다. Consumer MEMS는 크기와 전력을 우선하고, industrial·tactical·navigation 계열로 갈수록 장기 안정성과 보정 범위를 강화하는 경향이 있다. `VN-100`, `MTi`, `KVH 1750`, `HG1700` 같은 제품을 비교할 때는 등급 이름보다 같은 단위의 최신 datasheet와 Allan 측정 결과를 확인한다.
 
 > **추천 자료**
-> - [Probabilistic Robotics, Ch.5 — Robot Motion (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — 센서 노이즈 모델링과 모션 모델의 핵심 참고서. IMU 오차 모델링의 이론적 기초를 다룬다.
+> - [Probabilistic Robotics, Ch.5–6 — Robot Motion / Robot Perception (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — 모션 모델(5장)과 센서 측정 모델(6장)의 핵심 참고서. IMU 오차 모델(bias, random walk, Allan variance)은 다루지 않으므로 그 부분은 Titterton & Weston을 본다.
 > - [Titterton & Weston — Strapdown Inertial Navigation Technology](https://ieeexplore.ieee.org/book/5765860) — IMU 원리와 관성 항법의 교과서
 > - [Cyrill Stachniss — IMU and Inertial Navigation](https://www.youtube.com/watch?v=uHbRKvD8TWg) — IMU의 작동 원리와 오차 특성을 시각적으로 설명
 > - [Allan Variance — IMU 노이즈 분석 가이드 (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--background/specifications--allan-variance) — Allan Variance를 이용한 IMU 노이즈 파라미터 추출 방법
@@ -536,7 +536,7 @@ $$p(z_t^k \mid x_t, m) = z_{\text{hit}} \cdot \mathcal{N}(\text{dist};\, 0,\, \s
 
 지도가 고정되어 있다면 거리 변환(distance transform)을 한 번만 수행해 테이블로 저장할 수 있다. 그러면 $\text{dist}$ 조회가 $O(1)$이 된다. 이 테이블은 SDF(Signed Distance Field)의 양수 영역에 해당한다. 포즈 $x_t$에 대한 likelihood의 gradient도 계산할 수 있으므로 gradient 기반 scan matching에 적합하다.
 
-한계도 있다. short 성분이 없어 동적 장애물을 명시적으로 모델링하지 않으며, occlusion도 없어서 지도에 없는 자유 공간을 통과하는 빔도 끝점 거리만으로 평가한다. 벽 너머까지 "볼 수" 있고 지도 자체의 불확실성도 무시한다.
+한계도 있다. short 성분이 없어 동적 장애물을 명시적으로 모델링하지 않는다. 또한 끝점 거리만 보고 빔이 지나온 경로를 따지지 않으므로, 점유 영역을 관통해 들어온 빔에도 벌점을 주지 않는다. 그래서 벽 너머까지 "볼 수" 있고, 지도 자체의 불확실성도 무시한다.
 
 2D LiDAR 실내 내비게이션에서 AMCL은 빔 모델보다 likelihood field를 기본으로 쓴다. 계산이 빠르고 포즈에 대해 연속적이기 때문이다. 3D LiDAR와 RGB-D에서는 ICP, NDT가 이 역할을 넘겨받았다 (Ch.3 §3.10 칼만 필터 계열과의 연동은 Ch.14 §14.7 참조).
 

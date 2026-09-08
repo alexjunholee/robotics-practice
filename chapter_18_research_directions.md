@@ -37,7 +37,7 @@ Spatial AI 시스템을 **두 개의 모듈**로 구분하여 설계한다.
 3. **의미 이해**: VFM/VLA로 "깨진 유리컵"처럼 물체의 종류와 상태를 구분한다.
 4. **상호 보완**: Local의 기하학적 정밀도와 Global의 의미론적 이해를 결합한다.
 
-> 인체에 빗대면 Local Module은 즉각적인 **반사 신경**에 해당하며, Global Module은 고차원 판단을 내리는 **대뇌 피질**의 역할을 맡는다. 뜨거운 물체에 닿았을 때 손을 조건반사로 먼저 뗀 뒤 뒤이어 원인을 인지하듯, 로봇 역시 반사적 기하 회피와 인지적 의미 이해가 분리되어 맞물린다.
+> 인체에 빗대면 Local Module은 즉각적인 **반사 신경**에 해당하며, Global Module은 고차원 판단을 내리는 **대뇌 피질**의 역할을 맡는다. 뜨거운 물체에 닿았을 때 손을 무조건반사로 먼저 뗀 뒤 뒤이어 원인을 인지하듯, 로봇 역시 반사적 기하 회피와 인지적 의미 이해가 분리되어 맞물린다.
 
 ## 18.2 Local Module: Lightweight Geometry
 
@@ -71,7 +71,7 @@ Local Module의 update rate와 latency deadline은 플랫폼 속도, braking dis
 
 ```bash
 # TensorRT 최적화 예시
-trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --workspace=4096
+trtexec --onnx=model.onnx --saveEngine=model.trt --fp16 --memPoolSize=workspace:4096
 ```
 
 > TensorRT는 NVIDIA GPU용 inference engine을 만든다. FP16이 memory와 latency를 줄일 수 있지만 이득과 task metric 변화는 model, input, batch, power mode와 software version에 따라 달라진다. Target Jetson에서 end-to-end latency와 validation metric을 함께 비교해 채택 여부를 정한다.
@@ -86,10 +86,10 @@ class LocalModule:
         self.obstacle_detector = LightweightObstacleNet()  # TensorRT
 
     def process(self, sensor_data):
-        # 1. Odometry 업데이트 (100 Hz)
+        # 1. Odometry 업데이트 (IMU 입력 100 Hz)
         pose = self.odometry.update(sensor_data.imu, sensor_data.lidar)
 
-        # 2. 장애물 감지 (30 Hz)
+        # 2. 장애물 감지 (카메라 입력 30 Hz)
         obstacles = self.obstacle_detector(sensor_data.image)
 
         # 3. Global Module로 키프레임 전송
@@ -99,7 +99,7 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**실행 시나리오**: 위 코드에서 `process()`는 센서 데이터가 들어올 때마다 호출된다. IMU 데이터는 100 Hz(초당 100번), 카메라 이미지는 30 Hz로 들어온다. 매 프레임마다 "나 지금 어디?"(odometry)와 "앞에 뭐 있어?"(obstacle)를 계산하고, 중요한 순간의 키프레임만 Global Module에 보낸다. 모든 프레임을 전송하면 네트워크 대역폭을 넘길 수 있기 때문이다.
+**실행 시나리오**: 위 코드에서 `process()`는 융합 tick마다 호출된다고 보자. IMU 데이터는 100 Hz(초당 100번), 카메라 이미지는 30 Hz로 들어오므로, 센서별 콜백이 최신 측정을 버퍼에 넣고 tick이 그것을 함께 소비하는 구조가 된다. 매 tick마다 "나 지금 어디?"(odometry)와 "앞에 뭐 있어?"(obstacle)를 계산하고, 중요한 순간의 키프레임만 Global Module에 보낸다. 모든 프레임을 전송하면 네트워크 대역폭을 넘길 수 있기 때문이다.
 
 ## 18.3 Global Module: VFM-based Understanding
 
@@ -120,7 +120,7 @@ DINOv2와 SAM2에는 크기가 다른 model variant가 있고 모두 수십억 p
 ### 18.3.3 기술 스택
 
 **Vision Foundation Models** (→ 11장 참고):
-- DINOv2: Dense feature extraction — 이미지의 모든 픽셀에 대해 의미 있는 feature 벡터 생성
+- DINOv2: Dense feature extraction — 이미지를 패치 격자로 나눠 각 패치의 feature 벡터를 생성 (픽셀 단위로 쓰려면 보간·업샘플링이 필요)
 - SAM2: promptable image/video segmentation — point·box·mask prompt로 대상 mask를 추적
 - GroundingDINO: Text-guided detection — "빨간 컵"이라고 말하면 찾아줌
 
@@ -149,7 +149,7 @@ class GlobalModule:
         # 1. VFM feature 추출
         features = self.dinov2.extract(image)
 
-        # 2. Open-vocabulary segmentation
+        # 2. Promptable segmentation (텍스트 어휘 기반 프롬프트는 GroundingDINO/CLIP이 만들어 준다)
         masks = self.sam.segment(image, prompts=self.get_prompts())
 
         # 3. 3D Scene Graph 업데이트
@@ -276,7 +276,7 @@ Motivation이 문제 해결의 당위성을 제시한다면, novelty는 기존 �
 
 - **Motivation**: 단안용 ORB-SLAM의 map reuse·loop closing·relocalization 구조를 stereo와 RGB-D 입력에도 적용한다.
 - **직접적 확장**: 입력 modality마다 별도의 SLAM 시스템을 만든다.
-- **논문의 설계**: 세 modality가 tracking·local mapping·loop closing의 시스템 구조와 ORB 특징을 공유하되, stereo/RGB-D 관측은 disparity에서 얻은 depth와 metric-scale bundle adjustment에 반영한다.
+- **논문의 설계**: 세 modality가 tracking·local mapping·loop closing의 시스템 구조와 ORB 특징을 공유하되, stereo는 disparity에서 depth를 얻고 RGB-D는 측정 depth로 가상 오른쪽 좌표를 만들어 둘 다 stereo 관측 형태로 통일한 뒤 metric-scale bundle adjustment에 반영한다.
 - **설계 원리**: 공통 시스템 구조는 유지하고, modality별 차이를 관측 생성과 bundle-adjustment 잔차에 둔다.
 
 원 논문은 [*ORB-SLAM2: An Open-Source SLAM System for Monocular, Stereo and RGB-D Cameras*](https://doi.org/10.1109/TRO.2017.2705103)다. 2015년 ORB-SLAM은 단안 시스템이므로 이 사례의 세 modality 통합 근거로 사용할 수 없다.

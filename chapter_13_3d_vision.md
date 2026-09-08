@@ -18,7 +18,7 @@ Point: [x, y, z, r, g, b, intensity, ...]
 Point Cloud: N × D 행렬 (N개 점, D차원 속성)
 ```
 
-선형대수 관점에서 포인트 클라우드는 N×D 행렬로 볼 수 있다. N은 수만~수백만 개의 점, D는 각 점의 속성 차원이다. 회전과 이동은 각 점에 4×4 변환 행렬을 곱하는 연산이다.
+선형대수 관점에서 포인트 클라우드는 N×D 행렬로 볼 수 있다. N은 수만~수백만 개의 점, D는 각 점의 속성 차원이다. 회전과 이동은 각 점의 위치 좌표를 동차 형태로 만들어 4×4 변환 행렬을 곱하는 연산이다. 색상이나 반사도 같은 속성은 이 변환의 대상이 아니고, 법선은 회전만 적용한다.
 
 **주요 파일 포맷**:
 | 포맷 | 특징 |
@@ -107,7 +107,7 @@ filtered_pcd = pcd.select_by_index(ind)
 
 3D 처리 파이프라인에서 각 점의 표면 법선 벡터를 추정하는 전처리 단계다.
 
-ICP (정합), 표면 재구성(reconstruction), 조명 계산 등 거의 모든 3D 처리에서 법선 벡터를 요구한다. 법선이 없으면 "이 점이 평면의 일부인지 모서리의 일부인지"를 알 수 없다.
+표면 재구성(reconstruction), 조명 계산, 그리고 point-to-plane ICP가 법선 벡터를 요구한다. point-to-point ICP는 법선 없이 동작한다. 법선이 없으면 "이 점이 평면의 일부인지 모서리의 일부인지"를 알 수 없다.
 
 ```python
 # 법선 추정
@@ -251,6 +251,7 @@ Bundle Adjustment는 모든 카메라 포즈와 3D 점 위치를 동시에 최�
 # COLMAP 사용
 colmap feature_extractor --database_path db.db --image_path ./images
 colmap exhaustive_matcher --database_path db.db
+mkdir -p sparse
 colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 ```
 
@@ -285,7 +286,8 @@ volume = o3d.pipelines.integration.ScalableTSDFVolume(
 )
 
 for i, (color, depth, pose) in enumerate(frames):
-    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth)
+    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+        color, depth, depth_trunc=4.0, convert_rgb_to_intensity=False)
     volume.integrate(rgbd, intrinsic, np.linalg.inv(pose))
 
 mesh = volume.extract_triangle_mesh()
@@ -297,7 +299,7 @@ mesh = volume.extract_triangle_mesh()
 
 ## 13.5 Neural Rendering
 
-딥러닝으로 3D 장면을 표현하고 렌더링하는 방식이다. 기존 방법(mesh, point cloud)은 반사·투명체·가는 구조가 있는 복잡한 장면을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해 이런 효과를 다룬다. 최근에는 SLAM과 결합해 실시간 매핑에도 활용된다.
+딥러닝으로 3D 장면을 표현하고 렌더링하는 방식이다. 기존 방법(mesh, point cloud)은 반사·투명체·가는 구조가 있는 복잡한 장면을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해 이런 효과를 다룬다. 최근에는 SLAM과 결합해 온라인 매핑에도 활용된다.
 
 ### 13.5.1 NeRF (Neural Radiance Fields)
 
@@ -334,7 +336,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS는 NeRF에서 오래 걸리던 렌더링 시간을 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 실시간 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
+3DGS는 NeRF에서 오래 걸리던 렌더링 시간을 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 온라인 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
 
 **개념**: 장면을 수백만 개의 3D Gaussian으로 표현
 
@@ -366,7 +368,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 **3DGS + SLAM (최신 트렌드)**:
 
-3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 열리고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 실시간으로 구축한다.
+3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 열리고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 만든다. 실시간에 해당하는 100 FPS급 수치는 학습이 끝난 장면의 렌더링 처리율이고, tracking과 mapping 최적화를 포함한 종단 처리율은 그보다 훨씬 낮게 보고된다.
 
 - **SplaTAM (2024)**: RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 수행한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가/업데이트)을 번갈아 수행하며, 기존 Neural SLAM 대비 렌더링 품질과 속도를 크게 높인다.
 - **MonoGS (2024)**: 단안(monocular) 카메라만으로 3DGS 기반 SLAM을 수행한다. 깊이 센서 없이도 dense한 3D 맵을 구축할 수 있다.
@@ -375,12 +377,12 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 로봇이 돌아다니면서 포토리얼리스틱한 3D 맵을 실시간으로 만들 수 있다면, 디지털 트윈이나 AR/VR 콘텐츠 생성 같은 응용이 열린다.
 
 > **추천 자료**
-> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — 3DGS 원 논문
+> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.04079) — 3DGS 원 논문
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — 2D Gaussian으로 표면 복원 품질 향상
 > - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — 3DGS + SLAM의 대표작
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
 > - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — 카메라 내부/외부 파라미터 없이 이미지 쌍에서 dense 3D를 복원한다.
-> - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching 추가. 복원 + 정밀 대응점 동시 제공
+> - [Leroy et al., "Grounding Image Matching in 3D with MASt3R" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching 추가. 복원 + 정밀 대응점 동시 제공
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF/3DGS 실험 통합 프레임워크
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — 공식 코드
 
@@ -428,10 +430,10 @@ f_θ(z, x) → SDF value
 NeRF의 volume rendering 품질과 SDF의 깨끗한 surface를 결합한 연구다. SDF 값을 density로 변환하는 함수를 도입하여, volume rendering framework 안에서 SDF를 학습한다.
 
 ```
-density σ(x) = max(-dΦ_s(f(x))/dt, 0) / Φ_s(f(x))
+density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d 는 광선 위의 점
 ```
 
-여기서 `Φ_s`는 learnable parameter `s`가 제어하는 sigmoid-like 함수다. 학습이 진행될수록 `s`가 작아지면서 density가 surface 근처에 집중된다.
+여기서 `Φ_s`는 learnable parameter `s`가 제어하는 시그모이드다. 그 도함수로 정의되는 S-density의 표준편차가 `1/s`이므로, 학습이 수렴하면서 `s`가 커지고 density가 surface 근처로 좁아진다.
 
 **VolSDF**
 
@@ -476,7 +478,7 @@ C(r) = ∫ T(t) · σ(t) · c(t) dt
 where T(t) = exp( -∫_{t_n}^{t} σ(s) ds )
 ```
 
-- `σ(t)`: 위치 `t`에서의 density (불투명도)
+- `σ(t)`: 위치 `t`에서의 density (부피 밀도, 길이의 역수 차원)
 - `c(t)`: 위치 `t`에서의 색상 (RGB)
 - `T(t)`: 누적 투과도 (ray가 `t`까지 도달할 확률)
 
@@ -532,7 +534,7 @@ Differentiable rendering을 SLAM에 적용하면, tracking과 mapping을 모두 
 ```
 
 > **추천 자료**
-> - [Tewari et al., "Advances in Neural Rendering" (EGSR 2022)](https://arxiv.org/abs/2111.05849) — Differentiable rendering 서베이
+> - [Tewari et al., "Advances in Neural Rendering" (EUROGRAPHICS 2022 STAR)](https://arxiv.org/abs/2111.05849) — Differentiable rendering 서베이
 > - [Ravi et al., "Accelerating 3D Deep Learning with PyTorch3D" (2020)](https://arxiv.org/abs/2007.08501) — PyTorch3D 논문
 > - [Laine et al., "Modular Primitives for High-Performance Differentiable Rendering" (2020)](https://arxiv.org/abs/2011.03277) — nvdiffrast 논문
 
@@ -606,9 +608,9 @@ task planning이나 자연어 기반 내비게이션에서 scene graph는 3D 표
 
 > **기술 흐름: 3D Vision**
 > - **~2010**: 포인트 클라우드 처리 고전기. PCL 라이브러리, ICP 정합, TSDF 기반 볼류메트릭 복원이 주류.
-> - **2012~**: Kinect 출시로 RGB-D 기반 3D 복원이 대중화되었다. KinectFusion(TSDF + ICP)이 실시간 3D 복원의 문을 열었다.
+> - **2010~**: Kinect 출시(2010)와 KinectFusion(2011, TSDF + ICP)이 실시간 RGB-D 3D 복원의 문을 열고 대중화를 이끌었다.
 > - **2017~**: PointNet/PointNet++로 포인트 클라우드 딥러닝이 시작되었다. VoxelNet, PointPillars 등 3D Object Detection 연구도 이 시기에 급증했다.
 > - **2020~**: NeRF 등장으로 Neural Rendering이 주목받았다. 사진 몇 장으로 포토리얼리스틱한 3D 장면을 만들 수 있게 되었고, Instant-NGP, Mip-NeRF 등 후속 연구가 빠르게 이어졌다.
 > - **2023~**: 3D Gaussian Splatting이 NeRF의 속도 한계를 극복했다. 실시간 렌더링과 명시적 표현의 장점을 동시에 갖추었고, BEVFusion 등 멀티모달 3D 감지가 자율주행에서 기준점이 되었다.
-> - **2024~**: 3DGS + SLAM 결합(SplaTAM, MonoGS, Gaussian-SLAM)으로 Neural SLAM의 새 방향이 열리고 있다. 로봇이 이동하면서 실시간으로 포토리얼리스틱 3D 맵을 구축하는 방식이다.
+> - **2024~**: 3DGS + SLAM 결합(SplaTAM, MonoGS, Gaussian-SLAM)으로 Neural SLAM의 새 방향이 열리고 있다. 로봇이 이동하면서 포토리얼리스틱 3D 맵을 구축하는 방식이며, 렌더링은 실시간이지만 tracking·mapping을 포함한 종단 처리율은 아직 그에 못 미친다.
 > - **최근 흐름**: SLAM과 로보틱스에서 3DGS 기반 장면 표현을 사용하는 연구가 늘고 있다. NeRFStudio에서는 NeRF와 3DGS의 표현과 렌더링 속도를 같은 데이터로 비교할 수 있다.

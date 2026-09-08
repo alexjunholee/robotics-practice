@@ -39,7 +39,7 @@
 **Deep Learning** (Goodfellow, Bengio, Courville)
 - 딥러닝 이론 표준 교과서
 - 무료 온라인 제공
-- 무료 PDF: https://www.deeplearningbook.org/
+- 무료 온라인(장별 HTML): https://www.deeplearningbook.org/
 
 **Dive into Deep Learning** (d2l.ai)
 - 실습 중심 — 코드와 함께 배운다
@@ -86,7 +86,7 @@
 - YouTube: https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4
 
 **SLAM 입문 (한국어)**:
-- SLAM KR 커뮤니티의 스터디 자료: https://github.com/slam-kr
+- SLAM KR 커뮤니티(국내 SLAM 연구자 모임)의 스터디 자료
 
 ### ROS
 
@@ -142,7 +142,7 @@
 
 ### 어떻게 읽을 것인가?
 
-논문을 고르는 기준과 Keshav의 3-pass, 5 Cs, reviewer 관점, CCC 렌즈는 [「연구노트」 Ch.6–12 — 읽기 묶음](../research-notes/guide.html#chapter-6)에서 자세히 다룬다.
+논문을 고르는 기준과 Keshav의 3-pass, 5 Cs, reviewer 관점, CCC 렌즈는 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)에서 자세히 다룬다.
 
 ### 필독 논문 리스트
 
@@ -168,10 +168,10 @@
 
 **최신 트렌드**:
 - RT-2: Brohan et al., 2023 — [arXiv:2307.15818](https://arxiv.org/abs/2307.15818)
-- 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.14737](https://arxiv.org/abs/2308.14737)
+- 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.04079](https://arxiv.org/abs/2308.04079)
 - Depth Anything: Yang et al., 2024 — [arXiv:2401.10891](https://arxiv.org/abs/2401.10891)
 
-> 논문 검색에는 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [Papers With Code](https://paperswithcode.com/), [arXiv](https://arxiv.org/)를 활용할 수 있다. Papers With Code는 벤치마크 순위와 코드 링크를 함께 볼 수 있어 편하다.
+> 논문 검색에는 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [arXiv](https://arxiv.org/)를 활용할 수 있다. 벤치마크 순위와 코드 링크를 함께 보여 주던 Papers With Code는 2025년 서비스를 종료해 현재 도메인은 Hugging Face로 넘어간다.
 
 ### 논문 작성 도구
 
@@ -352,9 +352,9 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
-| VFM 이해 및 활용 | DINOv2, SAM, CLIP | 본 문서 10~11장 + 논문 직접 읽기 |
+| VFM 심화 (1.4절 중급 항목의 확장) | DINOv2, SAM, CLIP | 본 문서 10~11장 + 논문 직접 읽기 |
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
-| 논문 읽기 및 구현 | 최신 논문 분석 | [Papers With Code](https://paperswithcode.com/) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)* |
+| 논문 읽기 및 구현 | 최신 논문 분석 | [Hugging Face Papers](https://huggingface.co/papers/trending) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)* |
 | 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [「연구노트」 Ch.1–5 — 시작하기](../research-notes/guide.html#chapter-1)* |
 | 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#chapter-32)* |
 
@@ -404,7 +404,7 @@ SLAM·CV 실험에서는 ablation, 변인 통제, 반복 실험, 같은 데이�
 
 ### 20.8.3 학회 발표
 
-발표 1+1+3+3+1 분 구조, 슬라이드 한 장 한 메시지, 포스터 3m 가독성, 데모 30초~1분 — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#chapter-33).
+5분·20분 발표의 slide budget, 포스터 30초 elevator pitch와 2분 walk-through — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#chapter-33).
 
 ### 20.8.4 논문 리뷰 — Peer Review
 

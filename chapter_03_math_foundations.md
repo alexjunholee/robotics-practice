@@ -407,7 +407,7 @@ Lie algebra의 원소(벡터)를 Lie group의 원소(회전 행렬)로 보내는
 
 ```
 d/dt (R R^T) = R_dot R^T + R R_dot^T = 0
-→  R_dot R^T = -(R R_dot^T)^T
+→  R_dot R^T = -(R_dot R^T)^T
 ```
 
 즉 `R_dot R^T`는 반대칭 행렬(skew-symmetric)이다. 이를 어떤 벡터 w(t)의 hat form으로 쓸 수 있다:
@@ -552,7 +552,7 @@ xi_a = Ad_{T_ab} * xi_b
 
 ### 3.5.7 실무에서의 사용
 
-**Sophus (C++)**: Strasdat가 만든 Lie group 라이브러리. SO(3), SE(3)와 그 exponential/logarithmic map, Adjoint 등을 구현한다. ORB-SLAM3, Kimera 등 주요 SLAM 시스템이 사용한다.
+**Sophus (C++)**: Strasdat가 만든 Lie group 라이브러리. SO(3), SE(3)와 그 exponential/logarithmic map, Adjoint 등을 구현한다. ORB-SLAM3 등 여러 SLAM 시스템이 사용한다. Kimera는 Lie group 연산을 GTSAM의 Pose3/Rot3로 처리한다.
 
 ```cpp
 #include <sophus/se3.hpp>
@@ -653,7 +653,7 @@ Factor graph를 최적화하려면 정규 방정식 `H d = -b`를 풀어야 한�
 
 **Variable ordering**: 소거 순서를 최적화하는 것이 중요하다. COLAMD (Column Approximate Minimum Degree) 같은 heuristic이 널리 쓰인다. 직관적으로, 연결이 적은 변수를 먼저 소거하면 fill-in이 적다.
 
-**Bayes tree**: Kaess et al. (2012)이 제안한 자료구조로, iSAM2의 핵심이다. Factor graph를 elimination하면 Bayes net이 되고, 이를 tree 구조로 재편하면 Bayes tree가 된다. 새로운 측정이 들어올 때, 영향을 받는 subtree만 re-elimination하면 된다.
+**Bayes tree**: Kaess et al. (WAFR 2010)이 제안한 자료구조로, iSAM2(Kaess et al., IJRR 2012)의 핵심이다. Factor graph를 elimination하면 Bayes net이 되고, 이를 tree 구조로 재편하면 Bayes tree가 된다. 새로운 측정이 들어올 때, 영향을 받는 subtree만 re-elimination하면 된다.
 
 실시간 SLAM에서는 매 프레임마다 새로운 팩터가 추가된다. 전체 시스템을 처음부터 다시 풀면 O(n^3)이지만, Bayes tree를 이용한 incremental update는 영향받는 부분만 갱신하므로 실시간 처리가 가능하다.
 
@@ -816,7 +816,7 @@ OpenCV의 `cv::findHomography`, `cv::findFundamentalMat` 등에서 `cv::USAC_MAG
 
 > **추천 자료**
 > - [State Estimation for Robotics, Ch.5 (Barfoot)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — 바이어스, 대응 문제, outlier를 다루는 실전적 챕터
-> - [Hartley & Zisserman, Ch.4 — Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — RANSAC의 원본 설명과 robust estimation 이론
+> - [Hartley & Zisserman, Ch.4 — Estimation: 2D Projective Transforms](https://www.robots.ox.ac.uk/~vgg/hzbook/) — RANSAC(원 제안은 Fischler & Bolles, 1981)과 robust estimation 이론을 정리한 교재 설명
 > - [다크 프로그래머 — RANSAC의 이해와 영상처리 활용](https://darkpgmr.tistory.com/61) — RANSAC의 원리, threshold 설정, 반복 횟수 계산을 한글로 설명
 > - [정진용 블로그 — Bundle Adjustment의 Jacobian 계산](https://jinyongjeong.github.io/2020/03/01/Jacobian_of_BA/) — BA의 reprojection error Jacobian을 Lie algebra와 quaternion으로 유도. 손필기 수식 포함
 
@@ -861,7 +861,7 @@ a* = argmax_a  I(X; Z_a)  =  argmax_a  [ H(Z_a) - H(Z_a | X) ]
 
 > **추천 자료**
 > - [Elements of Information Theory (Cover & Thomas)](https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X) — 정보 이론 교과서
-> - [Placed: An exploration planner using information gain (2022)](https://arxiv.org/abs/2206.05193) — Active SLAM에서 정보 이론 활용 예시
+> - Placed et al., "A Survey on Active Simultaneous Localization and Mapping: State of the Art and New Frontiers" (IEEE T-RO 2023) — Active SLAM에서 정보 이론이 쓰이는 방식을 정리한 서베이
 
 > **기술 흐름: 로보틱스 수학 및 최적화**
 > - **~2005**: 칼만 필터(EKF) 중심의 상태 추정. 선형 근사 기반, 소규모 문제에 적합. 실시간 처리가 어려워 문제 크기에 제약이 있었다.
@@ -877,7 +877,7 @@ a* = argmax_a  I(X; Z_a)  =  argmax_a  [ H(Z_a) - H(Z_a | X) ]
 원전: Thrun, Burgard, Fox (2005) *Probabilistic Robotics*, Ch.2 (Recursive State Estimation).
 (국문: 『확률론적 로보틱스』, 에이콘, 2020)
 
-§3.8 정보 이론은 불확실성을 *측정*하는 도구였다. 그렇다면 시간이 흐르면서 새 관측이 쌓일 때, 그 불확실성을 어떻게 *갱신*할 것인가. §3.3.2의 베이즈 정리를 시간 축 위에서 재귀적으로 돌리면, "로봇이 지금 어디 있는가"라는 질문에 답하는 구조가 만들어진다. §3.6 Factor Graph가 공간적 제약들을 그래프로 묶었다면, 베이즈 필터는 그 추정 구조를 시간 방향으로 확장한다.
+§3.8 정보 이론은 불확실성을 *측정*하는 도구였다. 그렇다면 시간이 흐르면서 새 관측이 쌓일 때, 그 불확실성을 어떻게 *갱신*할 것인가. §3.3.2의 베이즈 정리를 시간 축 위에서 재귀적으로 돌리면, "로봇이 지금 어디 있는가"라는 질문에 답하는 구조가 만들어진다. §3.6 Factor Graph는 이미 연속 포즈 사이의 odometry·IMU factor로 시간 관계까지 담는다. 베이즈 필터와의 차이는 시간을 다루는지가 아니라 과거 상태를 marginalize하고 현재 믿음만 남기는지(filtering)에 있다.
 
 "로봇이 지금 어디 있는가?"라는 물음은 정적인 단일 시점 추정을 넘어, 과거와 현재의 정보를 순차적으로 누적하는 **재귀 추정(recursive estimation)** 문제로 다루어야 한다. 베이즈 필터는 그 재귀 구조의 가장 일반적인 형태로, 이후 칼만 필터와 입자 필터가 모두 이 틀 안에서 작동한다.
 
@@ -1244,7 +1244,7 @@ EKF와 마찬가지로, 비선형 $g, h$에 대해 Jacobian $G_t, H_t$를 사용
 
 정보 필터의 measurement update $\Omega_t = \bar\Omega_t + C_t^T Q_t^{-1} C_t$는 측정마다 $\Omega$에 한 항을 더한다. 여러 로봇의 독립 측정도 $\Omega_{\text{total}} = \sum_i \Omega_i$, $\xi_{\text{total}} = \sum_i \xi_i$로 합산할 수 있다.
 
-이 가산성은 §3.6 factor graph에서 "측정 factor 하나 = $H^T Q^{-1} H$와 $H^T Q^{-1} z$ 한 항 추가"로 일반화된다. Factor graph가 sparse Cholesky로 풀리는 이유, GTSAM·iSAM2의 정보 행렬이 sparse한 이유가 모두 이 가산 구조에서 비롯된다.
+이 가산성은 §3.6 factor graph에서 "측정 factor 하나 = $H^T Q^{-1} H$와 $H^T Q^{-1} z$ 한 항 추가"로 일반화된다. 정보 행렬이 sparse한 이유는 가산성 자체가 아니라 각 factor가 소수의 변수에만 연결된다는 국소성이다. $H$의 비영 열이 적어 더해지는 블록이 희소해진다. sparse Cholesky가 실제로 희소성을 유지하는지는 소거 순서가 만드는 fill-in이 정한다.
 
 EIF-SLAM과 SEIF는 이 정보형 가산성을 SLAM 표현에 사용한다. 역사적 연결은 Ch.14 §14.16에서 다룬다.
 
@@ -1297,7 +1297,7 @@ $$p(x_t) = \frac{p_{k,t}}{|\mathbf{x}_{k,t}|} \quad x_t \in \mathbf{x}_{k,t}$$
 영역 대표값(평균 상태) $\hat x_{k,t}$로 모델을 근사한다.
 
 $$p(z_t \mid \mathbf{x}_{k,t}) \approx p(z_t \mid \hat x_{k,t})$$
-$$p(\mathbf{x}_{k,t} \mid u_t, \mathbf{x}_{i,t-1}) \approx \frac{\eta}{|\mathbf{x}_{k,t}|}\, p(\hat x_{k,t} \mid u_t, \hat x_{i,t-1})$$
+$$p(\mathbf{x}_{k,t} \mid u_t, \mathbf{x}_{i,t-1}) \approx \eta\,|\mathbf{x}_{k,t}|\, p(\hat x_{k,t} \mid u_t, \hat x_{i,t-1})$$
 
 영역 크기가 모두 같으면 $|\mathbf{x}_{k,t}|$ 인수는 정규화에 흡수된다. 이렇게 만든 이산 베이즈 필터를 **히스토그램 필터**라 부른다.
 
@@ -1414,7 +1414,7 @@ $M = 1$인 극단을 상상하라. weight가 자기 자신으로 정규화되어
 
 #### (2) Resampling으로 인한 다양성 상실 (Sample Impoverishment)
 
-정적 상태($x_t = x_{t-1}$)에서 모션이 없으면 모든 입자가 동일한 궤적을 따른다. 무한 resampling은 입자 다양성을 0으로 수렴시켜 단일 상태로 붕괴된다.
+정적 상태($x_t = x_{t-1}$)에서 전이 잡음이 없으면 입자는 각자의 초기 상태를 그대로 유지한다. 문제는 그다음이다. 새 다양성이 주입되지 않는 상태에서 재표집을 반복하면 표집 분산 때문에 살아남는 입자의 종류가 줄어들어(sample impoverishment) 결국 단일 상태로 붕괴된다.
 
 완화: 로봇이 정지하면 resampling을 보류한다. 또는 weight variance가 높을 때만 resampling하고, 나머지 시간에는 weight를 곱셈적으로 누적한다.
 

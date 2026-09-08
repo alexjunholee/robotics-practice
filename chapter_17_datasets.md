@@ -57,7 +57,7 @@ KITTI보다 센서 구성이 풍부하고(360도 카메라, Radar 포함) 데이
 
 ### 17.1.3 Waymo Open Dataset
 
-Google의 대규모 자율주행 데이터셋이다.
+Waymo(Alphabet 산하)가 공개한 대규모 자율주행 데이터셋이다.
 
 nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이터 품질이 높고 규모가 크며, 매년 챌린지를 통해 최신 기술 동향을 확인할 수 있다.
 
@@ -241,7 +241,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 - 타임스탬프 기반 근사 동기화
 - 보간(interpolation) 사용
 
-ROS에서는 수신 시점에만 필터링할 수 있다:
+ROS의 `message_filters`는 메시지 header의 stamp를 기준으로 동기화한다. header가 없는 메시지에 `allow_headerless`를 지정할 때만 도착 시점을 쓴다:
 
 ```python
 import message_filters
@@ -267,7 +267,7 @@ Camera-LiDAR Extrinsic:
 
 Camera-IMU: Kalibr 사용 권장
 
-캘리브레이션이 부정확하면 카메라에서 본 객체 위치와 LiDAR에서 본 객체 위치가 일치하지 않는다. 센서 퓨전 정확도는 캘리브레이션 품질에 달려 있다. 선형대수 기준으로 보면, intrinsic은 3×3 카메라 행렬 K, extrinsic은 4×4 변환 행렬 [R|t]에 해당한다.
+캘리브레이션이 부정확하면 카메라에서 본 객체 위치와 LiDAR에서 본 객체 위치가 일치하지 않는다. 센서 퓨전 정확도는 캘리브레이션 품질에 달려 있다. 선형대수 기준으로 보면, intrinsic은 3×3 카메라 행렬 K다. extrinsic은 카메라 투영에 들어갈 때는 3×4 블록 [R|t]이고, 센서 간 좌표 변환으로 쓸 때는 아래에 [0 0 0 1] 행을 붙인 4×4 동차 변환이다.
 
 > **추천 자료**
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — 체커보드 기반 카메라 캘리브레이션

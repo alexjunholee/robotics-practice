@@ -24,8 +24,8 @@ Spatial AI는 다음 기술을 아우른다.
 
 > **추천 자료**
 > - [Andrew Davison — From SLAM to Spatial AI (MIT Robotics)](https://www.youtube.com/watch?v=BRRtlR0C_CY) — Andrew Davison 교수가 Spatial AI의 비전을 설명하는 강연이다. 분야의 큰 흐름을 파악하는 데 도움이 된다.
-> - [FutureMapping 논문 (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — 2018년에 object-level mapping과 미래 상태 예측을 결합한 Spatial AI 시스템 구성을 제안한 논문.
-> - [Cyrill Stachniss — Introduction to Mobile Robotics](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — 본 대학교 Cyrill Stachniss 교수의 모바일 로보틱스 강의. Spatial AI의 기반 개념들을 잘 정리해서 강의한다.
+> - [FutureMapping 논문 (arXiv:1803.11288)](https://arxiv.org/abs/1803.11288) — 2018년에 SLAM이 기하·의미를 통합한 Spatial AI 인지 능력으로 진화하는 흐름을 논의하고, 그 알고리즘의 계산 구조와 프로세서·센서 co-design을 검토한 포지션 논문.
+> - [Cyrill Stachniss — SLAM Course (2013)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — Cyrill Stachniss 교수의 프라이부르크 시절 SLAM 강의. EKF-SLAM·FastSLAM·graph SLAM을 다루는 대학원 수준 자료다. Spatial AI의 기반 개념들을 잘 정리해서 강의한다.
 
 ## 1.2 왜 중요한가?
 
@@ -72,7 +72,7 @@ AI가 코드를 짜고, 논문을 요약하고, 실험을 제안하는 시대에
 - **문제 정의**: AI는 주어진 문제를 푸는 일을 도울 수 있지만, 어떤 문제를 풀어야 하는지는 스스로 판단하지 못한다. 어떤 센서 조합이 환경에 적합한지, 어느 정도의 정확도가 응용에 충분한지, 어떤 절충을 받아들일 수 있는지는 분야를 아는 사람이 판단해야 한다. (*문제 정의의 기본 틀은 [「연구노트」 Ch.1 — 리뷰 논문에서 시작하라](../research-notes/guide.html#chapter-1)와 [「연구노트」 Ch.2 — 문제 정의](../research-notes/guide.html#chapter-2)에서 다룬다.*)
 - **시스템 통합**: 인식 모듈, 제어 모듈, 통신 스택, 하드웨어를 하나의 시스템으로 작동하게 만드는 일이다. AI는 각 모듈의 코드를 짤 수 있지만, 모듈 간 인터페이스와 타이밍, 예외 처리를 설계하는 일은 엔지니어의 몫이다.
 - **물리 세계와의 접점**: 케이블이 빠졌는지, 센서 렌즈에 먼지가 꼈는지, 모터가 과열됐는지는 원격 접속만으로 확인하기 어렵다. 로봇 앞에서 장비를 직접 살피는 사람이 필요하다.
-- **신뢰성 판단**: AI가 "99% 정확도"라고 보고해도, 그 1%가 안전 사고로 이어질 수 있는 상황인지 아닌지는 엔지니어가 판단해야 한다. 자율주행에서 99%는 충분하지 않고, 실내 서빙 로봇에서 99%는 충분할 수 있다.
+- **신뢰성 판단**: AI가 "99% 정확도"라고 보고해도, 그 값이 무엇을 분모로 무엇을 세었는지, 남은 1%가 어떤 실패인지는 엔지니어가 확인해야 한다. 같은 99%라도 실패가 인명 사고로 이어지는 작업과 재시도로 끝나는 작업에서 충분성이 다르다. 판단 기준은 산업 분야 이름이 아니라 실패의 비용과 노출 빈도다.
 
 AI 도구가 발전해도 이 네 가지를 대신할 수는 없다.
 

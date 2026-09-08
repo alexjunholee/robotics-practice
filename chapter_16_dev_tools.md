@@ -91,7 +91,7 @@ sudo apt install -y vim tmux htop
 
 ### 16.2.2 CUDA / cuDNN
 
-딥러닝 모델 학습에는 대개 GPU 가속을 쓴다. NVIDIA GPU를 쓰는 환경에서는 CUDA와 PyTorch의 호환 버전이 맞지 않으면 `import torch` 단계부터 오류가 날 수 있다.
+딥러닝 모델 학습에는 대개 GPU 가속을 쓴다. NVIDIA GPU를 쓰는 환경에서는 드라이버가 PyTorch에 번들된 CUDA 런타임을 지원하지 않으면 GPU를 잡지 못한다.
 
 **설치 확인**:
 
@@ -125,11 +125,11 @@ sudo reboot
 nvidia-smi
 ```
 
-설치 후 `nvidia-smi`에서 GPU가 안 보이면: (1) Secure Boot가 켜져 있는지 확인 (BIOS에서 끌 것), (2) `sudo dkms status`로 드라이버 모듈 상태 확인. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
+설치 후 `nvidia-smi`에서 GPU가 안 보이면: (1) `sudo dkms status`로 모듈이 빌드·설치됐는지, `lsmod | grep nvidia`로 실제 로드됐는지 확인, (2) Secure Boot가 켜져 있으면 서명되지 않은 모듈이 로드되지 않으므로 MOK 키를 등록하거나 배포판 서명 패키지를 쓰거나 Secure Boot를 끈다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
 
 **CUDA/cuDNN 버전 호환성**
 
-PyTorch와 CUDA 버전이 안 맞으면 `import torch` 한 줄에서 에러가 난다. 확인 순서:
+PyTorch 공식 wheel은 자체 CUDA 런타임을 포함하므로 호스트의 CUDA toolkit(nvcc) 버전과 같아야 하는 것은 아니다. 실제 조건은 드라이버가 wheel의 CUDA 런타임을 지원하는지다. 이 조건이 깨지면 `import torch`는 되지만 `torch.cuda.is_available()`이 False가 되거나 첫 CUDA 호출에서 오류가 난다. 확인 순서:
 
 ```bash
 # 1. GPU 확인
@@ -141,7 +141,8 @@ nvcc --version
 # 3. PyTorch가 사용하는 CUDA 확인
 python -c "import torch; print(torch.version.cuda)"
 
-# 세 버전이 호환되어야 한다. PyTorch 공식 사이트에서 조합 확인:
+# wheel을 쓰면 조건은 하나다: 드라이버(1)가 PyTorch의 CUDA 런타임(3)을 지원하는가.
+# nvcc(2)는 소스 빌드나 커스텀 CUDA 확장을 컴파일할 때만 관여한다. 조합은 PyTorch 공식 사이트에서 확인:
 # https://pytorch.org/get-started/locally/
 ```
 
@@ -153,9 +154,10 @@ apt로 설치하는 `python3-opencv`나 `pip install opencv-python`은 CUDA 가�
 
 ```bash
 # 의존성 설치
-sudo apt install -y cmake git libgtk2.0-dev pkg-config \
+sudo apt install -y build-essential cmake git libgtk2.0-dev pkg-config \
     libavcodec-dev libavformat-dev libswscale-dev \
-    libtbb-dev libjpeg-dev libpng-dev
+    libtbb-dev libjpeg-dev libpng-dev \
+    python3-dev python3-numpy   # BUILD_opencv_python3=ON에 필요. cmake 요약의 Python 3 항목을 확인한다
 
 # OpenCV + contrib 소스
 git clone https://github.com/opencv/opencv.git
@@ -163,11 +165,12 @@ git clone https://github.com/opencv/opencv_contrib.git
 
 # 빌드 (CUDA 활성화)
 cd opencv && mkdir build && cd build
+# CUDA_ARCH_BIN은 GPU에 맞게 조정 (RTX 3090=8.6, RTX 4090=8.9). 줄 연속(\) 뒤에는 주석을 둘 수 없다
 cmake -D CMAKE_BUILD_TYPE=Release \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
       -D WITH_CUDA=ON \
-      -D CUDA_ARCH_BIN="8.6"  \  # GPU에 맞게 조정 (RTX 3090=8.6, RTX 4090=8.9)
+      -D CUDA_ARCH_BIN="8.6" \
       -D WITH_CUDNN=ON \
       -D OPENCV_DNN_CUDA=ON \
       -D BUILD_opencv_python3=ON \
@@ -198,7 +201,8 @@ conda create -n myenv python=3.10
 conda activate myenv
 
 # 패키지 설치
-conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
+# PyTorch는 2.6부터 pytorch Anaconda 채널 게시를 중단했다. conda 환경 안에서 pip 인덱스를 쓴다
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
 **venv** (가벼움):
@@ -293,7 +297,7 @@ sudo apt-get install -y xauth
 xhost +local:docker
 ```
 
-`xhost +local:docker`는 Docker 컨테이너에서만 X 서버 접근을 허용한다. `xhost +`(전체 허용)보다 안전하지만, 보안이 중요한 환경이라면 `xauth` 기반 인증을 쓰는 게 맞다.
+`xhost +local:docker`는 로컬 연결을 허용하는 항목을 추가한다. xhost는 호스트 기반 접근 제어라 컨테이너 신원을 구별하지 못하므로 Docker에만 열리는 것은 아니다. 컨테이너를 지정해 제한하려면 `xauth` 쿠키 기반 인증을 쓴다.
 
 **2단계: 실행 스크립트**
 
@@ -329,9 +333,9 @@ docker run --rm -it \
 | `-e QT_X11_NO_MITSHM=1` | MIT-SHM 호환성 문제로 RViz 등이 종료될 때 사용하는 우회 설정 |
 | `-e ROS_DOMAIN_ID=42` | 같은 네트워크의 다른 ROS2 시스템과 격리. 여러 시스템이 함께 있을 때 도메인 값을 분리 |
 | `-v /dev:/dev` | 센서 USB가 언제 꽂힐지 모르므로 /dev 전체 마운트. `--privileged`와 세트 |
-| `-v .Xauthority` | X11 인증. 이걸 안 걸면 `cannot open display` |
+| `-v .Xauthority` | X11 인증. 1단계의 xhost 설정을 쓰지 않을 때 이것이 없으면 `cannot open display` |
 
-**3단계: 작업 후 컨테이너 저장**
+**3단계: 작업 후 컨테이너 저장** — 2단계를 `--rm`으로 실행하면 셸을 나가는 순간 컨테이너가 삭제되므로 commit할 대상이 남지 않는다. 컨테이너가 살아 있는 동안 다른 셸에서 commit하거나, `--rm` 없이 실행한다.
 
 ```bash
 # 컨테이너 안에서 패키지 설치 등 작업을 했으면 커밋
@@ -675,7 +679,7 @@ TEST(MyTest, BasicTest) {
 2008 ─── GitHub 출시
   │       오픈소스 협업의 중심지가 됨
   │
-2010 ─── Conda (Anaconda) 등장
+2012 ─── Conda (Anaconda) 등장
   │       데이터 과학에서 널리 쓰이는 Python 환경 관리 도구가 됨
   │
 2013 ─── Docker 공개

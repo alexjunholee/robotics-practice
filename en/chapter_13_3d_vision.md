@@ -18,7 +18,7 @@ Point: [x, y, z, r, g, b, intensity, ...]
 Point Cloud: N × D matrix (N points, D-dimensional attributes)
 ```
 
-In linear-algebra terms, a point cloud is just an N×D matrix. N ranges from tens of thousands to millions of points, and D is the attribute dimension per point. A transformation (rotation, translation) amounts to multiplying each point by a 4×4 transformation matrix.
+In linear-algebra terms, a point cloud is just an N×D matrix. N ranges from tens of thousands to millions of points, and D is the attribute dimension per point. A transformation (rotation, translation) amounts to writing each point's position in homogeneous form and multiplying it by a 4×4 transformation matrix. Attributes such as color or reflectance are not touched by that transformation, and normals take the rotation only.
 
 **Major file formats**:
 | Format | Characteristics |
@@ -107,7 +107,7 @@ Remove points that have too few neighbors within a given radius.
 
 Estimate the surface normal vector at each point. This is a preprocessing step for many algorithms.
 
-ICP (registration), surface reconstruction, lighting computation — nearly every 3D processing step requires normals. Without normals, there is no way to tell "whether a point is part of a plane or part of an edge."
+Surface reconstruction, lighting computation, and point-to-plane ICP require normals; point-to-point ICP runs without them. Without normals, there is no way to tell "whether a point is part of a plane or part of an edge."
 
 ```python
 # Normal estimation
@@ -251,6 +251,7 @@ Bundle adjustment "jointly optimizes all camera poses and 3D point positions." I
 # Using COLMAP
 colmap feature_extractor --database_path db.db --image_path ./images
 colmap exhaustive_matcher --database_path db.db
+mkdir -p sparse
 colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 ```
 
@@ -285,7 +286,8 @@ volume = o3d.pipelines.integration.ScalableTSDFVolume(
 )
 
 for i, (color, depth, pose) in enumerate(frames):
-    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth)
+    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+        color, depth, depth_trunc=4.0, convert_rgb_to_intensity=False)
     volume.integrate(rgbd, intrinsic, np.linalg.inv(pose))
 
 mesh = volume.extract_triangle_mesh()
@@ -297,7 +299,7 @@ mesh = volume.extract_triangle_mesh()
 
 ## 13.5 Neural Rendering
 
-A new deep-learning-based approach to 3D representation and rendering. Prior methods (mesh, point cloud) had limits in representing complex scenes (reflections, transparent objects, thin structures). Neural rendering represents a scene as a learnable function, handling such effects naturally. Recently it has also been combined with SLAM for real-time mapping.
+A new deep-learning-based approach to 3D representation and rendering. Prior methods (mesh, point cloud) had limits in representing complex scenes (reflections, transparent objects, thin structures). Neural rendering represents a scene as a learnable function, handling such effects naturally. Recently it has also been combined with SLAM for online mapping.
 
 ### 13.5.1 NeRF (Neural Radiance Fields)
 
@@ -334,7 +336,7 @@ Intuitively: NeRF learns, via a neural network, "for every point in 3D space, wh
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS was adopted quickly because it substantially reduced the rendering time associated with NeRF. NeRF can take seconds to render a frame, whereas reported 3DGS implementations render at more than 100 FPS. This difference makes real-time mapping and SLAM applications more practical.
+3DGS was adopted quickly because it substantially reduced the rendering time associated with NeRF. NeRF can take seconds to render a frame, whereas reported 3DGS implementations render at more than 100 FPS. This difference makes robotics applications such as SLAM and online mapping practical.
 
 **Concept**: represent a scene with millions of 3D Gaussians.
 
@@ -366,7 +368,7 @@ Recall the covariance matrix from linear algebra. The eigenvectors of a 3×3 cov
 
 **3DGS + SLAM (current trend)**:
 
-As 3D Gaussian Splatting merges with SLAM, a new direction for neural SLAM is emerging. Whereas traditional SLAM built sparse point maps or voxel maps, 3DGS-SLAM builds photorealistic 3D maps in real time.
+As 3D Gaussian Splatting merges with SLAM, a new direction for neural SLAM is emerging. Whereas traditional SLAM built sparse point maps or voxel maps, 3DGS-SLAM builds photorealistic 3D maps. The 100+ FPS figures quoted as real time are the rendering throughput of an already-trained scene; end-to-end throughput including tracking and mapping optimization is reported to be far lower.
 
 - **SplaTAM (2024)**: runs 3DGS-based dense SLAM from RGB-D camera input. It alternates between tracking (camera pose estimation) and mapping (adding/updating Gaussians), and greatly improves both rendering quality and speed compared with prior neural SLAM.
 - **MonoGS (2024)**: runs 3DGS-based SLAM using only a monocular camera. It is drawing attention because it can build a dense 3D map without a depth sensor.
@@ -375,12 +377,12 @@ As 3D Gaussian Splatting merges with SLAM, a new direction for neural SLAM is em
 If a robot can build photorealistic 3D maps in real time while moving around, applications such as AR/VR content creation, digital twins, and building inspection open up.
 
 > **Further reading**
-> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.14737) — the original 3DGS paper.
+> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.04079) — the original 3DGS paper.
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — improves surface reconstruction quality via 2D Gaussians.
 > - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — an early 3DGS + SLAM system.
 > - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — the MonoGS paper.
 > - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — reconstructs dense 3D from image pairs without camera intrinsics or extrinsics.
-> - [Leroy et al., "MASt3R: Matching And Stereo 3D Reconstruction" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — adds local feature matching to DUSt3R. Provides reconstruction and precise correspondences simultaneously.
+> - [Leroy et al., "Grounding Image Matching in 3D with MASt3R" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — adds local feature matching to DUSt3R. Provides reconstruction and precise correspondences simultaneously.
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — unified framework for NeRF/3DGS experiments.
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — the official code.
 
@@ -428,10 +430,10 @@ For a new object, `z` is estimated via test-time optimization.
 Combines the rendering quality of NeRF's volume rendering with the clean surfaces of SDFs. It introduces a function that converts SDF values into densities, so SDFs can be learned within the volume rendering framework.
 
 ```
-density σ(x) = max(-dΦ_s(f(x))/dt, 0) / Φ_s(f(x))
+density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d is a point along the ray
 ```
 
-Here `Φ_s` is a sigmoid-like function controlled by a learnable parameter `s`. As training progresses, `s` shrinks and density concentrates near the surface.
+Here `Φ_s` is a sigmoid controlled by a learnable parameter `s`. The S-density defined as its derivative has standard deviation `1/s`, so as training converges `s` grows and the density narrows toward the surface.
 
 **VolSDF**
 
@@ -476,7 +478,7 @@ C(r) = ∫ T(t) · σ(t) · c(t) dt
 where T(t) = exp( -∫_{t_n}^{t} σ(s) ds )
 ```
 
-- `σ(t)`: density (opacity) at location `t`
+- `σ(t)`: density at location `t` (volume density, in units of inverse length)
 - `c(t)`: color (RGB) at location `t`
 - `T(t)`: accumulated transmittance (the probability that the ray reaches `t`)
 
@@ -532,7 +534,7 @@ When differentiable rendering is applied to SLAM, both tracking and mapping can 
 ```
 
 > **Further reading**
-> - [Tewari et al., "Advances in Neural Rendering" (EGSR 2022)](https://arxiv.org/abs/2111.05849) — survey of differentiable rendering.
+> - [Tewari et al., "Advances in Neural Rendering" (EUROGRAPHICS 2022 STAR)](https://arxiv.org/abs/2111.05849) — survey of differentiable rendering.
 > - [Ravi et al., "Accelerating 3D Deep Learning with PyTorch3D" (2020)](https://arxiv.org/abs/2007.08501) — the PyTorch3D paper.
 > - [Laine et al., "Modular Primitives for High-Performance Differentiable Rendering" (2020)](https://arxiv.org/abs/2011.03277) — the nvdiffrast paper.
 
@@ -606,9 +608,9 @@ In task planning, natural-language-driven navigation, and human-robot interactio
 
 > **Technical Timeline: 3D Vision**
 > - **~2010**: the classical era of point cloud processing. The PCL library, ICP registration, and TSDF-based volumetric reconstruction dominate.
-> - **2012~**: the release of the Kinect popularized RGB-D-based 3D reconstruction. KinectFusion (TSDF + ICP) opened the door to real-time 3D reconstruction.
+> - **2010~**: the release of the Kinect (2010) and KinectFusion (2011, TSDF + ICP) opened the door to real-time RGB-D 3D reconstruction and drove its popularization.
 > - **2017~**: point cloud deep learning begins with PointNet/PointNet++. 3D object detection research such as VoxelNet and PointPillars also surges in this period.
 > - **2020~**: the arrival of NeRF brings neural rendering into the spotlight. A handful of photos can yield a photorealistic 3D scene, and follow-ups such as Instant-NGP and Mip-NeRF arrive in quick succession.
 > - **2023~**: 3D Gaussian Splatting overcomes NeRF's speed limits. It combines real-time rendering with the advantages of explicit representation, and multi-modal 3D detection such as BEVFusion becomes the reference in autonomous driving.
-> - **2024~**: the combination of 3DGS + SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is opening up a new direction for neural SLAM. Robots can build photorealistic 3D maps in real time as they move.
+> - **2024~**: the combination of 3DGS + SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is opening up a new direction for neural SLAM. Robots build photorealistic 3D maps as they move; rendering is real time, but end-to-end throughput including tracking and mapping does not yet reach that level.
 > - **Recent direction**: more SLAM and robotics systems are using 3DGS-based scene representations. NeRFStudio allows NeRF and 3DGS to be compared on the same data, including their representations and rendering speed.

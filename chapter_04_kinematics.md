@@ -234,7 +234,7 @@ if result:
 
 **6R 매니퓰레이터의 해석적 IK:**
 
-6축 로봇 중 Pieper의 조건을 만족하는 구조 — 마지막 3축이 한 점에서 만나는(spherical wrist) 경우 — 는 해석적으로 풀 수 있다. 대부분의 산업용 6축 로봇(UR, KUKA, ABB 등)이 이 구조이다.
+6축 로봇 중 Pieper의 조건을 만족하는 구조 — 마지막 3축이 한 점에서 만나는(spherical wrist) 경우 — 는 해석적으로 풀 수 있다. KUKA, ABB 등 전통적 산업용 6축 로봇이 이 구조이다. UR 팔은 손목 3축이 한 점에서 만나지 않는 오프셋 손목이라 닫힌 해가 있어도 별도 유도가 필요하다.
 
 이 경우 위치 문제(처음 3축)와 자세 문제(마지막 3축)를 분리하여 풀 수 있다. 최대 8개의 해가 존재하며, 관절 제한(joint limits)과 이전 관절 각도에 가까운 해를 선택하는 것이 일반적이다.
 
@@ -321,7 +321,7 @@ Pseudo-inverse의 문제는 특이점 근처에서 관절 속도가 폭발한다
 | IKFast (OpenRAVE) | Analytical (코드 생성) | 특정 구조에 대해 C++ 코드 자동 생성. 빠름 |
 | TRAC-IK | KDL + SQP 듀얼 | KDL보다 성공률 높음, ROS 패키지 존재 |
 | MoveIt2 IK | 위 솔버들을 통합 | ROS2 생태계, 충돌 회피 통합 |
-| pinocchio | PoE 기반 | 현대적, 빠름, 미분 가능 (differentiable) |
+| pinocchio | 자코비안 기반 수치 반복 (CLIK) | 강체 동역학 라이브러리, 빠름, 해석적 미분 제공 |
 
 ```python
 # Beeson & Ames (2015)는 5개 로봇 모델의 도달 가능한 자세를
@@ -481,7 +481,7 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 
 | 모델 | 공칭 최대 토크 예시 (Nm) | 통신 | 용도 |
 |------|-----------|------|------|
-| XL330 | 0.5 | TTL | 소형 그리퍼, SO-ARM100 등 |
+| XL330 | 0.5 | TTL | 소형 그리퍼, 소형 저가 팔 |
 | XM540 | 10.0 | RS-485 | 중형 로봇 팔 |
 | PH54  | 44.7 | RS-485 | 대형 매니퓰레이터, 모바일 로봇 |
 
@@ -500,7 +500,6 @@ QDD: 감속비 6:1 ~ 10:1 (유성기어 또는 belt)
 
 QDD를 사용하는 최근 시스템들:
 - MIT Mini Cheetah / Cheetah 3
-- ALOHA (low-cost bimanual teleop)
 - Unitree 로봇 시리즈
 
 ```
@@ -619,7 +618,7 @@ print(f"모터 필요 RPM: {motor_rpm:.0f}")
 자동차 산업에서 시작했으며 로봇의 모터와 센서 네트워크에도 쓰인다. 차동 신호(differential signaling)로 노이즈에 강하고, 멀티마스터 구조에 우선순위 기반 중재(arbitration)를 지원한다.
 
 - 속도: 최대 1 Mbps (CAN 2.0), 5 Mbps (CAN FD)
-- 거리: 최대 1km (125 kbps에서)
+- 거리: 최대 약 1 km (50 kbps에서; 125 kbps는 약 500 m, 1 Mbps는 약 40 m)
 - 토폴로지: 버스 (데이지 체인 가능)
 
 로봇에서의 활용: 모터 드라이버와 메인 컨트롤러 사이 통신. MIT Cheetah, 많은 legged robot이 CAN을 사용한다.
@@ -672,7 +671,7 @@ KUKA, Beckhoff, 그리고 최근의 많은 연구용 로봇 플랫폼이 EtherCA
 
 **RS-485 / Dynamixel Protocol:**
 
-Dynamixel 서보의 통신 방식이다. RS-485는 차동 신호 기반의 시리얼 통신으로, 최대 1 Mbps, 여러 장치를 데이지 체인으로 연결할 수 있다.
+Dynamixel 서보의 통신 방식이다. RS-485는 차동 신호 기반의 시리얼 통신으로, 짧은 거리에서는 수 Mbps 이상도 가능하며(아래 예제의 1 Mbps는 Dynamixel 설정값이다), 여러 장치를 데이지 체인으로 연결할 수 있다.
 
 ```python
 # Dynamixel SDK를 이용한 서보 제어 예시
@@ -727,8 +726,8 @@ print(f"현재 위치: {pos} (= {pos * 360 / 4096:.1f}°)")
 
 설정 방법 (개략):
 ```bash
-# 1. PREEMPT_RT 패치가 적용된 커널 설치 (Ubuntu 예시)
-sudo apt install linux-image-rt-amd64   # Debian/Ubuntu
+# 1. PREEMPT_RT 패치가 적용된 커널 설치 (Debian 예시)
+sudo apt install linux-image-rt-amd64   # Debian 메타패키지. Ubuntu는 이 이름이 없고 Ubuntu Pro의 real-time kernel 등 별도 경로를 쓴다
 
 # 2. GRUB에서 RT 커널로 부팅 설정
 
@@ -888,7 +887,7 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 
 ### 4.7.1 도입: 결정론에서 확률로
 
-§4.2 순기구학과 §4.3 역기구학은 결정론적이다. 관절 각도를 넣으면 끝단 위치 하나가 나오고, 끝단 위치를 넣으면 관절 각도 집합이 나온다. 입력에 대한 출력은 점 추정이다. 팔 끝이 어디 있는지 수학적으로 정확히 계산할 수 있는 매니퓰레이터의 세계다.
+§4.2 순기구학과 §4.3 역기구학은 결정론적이다. 관절 각도를 넣으면 끝단 위치 하나가 나오고, 끝단 위치를 넣으면 관절 각도 집합이 나온다. 입력에 대한 출력은 점 추정이다. 다만 이것은 모델의 성질이지 플랫폼의 성질이 아니다. 매니퓰레이터도 관절 백래시, 링크 컴플라이언스, 캘리브레이션 오차를 가지며, 그래서 도입에서 모델 오차 보정을 다뤘다.
 
 차륜 구동 모바일 로봇은 다르다. 명령한 속도대로 바퀴가 정확히 굴러가지 않는다. 슬립이 있고, 바퀴 마모로 실효 반지름이 변한다. 좌우 바퀴의 비대칭 마모가 직진 오차를 만들기도 한다. 결과적으로, 제어 명령 $u_t$를 내리더라도 다음 pose $x_t$는 하나의 점이 아니라 확률 분포이다. 이 분포를 정형화하는 것이 **확률적 운동 모델(probabilistic motion model)**이다.
 
@@ -900,9 +899,9 @@ $$p(x_t \mid u_t, x_{t-1})$$
 
 **Velocity model**: 제어 입력이 선속도와 각속도 $u_t = (v, \omega)^T$로 주어진다. 계획 단계에서 사용할 수 있다. 실제 로봇의 명령 속도와 실제 속도 사이의 오차를 노이즈로 모델링한다.
 
-**Odometry model**: 제어 입력이 휠 인코더에서 측정한 두 pose pair $u_t = (\bar{x}_{t-1}, \bar{x}_t)$로 주어진다. 사후(retrospective) 정보이므로 계획에는 쓸 수 없지만, 인코더가 직접 측정한 값이므로 velocity model보다 정확하다.
+**Odometry model**: 제어 입력이 휠 인코더 적분으로 얻은 두 pose pair $u_t = (\bar{x}_{t-1}, \bar{x}_t)$로 주어진다. 사후(retrospective) 정보이므로 계획에는 쓸 수 없다. 이 pose 쌍은 인코더 회전을 기구학 모델로 적분해 얻은 값이며 pose를 직접 측정한 것은 아니다. 그래도 명령 속도를 그대로 믿는 velocity model보다 실무에서 더 정확한 편이다.
 
-두 모델 각각에 대해 **폐쇄형 밀도 평가(closed-form density evaluation)**와 **샘플링(sampling)** 두 가지 사용 방법이 있다. 폐쇄형은 "이 가설 pose $x_t$가 얼마나 그럴듯한가"를 확률밀도 수치로 돌려준다. EKF·UKF의 prediction 단계에서 필요하다. 샘플링은 "다음 pose 하나를 생성하라"는 forward 시뮬레이션이다. Particle filter(MCL)가 이 형태를 직접 쓴다. 4개의 조합을 §4.7.2~§4.7.5에서 각각 다룬다.
+두 모델 각각에 대해 **폐쇄형 밀도 평가(closed-form density evaluation)**와 **샘플링(sampling)** 두 가지 사용 방법이 있다. 폐쇄형은 "이 가설 pose $x_t$가 얼마나 그럴듯한가"를 확률밀도 수치로 돌려준다. 베이즈 필터의 적분을 직접 계산하는 격자 국지화 같은 경우에 필요하다. EKF·UKF의 prediction은 이 밀도값을 쓰지 않고 Jacobian이나 시그마점으로 평균과 공분산을 전파한다. 샘플링은 "다음 pose 하나를 생성하라"는 forward 시뮬레이션이다. Particle filter(MCL)가 이 형태를 직접 쓴다. 4개의 조합을 §4.7.2~§4.7.5에서 각각 다룬다.
 
 
 ### 4.7.2 Velocity Motion Model — 폐쇄형
@@ -998,7 +997,7 @@ Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
   return (x', y', θ')ᵀ
 ```
 
-**Closed-form vs Sampling 용도 차이.** Closed-form(`motion_model_velocity`)은 확률밀도 수치를 직접 계산해 반환한다. 주로 EKF·UKF의 prediction 단계에서 자코비안과 결합하여 활용된다. 이에 비해 Sampling(`sample_motion_model_velocity`) 기법은 구체적인 pose 표본 하나를 추출하는 데 목적이 있다. Particle filter(MCL, §14.7)에서 각 입자를 시간 축에 따라 전개할 때 직접 호출되는 형태다. 두 알고리즘은 동일한 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유하면서도 서로 반대되는 연산 방향을 취한다. closed-form 수식이 주어진 가설 pose의 우도를 평가하는 데 집중하는 한편, sampling 기법은 다음 시점의 새로운 pose를 순차적으로 생성해 나간다.
+**Closed-form vs Sampling 용도 차이.** Closed-form(`motion_model_velocity`)은 확률밀도 수치를 직접 계산해 반환한다. 베이즈 필터의 적분을 직접 계산하는 격자 국지화처럼 밀도값 자체가 필요한 곳에서 쓴다. 이에 비해 Sampling(`sample_motion_model_velocity`) 기법은 구체적인 pose 표본 하나를 추출하는 데 목적이 있다. Particle filter(MCL, §14.7)에서 각 입자를 시간 축에 따라 전개할 때 직접 호출되는 형태다. 두 알고리즘은 동일한 노이즈 파라미터 $\alpha_1..\alpha_6$를 공유하면서도 서로 반대되는 연산 방향을 취한다. closed-form 수식이 주어진 가설 pose의 우도를 평가하는 데 집중하는 한편, sampling 기법은 다음 시점의 새로운 pose를 순차적으로 생성해 나간다.
 
 ```python
 import numpy as np
@@ -1078,7 +1077,7 @@ Algorithm motion_model_odometry(x_t, u_t, x_{t-1}):
   return p1 · p2 · p3
 ```
 
-세 파라미터 $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$는 각각 독립 노이즈 변수로 다루어지므로, EKF·UKF의 prediction 단계에서 가설 pose 평가에 바로 쓸 수 있다.
+세 파라미터 $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$를 각각 독립 노이즈 변수로 다루므로 세 방향의 지지를 갖는 밀도가 얻어지고, 주어진 가설 pose의 우도를 그대로 평가할 수 있다.
 
 ### 4.7.5 Odometry Model — Particle Filter에서의 Sampling
 
@@ -1162,7 +1161,7 @@ $$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid 
 
 앞 항 $p(x_t \mid u_t, x_{t-1})$은 §4.7.2~§4.7.5의 운동 모델이다. 뒷 항 $p(x_t \mid m)$은 지도 조건부 확률로, occupancy grid에서 $x_t$가 자유 공간(free cell)이면 1에 가깝고, 벽이나 점유 공간이면 0에 가깝다.
 
-**효과.** Particle filter에서 입자가 벽을 통과하는 현상이 방지된다. 샘플링 후 새 pose를 지도에 조회하여 점유 공간이면 해당 입자의 weight를 0(또는 매우 낮게)으로 설정하는 것이 가장 단순한 구현이다. 정확히는 $p(x_t \mid m)$이 likelihood가 아니라 prior로 작용하는 형태이므로, 이 근사는 운동 모델과 지도 정보가 독립이라고 가정한다는 한계가 있다.
+**효과.** Particle filter에서 입자가 벽 안에 놓이는 것을 막는다. 샘플링 후 새 pose를 지도에 조회하여 점유 공간이면 해당 입자의 weight를 0(또는 매우 낮게)으로 설정하는 것이 가장 단순한 구현이다. 끝점만 검사하므로 시간 간격이 크면 벽을 지나쳐 건너간 경로는 걸러지지 않는다. 정확히는 $p(x_t \mid m)$이 likelihood가 아니라 prior로 작용하는 형태이므로, 이 근사는 운동 모델과 지도 정보가 독립이라고 가정한다는 한계가 있다.
 
 실제 구현에서 occupancy grid는 자유 공간 외에도 unknown 영역을 갖는다. Unknown 영역에 대해 $p(x_t \mid m)$을 어떻게 설정하느냐(1로 보느냐, 중간값으로 보느냐)는 localization 성능에 영향을 준다. ROS2 Nav2의 기본 설정은 unknown 영역을 free로 취급한다.
 
@@ -1180,7 +1179,7 @@ Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 partic
 
 ---
 
-결정론적 FK는 관절 각도를 하나의 자세로 보내고, IK는 목표 자세에 대응하는 관절 각도의 해 집합을 구한다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 직접 측정이므로 계획에 쓸 수 없지만 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, closed-form은 EKF/UKF에서 각각의 역할이 있다.
+결정론적 FK는 관절 각도를 하나의 자세로 보내고, IK는 목표 자세에 대응하는 관절 각도의 해 집합을 구한다. 확률적 운동 모델은 "입력 → 출력 분포"이다. 두 모델(Velocity, Odometry)과 두 사용 방식(밀도 평가, 샘플링)의 조합 4개가 실제 localization 시스템을 구성하는 기본 단위다. Odometry model은 인코더 회전을 적분해 얻은 사후 정보라 계획에 쓸 수 없지만 실무 정확도가 높고, Velocity model은 사전 계획에 쓸 수 있지만 실제 슬립을 반영하지 못한다. Sampling은 particle filter에서, 밀도 평가는 격자 국지화처럼 밀도값이 직접 필요한 곳에서 각각의 역할이 있다.
 
 한 가지 물음을 남긴다. 여기서 다룬 모든 모델은 바퀴가 미끄러지지 않는다는 운동학적 제약 위에 노이즈를 얹는 구조다. 진흙탕이나 경사 주행처럼 그 제약 자체가 무너지는 환경에서 $\alpha_i$ calibration은 어느 정도까지 보상할 수 있을까.
 
@@ -1192,7 +1191,7 @@ Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 partic
 
 **교재:**
 
-- Craig, "Introduction to Robotics: Mechanics and Planning" — DH 파라미터와 기구학을 다루며 Modified DH convention을 사용한다. 선수지식과 강의 구성에 맞는지는 목차와 예제를 보고 판단한다.
+- Craig, "Introduction to Robotics: Mechanics and Control" — DH 파라미터와 기구학을 다루며 Modified DH convention을 사용한다. 선수지식과 강의 구성에 맞는지는 목차와 예제를 보고 판단한다.
 
 - Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control" — PoE 기반. 무료 PDF와 Coursera 강의를 제공하여 접근성이 뛰어나다. 수학적으로 더 깔끔하지만 처음 보면 어렵다. https://modernrobotics.org
 
@@ -1219,8 +1218,8 @@ Velocity model과 Odometry model의 sampling formulation은 차륜 로봇 partic
 ```
 1955 ── DH 파라미터 제안 (Denavit & Hartenberg)
 1969 ── Stanford Arm (초기의 전기식 컴퓨터 제어 로봇 팔)
+1970~80년대 ── Harmonic Drive가 산업용 다관절 로봇 관절의 표준 감속기로 정착
 1985 ── Product of Exponentials 정형화
-1998 ── Harmonic Drive 로봇 적용 확산
 2019 ── MIT Mini Cheetah: QDD 액추에이터
 2019 ── MoveIt2 (ROS2 기반 모션 플래닝 프레임워크)
 2023 ── ALOHA: 저비용 양팔 텔레오퍼레이션 플랫폼

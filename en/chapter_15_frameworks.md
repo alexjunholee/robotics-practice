@@ -13,7 +13,7 @@ A robot runs modules such as cameras, LiDAR, motors, and controllers concurrentl
 
 | Feature | ROS1 | ROS2 |
 | --- | --- | --- |
-| Release | 2007 | 2017 |
+| First public release | 2010 (ROS 1.0 Box Turtle; development began 2007) | 2017 (Ardent Apalone) |
 | Communication | Custom (TCPROS) | DDS-based |
 | Real-time | Not supported | Supported |
 | Security | None | SROS2 |
@@ -37,7 +37,7 @@ For a new project, start with ROS2 unless there is a specific reason not to. If 
 Topics, services, and actions differ in timing and response behavior. They represent sensor streams, short request-response operations, and long-running tasks that expose intermediate state, respectively.
 
 **Node**:
-- An executable process
+- A functional unit that participates in the graph. In ROS 1 a node was effectively one process; in ROS 2 nodes can be built as components so that several of them live in a single process
 - Single-purpose (sensor driver, controller, etc.)
 
 **Topic**:
@@ -64,7 +64,7 @@ class MinimalPublisher(Node):
 ```
 
 **Service**:
-- Synchronous request/response
+- A request/response interface. The ROS 2 client APIs are asynchronous by default; blocking on a call synchronously from the thread that runs the executor (i.e., inside a callback) deadlocks
 - Suited to one-shot operations
 - Examples: changing settings, querying state
 
@@ -80,7 +80,7 @@ Use a Topic for continuous data such as camera images. A Service fits a single r
 - Node configuration values
 - Changeable at runtime
 
-> **⚠ Generated-code check**: Include the sensor topic's QoS when requesting ROS2 code. Verify that the generated subscriber matches the publisher's reliability and durability settings; a mismatch can prevent delivery without an obvious error message.
+> **⚠ Generated-code check**: Include the sensor topic's QoS when requesting ROS2 code. Verify that the generated subscriber's reliability and durability are compatible with the publisher's; an incompatible pair can prevent delivery without an obvious error message. The requirement is compatibility, not equality. A RELIABLE publisher connects to a BEST_EFFORT subscriber but not the reverse, and for durability a TRANSIENT_LOCAL publisher connects to a VOLATILE subscriber but not the reverse.
 
 > **Further reading**
 > - [ROS2 Concepts — Understanding nodes, topics, services, actions](https://docs.ros.org/en/humble/Concepts.html) — Official concepts document
@@ -121,18 +121,29 @@ A robot has camera, LiDAR, base, and world coordinate frames all existing at the
 
 ```python
 # tf2 listener example
-from tf2_ros import Buffer, TransformListener
+import rclpy
+from rclpy.node import Node
+from tf2_ros import Buffer, TransformListener, LookupException, ExtrapolationException
 
-tf_buffer = Buffer()
-tf_listener = TransformListener(tf_buffer, self)
+class TfDemo(Node):
+    def __init__(self):
+        super().__init__('tf_demo')
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        # Look up inside a timer so the listener has time to fill the buffer
+        self.create_timer(0.1, self.lookup)
 
-# Look up the transform from camera_link coordinates to base_link coordinates
-transform = tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Time())
+    def lookup(self):
+        try:
+            # Look up the transform from camera_link coordinates to base_link coordinates
+            t = self.tf_buffer.lookup_transform('base_link', 'camera_link', rclpy.time.Time())
+        except (LookupException, ExtrapolationException) as e:
+            self.get_logger().warn(f'tf not ready: {e}')
 ```
 
 > **Further reading**
 > - [ROS2 tf2 Tutorials](https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Tf2-Main.html) — Official coordinate transform tutorial
-> - [The Construct - rviz2 Complete Guide](https://www.youtube.com/@TheConstruct) — Video on using rviz2
+> - [The Construct channel](https://www.youtube.com/@TheConstruct) — ROS2 lecture channel, including videos on using rviz2
 > - [ros2 bag CLI documentation](https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html) — Official guide for recording and replaying data
 
 ### 15.1.4 Key Packages
@@ -224,7 +235,7 @@ Autonomous driving papers very often use CARLA as their experimental environment
 
 > **Further reading**
 > - [CARLA Documentation](https://carla.readthedocs.io/) — Official documentation and Python API reference
-> - [CARLA Simulator YouTube](https://www.youtube.com/@intaborlado5265) — Demo videos of simulator usage
+> - [CARLA Simulator YouTube](https://www.youtube.com/channel/UC1llP9ekCwt8nEJzMJBQekg) — Demo videos of simulator usage
 
 ## 15.3 Other Frameworks
 
@@ -258,7 +269,7 @@ For example, Eigen and Sophus are core libraries in robotics for handling coordi
 **15.4.1 Latency Budgeting**
 - Allocate the latency of the full pipeline segment by segment
 - Example: autonomous driving — sensor input (10 ms) → perception (50 ms) → planning (30 ms) → control (10 ms) = 100 ms total
-- If any segment exceeds its budget the whole system fails. The slowest segment is the bottleneck
+- The per-segment figures are design targets that divide up the end-to-end deadline. Unless each segment enforces its own deadline, slack in one segment can absorb an overrun in another. For throughput, the slowest segment is the bottleneck
 - Profiling methods: ROS2 callback duration, `ros2 topic delay`, tracing (ros2_tracing)
 
 **15.4.2 Behavior Tree**
@@ -277,7 +288,8 @@ For example, Eigen and Sophus are core libraries in robotics for handling coordi
 
 **15.4.4 Deployment and Field Testing**
 - CI/CD: automated colcon build + test, Docker image builds
-- Hardware-in-the-Loop (HIL): test new code while replaying real sensor data
+- Log replay testing: test new code while replaying recorded sensor data
+- Hardware-in-the-Loop (HIL): test with the real hardware in a closed loop while the plant side is simulated in real time
 - Field test protocol: controlled environment → semi-controlled → real environment, in stages
 - Log collection: rosbag + system logs (journalctl) + sensor status monitoring
 
@@ -288,7 +300,7 @@ For example, Eigen and Sophus are core libraries in robotics for handling coordi
 ## Technical Timeline: Robot Frameworks — Past → Present → Future
 
 ```
-2007 ─── ROS1 released (Willow Garage)
+2007 ─── ROS development begins (Stanford → Willow Garage; 1.0 released in 2010)
   │       Widely adopted as robot middleware
   │
 2012 ─── Gazebo Classic becomes an independent project

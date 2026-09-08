@@ -29,7 +29,7 @@ PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정
 
 전통적 방법으로 풀 수 있으면 전통적 방법을 쓰는 편이 낫다. 학습은 전통적 방법이 한계에 부딪히는 문제에 적용하는 도구다. 실무에서는 둘을 적절히 조합한다.
 
-그렇다면 전통적 방법이 부딪히는 한계는 구체적으로 어디에 있는가. Probabilistic Robotics(Thrun·Burgard·Fox)는 구체적인 로봇 도메인으로 이 그림을 그린다. 산업용 매니퓰레이터는 작업 공간이 제어되면 전통적 제어로 충분하지만, 수중 탐사 차량은 조류·시야·부력 변화 때문에 사전 모델을 세우기 어렵다. 헬리콥터 자율 비행은 공기역학 비선형성과 외란이 커서 학습 기반 제어가 두드러진다. 화성 탐사 로버는 지구와의 통신 지연 때문에 자율 의사결정이 필수이며, 지형 모델을 사전에 완전히 알 수 없다. 어느 도메인에서 학습이 더 절실한지는 모델 불확실성의 크기와 직결된다.
+그렇다면 전통적 방법이 부딪히는 한계는 구체적으로 어디에 있는가. Probabilistic Robotics(Thrun·Burgard·Fox) 15장은 매니퓰레이터, 수중 차량, 헬리콥터, 행성 탐사 로봇 팀이라는 네 도메인을 들어 불확실성 아래의 행동 선택이 왜 필요한지 보여준다. 그 예시를 학습의 관점에서 다시 읽으면 이렇다. 산업용 매니퓰레이터는 작업 공간이 제어되면 전통적 제어로 충분하지만, 수중 탐사 차량은 조류·시야·부력 변화 때문에 사전 모델을 세우기 어렵다. 헬리콥터는 돌풍 같은 외란이 커서 장애물과의 여유를 얼마로 둘지가 문제이고, 행성 탐사 로봇은 지형과 서로의 상대 위치를 사전에 알 수 없다. 어느 도메인에서 학습이 더 절실한지는 모델 불확실성의 크기와 직결된다.
 
 
 ---
@@ -52,7 +52,7 @@ PID 제어, MPC, RRT 같은 전통적 제어/플래닝은 dynamics 모델이 정
 J(π) = E[ Σ_{t=0}^{∞} γ^t · r_t ]
 ```
 
-Markov property는 "다음 상태는 현재 상태와 행동에만 의존한다"는 가정이다. 이전 히스토리 전체를 볼 필요가 없다는 뜻인데, 실제 로봇에서는 이 가정이 깨지는 경우도 있다 (부분 관측, 즉 POMDP 상황). 이 경우 observation history를 state로 사용하거나 recurrent policy를 쓴다.
+Markov property는 "다음 상태는 현재 상태와 행동에만 의존한다"는 가정이다. 이전 히스토리 전체를 볼 필요가 없다는 뜻이다. 실제 로봇에서 깨지는 것은 상태 전이의 Markov성이 아니라 관측이 곧 상태라는 가정이다(부분 관측, 즉 POMDP 상황). 잠재 상태의 전이는 여전히 Markov지만 관측만 보고 세운 정책은 그렇지 않다. 이 경우 observation history나 belief를 state로 사용하거나 recurrent policy를 쓴다.
 
 MDP 정의는 "무엇이 최적인가"의 기준을 세운다. 환경 모델 $p(x'|x,a)$와 보상 $r$이 알려져 있을 때 그 최적 정책을 *어떻게* 계산하는가는 다음 절에서 다룬다.
 
@@ -110,7 +110,7 @@ Algorithm MDP_value_iteration():
 
 변수 정리: $V_k$는 k번째 반복의 가치 추정값, $V^*$는 수렴 후 최적 가치, $\pi^*$는 최적 정책, $r$은 보상, $\gamma$는 할인 인자, $p(x'|x,a)$는 전이 확률.
 
-갱신 순서는 임의여도 된다. Sutton &amp; Barto(2018) §4.4에 따르면 각 상태가 무한히 자주 갱신되기만 하면 수렴이 보장된다. 위 수식은 이산 상태 공간의 합(Σ)으로 썼으며, 연속 상태 공간에서는 적분으로 표현한다.
+갱신 순서는 임의여도 된다. Sutton &amp; Barto(2018) §4.5에 따르면 각 상태가 무한히 자주 갱신되기만 하면 수렴이 보장된다. 위 수식은 이산 상태 공간의 합(Σ)으로 썼으며, 연속 상태 공간에서는 적분으로 표현한다.
 
 수렴 보장: Bellman 갱신 연산자는 $\gamma$를 수축률(contraction rate)로 하는 수축 사상(contraction mapping)이다. 따라서 반복은 반드시 유일한 고정점 $V^*$로 수렴한다. $k$번 반복 후 오차는 초기 오차의 $\gamma^k$배 이하로 감소한다: $\|V_k - V^*\|_\infty \leq \gamma^k \|V_0 - V^*\|_\infty$.
 
@@ -120,9 +120,9 @@ Algorithm MDP_value_iteration():
 
 $5 \times 5$ 격자 공간을 상상한다. 각 셀이 상태 $x$이고, 행동은 상하좌우 4방향이다. 목표 셀에 도달하면 $r = +100$, 장애물 셀에 부딪히면 $r = -10$, 그 외는 $r = -1$ (이동 비용). 전이는 의도한 방향으로 0.8 확률, 직교 방향으로 각 0.1 확률 (확률적 전이).
 
-Value Iteration을 실행하면 가치 함수가 목표 셀 주변에서 높고 장애물 주변에서 낮은 등고선 형태를 띤다. 초기에는 목표 인접 상태만 양수 가치를 보이지만, 반복 계산이 거듭되며 보상 파급(propagation)이 공간 전체로 확장되는 구조다. 수렴에 도달한 뒤 각 셀에서 최대 가치 방향을 순차 추종하면 최적 경로가 얻어지며, 장애물을 우회하는 거동 역시 자연스럽게 형성된다.
+Value Iteration을 실행하면 가치 함수가 목표 셀 주변에서 높고 장애물 주변에서 낮은 등고선 형태를 띤다. 초기에는 목표 인접 상태만 양수 가치를 보이지만, 반복 계산이 거듭되며 보상 파급(propagation)이 공간 전체로 확장되는 구조다. 수렴에 도달한 뒤 각 셀에서 즉시 보상과 후속 상태 가치의 기대값을 합한 값이 가장 큰 행동을 고르면 최적 정책이 얻어지고, 장애물을 우회하는 거동 역시 자연스럽게 형성된다. 정책은 모든 상태에 행동을 주는 사상이며, 확률적 전이에서는 실제 궤적이 실행마다 달라진다.
 
-이 그리디 경로가 곧 $\pi^*$다. 명시적으로 경로를 탐색(RRT, A*)하지 않아도 가치 함수의 경사(gradient)를 따라가는 것만으로 최적 경로가 나온다.
+이렇게 얻은 상태별 행동 사상이 $\pi^*$다. 명시적으로 경로를 탐색(RRT, A*)하지 않아도 가치 함수만으로 행동이 정해진다.
 
 MDP는 환경 모델 $p(x'|x,a)$와 $r$이 *주어졌을 때* 적용된다. 모델을 *모르고* 경험으로 학습하는 RL은 §8.3에서, *부분 관측*하의 플래닝은 ch.7 §7.9 심화 POMDP에서 다룬다.
 
@@ -168,7 +168,7 @@ Value function을 따로 학습해두면 variance를 줄일 수 있다. 대부�
 
 ### PPO (Proximal Policy Optimization)
 
-PPO는 Schulman et al. (2017)이 제안한 on-policy 알고리즘이다. Policy update의 크기를 제한하고, 이전 policy에서 너무 크게 벗어나는 변화는 clipping으로 잘라낸다.
+PPO는 Schulman et al. (2017)이 제안한 on-policy 알고리즘이다. surrogate 목적함수 안의 확률 비율을 clipping하여, 이전 policy에서 크게 벗어나는 변화에 이득이 생기지 않도록 만든다. 정책 변화 자체를 강제로 묶는 신뢰 영역 제약은 TRPO 쪽이고, PPO는 그 역할을 목적함수 설계로 대신한다.
 
 ```
 L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
@@ -176,7 +176,7 @@ L_CLIP(θ) = E[ min( r_t(θ) · A_t, clip(r_t(θ), 1-ε, 1+ε) · A_t ) ]
 
 여기서 r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t)는 probability ratio, ε의 원 논문 기본값은 0.2다.
 
-PPO가 널리 쓰이는 이유는 구현이 간단하고 하이퍼파라미터에 둔감하다는 데 있다. 안정적이기도 하다. NVIDIA Isaac Lab 등 대규모 병렬 시뮬레이션과 결합하면 수천 개 환경에서 동시에 데이터를 수집할 수 있어서 sample efficiency 문제를 물량으로 해결할 수 있다.
+PPO가 널리 쓰이는 이유는 구현이 간단하고 기본값이 비교적 넓은 범위에서 무난하게 동작한다는 데 있다. 다만 advantage 정규화·value clipping 같은 구현 세부에 성능이 크게 좌우된다는 재현 연구도 있다. 안정적이기도 하다. NVIDIA Isaac Lab 등 대규모 병렬 시뮬레이션과 결합하면 수천 개 환경에서 동시에 데이터를 수집할 수 있어서 sample efficiency 문제를 물량으로 해결할 수 있다.
 
 ### SAC (Soft Actor-Critic)
 
@@ -207,7 +207,7 @@ SAC와 성능이 비슷하지만, entropy tuning이 필요 없어서 하이퍼�
 | 시뮬레이션, GPU 병렬화 가능 | PPO | 병렬 환경으로 sample efficiency 보상 가능 |
 | 실제 로봇, 데이터 적음 | SAC | off-policy, sample efficient |
 | 연속 action space, 안정성 중시 | SAC 또는 TD3 | 둘 다 연속 공간에 강함 |
-| 이산 action space | PPO 또는 DQN | SAC는 연속 공간 전용 |
+| 이산 action space | PPO 또는 DQN | 원 SAC는 연속 행동용이며 이산 변형은 별도 구현이 필요 |
 | 처음 시작하는 프로젝트 | PPO | 튜닝이 쉽고, 디버깅이 용이 |
 
 ### Stable-Baselines3 코드 예시
@@ -327,7 +327,7 @@ Google에서 개발한 JAX 기반 물리 엔진이다. JAX의 JIT 컴파일과 �
 
 ### Domain Randomization
 
-아이디어는 시뮬레이션의 물리 파라미터를 랜덤하게 변화시켜서, policy가 특정 파라미터에 의존하지 않고 robust하게 학습되도록 하는 것이다. OpenAI의 Dactyl(2019)이 수백 개 물리 파라미터를 동시에 랜덤화해 sim-to-real을 성공시키면서 이 접근의 가능성을 보여줬다.
+아이디어는 시뮬레이션의 물리 파라미터를 랜덤하게 변화시켜서, policy가 특정 파라미터에 의존하지 않고 robust하게 학습되도록 하는 것이다. OpenAI의 Dactyl(2018)이 수백 개 물리 파라미터를 동시에 랜덤화해 sim-to-real을 성공시키면서 이 접근의 가능성을 보여줬다.
 
 랜덤화하는 대표적인 파라미터들:
 
@@ -368,7 +368,7 @@ def add_obs_noise(obs, config):
     return obs + noise
 ```
 
-충분히 넓은 범위로 랜덤화하면, 현실은 그 범위 안에 포함될 가능성이 높다. 대신 policy 성능의 상한은 내려간다. 특정 파라미터에 최적화한 policy보다 낮을 수밖에 없다.
+충분히 넓은 범위로 랜덤화하면, 현실은 그 범위 안에 포함될 가능성이 높다. 대신 특정 파라미터 설정에서 재면 성능이 낮아진다. 실제 시스템에서는 그 파라미터를 정확히 동정하기 어려우므로, 무작위화 정책이 특화 정책보다 나은 경우도 있다.
 
 ### System Identification (Sys-ID)
 
@@ -460,7 +460,7 @@ for epoch in range(100):
         print(f"Epoch {epoch+1}, Loss: {total_loss/len(loader):.4f}")
 ```
 
-**Compounding error**: BC의 구조적 한계다. 학습된 policy가 조금이라도 전문가 trajectory에서 벗어나면 학습 데이터에 없는 상태에 도달하고, 거기서의 행동은 예측 불가능해진다. 더 벗어나고, 에러가 누적되는 과정이 반복되면서 시간에 따라 에러가 기하급수적으로 커질 수 있다.
+**Compounding error**: BC의 구조적 한계다. 학습된 policy가 조금이라도 전문가 trajectory에서 벗어나면 학습 데이터에 없는 상태에 도달하고, 거기서의 행동은 예측 불가능해진다. 더 벗어나고, 에러가 누적되는 과정이 반복되면서 horizon $T$에 대해 오차가 $O(\epsilon T^2)$로 커질 수 있다(Ross & Bagnell, 2010).
 
 ### DAgger (Dataset Aggregation)
 
@@ -487,9 +487,9 @@ Stanford의 ALOHA 프로젝트에서 제안한 방법으로, 두 가지 장치�
 
 ### Diffusion Policy
 
-CMU의 Chi et al. (2023)이 제안한 방법으로, diffusion model을 action 생성에 적용한다.
+Chi et al. (2023)이 제안한 방법으로, diffusion model을 action 생성에 적용한다.
 
-Diffusion policy는 denoising 과정을 통해 임의의 복잡한 action 분포를 표현할 수 있다. BC가 unimodal Gaussian에 머무는 것과 달리, 다봉 분포도 자연스럽게 다룬다.
+Diffusion policy는 denoising 과정을 통해 임의의 복잡한 action 분포를 표현할 수 있다. MSE 회귀로 구현한 BC는 사실상 단봉 Gaussian을 가정하는데, diffusion policy는 다봉 분포도 자연스럽게 다룬다. BC는 학습 방식의 이름이므로 에너지 기반이나 혼합 밀도로 구현하면 다봉을 표현할 수 있다.
 
 ```python
 # Diffusion Policy의 action 생성 과정 (pseudo-code)
@@ -665,7 +665,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 > **추가 논문**
 > - [Andrychowicz et al., "Hindsight Experience Replay" (NeurIPS 2017, arXiv:1707.01495)](https://arxiv.org/abs/1707.01495) — sparse reward 문제 해결의 핵심. 실패한 trajectory를 성공으로 재레이블링
-> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — 단일 하이퍼파라미터로 150+ 도메인 학습. World model 기반 RL의 현 시점 대표적 성과
+> - [Hafner et al., "Mastering Diverse Domains through World Models" (DreamerV3, arXiv:2301.04104)](https://arxiv.org/abs/2301.04104) — 고정된 하이퍼파라미터 설정 하나로 150개 이상의 태스크 학습. World model 기반 RL의 현 시점 대표적 성과
 > - [Chi et al., "Universal Manipulation Interface" (UMI, RSS 2024, arXiv:2402.10329)](https://arxiv.org/abs/2402.10329) — 핸드헬드 그리퍼로 데이터 수집, 다양한 로봇에 zero-shot 배포
 > - [Fu et al., "Mobile ALOHA" (CoRL 2024, arXiv:2401.02117)](https://arxiv.org/abs/2401.02117) — 모바일 베이스 + 양팔 텔레오퍼레이션. co-training으로 성공률 대폭 향상
 
@@ -679,7 +679,8 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
          초기의 영향력 큰 Monte Carlo policy-gradient 방법. score-function 추정량의 variance가 높다.
 
 2013 ── DQN (Mnih et al., Atari)
-         Deep RL의 시작. replay buffer + target network로 안정적 학습.
+         Deep RL의 시작. replay buffer로 상관된 표본 문제를 완화했다.
+         고정 target network는 2015년 Nature 판에서 더해졌다.
 
 2015 ── TRPO (Schulman et al.)
          trust region 제약으로 안정적 policy update. 이론은 좋으나 구현이 복잡.
@@ -691,7 +692,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
          entropy regularization + off-policy. 연속 공간에서 sample efficient.
 
 2019 ── ANYmal: sim-to-real locomotion (ETH Zurich)
-         대규모 domain randomization으로 사족보행 sim-to-real 성공.
+         실제 로봇 데이터로 학습한 actuator network로 구동계 동역학을 모사해 사족보행 sim-to-real 성공.
 
 2020 ── DAgger 실전 적용 확산
          모방학습의 실용성 입증. 다양한 로봇 플랫폼에 적용.
@@ -699,7 +700,7 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 2022 ── RT-1 (Google)
          대규모 로봇 데이터 + Transformer. 다중 태스크 범용 정책.
 
-2023 ── ACT/ALOHA (Stanford), Diffusion Policy (CMU)
+2023 ── ACT/ALOHA (Stanford), Diffusion Policy (Columbia·TRI·MIT)
          모방학습의 새로운 표준. action chunking과 diffusion으로 성능 향상.
 
 2023 ── RT-2 (Google)
@@ -714,6 +715,6 @@ c_t는 cost (예: 관절 토크 한계 초과, 장애물 충돌), d는 허용 �
 
 ---
 
-모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 시뮬레이션에서 학습한 모델을 실제 로봇에 적용할 때는 어느 접근이든 sim-to-real gap을 따로 평가해야 한다. OpenAI Dactyl은 이를 줄이기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 생성했다.
+모델이 주어지면 MDP Value Iteration처럼 dynamic programming으로 최적 정책을 계산할 수 있다. 모델을 모를 때는 PPO·SAC 같은 model-free RL로 경험에서 직접 학습한다. 시연 데이터가 있으면 BC·ACT·Diffusion Policy로 모방한다. 시뮬레이션에서 학습한 모델을 실제 로봇에 적용할 때는 어느 접근이든 sim-to-real gap을 따로 평가해야 한다. OpenAI의 루빅스 큐브 연구(2019)는 이를 줄이기 위해 시뮬레이션에서 약 13,000년 분량의 경험을 생성했다.
 
 로봇이 학습하려면 먼저 환경을 지각해야 한다. Ch.9에서는 카메라 이미지에서 정보를 뽑아내는 컴퓨터 비전 기초를 다룬다.

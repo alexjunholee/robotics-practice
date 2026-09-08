@@ -30,7 +30,7 @@ Scaling laws describe empirical power-law relationships between performance and 
 
 ## 11.2 Major VFMs
 
-This section compares DINOv2, SAM, CLIP, and Depth Anything through representation learning, segmentation, image-text alignment, and monocular depth estimation.
+This section compares DINOv2, SAM, CLIP, Depth Anything, and GroundingDINO through representation learning, segmentation, image-text alignment, monocular depth estimation, and open-vocabulary detection.
 
 ### 11.2.1 DINOv2
 
@@ -39,7 +39,7 @@ A **self-supervised Vision Transformer** that learns rich features from images w
 DINOv2 learns general-purpose visual features without labels. These features can be used as-is for diverse tasks such as classification, segmentation, and matching. In robotics in particular, DINOv2's dense features provide stable matching even in textureless regions, and are used in SLAM and visual odometry to reduce tracking failure rates in textureless environments.
 
 **Characteristics**:
-- contrastive learning + self-distillation
+- self-distillation (DINO) + masked image modeling (iBOT) + KoLeo regularization
 - strong transfer performance across diverse tasks
 - provides dense visual features
 
@@ -71,9 +71,9 @@ The first token of `last_hidden_state` is the [CLS] token summarizing the whole 
 
 ### 11.2.2 SAM (Segment Anything Model)
 
-**Promptable segmentation**: segments any object from prompts such as points, boxes, or text.
+**Promptable segmentation**: segments any object from point, box, or mask prompts. Text prompts were an exploratory experiment in the original paper and are supported by neither the public checkpoints nor the API, so text-driven segmentation is covered later as a composition in which GroundingDINO turns text into boxes.
 
-Conventional segmentation models could only segment the classes used during training. Trained on "chair, table, person", they cannot segment "cup". SAM is trained on 1.1B masks and can segment any object it has never seen. For robots that have to manipulate objects they encounter for the first time in a new environment, the approach to segmentation has changed since SAM.
+Conventional segmentation models could only segment the classes used during training. Trained on "chair, table, person", they cannot segment "cup". SAM is trained on 1.1B masks and aims to segment arbitrary objects without being tied to its training classes. Its performance drops in domains with a different distribution, such as medical, satellite, or underwater imagery (§11.5). For robots that have to manipulate objects they encounter for the first time in a new environment, the approach to segmentation has changed since SAM.
 
 **Components**:
 - Image Encoder: embeds images with a ViT
@@ -98,7 +98,7 @@ masks, scores, logits = predictor.predict(
 )
 ```
 
-With `multimask_output=True`, three mask candidates are returned (whole object, part, smaller part). Use `scores` to pick the most suitable mask.
+With `multimask_output=True`, three mask candidates are returned (whole object, part, smaller part). `scores` is a predicted mask-quality (IoU) estimate, not a measure of which extent you wanted, so selecting a particular extent means changing the prompt or comparing the three candidates yourself.
 
 > **Further reading**
 > - [Kirillov et al., "Segment Anything" (2023)](https://arxiv.org/abs/2304.02643) — the original SAM paper.
@@ -136,11 +136,14 @@ with torch.no_grad():
     image_features = model.encode_image(image)
     text_features = model.encode_text(text)
 
-    similarity = (image_features @ text_features.T).softmax(dim=-1)
+    # CLIP only yields a cosine similarity if both features are L2-normalized before the inner product
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+    similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)  # 100.0 ≈ model.logit_scale.exp(), the learned temperature scale
     print(similarity)  # similarity between each text and the image
 ```
 
-`@` is matrix multiplication (dot product). It computes the cosine similarity between image features and text features, expressing numerically how semantically close the image is to each text. This is the principle of zero-shot classification.
+`@` is matrix multiplication. CLIP L2-normalizes both features before taking the inner product, which is what makes the value a cosine similarity; the result is then multiplied by a learned scale and passed through a softmax. Skip the normalization and what you get is a plain dot product, not a cosine. This is the principle of zero-shot classification.
 
 > **Further reading**
 > - [Radford et al., "Learning Transferable Visual Models From Natural Language Supervision" (2021)](https://arxiv.org/abs/2103.00020) — the original CLIP paper.
@@ -157,7 +160,7 @@ Depth Anything is a monocular depth model trained with 1.5M labeled and 62M unla
 **Characteristics**:
 - trained on 1.5M labeled + 62M unlabeled images
 - robust across diverse domains
-- V2: metric-depth models available
+- metric-depth models available for both V1 and V2 (V2's distinguishing point is improved relative-depth quality from retraining on synthetic labels)
 
 Depth Anything V2 also provides a model for metric, or absolute, depth. This variant is useful when a robotics system needs distances in physical units rather than only relative ordering.
 
@@ -234,7 +237,7 @@ Embedding 2D-extracted VFM features into a 3D representation (NeRF, 3D Gaussian 
 
 Using VFMs in a robot's Local Module requires making them lightweight.
 
-VFMs perform well, but with hundreds of millions of parameters they are hard to run in real time without a GPU server. Robots, on the other hand, must run at 30 FPS on Jetson or embedded boards. Bridging this gap is the job of lightweight modeling and edge deployment. No matter how good a model is, if it cannot run in real time on a robot, it only shines inside a paper.
+VFMs have hundreds of millions of parameters, so their compute and memory demands are high. A ViT-B-class model runs on a desktop GPU, but meeting real-time deadlines on onboard compute while sharing resources with other modules is hard. Field robots, on the other hand, have to run them on onboard compute, and the throughput they need is set by the control loop and the task: retrieval, map update, and manipulation each carry a different latency budget. Bridging this gap is the job of lightweight modeling and edge deployment. No matter how good a model is, if it cannot run in real time on a robot, it only shines inside a paper.
 
 **Lightweight techniques**:
 | Technique | Description |
@@ -323,7 +326,7 @@ lora_config = LoraConfig(
 # Create the PEFT model
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
-# Example output: trainable params: 294,912 || all params: 86,567,178 || trainable%: 0.34%
+# Example output: trainable params: 589,824 || all params: 86,567,178 || trainable%: 0.68%
 ```
 
 **Adapter**:
@@ -392,8 +395,8 @@ For fair comparison, the same backbone, the same data split, and the same augmen
 ---
 
 > **Technical Timeline: Vision Foundation Models**
-> - **2021**: CLIP (OpenAI) released. It trained a shared embedding on 400M image-text pairs and demonstrated zero-shot classification.
-> - **2022**: Self-supervised pretraining methods such as Masked Autoencoders (MAE) begin to draw attention. DINO demonstrates the potential of self-supervised ViTs.
+> - **2021**: CLIP (OpenAI) released. It trained a shared embedding on 400M image-text pairs and demonstrated zero-shot classification. DINO (ICCV 2021) demonstrates the potential of self-supervised ViTs.
+> - **2022**: Self-supervised pretraining methods such as Masked Autoencoders (MAE, CVPR 2022) begin to draw attention.
 > - **2023**: SAM (Segment Anything Model) released. Trained on 11M images and 1.1B masks. Achieves foundation-model-level generality with "segment anything". DINOv2 released the same year — a new standard for self-supervised vision features.
 > - **2024**: Rapid evolution of VFMs including SAM2 (extension to video segmentation), Depth Anything V2 (metric depth support), and Florence-2 (unified vision model). Lightweight modeling and edge deployment become active.
 > - **2025~**: 3D extensions of VFMs and multimodal unification accelerate. The direction is a single foundation model that jointly handles detection, segmentation, depth, and tracking. In robotics, VFMs are on course to become the standard perception backbone.
