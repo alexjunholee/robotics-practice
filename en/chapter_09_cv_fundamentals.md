@@ -428,7 +428,7 @@ In "PyrLK", "Pyr" stands for Pyramid. It uses an image pyramid to capture large 
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-RAFT (Recurrent All-Pairs Field Transforms) is a common learned baseline for dense optical flow. Its paper reports strong benchmark accuracy, but latency and accuracy relative to newer methods depend on resolution, hardware, training data, and evaluation protocol.
+RAFT (Recurrent All-Pairs Field Transforms) is a learned baseline for dense optical flow. Its 2020 paper reported lower optical-flow estimation errors than prior methods on the KITTI and Sintel benchmarks.
 
 > **Further reading**
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — Mathematical principles of optical flow.

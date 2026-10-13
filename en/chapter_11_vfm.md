@@ -19,7 +19,7 @@ Task-specific models often require new data collection, labeling, and training w
 
 Reusing a pretrained representation can reduce the need to build labels from scratch for each environment. Actual generalization still has to be evaluated separately for the target domain and adaptation setting.
 
-Scaling laws describe empirical power-law relationships between performance and model size, data, or compute. They have informed the development of large models such as GPT, CLIP, and SAM. Gains from scale depend on how these resources are balanced: Hoffmann et al. (2022), for example, showed that increasing model size alone can be less effective than allocating data and compute together.
+Scaling laws describe empirical power-law relationships between performance and model size, data, or compute (Kaplan et al., 2020; Zhai et al., 2022 for ViT). They have informed the development of large models such as GPT, CLIP, and SAM. Gains from scale depend on how these resources are balanced: Hoffmann et al. (2022), for example, showed that increasing model size alone can be less effective than allocating data and compute together.
 
 > **Further reading**
 > - [Bommasani et al., "On the Opportunities and Risks of Foundation Models" (2021)](https://arxiv.org/abs/2108.07258) — Stanford report that defined the term "foundation model".

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="shared/theme.css">
 <title>Guide on Becoming a Roboticist</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,6 +484,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
 {{MD_EN}}
 </textarea>
 
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
@@ -504,6 +506,62 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
   // Disable strikethrough: ~ is used as range separator throughout this document
   marked.use({ renderer: { del: function(token) { return '~' + (token.text || token) + '~'; } }
   });
+
+  function protectMath(src) {
+    var placeholders = [];
+    var idx = 0;
+
+    // Protect code blocks first (``` ... ```)
+    var codeBlocks = [];
+    src = src.replace(/```[\s\S]*?```/g, function(m) {
+      codeBlocks.push(m);
+      return '%%CODEBLOCK' + (codeBlocks.length - 1) + '%%';
+    });
+
+    // Protect inline code (` ... `)
+    var inlineCodes = [];
+    src = src.replace(/`[^`\n]+`/g, function(m) {
+      inlineCodes.push(m);
+      return '%%INLINECODE' + (inlineCodes.length - 1) + '%%';
+    });
+
+    // Protect display math ($$...$$)
+    src = src.replace(/\$\$([\s\S]*?)\$\$/g, function(m, math) {
+      placeholders.push({ display: true, math: math });
+      return '%%MATH' + (idx++) + '%%';
+    });
+
+    // Protect inline math ($...$) — but not lone $ signs
+    src = src.replace(/\$([^\s$](?:[^$]*[^\s$])?)\$/g, function(m, math) {
+      placeholders.push({ display: false, math: math });
+      return '%%MATH' + (idx++) + '%%';
+    });
+
+    // Restore code blocks
+    src = src.replace(/%%CODEBLOCK(\d+)%%/g, function(m, i) {
+      return codeBlocks[parseInt(i)];
+    });
+    src = src.replace(/%%INLINECODE(\d+)%%/g, function(m, i) {
+      return inlineCodes[parseInt(i)];
+    });
+
+    return { src: src, placeholders: placeholders };
+  }
+
+  function restoreAndRenderMath(html, placeholders) {
+    return html.replace(/%%MATH(\d+)%%/g, function(m, i) {
+      var p = placeholders[parseInt(i)];
+      try {
+        return katex.renderToString(p.math, {
+          displayMode: p.display,
+          throwOnError: false,
+          trust: false
+        });
+      } catch(e) {
+        return p.display ? '$$' + p.math + '$$' : '$' + p.math + '$';
+      }
+    });
+  }
 
   // ---- I18N ----
   var I18N = {
@@ -579,8 +637,9 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
       var src = document.getElementById('md-source-' + lang).value;
       // Fix: marked.js doesn't recognize **text** when immediately followed by Korean characters
       src = src.replace(/\*\*([^*\n]+)\*\*(?=[가-힣])/g, '<strong>$1</strong>');
-      const html = marked.parse(src);
-      contentEl.innerHTML = html;
+      const math = protectMath(src);
+      const html = marked.parse(math.src);
+      contentEl.innerHTML = restoreAndRenderMath(html, math.placeholders);
 
       document.getElementById('toc-container').innerHTML = '';
       embedDemos();

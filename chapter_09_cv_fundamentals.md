@@ -428,7 +428,7 @@ p1, status, err = cv2.calcOpticalFlowPyrLK(
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-최근에는 RAFT(Recurrent All-Pairs Field Transforms)가 dense optical flow의 기준점이 됐다. 딥러닝 기반이지만 정확도가 크게 높아서 품질이 중요한 경우에 쓰인다.
+RAFT(Recurrent All-Pairs Field Transforms)는 dense optical flow의 학습 기반 비교 기준으로 쓰인다. 2020년 원 논문은 KITTI와 Sintel 벤치마크에서 당시 기존 방법보다 낮은 광류 추정 오류를 보고했다.
 
 > 추천 자료
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — 광류의 수학적 원리

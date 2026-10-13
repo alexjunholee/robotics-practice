@@ -15,7 +15,7 @@ But the following situations cannot be handled without dynamics:
 - **Optimal control**: Finding trajectories that minimize energy or time requires the dynamics model as a constraint.
 - **Collision/contact handling**: Grasping, pushing, or throwing objects is impossible without contact dynamics.
 
-Kinematics is the "geometry" of the robot; dynamics is its "physics". Just as geometry alone cannot capture the world, kinematics alone cannot fully control a robot.
+Kinematics is the "geometry" of the robot; dynamics is its "physics". Geometry alone does not explain how forces produce motion.
 
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Chapter 1 — a concise account of why dynamics is needed.

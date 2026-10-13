@@ -1,6 +1,6 @@
 # Ch.18 — Lab Research Directions
 
-Our lab designs a Spatial AI system as two modules. This split is forced by physical constraints and real-time requirements, and it is where the concepts built up in earlier chapters come together.
+Our lab designs a Spatial AI system as two modules. This design responds to physical constraints and real-time requirements, and it is where the concepts built up in earlier chapters come together.
 
 ## 18.1 Overview
 
@@ -101,7 +101,7 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**Reading it as a scenario**: assume that in the code above, `process()` is called once per fusion tick. IMU data comes in at 100 Hz (100 times per second) and camera images at 30 Hz, so the structure is one where each sensor's own callback drops its latest measurement into a buffer and the tick consumes them together. Every tick, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame would saturate the network.
+**Reading it as a scenario**: assume that in the code above, `process()` is called once per fusion tick. IMU data comes in at 100 Hz (100 times per second) and camera images at 30 Hz, so the structure is one where each sensor's own callback drops its latest measurement into a buffer and the tick consumes them together. Every tick, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame could exceed the available network bandwidth.
 
 ## 18.3 Global Module: VFM-based Understanding
 

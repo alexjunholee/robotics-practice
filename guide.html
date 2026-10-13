@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="shared/theme.css">
 <title>Guide on Becoming a Roboticist</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7626,7 +7627,7 @@ p1, status, err = cv2.calcOpticalFlowPyrLK(
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-최근에는 RAFT(Recurrent All-Pairs Field Transforms)가 dense optical flow의 기준점이 됐다. 딥러닝 기반이지만 정확도가 크게 높아서 품질이 중요한 경우에 쓰인다.
+RAFT(Recurrent All-Pairs Field Transforms)는 dense optical flow의 학습 기반 비교 기준으로 쓰인다. 2020년 원 논문은 KITTI와 Sintel 벤치마크에서 당시 기존 방법보다 낮은 광류 추정 오류를 보고했다.
 
 > 추천 자료
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — 광류의 수학적 원리
@@ -13185,7 +13186,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 ## 20.7 추천 학습 경로
 
-아래는 기존 1.4절에 있던 학습 경로를 확장한 것이다. 각 단계별로 구체적인 자료와 링크를 달았으니, 자기 수준에 맞는 단계부터 시작하면 된다.
+1.4절의 학습 경로를 확장해 단계마다 구체적인 자료와 링크를 더했다. 자기 수준에 맞는 단계부터 시작하면 된다.
 
 ### 입문 단계 (1~3개월)
 
@@ -14769,7 +14770,7 @@ A = UΣV^T
 
 **Uses**: least squares solutions, matrix approximation, fundamental matrix computation.
 
-SVD shows up constantly in robotics. It is the most numerically stable way to compute the least-squares solution of an overdetermined system. Camera calibration for the fundamental matrix, point cloud registration for the optimal transformation — all use SVD. The final step of the "8-point algorithm," which computes the fundamental matrix from eight or more correspondences, is SVD.
+SVD shows up constantly in robotics. It provides a numerically stable way to compute the least-squares solution of an overdetermined system. Camera calibration for the fundamental matrix, point cloud registration for the optimal transformation — all use SVD. The final step of the "8-point algorithm," which computes the fundamental matrix from eight or more correspondences, is SVD.
 
 > **Further reading**
 > - [Steve Brunton — Singular Value Decomposition (YouTube)](https://www.youtube.com/watch?v=nbBvuuNVfco) — Lectures by a University of Washington professor that clearly explain the mathematical meaning of SVD and its applications.
@@ -15628,7 +15629,7 @@ The complete generative model = motion model + measurement model + initial distr
 
 ### 3.9.5 The General Bayes Filter
 
-The most general form of any belief calculator. It alternates a **prediction** step and a **correction** step.
+The Bayes filter is a general framework for recursive estimation of a dynamic state. It alternates a **prediction** step and a **correction** step.
 
 $$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t-1})\, dx_{t-1} \tag{prediction}$$
 
@@ -17431,7 +17432,7 @@ But the following situations cannot be handled without dynamics:
 - **Optimal control**: Finding trajectories that minimize energy or time requires the dynamics model as a constraint.
 - **Collision/contact handling**: Grasping, pushing, or throwing objects is impossible without contact dynamics.
 
-Kinematics is the "geometry" of the robot; dynamics is its "physics". Just as geometry alone cannot capture the world, kinematics alone cannot fully control a robot.
+Kinematics is the "geometry" of the robot; dynamics is its "physics". Geometry alone does not explain how forces produce motion.
 
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Chapter 1 — a concise account of why dynamics is needed.
@@ -19930,7 +19931,7 @@ In these situations, learning-based approaches approximate the input-output rela
 
 If a problem can be solved with traditional methods, use traditional methods. Learning is a tool to apply where traditional methods hit their limits. Combining the two appropriately is the most realistic approach in practice.
 
-Where, then, are these limits in concrete terms? Chapter 15 of *Probabilistic Robotics* (Thrun, Burgard, and Fox) uses four domains — a manipulator, an underwater vehicle, a helicopter, and a team of planetary exploration robots — to show why action selection under uncertainty is necessary. Read from the perspective of learning, those examples go as follows. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a prior model is not realistic. A helicopter contends with disturbances such as gusts large enough that the question becomes how much clearance to keep from obstacles, and planetary exploration robots cannot know the terrain or their positions relative to one another in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
+Where, then, are these limits in concrete terms? Chapter 15 of *Probabilistic Robotics* (Thrun, Burgard, and Fox) uses four domains — a manipulator, an underwater vehicle, a helicopter, and a team of planetary exploration robots — to show why action selection under uncertainty is necessary. Read from the perspective of learning, those examples go as follows. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a model in advance is difficult. A helicopter contends with disturbances such as gusts large enough that the question becomes how much clearance to keep from obstacles, and planetary exploration robots cannot know the terrain or their positions relative to one another in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
 
 
 ---
@@ -21052,7 +21053,7 @@ In "PyrLK", "Pyr" stands for Pyramid. It uses an image pyramid to capture large 
 flow = cv2.calcOpticalFlowFarneback(prev_gray, curr_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
 ```
 
-RAFT (Recurrent All-Pairs Field Transforms) is a common learned baseline for dense optical flow. Its paper reports strong benchmark accuracy, but latency and accuracy relative to newer methods depend on resolution, hardware, training data, and evaluation protocol.
+RAFT (Recurrent All-Pairs Field Transforms) is a learned baseline for dense optical flow. Its 2020 paper reported lower optical-flow estimation errors than prior methods on the KITTI and Sintel benchmarks.
 
 > **Further reading**
 > - [First Principles of CV — Optical Flow](https://www.youtube.com/playlist?list=PL2zRqk16wsdp8KbDfHKvPYNGF2L-zQASc) — Mathematical principles of optical flow.
@@ -21941,7 +21942,7 @@ Task-specific models often require new data collection, labeling, and training w
 
 Reusing a pretrained representation can reduce the need to build labels from scratch for each environment. Actual generalization still has to be evaluated separately for the target domain and adaptation setting.
 
-Scaling laws describe empirical power-law relationships between performance and model size, data, or compute. They have informed the development of large models such as GPT, CLIP, and SAM. Gains from scale depend on how these resources are balanced: Hoffmann et al. (2022), for example, showed that increasing model size alone can be less effective than allocating data and compute together.
+Scaling laws describe empirical power-law relationships between performance and model size, data, or compute (Kaplan et al., 2020; Zhai et al., 2022 for ViT). They have informed the development of large models such as GPT, CLIP, and SAM. Gains from scale depend on how these resources are balanced: Hoffmann et al. (2022), for example, showed that increasing model size alone can be less effective than allocating data and compute together.
 
 > **Further reading**
 > - [Bommasani et al., "On the Opportunities and Risks of Foundation Models" (2021)](https://arxiv.org/abs/2108.07258) — Stanford report that defined the term "foundation model".
@@ -24185,7 +24186,7 @@ Practical choice:
 
 ### 14.12 Advanced: Semantic SLAM
 
-Classic SLAM produces a purely geometric map. Point clouds, meshes, occupancy grids and so on record only "the shape of space." It knows there is a wall, but not whether that wall is a wall, a door, or a bookshelf. Semantic SLAM adds semantic information to the map.
+Classic SLAM produces a purely geometric map. Point clouds, meshes, occupancy grids and so on record only "the shape of space." It records an obstacle's location without identifying whether it is a wall, a door, or a bookshelf. Semantic SLAM adds semantic information to the map.
 
 Approaches split by landmark representation. **Object-level SLAM** (CubeSLAM, QuadricSLAM) estimates objects as landmarks — 3D cuboids, dual quadrics, and the like — rather than points. It depends on an object detector, but data association is more robust than point-based, and object-level reasoning becomes possible. **Panoptic SLAM** fuses panoptic segmentation results into 3D to produce a map where every pixel carries a semantic label. The robot can directly query "there are 3 chairs in this room" on the map. **Open-vocabulary SLAM** (ConceptGraphs) stores features from a vision-language model like CLIP in the map, so places can be searched with natural language. It connects directly to the 3D Scene Graph (Hydra, etc.) discussed in Chapter 13.
 
@@ -25951,7 +25952,7 @@ Once data is collected, you have to annotate it. Labeling is one of the most tim
 
 # Ch.18 — Lab Research Directions
 
-Our lab designs a Spatial AI system as two modules. This split is forced by physical constraints and real-time requirements, and it is where the concepts built up in earlier chapters come together.
+Our lab designs a Spatial AI system as two modules. This design responds to physical constraints and real-time requirements, and it is where the concepts built up in earlier chapters come together.
 
 ## 18.1 Overview
 
@@ -26052,7 +26053,7 @@ class LocalModule:
         return pose, obstacles
 ```
 
-**Reading it as a scenario**: assume that in the code above, `process()` is called once per fusion tick. IMU data comes in at 100 Hz (100 times per second) and camera images at 30 Hz, so the structure is one where each sensor's own callback drops its latest measurement into a buffer and the tick consumes them together. Every tick, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame would saturate the network.
+**Reading it as a scenario**: assume that in the code above, `process()` is called once per fusion tick. IMU data comes in at 100 Hz (100 times per second) and camera images at 30 Hz, so the structure is one where each sensor's own callback drops its latest measurement into a buffer and the tick consumes them together. Every tick, it computes "where am I now?" (odometry) and "what is in front?" (obstacle), and only at important moments (keyframes) sends data to the Global Module. Sending every frame could exceed the available network bandwidth.
 
 ## 18.3 Global Module: VFM-based Understanding
 
@@ -27327,6 +27328,7 @@ Draft date: 2025.12.28 · Revision date: 2026.05.01
 
 </textarea>
 
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
@@ -27348,6 +27350,62 @@ Draft date: 2025.12.28 · Revision date: 2026.05.01
   // Disable strikethrough: ~ is used as range separator throughout this document
   marked.use({ renderer: { del: function(token) { return '~' + (token.text || token) + '~'; } }
   });
+
+  function protectMath(src) {
+    var placeholders = [];
+    var idx = 0;
+
+    // Protect code blocks first (``` ... ```)
+    var codeBlocks = [];
+    src = src.replace(/```[\s\S]*?```/g, function(m) {
+      codeBlocks.push(m);
+      return '%%CODEBLOCK' + (codeBlocks.length - 1) + '%%';
+    });
+
+    // Protect inline code (` ... `)
+    var inlineCodes = [];
+    src = src.replace(/`[^`\n]+`/g, function(m) {
+      inlineCodes.push(m);
+      return '%%INLINECODE' + (inlineCodes.length - 1) + '%%';
+    });
+
+    // Protect display math ($$...$$)
+    src = src.replace(/\$\$([\s\S]*?)\$\$/g, function(m, math) {
+      placeholders.push({ display: true, math: math });
+      return '%%MATH' + (idx++) + '%%';
+    });
+
+    // Protect inline math ($...$) — but not lone $ signs
+    src = src.replace(/\$([^\s$](?:[^$]*[^\s$])?)\$/g, function(m, math) {
+      placeholders.push({ display: false, math: math });
+      return '%%MATH' + (idx++) + '%%';
+    });
+
+    // Restore code blocks
+    src = src.replace(/%%CODEBLOCK(\d+)%%/g, function(m, i) {
+      return codeBlocks[parseInt(i)];
+    });
+    src = src.replace(/%%INLINECODE(\d+)%%/g, function(m, i) {
+      return inlineCodes[parseInt(i)];
+    });
+
+    return { src: src, placeholders: placeholders };
+  }
+
+  function restoreAndRenderMath(html, placeholders) {
+    return html.replace(/%%MATH(\d+)%%/g, function(m, i) {
+      var p = placeholders[parseInt(i)];
+      try {
+        return katex.renderToString(p.math, {
+          displayMode: p.display,
+          throwOnError: false,
+          trust: false
+        });
+      } catch(e) {
+        return p.display ? '$$' + p.math + '$$' : '$' + p.math + '$';
+      }
+    });
+  }
 
   // ---- I18N ----
   var I18N = {
@@ -27423,8 +27481,9 @@ Draft date: 2025.12.28 · Revision date: 2026.05.01
       var src = document.getElementById('md-source-' + lang).value;
       // Fix: marked.js doesn't recognize **text** when immediately followed by Korean characters
       src = src.replace(/\*\*([^*\n]+)\*\*(?=[가-힣])/g, '<strong>$1</strong>');
-      const html = marked.parse(src);
-      contentEl.innerHTML = html;
+      const math = protectMath(src);
+      const html = marked.parse(math.src);
+      contentEl.innerHTML = restoreAndRenderMath(html, math.placeholders);
 
       document.getElementById('toc-container').innerHTML = '';
       embedDemos();

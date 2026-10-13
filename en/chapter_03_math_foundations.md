@@ -64,7 +64,7 @@ A = UΣV^T
 
 **Uses**: least squares solutions, matrix approximation, fundamental matrix computation.
 
-SVD shows up constantly in robotics. It is the most numerically stable way to compute the least-squares solution of an overdetermined system. Camera calibration for the fundamental matrix, point cloud registration for the optimal transformation — all use SVD. The final step of the "8-point algorithm," which computes the fundamental matrix from eight or more correspondences, is SVD.
+SVD shows up constantly in robotics. It provides a numerically stable way to compute the least-squares solution of an overdetermined system. Camera calibration for the fundamental matrix, point cloud registration for the optimal transformation — all use SVD. The final step of the "8-point algorithm," which computes the fundamental matrix from eight or more correspondences, is SVD.
 
 > **Further reading**
 > - [Steve Brunton — Singular Value Decomposition (YouTube)](https://www.youtube.com/watch?v=nbBvuuNVfco) — Lectures by a University of Washington professor that clearly explain the mathematical meaning of SVD and its applications.
@@ -923,7 +923,7 @@ The complete generative model = motion model + measurement model + initial distr
 
 ### 3.9.5 The General Bayes Filter
 
-The most general form of any belief calculator. It alternates a **prediction** step and a **correction** step.
+The Bayes filter is a general framework for recursive estimation of a dynamic state. It alternates a **prediction** step and a **correction** step.
 
 $$\overline{\text{bel}}(x_t) = \int p(x_t \mid u_t,\, x_{t-1})\, \text{bel}(x_{t-1})\, dx_{t-1} \tag{prediction}$$
 

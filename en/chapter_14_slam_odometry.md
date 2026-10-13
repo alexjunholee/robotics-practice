@@ -886,7 +886,7 @@ Practical choice:
 
 ### 14.12 Advanced: Semantic SLAM
 
-Classic SLAM produces a purely geometric map. Point clouds, meshes, occupancy grids and so on record only "the shape of space." It knows there is a wall, but not whether that wall is a wall, a door, or a bookshelf. Semantic SLAM adds semantic information to the map.
+Classic SLAM produces a purely geometric map. Point clouds, meshes, occupancy grids and so on record only "the shape of space." It records an obstacle's location without identifying whether it is a wall, a door, or a bookshelf. Semantic SLAM adds semantic information to the map.
 
 Approaches split by landmark representation. **Object-level SLAM** (CubeSLAM, QuadricSLAM) estimates objects as landmarks — 3D cuboids, dual quadrics, and the like — rather than points. It depends on an object detector, but data association is more robust than point-based, and object-level reasoning becomes possible. **Panoptic SLAM** fuses panoptic segmentation results into 3D to produce a map where every pixel carries a semantic label. The robot can directly query "there are 3 chairs in this room" on the map. **Open-vocabulary SLAM** (ConceptGraphs) stores features from a vision-language model like CLIP in the map, so places can be searched with natural language. It connects directly to the 3D Scene Graph (Hydra, etc.) discussed in Chapter 13.
 
