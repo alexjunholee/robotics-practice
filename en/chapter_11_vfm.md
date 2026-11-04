@@ -326,7 +326,7 @@ lora_config = LoraConfig(
 # Create the PEFT model
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
-# Example output: trainable params: 589,824 || all params: 86,567,178 || trainable%: 0.68%
+# Example output: trainable params: 589,824 || all params: 87,185,674 || trainable%: 0.68%
 ```
 
 **Adapter**:

@@ -7,7 +7,7 @@
 
 | 약어 | 풀이 | 설명 |
 | --- | --- | --- |
-| SLAM | Simultaneous Localization and Mapping | 동시적 위치추정 및 지도작성 |
+| SLAM | Simultaneous Localization and Mapping | 위치 추정과 지도 작성을 동시에 하는 문제 |
 | VO | Visual Odometry | 시각 주행거리계 |
 | VIO | Visual-Inertial Odometry | 시각-관성 주행거리계 |
 | LIO | LiDAR-Inertial Odometry | 라이다-관성 주행거리계 |
@@ -23,7 +23,7 @@
 | VLA | Vision-Language-Action | 시각-언어-행동 모델 |
 | VLM | Vision-Language Model | 시각-언어 모델 |
 | LLM | Large Language Model | 대규모 언어 모델 |
-| mAP | mean Average Precision | 평균 정밀도 |
+| mAP | mean Average Precision | 클래스별 평균 정밀도(AP)의 평균 |
 | ICP | Iterative Closest Point | 반복적 최근접점 |
 | NDT | Normal Distributions Transform | 정규분포 변환 |
 | NeRF | Neural Radiance Fields | 신경 방사장 |
@@ -40,7 +40,7 @@
 
 ### A.2 용어
 
-**Keyframe**: 중요 정보를 포함하도록 선택한 프레임. 모든 프레임을 처리하면 너무 느리므로 의미 있는 변화가 있는 프레임만 골라 쓴다.
+**Keyframe**: 추적과 지도 작성의 기준으로 골라 둔 프레임. 모든 프레임을 처리하면 너무 느리므로 의미 있는 변화가 있는 프레임만 골라 쓴다.
 
 **Loop Closure**: 이전에 방문한 장소를 다시 인식해 drift를 보정하는 과정. "아, 여기 아까 왔던 곳이네"라고 알아차려 누적 오차를 한꺼번에 교정한다.
 
@@ -50,7 +50,7 @@
 
 **Feature Descriptor**: 특징점 주변을 설명하는 벡터. 두 이미지에서 같은 점을 찾을 때, 이 벡터를 비교한다.
 
-**Homography**: 평면 간의 변환. 책상 위를 찍은 두 사진을 정합할 때 사용.
+**Homography**: 같은 평면을 찍은 두 이미지 사이의 변환. 책상 위를 찍은 두 사진을 맞출 때 쓴다.
 
 **Essential Matrix**: 캘리브레이션된 카메라 쌍의 기하 관계. 5DoF(회전 3 + 이동 방향 2).
 
@@ -58,21 +58,21 @@
 
 **Epipole**: 한 카메라의 중심이 다른 카메라 이미지에 투영된 점.
 
-**Zero-shot**: 학습 없이 새로운 태스크 수행. "고양이"를 학습 안 했는데 "고양이 찾아줘"가 되는 것.
+**Zero-shot**: 그 태스크로 따로 학습하지 않고 바로 푸는 것. 예: 고양이 사진으로 따로 학습하지 않았는데 "고양이 찾아 줘"에 답한다.
 
-**Few-shot**: 적은 예제로 새로운 태스크 학습. 예시 3~5개만 주면 학습.
+**Few-shot**: 예제 몇 개만으로 새 태스크를 익히는 것.
 
-**Fine-tuning**: 사전학습 모델을 특정 태스크에 맞게 재학습. 대형 모델을 내 데이터에 맞게 조정.
+**Fine-tuning**: 사전학습한 모델을 특정 태스크나 내 데이터에 맞게 추가로 학습하는 것.
 
-**Domain Adaptation**: 소스 도메인에서 타겟 도메인으로 적응. 시뮬레이션에서 학습 → 실제 환경 적용.
+**Domain Adaptation**: 한 도메인(소스)에서 학습한 모델을 다른 도메인(타깃)에 맞추는 것. 예: 시뮬레이션에서 학습한 모델을 실제 환경에 쓴다.
 
-**Sim-to-Real**: 시뮬레이션에서 실제 환경으로 전이. Domain Adaptation의 대표적 사례.
+**Sim-to-Real**: 시뮬레이션에서 학습한 정책이나 모델을 실제 로봇으로 옮기는 것. [Zhao et al.(2020)의 서베이](https://arxiv.org/abs/2009.13303)는 Domain Randomization과 Domain Adaptation을 Sim-to-Real의 주요 방법으로 다룬다.
 
-**Gaussian Splatting**: 3D 장면을 수백만 개의 3D 가우시안으로 표현하는 방법. NeRF보다 빠르고 편집 가능.
+**Gaussian Splatting**: 3D 장면을 수백만 개의 3D 가우시안으로 표현하는 방법. NeRF보다 렌더링이 빠르고 장면을 편집하기 쉽다.
 
-**Factor Graph**: 변수 간의 제약 조건을 그래프로 표현한 SLAM 최적화의 핵심 자료구조다.
+**Factor Graph**: 변수 사이의 제약 조건을 그래프로 표현한 자료구조. SLAM 최적화 문제를 이 그래프로 세운다.
 
-**Knowledge Distillation**: 큰 모델(teacher)의 지식을 작은 모델(student)에 전달하는 기법.
+**Knowledge Distillation**: 큰 모델(teacher)의 출력을 따라 하도록 작은 모델(student)을 학습시키는 기법.
 
 ## B. 자주 묻는 질문 (FAQ)
 
@@ -80,67 +80,67 @@
 
 A: 먼저 읽고 실행할 연구실 코드의 언어부터 시작한다. SLAM, ROS 패키지, 실시간 제어 모듈에는 C++가 널리 쓰이므로 연구실 코드를 읽고 수정하려면 C++가 필요하다. Python은 딥러닝 스크립트와 데이터 전처리에 주로 쓴다. AI 코딩 에이전트가 작성을 도울 수는 있지만, 두 언어 모두 기존 코드를 읽고 동작을 검증할 수 있어야 한다.
 
-**Q: GPU가 없으면 연구를 할 수 없나요?**
+**Q: GPU가 없는데 연구를 시작할 수 있나요?**
 
-A: 간단한 실험은 CPU로도 가능하다. 다만 딥러닝 모델을 학습하려면 대개 GPU가 필요하다. Google Colab(무료)이나 연구실 서버를 활용할 수 있고, Colab 무료 버전으로도 YOLO fine-tuning 정도는 가능하다.
+A: 간단한 실험은 CPU로도 돌릴 수 있다. 딥러닝 모델을 학습하려면 GPU가 필요하니 Google Colab이나 연구실 서버를 쓴다. Colab 무료 버전으로도 작은 YOLO 모델은 fine-tuning할 수 있다.
 
 **Q: ROS1과 ROS2 중 어떤 것을 배워야 하나요?**
 
-A: 새로 배운다면 ROS2를 권장한다. ROS1은 2025년에 공식 지원이 종료(EOL)되었다. 하지만 사용하려는 패키지가 ROS1만 지원하면 어쩔 수 없이 ROS1을 먼저 배울 수도 있다. 다만 ROS1을 알면 ROS2는 금방 익힌다.
+A: 새로 배운다면 ROS2를 권장한다. ROS1은 2025년에 공식 지원이 종료(EOL)되었다. 쓰려는 패키지가 ROS1만 지원하면 ROS1을 먼저 배운다. ROS1을 먼저 배워도 ROS2로 옮겨 가기는 어렵지 않다.
 
 **Q: 논문을 어디서 찾나요?**
 
-A: [arXiv](https://arxiv.org/) (무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/) (논문 검색)를 주로 활용한다. 코드도 필요하면 논문의 GitHub 링크나 [Hugging Face Papers](https://huggingface.co/papers/trending)를 보고(Papers With Code는 2025년 종료), 학회별로 보고 싶다면 [CVPR Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)도 유용하다.
+A: 주로 [arXiv](https://arxiv.org/)(무료 프리프린트 서버)와 [Google Scholar](https://scholar.google.com/)에서 찾는다. 코드가 필요하면 논문의 GitHub 링크나 [Hugging Face Papers](https://huggingface.co/papers/trending)를 본다. Papers With Code는 2025년에 문을 닫았다. 학회별로 보려면 [CVF Open Access](https://openaccess.thecvf.com/)나 [IEEE Xplore](https://ieeexplore.ieee.org/)를 쓴다.
 
 **Q: SLAM을 공부하려면 어디서 시작해야 하나요?**
 
-A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작해 ORB-SLAM3 코드를 분석해 보자. 그전에 본 문서의 9장(카메라 모델)과 14장(Visual Odometry)을 읽으면 강의를 이해하기가 한결 쉽다.
+A: Cyrill Stachniss의 [YouTube SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_)로 시작해 ORB-SLAM3 코드를 분석해 보자. 그전에 이 가이드의 9장(카메라 모델)과 14장(SLAM & Odometry)을 읽으면 강의를 이해하기가 한결 쉽다.
 
 **Q: 연구 아이디어는 어떻게 찾나요?**
 
-A: 최신 학회 논문의 Limitation 섹션을 읽어보자. 해결되지 않은 문제에서 아이디어를 얻을 수 있다. 또 다른 방법은 아직 덜 합쳐진 두 분야를 잇는 것이다. 다만 조합의 이름만으로 미개척을 판단할 수는 없다. "3D Gaussian Splatting + Semantic SLAM"은 이미 여러 연구가 나와 있고 이 책의 연구 방향 장도 의미 정보를 담은 Gaussian 지도를 다룬다. 선행 연구를 먼저 확인한 뒤 남은 자리를 찾아야 한다.
+A: 최근 학회 논문의 Limitation 절을 읽어 보자. 저자들이 풀지 못했다고 밝힌 문제에서 아이디어를 얻을 수 있다. 아직 잘 합쳐지지 않은 두 분야를 이어 보는 방법도 있다. 이때는 그 조합의 선행 연구부터 검색한다. 예를 들어 "3D Gaussian Splatting + Semantic SLAM"은 이미 여러 연구가 나왔고, 18장도 의미 정보를 담은 Gaussian 지도를 다룬다. 선행 연구를 확인한 뒤에 아직 아무도 하지 않은 부분을 찾는다.
 
 **Q: 어떤 GPU를 사야 하나요?**
 
-A: 연구 대상 모델과 옵티마이저 상태, activation, 배치 크기가 VRAM에 적재되는지 실제 설정으로 먼저 실측한다. 이어 정밀도 지원 범위, 메모리 대역폭, 소비 전력, 프레임워크 호환성 및 실측 벤치마크를 종합 점검한다. 본 표는 일률적인 서열 매기기가 목적이 아니며, VRAM 등급별 적정 후보군을 합리적으로 압축하기 위한 참조 기준이다.
+A: 먼저 연구할 모델을 실제 설정으로 돌려 보고, 모델과 옵티마이저 상태, activation, 배치가 VRAM에 들어가는지 잰다. 그다음 지원하는 정밀도, 메모리 대역폭, 소비 전력, 프레임워크 호환성, 벤치마크 결과를 함께 본다. 아래 표는 VRAM 크기별로 검토할 후보를 추렸다. 위아래 순서는 성능 순위와 상관없다.
 
 개인용 (데스크톱)
 
 | VRAM | 카드 예시 | 검토할 역할 | 구매 전 확인 |
 |------|-----------|-------------|--------------|
-| 8GB | RTX 4060, RTX 5060 Ti 8GB | 작은 CNN 학습, 제한된 batch의 추론 | intended model의 peak memory; VFM fine-tuning은 설정에 따라 부족할 수 있음 |
+| 8GB | RTX 4060, RTX 5060 Ti 8GB | 작은 CNN 학습, 제한된 batch의 추론 | 돌릴 모델의 최대 메모리 사용량. VFM fine-tuning은 설정에 따라 부족할 수 있음 |
 | 12GB | RTX 3060 12GB, RTX 4070 | 중간 크기 inference·학습 실험 | 세대별 연산 차이와 중고 상태 |
-| 16GB | RTX 5060 Ti 16GB, RTX 4070 Ti Super | 더 큰 batch, VFM inference, 중간 규모 학습 | model별 activation·optimizer memory |
+| 16GB | RTX 5060 Ti 16GB, RTX 4070 Ti Super | 더 큰 batch, VFM inference, 중간 규모 학습 | 모델별 activation·optimizer 메모리 |
 | 24GB | RTX 3090, RTX 4090 | 24GB 안에 드는 학습, 3DGS·VLA 실험 | 전력·냉각·중고 보증; 3090과 4090의 runtime 차이 |
-| 32GB | RTX 5090 | 24GB를 넘는 로컬 실험 | 전력·케이스·PSU와 software support |
+| 32GB | RTX 5090 | 24GB를 넘는 로컬 실험 | 전력·케이스·PSU, 소프트웨어 지원 |
 
 서버/연구실용 (데이터센터)
 
 | GPU memory | 카드 | 특징 | 공식 사양 |
 |------------|------|------|-----------|
-| 16/32GB | V100 SXM2 | 1세대 Tensor Core, TF32/BF16 미지원 | [V100 data center GPU](https://www.nvidia.com/en-us/data-center/v100/) |
+| 16/32GB | V100 SXM2 | 1세대 Tensor Core, TF32/BF16 미지원 | [V100 datasheet](https://images.nvidia.com/content/technologies/volta/pdf/tesla-volta-v100-datasheet.pdf) |
 | 24GB | A10 | PCIe inference·graphics 계열 | [A10 datasheet](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a10/pdf/a10-datasheet.pdf) |
 | 40/80GB | A100 | TF32·BF16, MIG, PCIe/SXM 변형 | [A100 specifications](https://www.nvidia.com/en-us/data-center/a100/) |
 | 80GB | H100 SXM | Hopper, Transformer Engine, NVLink | [H100 specifications](https://www.nvidia.com/en-us/data-center/h100/) |
 | 141GB | H200 SXM | 141GB HBM3e, 4.8TB/s memory bandwidth | [H200 specifications](https://www.nvidia.com/en-us/data-center/h200/) |
-| 180GB | B200 | Blackwell, 180GB HBM3e; server configuration에 따라 제공 | [DGX B200 specifications](https://www.nvidia.com/en-us/data-center/dgx-b200/) |
+| 180GB | B200 | Blackwell, 180GB HBM3e. DGX 같은 서버 구성으로 공급 | [DGX B200 specifications](https://www.nvidia.com/en-us/data-center/dgx-b200/) |
 
-사양을 읽을 때는 precision(FP32·TF32·BF16·FP16·FP8), CUDA core와 Tensor Core, dense와 structured sparsity, PCIe와 SXM을 구분한다. 제조사 표의 peak TFLOPS가 같아도 memory bandwidth, kernel, batch, data loading 때문에 실제 학습 시간은 달라진다. `torch.amp`의 효과도 model과 hardware에 따라 달라지므로, 같은 repository·batch·precision으로 짧은 benchmark를 돌려 비교한다.
+사양을 읽을 때는 precision(FP32·TF32·BF16·FP16·FP8), CUDA core와 Tensor Core, dense와 structured sparsity, PCIe와 SXM을 구분한다. 제조사 표의 peak TFLOPS가 같아도 memory bandwidth, kernel, batch, data loading 때문에 실제 학습 시간은 달라진다. `torch.amp`의 효과도 모델과 하드웨어에 따라 달라지므로, 같은 repository·batch·precision으로 짧은 benchmark를 돌려 비교한다.
 
 **참고 사항**:
 - RTX 5060 Ti처럼 8GB와 16GB 모델이 함께 나오는 카드에서는 사용할 모델과 batch가 요구하는 VRAM을 먼저 계산한다. VFM을 로컬에서 다룬다면 8GB는 빠듯할 수 있다.
 - AMD GPU를 고려할 때는 사용할 프레임워크와 라이브러리가 ROCm을 지원하는지 확인한다. CUDA 전용 의존성이 있다면 이식 비용도 구매 조건에 포함한다.
 - 연구실 서버에 A100/H100이 있다면 개인 GPU의 역할은 디버깅과 프로토타이핑에 가까워진다. 구매 전에 서버의 사용 가능 시간과 사양을 확인한다.
 - 중고 RTX 3090은 24GB 선택지지만 가격·보증·냉각 상태가 매물마다 다르다. 정격 전력과 PSU·케이스 조건도 확인한다.
-- Colab과 cloud GPU의 요금·할당 GPU·사용 제한은 수시로 바뀐다. 구매 전 실제 workload를 대여 GPU에서 측정하되, 현재 provider 페이지의 가격과 quota를 확인한다.
+- Colab과 cloud GPU의 요금·할당 GPU·사용 제한은 수시로 바뀐다. 구매 전 실제 workload를 대여 GPU에서 측정하되, 제공업체 페이지에서 현재 가격과 quota를 확인한다.
 
 **Q: 논문은 하루에 몇 편 읽어야 하나요?**
 
-A: 하루에 몇 편을 읽는지보다 읽는 목적과 깊이가 중요하다. 처음에는 20.4절의 3-패스 방법에 따라 일주일에 한 편을 자세히 읽는 편이 도움이 된다. 경험이 쌓이면 Abstract만으로도 논문의 유형과 관련성을 빠르게 가늠할 수 있다. 랩미팅 발표를 위한 읽기와 자신의 연구를 위한 읽기도 깊이가 다르며, 후자는 코드 분석까지 이어질 수 있다.
+A: 정해진 편수는 없다. 읽는 목적에 따라 깊이를 정한다. 처음에는 20.4절에서 소개한 Keshav의 3-pass 방법으로 일주일에 한 편을 자세히 읽어 보자. 경험이 쌓이면 Abstract만으로도 논문의 유형과 관련성을 빠르게 가늠할 수 있다. 랩미팅 발표를 위한 읽기와 자신의 연구를 위한 읽기도 깊이가 다르며, 후자는 코드 분석까지 이어질 수 있다.
 
-**Q: 코딩을 잘 못하는데 연구를 할 수 있나요?**
+**Q: 코딩이 서툰데 연구를 시작할 수 있나요?**
 
-A: 코딩 에이전트(Claude, Copilot 등)는 "KITTI 데이터셋 로더를 만들어줘"나 "이 학습 루프에 wandb 로깅을 추가해줘" 같은 요청으로 초안을 빠르게 만들 수 있다. 덕분에 직접 타이핑하는 시간은 줄었지만, 결과를 검토하는 일은 남는다.
+A: 코딩 에이전트(Claude, Copilot 등)는 "KITTI 데이터셋 로더를 만들어줘"나 "이 학습 루프에 wandb 로깅을 추가해줘" 같은 요청으로 초안을 빠르게 만들 수 있다. 생성된 코드는 직접 읽고 검토한다.
 
 생성된 코드를 판단하려면 도메인 지식이 필요하다. 에이전트가 `num_workers=0`일 때 DataLoader가 느린 이유, loss가 NaN이 되는 원인, SLAM 코드에서 좌표계가 뒤집힌 지점을 충분한 실행 정보 없이 찾기는 어렵다(14장 참고). 코드를 실행하고 기존 구현과 비교한 뒤 받아들여야 한다.
 
@@ -160,7 +160,7 @@ A: 반복해서 읽고 분야 배경지식이 쌓이면 부담이 줄어든다.
 
 - 구조를 먼저 파악하라: 많은 실험 논문은 Introduction → Related Work → Method → Experiments → Conclusion 순서를 쓰지만, 기여는 문제 정의·데이터·평가나 분석에도 놓일 수 있다. 제목과 헤딩으로 실제 구조부터 확인한다.
 - 분야별 어휘를 먼저 익혀라: "ablation study", "state-of-the-art", "we empirically show" 같은 표현은 반복된다. 익숙해지는 데 필요한 논문 수는 배경지식과 분야에 따라 다르다.
-- 번역 도구를 부끄러워하지 마라: DeepL, Google Translate로 모르는 문장을 번역하는 건 전혀 부끄러운 일이 아니다. 다만, 번역에만 의존하면 영어 실력이 안 는다. "원문 → 번역 확인 → 다시 원문" 순서로 읽자.
+- 번역 도구를 써라: 모르는 문장은 DeepL이나 Google Translate로 번역해 봐도 된다. 번역에만 기대면 영어가 늘지 않으니 "원문 → 번역 확인 → 다시 원문" 순서로 읽자.
 - PDF 리더의 형광펜을 활용하라: 중요한 문장을 표시하면 다시 찾기 쉽다. Adobe Acrobat이나 Zotero 내장 뷰어처럼 자신에게 편한 도구를 쓰면 된다.
 
 ## C. 트러블슈팅 가이드
@@ -183,18 +183,7 @@ sudo apt --fix-broken install    # 의존성 깨졌을 때 복구
 
 **SSH 키 설정 (비밀번호 없이 서버 접속)**
 
-```bash
-# 키 생성 (Enter 연타로 기본값 사용)
-ssh-keygen -t ed25519
-
-# 공개키를 서버에 복사
-ssh-copy-id user@server_ip
-
-# 이후 비밀번호 없이 접속 가능
-ssh user@server_ip
-```
-
-GitHub에도 같은 공개키(`~/.ssh/id_ed25519.pub`)를 등록하면 SSH remote(`git@github.com:...`)에서 `git push`에 비밀번호가 필요 없다. HTTPS로 clone한 저장소는 토큰이나 credential helper를 쓰므로 이 키가 적용되지 않는다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
+Ch.16 §16.4.2의 방법으로 만든 공개키(`~/.ssh/id_ed25519.pub`)를 GitHub에도 등록하면 SSH remote(`git@github.com:...`)에서 `git push`를 키로 인증한다. HTTPS로 clone한 저장소는 토큰이나 credential helper로 인증한다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
 
 **CPU 성능 모드 설정 (실험 시)**
 
@@ -213,7 +202,7 @@ echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
 sudo systemctl restart cpufrequtils
 ```
 
-노트북에서는 배터리 소모가 커지니 전원 연결 상태에서만 사용할 것. (참고: [정진용 블로그](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/))
+노트북에서는 배터리가 빨리 닳으니 전원을 연결했을 때만 쓴다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/))
 
 ### C.1 CUDA / PyTorch 관련
 
@@ -269,12 +258,12 @@ python -c "import torch; print(torch.version.cuda)"
 # 두 값은 달라도 정상이다. wheel이 자체 CUDA 런타임을 포함하므로
 # 드라이버가 그 런타임을 지원하면 그대로 쓴다. 단 CUDA 확장을 직접 빌드할 때는
 # nvcc와 torch.version.cuda의 메이저 버전을 맞춰야 하며, 그때만 재설치한다.
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install torch --index-url https://download.pytorch.org/whl/cu126
 ```
 
 **문제**: `RuntimeError: CUDA error: device-side assert triggered`
 
-**해결**: 이건 보통 라벨 인덱스가 범위를 벗어났을 때 발생한다. CPU에서 돌려보면 더 자세한 에러 메시지를 얻을 수 있다. 아래 명령은 GPU에서 CUDA 호출을 동기화하여 오류가 발생한 코드 위치를 찾는 별도의 방법이다.
+**해결**: 흔한 원인은 라벨 인덱스가 클래스 수 범위를 벗어난 경우다. CPU에서 돌려 보면 더 자세한 에러 메시지가 나온다. GPU에서 그대로 찾으려면 아래처럼 CUDA 호출을 동기화해서, 오류가 난 코드 줄이 정확히 찍히게 한다.
 
 ```bash
 CUDA_LAUNCH_BLOCKING=1 python train.py
@@ -305,8 +294,8 @@ echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
 # TF 트리 확인
 ros2 run tf2_tools view_frames
 
-# Static transform 추가 (예시)
-ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 base_link camera_link
+# Static transform 추가 (예시). 위치·자세 인자를 생략하면 0으로 둔다
+ros2 run tf2_ros static_transform_publisher --frame-id base_link --child-frame-id camera_link
 ```
 
 **문제**: `Topic not published` / 데이터가 안 들어옴
@@ -348,22 +337,7 @@ docker run -it --env DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ...
 
 **문제**: Docker 안에서 GPU가 안 잡힘
 
-**해결**:
-
-```bash
-# nvidia-container-toolkit 설치 — NVIDIA apt 저장소와 키를 먼저 등록해야 패키지가 보인다
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-sudo nvidia-ctk runtime configure --runtime=docker   # Docker 런타임에 훅 등록
-sudo systemctl restart docker
-
-# GPU 옵션 추가해서 실행
-docker run --gpus all -it nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
-```
+**해결**: Ch.16 §16.3.3의 순서대로 nvidia-container-toolkit을 설치하고 Docker 런타임에 등록한 뒤 `--gpus all`로 실행한다.
 
 ### C.4 OpenCV 관련
 
@@ -397,11 +371,16 @@ colcon build --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3
 
 ```bash
 # OpenCV 4.x에서는 일부 API가 변경됨
-# CMakeLists.txt에서 OpenCV 버전 확인
-find_package(OpenCV 4 REQUIRED)
+# CMakeLists.txt에서 OpenCV 버전 확인:
+#   find_package(OpenCV 4 REQUIRED)
 
-# Pangolin 빌드 에러 시
-sudo apt-get install libglew-dev libpython2.7-dev
+# Pangolin 빌드 에러 시: 저장소에 든 스크립트로 의존 패키지를 설치한다
+# (Ubuntu 24.04 이후에는 libpython2.7-dev 패키지가 없다)
+git clone --recursive https://github.com/stevenlovegrove/Pangolin.git
+cd Pangolin
+./scripts/install_prerequisites.sh recommended
+cmake -B build
+cmake --build build
 ```
 
 **문제**: Eigen 버전 관련 에러
@@ -420,13 +399,13 @@ sudo apt-get install libeigen3-dev
 
 ### D.1 환경 설정
 
-- [ ] Ubuntu 설치 완료 (22.04 LTS 권장)
+- [ ] Ubuntu 설치 완료 (쓸 ROS2 배포판에 맞춘다. Ch.15 15.1.1, Ch.16 16.2.1 참고)
 - [ ] NVIDIA 드라이버 설치 (`nvidia-smi`로 확인)
 - [ ] CUDA toolkit 설치 (`nvcc --version`으로 확인)
 - [ ] cuDNN 설치 (시스템 설치는 `cudnn_version.h`로 확인. `torch.backends.cudnn.version()`은 PyTorch에 번들된 cuDNN을 보여준다)
 - [ ] Conda 또는 venv 환경 설정
 - [ ] PyTorch GPU 동작 확인 (`torch.cuda.is_available()`)
-- [ ] ROS2 설치 (필요 시. Ubuntu 22.04이면 Humble, 24.04이면 Jazzy)
+- [ ] ROS2 설치 (필요 시. Ubuntu 22.04이면 Humble, 24.04이면 Jazzy, 26.04이면 Lyrical)
 - [ ] Git 설정 (`git config --global user.name/email`)
 - [ ] Docker 설치 (선택, 재현성을 위해 권장)
 - [ ] VS Code + 필수 확장 설치 (Python, Remote-SSH, Jupyter)
@@ -441,7 +420,7 @@ sudo apt-get install libeigen3-dev
 
 ### D.3 연구 도구
 
-논문 읽기 도구(노트 양식·인용 관리)는 [「연구노트」 Ch.15](../research-notes/guide.html#chapter-15)에서, 쓰기 도구는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 도구는 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
+논문 읽기 도구(노트 양식·인용 관리)는 [「연구노트」 Ch.15](../research-notes/guide.html#chapter-15)에서, 아웃라인·단락 구조·피드백 받기 같은 쓰기 방법은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에서, 학회 준비 체크리스트는 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서 확인할 수 있다. Spatial AI 분야의 도구와 학습 순서는 §20.4와 §20.7을 참고한다.
 
 ### D.4 데이터셋 준비
 
@@ -452,7 +431,7 @@ sudo apt-get install libeigen3-dev
 
 ## E. 첫 주 생존 가이드
 
-첫 주에는 계정과 실행 환경을 준비하고, 연구 대상의 코드·데이터·문서를 찾는 최소 작업 목록이 필요하다. 아래 Day 1~7 배치는 예시이며 계정 발급, 장비 일정, 연구실 onboarding 방식에 맞춰 순서를 바꾼다.
+첫 주에는 계정과 실행 환경을 준비하고, 연구 대상의 코드·데이터·문서를 찾는다. 아래 Day 1~7 배치는 예시이며 계정 발급, 장비 일정, 연구실 onboarding 방식에 맞춰 순서를 바꾼다.
 
 ### Day 1~2: 환경 구축
 
@@ -496,16 +475,14 @@ Ch.18의 연구 방향을 읽고 연구실의 최근 논문과 프로젝트가 �
 - 최신 연구 트렌드를 전부 파악하기 — 점진적으로
 - 코드를 처음부터 짜기 — 기존 코드를 수정하는 것부터
 - GPU 서버를 완벽하게 세팅하기 — 연구실이 검증한 환경 파일·container·설치 절차에서 시작한다
-- 연구 아이디어를 완성된 형태로 내놓기 — 먼저 연구실의 문제와 도구를 배워도 늦지 않다
+- 연구 아이디어를 완성된 형태로 내놓기 — 연구실의 문제와 도구를 먼저 배운다
 
 ### 생존을 위한 마인드셋
 
-연구 초기에 필요한 태도와 작업 습관은 research-notes와 grad-notes에서 주제별로 다룬다.
+연구 초기에 필요한 태도와 작업 습관은 「대학원노트」의 다음 장에서 다룬다.
 
-관련 장은 다음과 같다.
-
-- *모르는 건 당연하다* → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#chapter-14) § 2 (대학원의 가치 재정의)
-- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [「대학원노트」 Ch.10 — 한 메일 한 질문](../grad-notes/guide.html#chapter-10) § 3 (형식의 사소한 표준)
-- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [「대학원노트」 Ch.8 — 시간 쓰는 법](../grad-notes/guide.html#chapter-8) § 5 (퇴근 전 포스트잇)
-- *작게 시작하라 — 작은 코드 조각부터* → [「대학원노트」 Ch.11 — 도구의 함정](../grad-notes/guide.html#chapter-11) § 1 (셋업 시간은 연구 시간이 아니다)
-- *비교하지 마라 — 3개월 후의 나* → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#chapter-15) § 3 (단거리 vs 장거리)
+- *모르는 건 당연하다* → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#chapter-14) § 2 (대학원에서 오래 남는 것)
+- *"안 돼요"는 보고가 아니다* + 보고 형식(예측·시도·결과) → [「대학원노트」 Ch.10 — 한 메일 한 질문](../grad-notes/guide.html#chapter-10) § 3 (답하기 쉬운 메일의 형식)
+- *기록하라 — 과거의 내가 미래의 나를 도와준다* → [「대학원노트」 Ch.8 — 시간 쓰는 법](../grad-notes/guide.html#chapter-8) § 5 (퇴근 전에 다음 시작점을 적는다)
+- *작게 시작하라 — 작은 코드 조각부터* → [「대학원노트」 Ch.11 — 도구의 함정](../grad-notes/guide.html#chapter-11) § 1 (환경 설정 시간과 연구 시간을 구분한다)
+- *비교하지 마라 — 3개월 후의 나* → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#chapter-15) § 3 (단거리와 장거리)

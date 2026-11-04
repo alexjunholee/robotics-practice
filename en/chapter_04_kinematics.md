@@ -115,7 +115,7 @@ def fk_2link(theta1, theta2, L1=1.0, L2=1.0):
 # θ_1=30°, θ_2=45°, link lengths of 1m each
 x, y, phi = fk_2link(np.radians(30), np.radians(45))
 print(f"End-effector position: ({x:.3f}, {y:.3f}), orientation: {np.degrees(phi):.1f}°")
-# Output: End-effector position: (0.259, 1.366), orientation: 75.0°
+# Output: End-effector position: (1.125, 1.466), orientation: 75.0°
 ```
 
 If this looks overly simple, that is normal. The FK of a real 6-axis arm works on the same principle — it just multiplies six 4×4 matrices.
@@ -300,7 +300,7 @@ A joint configuration where the rank of the Jacobian drops is called a singulari
 2. **Joint velocities go to infinity for infinitesimal motion** — real motors cannot follow
 3. **IK solutions are discontinuous** — abrupt joint jumps during path following
 
-Singularities of the 2-link arm are simple: θ_2 = 0 (arm fully extended) or θ_2 = π (fully folded). Here the end-effector can only move in the radial direction; no tangential velocity is achievable.
+Singularities of the 2-link arm are simple: θ_2 = 0 (arm fully extended) or θ_2 = π (fully folded). At that instant the end-effector can move only in the tangential direction; it cannot generate any velocity in the radial direction.
 
 Representative singularities of 6-axis robots:
 - **Wrist singularity**: axes 4 and 6 are aligned (q5 ≈ 0)

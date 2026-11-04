@@ -345,7 +345,7 @@ transform = T.Compose([
 - **Stochastic Depth**: randomly skip some layers during training. Effective at preventing overfitting in ResNet-family models.
 - **Weight Decay**: set `weight_decay=0.01~0.05` in the optimizer. With AdamW, use decoupled weight decay.
 
-**Gradient Clipping**: prevents gradients from exploding. Almost mandatory in Transformer training.
+**Gradient Clipping**: prevents gradients from exploding. Often used as a stabilization tool in Transformer training.
 
 ```python
 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)

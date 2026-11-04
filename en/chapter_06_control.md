@@ -536,9 +536,7 @@ print(f"Predicted trajectory (position): {x_pred[:5, 0]}")
 
 ### Industry Cases
 
-- **Boston Dynamics Atlas (2019~)**: a combination of MPC + Whole-Body Control. Nonlinear MPC predicts contact sequences, and WBC distributes joint torques in real time.
-- **Unitree H1/G1 (2023~)**: a hybrid structure where a learning-based policy (reinforcement learning) generates high-level commands and MPC handles low-level trajectory tracking.
-- **Figure 01 (2024)**: an LLM does task-level planning and MPC optimizes manipulation trajectories. An example of combining control with AI.
+- **Boston Dynamics Atlas**: according to the manufacturer's public description, MPC is at the core of Atlas's controller. For experiments in which Atlas picks up and throws objects, the model included whole-body joint motion, the momentum of each link, and the forces between the robot and the object.
 
 ---
 
@@ -702,7 +700,7 @@ Modern WBC handles multiple tasks simultaneously by solving a QP (Quadratic Prog
 Basic structure:
 
 ```
-minimize    || J_task * q_ddot - x_ddot_d ||^2  (task tracking)
+minimize    || J_task * q_ddot + J_task_dot * q_dot - x_ddot_d ||^2  (task tracking)
 subject to  M(q)*q_ddot + h(q,q_dot) = S^T*tau + J_c^T*F_c  (dynamics)
             F_c ∈ friction cone                   (contact force constraint)
             tau_min ≤ tau ≤ tau_max               (torque limits)
@@ -874,9 +872,7 @@ Adaptive control and sliding mode are selected according to the structure of the
 1987 ── Operational Space Control (Khatib)
 1990s ─ Robust control (H-infinity) theory established; early application attempts
 2004 ── Real-time MPC becomes practical
-2019 ── Boston Dynamics Atlas: MPC + WBC
-2023 ── Unitree H1/G1: learning-based + MPC hybrid
-2024 ── Figure 01: LLM + MPC + manipulation
+2020s ─ Boston Dynamics Atlas: publicly demonstrated MPC covering whole-body motion and forces applied to objects
 ```
 
 ---

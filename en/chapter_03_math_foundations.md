@@ -170,7 +170,7 @@ The Gaussian is used this heavily because of mathematical convenience. The centr
 
 **Mahalanobis Distance**
 
-Euclidean distance treats every direction equally. But sensor data has different uncertainty in different directions. GPS, for example, has much larger error vertically (tens of meters) than horizontally (a few meters).
+Euclidean distance treats every direction equally. But sensor data has different uncertainty in different directions. GPS, for example, typically has about two to three times larger error vertically than horizontally.
 
 Mahalanobis distance is distance that accounts for covariance:
 
@@ -205,7 +205,7 @@ Each new measurement combines the prior with the measurement likelihood to form 
 
 > **Further reading**
 > - [3Blue1Brown — Bayes' Theorem](https://www.youtube.com/watch?v=HZGCoVF3YvM) — A good visual introduction to Bayes' theorem.
-> - [Probabilistic Robotics (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — The essential textbook on probabilistic robotics. Organizes Bayes filters, Kalman filters, particle filters, and SLAM cleanly from a probabilistic viewpoint.
+> - [Probabilistic Robotics (Thrun, Burgard, Fox)](http://probabilistic-robotics.org/) — The essential textbook on probabilistic robotics. Organizes Bayes filters, Kalman filters, particle filters, and SLAM cleanly from a probabilistic viewpoint.
 > - [Giseop Kim's blog — Bayesian Filtering series (2 posts)](https://gisbi-kim.github.io/blog/2021/03/09/bayesfiltering-1.html) — Korean-language walkthrough of Bayes filtering. A foundation that leads into the Kalman filter.
 
 ### 3.3.3 MLE and MAP
@@ -229,7 +229,7 @@ MAP incorporates the prior into the estimate.
 The difference in SLAM is between "find the optimal position from observations alone (MLE)" and "find the optimal position using prior position information too (MAP)." Real SLAM systems mostly use MAP. A prior makes estimation stable even with noisy observations. With Gaussian observation noise and fixed covariance, minimizing the negative log posterior for MAP gives a "weighted sum of squared observation errors + a regularization term from the negative log prior," which is the same form as regularized least squares from an optimization standpoint.
 
 > **Further reading**
-> - [Probabilistic Robotics, Ch.2 — Recursive State Estimation (Thrun)](https://www.probabilistic-robotics.org/) — Explains the relationships between MLE, MAP, and Bayes filtering in a robotics context.
+> - [Probabilistic Robotics, Ch.2 — Recursive State Estimation (Thrun)](http://probabilistic-robotics.org/) — Explains the relationships between MLE, MAP, and Bayes filtering in a robotics context.
 > - [Cyrill Stachniss — Maximum Likelihood and MAP Estimation](https://www.youtube.com/watch?v=XepXtl9YKwc) — A clear, example-driven explanation of the difference between MLE and MAP.
 
 **Intuitive difference between MLE and MAP**
@@ -273,7 +273,7 @@ Least squares is the most basic way to "find the best-fitting model parameters f
 
 In an over-determined system (more equations than unknowns), there may be no x that exactly satisfies Ax = b. Instead, find the x that minimizes ||Ax - b||², which gives the normal equation `A^T A x = A^T b`. That is all there is to least squares.
 
-Caveat: if `A^T A` is singular (rank deficient), there is no unique solution. In that case, instead of the pseudo-inverse `x = (A^T A)^{-1} A^T b`, use SVD for numerical stability.
+Caveat: if `A^T A` is singular (rank deficient), the inverse above does not exist, and there is no unique least-squares solution. With the SVD `A = U Σ V^T`, the Moore–Penrose pseudo-inverse `A^+ = V Σ^+ U^T` gives the minimum-norm solution `x = A^+ b`.
 
 (See: [Dark Programmer — Understanding Least Squares and Various Uses](https://darkpgmr.tistory.com/56))
 
@@ -294,7 +294,7 @@ The **gradient** ∇f is the first derivative of a scalar function f and outputs
 
 Relationships:
 ```
-For cost function C(x) = ||r(x)||²:
+For cost function C(x) = (1/2)||r(x)||²:
   Gradient:  ∇C = J^T r           (J is the Jacobian of r)
   Hessian:   H ≈ J^T J            (Gauss-Newton approximation: drop the second-derivative term)
   Update:    δx = -(J^T J)^{-1} J^T r
@@ -432,7 +432,7 @@ This formula is derived by substituting the Taylor series of `sin(t)` and `cos(t
 When theta is small (|theta| < eps), sin(theta)/theta ≈ 1 and (1-cos(theta))/theta^2 ≈ 1/2, so:
 
 ```
-exp([w]x) ≈ I + [w]x + (1/2)[w]x^2   (first-order approximation)
+exp([w]x) ≈ I + [w]x + (1/2)[w]x^2   (second-order approximation)
 ```
 
 Caveat: for a given rotation matrix R, the w satisfying `R = exp([w]x)` is not unique. ||w|| + 2*pi*k (integer k) give the same R. This is the subtle point in the logarithmic map.
@@ -592,7 +592,7 @@ T_updated = jaxlie.SE3.exp(delta) @ T
 
 ## 3.6 Advanced: Factor Graph
 
-Factor graph is the framework for systematically defining and efficiently solving SLAM problems. The back-end of modern SLAM systems is almost without exception based on factor graphs.
+Factor graph is the framework for systematically defining and efficiently solving SLAM problems. The back-ends of many modern SLAM systems use factor graphs.
 
 ### 3.6.1 What Is a Factor Graph
 
@@ -655,6 +655,8 @@ Optimizing a factor graph requires solving the normal equation `H d = -b` (H is 
 
 In real-time SLAM, new factors are added every frame. Re-solving the entire system from scratch is O(n^3), but incremental updates via the Bayes tree refresh only the affected part, making real-time processing possible.
 
+The factor graph is closely tied to the information filter of §3.10 — both representations exploit the sparse structure of the information matrix $\Omega$.
+
 > **Further reading**
 > - [Factor Graphs and GTSAM (Dellaert & Kaess)](https://gtsam.org/tutorials/intro.html) — The official GTSAM tutorial. Explains the connection from factor graphs to SLAM.
 > - [Factor Graphs for Robot Perception (Dellaert & Kaess, 2017)](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — A 100-page comprehensive reference.
@@ -704,7 +706,7 @@ class PoseGraph3dErrorTerm {
 ```
 
 - **template \<typename T\>**: inside Ceres, `T=double` is used when residual values are needed, and `T=Jet<double>` when Jacobians are needed, switching automatically. That is the mechanism of AutoDiff.
-- **sqrt_information**: the Cholesky decomposition of the covariance. Computed as `information.llt().matrixL()`.
+- **sqrt_information**: the Cholesky decomposition of the information matrix. Computed as `information.llt().matrixL()`.
 - **AutoDiffCostFunction dimensions**: `<PoseGraph3dErrorTerm, 6, 3, 4, 3, 4>` — residual 6D, pos_a 3D, quat_a 4D, pos_b 3D, quat_b 4D.
 - **SetManifold**: a quaternion has 4 parameters but only 3 DoF, so specify `EigenQuaternionManifold` to optimize on the manifold. In the older API this was `LocalParameterization`.
 
@@ -740,7 +742,7 @@ ceres::Solver::Summary summary;
 ceres::Solve(options, &problem, &summary);
 ```
 
-`SPARSE_NORMAL_CHOLESKY` suits sparse problems like pose graphs. As the number of variables grows, `SPARSE_SCHUR` is also worth considering.
+`SPARSE_NORMAL_CHOLESKY` suits sparse problems like pose graphs. For problems with a clear block of point variables to eliminate, such as bundle adjustment, `SPARSE_SCHUR` is also worth considering.
 
 **GTSAM vs Ceres comparison**
 
@@ -837,7 +839,7 @@ Higher entropy means greater uncertainty. For a Gaussian, larger covariance mean
 D_KL(p || q) = sum  p(x) log(p(x) / q(x))
 ```
 
-It is asymmetric: D_KL(p||q) != D_KL(q||p). It can be read as "the information loss when you assumed p but the truth is q."
+It is asymmetric: D_KL(p||q) != D_KL(q||p). It can be read as the information lost when p is approximated by q.
 
 **Mutual information**: measures how much you learn about X by observing Y.
 
@@ -1017,7 +1019,7 @@ The entire derivation rests on the Markov assumption. When the Markov assumption
 The two lines of the algorithm in §3.9.5 are consequences of Bayes' rule, the law of total probability, and the Markov assumption — nothing else. Knowing where each assumption enters tells you exactly where this filter will fail.
 
 > **Further reading**
-> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.2 is the primary source for this section. Algorithm, examples, and derivation are covered completely.
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](http://probabilistic-robotics.org/) — Ch.2 is the primary source for this section. Algorithm, examples, and derivation are covered completely.
 > - [Cyrill Stachniss — Bayes Filter Lecture (YouTube)](https://www.youtube.com/watch?v=0lKHFJpaZkI) — Lecture from Freiburg University. A clear slide-based walkthrough of the Bayes filter.
 
 ---
@@ -1166,7 +1168,7 @@ The EKF was widely used in SLAM, VIO, and IMU fusion through the mid-2010s. Seve
 - **IEKF (Iterated EKF):** Re-computes the Jacobian by repeating the update point. More accurate than EKF under strong nonlinearity.
 - **LIEKF (Left-Invariant EKF):** For SO(3)/SE(3) states, uses manifold linearization in place of Taylor linearization. Improves rotation estimation accuracy.
 
-The EKF/IEKF used in Ch.14 §14.7 EKF localization and §14.10 IMU preintegration takes this algorithm box directly. IMU preintegration in §14.10 uses IEKF to reduce rotation drift; localization in §14.7 feeds odometry into EKF prediction and landmark observations into correction. Understanding what $g$, $h$, $G_t$, and $H_t$ are here means the algorithm skeleton in Ch.14 does not need to be rederived when you encounter specific sensor models there.
+The filter structures of Ch.14 §14.7 EKF localization and of the IEKF and MSCKF connect to this algorithm box. IMU preintegration in §14.10, by contrast, is a separate measurement-construction method that bundles the IMU measurements between keyframes into an optimization factor. Understanding what $g$, $h$, $G_t$, and $H_t$ are here means the algorithm skeleton in Ch.14 does not need to be rederived when you encounter specific filters and sensor models there.
 
 ### 3.10.3 Information Filter (IF)
 
@@ -1243,7 +1245,7 @@ This additivity generalizes in §3.6 factor graphs to "one measurement factor = 
 EIF-SLAM and SEIF use this information-form additivity in their SLAM representations. Ch.14 §14.16 traces the historical connection.
 
 > **Further reading**
-> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.3 is the primary source. KF, EKF, and IF derivations appear side by side.
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](http://probabilistic-robotics.org/) — Ch.3 is the primary source. KF, EKF, and IF derivations appear side by side.
 > - [Cyrill Stachniss — Kalman Filter and EKF Lectures](https://www.youtube.com/watch?v=PiCC-SxWlH8) — Freiburg lectures. Strong visual explanations.
 > - [Welch & Bishop — An Introduction to the Kalman Filter (2006)](https://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf) — A standard KF introduction. Derivation and intuition are balanced throughout.
 
@@ -1454,7 +1456,7 @@ When all weights are equal, the output is identical to the input — no particle
 With this, both why the particle filter works and where it breaks down are clear. Each of the four error sources has a mitigation, and choosing the right tradeoff for the situation is the core of practical implementation. The four errors are addressed by augmented MCL and mixture MCL in Ch.14 §14.7.
 
 > **Further reading**
-> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](https://www.probabilistic-robotics.org/) — Ch.4 is the primary source. Algorithms and analysis for histogram, binary Bayes, and particle filters are covered completely.
+> - [Thrun, Burgard, Fox — Probabilistic Robotics (2005)](http://probabilistic-robotics.org/) — Ch.4 is the primary source. Algorithms and analysis for histogram, binary Bayes, and particle filters are covered completely.
 > - [Arulampalam et al. — A Tutorial on Particle Filters (IEEE Trans. Signal Processing 2002)](https://ieeexplore.ieee.org/document/978374) — A standard tutorial on particle filter theory and applications.
 > - [Thrun — Particle Filters in Robotics (UAI 2002)](https://www.aaai.org/Papers/UAI/2002/UAI02-079.pdf) — A short paper explaining the connection to Rao-Blackwellized PF and FastSLAM.
 > - [ROS AMCL package](https://wiki.ros.org/amcl) — The theory of §3.11.3–3.11.4 implemented in a production package. Augmented MCL and the low-variance sampler are applied directly.
@@ -1463,4 +1465,4 @@ With this, both why the particle filter works and where it breaks down are clear
 
 The Bayes filter is the framework. The KF, EKF, and IF are closed-form implementations of that framework under the Gaussian assumption. The histogram filter and particle filter buy flexibility without the Gaussian assumption, at the cost of computation. Which filter to choose is determined by state-space dimension and whether the distribution is multi-modal.
 
-When you encounter EKF localization (§14.7), MCL (§14.7), and IMU preintegration (§14.10) in Ch.14, there is no need to follow each algorithm's derivation from scratch. The filter vocabulary built here makes it possible to identify what $g$, $h$, and the proposal are in each algorithm, and the skeleton becomes immediately visible.
+When you encounter EKF localization (§14.7) and MCL (§14.7) in Ch.14, there is no need to follow each algorithm's derivation from scratch. The filter vocabulary built here makes it possible to identify what $g$, $h$, and the proposal are in each algorithm, and the skeleton becomes immediately visible. IMU preintegration (§14.10) is a technique distinct from the filter structure; it is treated separately as a way of compressing measurements into optimization factors.

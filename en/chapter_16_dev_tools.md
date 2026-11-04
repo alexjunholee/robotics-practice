@@ -100,9 +100,7 @@ nvidia-smi          # GPU status
 nvcc --version      # CUDA version
 ```
 
-**Recommended versions**: CUDA 12.x, cuDNN 8.x
-
-**Caveat**: always verify compatibility between the CUDA version and your PyTorch/TensorFlow version.
+**Version selection**: choose the CUDA/cuDNN combination supported in the official installation table for the PyTorch/TensorFlow release you will use.
 
 > **Further reading**
 > - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — check PyTorch-CUDA version matching. Consult before installing
@@ -335,9 +333,9 @@ What each flag does:
 |--------|------|
 | `--gpus all` | GPU passthrough (nvidia-container-toolkit) |
 | `--privileged` | Full access to USB/serial devices. In production, map individually with `--device` |
-| `--net=host` | Share host network for DDS multicast. Essential for ROS2 inter-node communication |
+| `--net=host` | Share host network to simplify DDS multicast setup. Optional, depending on the communication setup |
 | `--ipc=host` | Shared memory. Required by GUI tools like RViz |
-| `-e QT_X11_NO_MITSHM=1` | Without this, RViz crashes with a segfault. MIT-SHM does not work in Docker |
+| `-e QT_X11_NO_MITSHM=1` | Workaround used when RViz and similar tools exit because of MIT-SHM compatibility problems |
 | `-e ROS_DOMAIN_ID=42` | Isolates from other ROS2 systems on the same network. Essential when multiple people use the lab |
 | `-v /dev:/dev` | Sensor USB may be plugged in at any time, so mount all of /dev. Pairs with `--privileged` |
 | `-v .Xauthority` | X11 authentication. If you are not using the xhost setup from Step 1, without it you get `cannot open display` |
@@ -379,7 +377,7 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 ```
 
-Why a Dockerfile beats `docker commit`: later you can trace "what is installed in this image?". An image built by commit has no history, so you cannot reproduce it.
+Why a Dockerfile beats `docker commit`: later you can trace "what is installed in this image?". An image built by commit still keeps its layer history, but the build steps are not recorded in a Dockerfile, so it is hard to rebuild.
 
 > **Further reading**
 > - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — reference for ROS + NVIDIA + GUI Docker setup. Supports Melodic through Humble

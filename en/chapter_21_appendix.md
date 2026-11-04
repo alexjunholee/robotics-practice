@@ -82,7 +82,7 @@ A: Start with the language of the lab code you need to read and run first. C++ i
 
 **Q: Can I do research without a GPU?**
 
-A: Simple experiments are possible on CPU. But a GPU is essential for deep-learning training. Use Google Colab (free) or the lab server. The free version of Colab is enough for something like YOLO fine-tuning.
+A: Simple experiments are possible on CPU. But training deep-learning models usually requires a GPU. Use Google Colab (free) or the lab server. The free version of Colab is enough for something like YOLO fine-tuning.
 
 **Q: Should I learn ROS1 or ROS2?**
 
@@ -222,28 +222,38 @@ On laptops, battery drain increases, so use it only while plugged in. (Reference
 **Solution**:
 
 ```python
+import torch
+
 # 1. Reduce batch size (try this first)
 batch_size = 16  # → 8 or 4
 
 # 2. Clear memory
 torch.cuda.empty_cache()
 
-# 3. Use gradient accumulation (keep the effective batch, save memory)
+# 3. Gradient accumulation + AMP
 accumulation_steps = 4
-for i, (inputs, labels) in enumerate(dataloader):
-    loss = model(inputs, labels) / accumulation_steps
-    loss.backward()
-    if (i + 1) % accumulation_steps == 0:
-        optimizer.step()
-        optimizer.zero_grad()
+num_batches = len(dataloader)
+scaler = torch.amp.GradScaler("cuda")
+optimizer.zero_grad()
 
-# 4. Mixed Precision Training (halves memory)
-from torch.cuda.amp import autocast, GradScaler
-scaler = GradScaler()
-with autocast():
-    output = model(input)
-    loss = criterion(output, target)
+for i, (inputs, labels) in enumerate(dataloader):
+    group_start = (i // accumulation_steps) * accumulation_steps
+    group_size = min(accumulation_steps, num_batches - group_start)
+
+    with torch.autocast(device_type="cuda", dtype=torch.float16):
+        output = model(inputs)
+        loss = criterion(output, labels) / group_size
+
+    scaler.scale(loss).backward()
+
+    is_update_step = ((i + 1) % accumulation_steps == 0) or ((i + 1) == num_batches)
+    if is_update_step:
+        scaler.step(optimizer)
+        scaler.update()
+        optimizer.zero_grad()
 ```
+
+The memory savings and speedup from AMP vary with the model, GPU, and operators. Measure peak memory and training stability with the same batch and model.
 
 **Problem**: `CUDA version mismatch` (mostly when building CUDA extensions yourself)
 

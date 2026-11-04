@@ -1,13 +1,13 @@
 # Ch.13 — 3D 비전 (3D Vision)
 
 
-로봇은 2D 이미지만으로 "저 물체가 얼마나 멀리 있는지", "저 벽 뒤에 무엇이 있는지"를 알기 어렵다. 3D 비전은 로봇에게 공간 감각을 부여하는 분야다. 포인트 클라우드 처리, 3D 물체 감지, 장면 복원이 여기에 속한다. SLAM과 로봇 조작(manipulation)도 이 내용 없이는 온전히 이해하기 어렵다.
+2D 이미지 한 장으로는 로봇이 물체까지 거리가 얼마인지 바로 알기 어렵다. 3D 비전은 포인트 클라우드를 처리하고, 3D 물체를 감지하고, 장면을 복원해서 공간의 형상과 거리를 구한다. SLAM과 로봇 조작(manipulation)이 이 결과를 쓴다.
 
 ## 13.1 Point Cloud 기초
 
-LiDAR나 깊이 카메라에서 나오는 데이터가 바로 포인트 클라우드이다. 이미지는 픽셀 격자에 정렬된 2D 데이터인 반면, 포인트 클라우드는 3D 공간에 불규칙하게 흩어진 점들이다. 이 비정형 데이터를 어떻게 다루는지가 3D 비전의 출발점이다.
+LiDAR나 깊이 카메라는 포인트 클라우드를 출력한다. 이미지는 픽셀 격자에 정렬된 2D 데이터다. 포인트 클라우드는 3D 공간에 불규칙하게 흩어진 점들의 집합이다.
 
-**Point Cloud (포인트 클라우드)**는 3D 공간에 있는 점들의 집합이다. 각 점은 최소한 (x, y, z) 좌표를 가지며, 추가로 색상(RGB), 반사도(intensity), 법선(normal) 등의 속성을 가질 수 있다.
+각 점에는 적어도 (x, y, z) 좌표가 있고, 색상(RGB), 반사도(intensity), 법선(normal) 같은 속성이 더 붙기도 한다.
 
 ### 13.1.1 데이터 구조 및 포맷
 
@@ -18,20 +18,20 @@ Point: [x, y, z, r, g, b, intensity, ...]
 Point Cloud: N × D 행렬 (N개 점, D차원 속성)
 ```
 
-선형대수 관점에서 포인트 클라우드는 N×D 행렬로 볼 수 있다. N은 수만~수백만 개의 점, D는 각 점의 속성 차원이다. 회전과 이동은 각 점의 위치 좌표를 동차 형태로 만들어 4×4 변환 행렬을 곱하는 연산이다. 색상이나 반사도 같은 속성은 이 변환의 대상이 아니고, 법선은 회전만 적용한다.
+선형대수로 보면 포인트 클라우드는 N×D 행렬이다. N은 점의 개수로 수만에서 수백만에 이르고, D는 점 하나에 붙은 속성의 차원이다. 회전하고 이동할 때는 각 점의 위치 좌표를 동차 좌표로 바꾼 뒤 4×4 변환 행렬을 곱한다. 색상과 반사도는 그대로 둔다. 법선에는 회전만 적용한다.
 
 **주요 파일 포맷**:
 | 포맷 | 특징 |
 |---|---|
-| **PCD** | PCL 표준, ASCII/Binary |
-| **PLY** | 다목적, mesh도 지원 |
-| **LAS/LAZ** | 지리정보 표준, LAZ는 압축 |
-| **XYZ** | 단순 텍스트, 좌표만 |
-| **BIN** | KITTI 등에서 사용, 바이너리 |
+| PCD | PCL 표준, ASCII/Binary |
+| PLY | 다목적, mesh도 지원 |
+| LAS/LAZ | 지리정보 표준, LAZ는 압축 |
+| XYZ | 단순 텍스트, 좌표만 |
+| BIN | KITTI 등에서 사용, 바이너리 |
 
 > **추천 자료**
-> - [Open3D Documentation](http://www.open3d.org/docs/release/) — 포인트 클라우드 처리의 현대적 라이브러리
-> - [PCL (Point Cloud Library) Tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — 포인트 클라우드 처리의 고전 라이브러리
+> - [Open3D Documentation](https://www.open3d.org/docs/release/) — Python과 C++로 쓰는 포인트 클라우드 라이브러리
+> - [PCL (Point Cloud Library) Tutorials](https://pcl.readthedocs.io/projects/tutorials/en/latest/) — 오래전부터 써 온 C++ 포인트 클라우드 라이브러리
 
 ### 13.1.2 라이브러리
 
@@ -54,6 +54,7 @@ pcl::io::loadPCDFile<pcl::PointXYZ>("cloud.pcd", *cloud);
 - 딥러닝 친화적
 
 ```python
+import numpy as np
 import open3d as o3d
 
 # 포인트 클라우드 읽기
@@ -66,21 +67,21 @@ o3d.visualization.draw_geometries([pcd])
 points = np.asarray(pcd.points)  # (N, 3)
 ```
 
-Open3D는 직관적인 파이썬 바인딩 덕분에 초기 알고리즘 프로토타이핑에 매우 적합하다. 한편 실시간 C++ ROS 파이프라인 구축에는 전통적인 PCL이 여전히 폭넓게 활용된다. 처음 입문한다면 Open3D부터 시작하는 경로를 추천한다.
+Open3D는 파이썬 바인딩이 있어 알고리즘 프로토타이핑에 편하다. C++ ROS 파이프라인에서는 PCL도 많이 쓴다. 처음이라면 Open3D부터 시작한다.
 
 > **추천 자료**
-> - [Open3D Getting Started](http://www.open3d.org/docs/release/getting_started.html) — Python으로 포인트 클라우드 다루기 입문
+> - [Open3D Getting Started](https://www.open3d.org/docs/release/getting_started.html) — Python으로 포인트 클라우드 다루기 입문
 > - [PCL Tutorials — Basic Usage](https://pcl.readthedocs.io/projects/tutorials/en/latest/#basic-usage) — C++ 기반 포인트 클라우드 처리
-> - [Open3D YouTube Channel](https://www.youtube.com/@Open3D) — 시각화 및 처리 튜토리얼
+> - [Open3D YouTube Channel](https://www.youtube.com/channel/UCRJBlASPfPBtPXJSPffJV-w) — 시각화 및 처리 튜토리얼
 
 ## 13.2 Point Cloud 처리
 
 ### 13.2.1 필터링 (Filtering)
 
-원시 포인트 클라우드에는 노이즈가 많고 점의 밀도도 불균일하다. 그대로 쓰면 정합이나 세그멘테이션 같은 후속 알고리즘이 느려지거나 결과가 나빠진다. 그래서 필터링은 대부분의 포인트 클라우드 파이프라인에서 첫 단계가 된다.
+원시 포인트 클라우드에는 노이즈가 많고 점의 밀도가 위치마다 다르다. 그대로 쓰면 정합이나 세그멘테이션 같은 후속 알고리즘이 느려지거나 결과가 나빠지므로, 파이프라인 첫 단계에서 필터링한다.
 
 **Voxel Grid Downsampling**:
-공간을 격자로 나누고 각 격자 내 점들을 하나로 축소한다.
+공간을 격자로 나누고, 한 칸에 든 점들을 점 하나로 합친다.
 
 ```python
 # Open3D
@@ -88,7 +89,7 @@ voxel_pcd = pcd.voxel_down_sample(voxel_size=0.05)  # 5cm 격자
 ```
 
 **Statistical Outlier Removal**:
-이웃과의 거리 통계를 기반으로 이상치를 제거한다.
+이웃 점까지 거리의 통계를 보고 이상치를 지운다.
 
 ```python
 # 이상치 제거
@@ -97,17 +98,17 @@ filtered_pcd = pcd.select_by_index(ind)
 ```
 
 **Radius Outlier Removal**:
-주어진 반경 내 이웃 수가 부족한 점을 제거한다.
+정한 반경 안에 이웃이 너무 적은 점을 지운다.
 
 > **추천 자료**
-> - [Open3D — Point Cloud Filtering Tutorial](http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html) — Voxel downsampling, outlier removal 예제
+> - [Open3D — Point Cloud Filtering Tutorial](https://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html) — Voxel downsampling, outlier removal 예제
 > - [PCL — Filtering Tutorial](https://pcl.readthedocs.io/projects/tutorials/en/latest/passthrough.html) — PCL 기반 필터링
 
 ### 13.2.2 Normal Estimation
 
-3D 처리 파이프라인에서 각 점의 표면 법선 벡터를 추정하는 전처리 단계다.
+각 점에서 표면의 법선 벡터를 추정하는 전처리 단계다.
 
-표면 재구성(reconstruction), 조명 계산, 그리고 point-to-plane ICP가 법선 벡터를 요구한다. point-to-point ICP는 법선 없이 동작한다. 법선이 없으면 "이 점이 평면의 일부인지 모서리의 일부인지"를 알 수 없다.
+표면 재구성(reconstruction), 조명 계산, point-to-plane ICP가 법선 벡터를 쓴다. point-to-point ICP는 점 좌표만 쓴다. 이웃 점들의 법선 방향을 비교하면 그 점이 평면 위에 있는지 모서리에 있는지 판단할 수 있다.
 
 ```python
 # 법선 추정
@@ -116,11 +117,11 @@ pcd.estimate_normals(
 )
 ```
 
-내부적으로는 각 점 주변의 이웃 $k$개 점들로 공분산 행렬을 구성한 뒤, 최소 고유값에 대응하는 고유벡터를 산출하여 법선 방향으로 채택한다. 이는 선형대수의 주성분 분석(PCA)과 동일한 기하학적 원리다.
+Open3D는 각 점 주변 이웃 점들(위 예제에서는 반경 0.1 m 안의 최대 30개)로 공분산 행렬을 만든다. 이 행렬의 최소 고유값에 대응하는 고유벡터를 법선 방향으로 쓴다. 주성분 분석(PCA)에서 분산이 가장 작은 축을 고르는 셈이다.
 
 ### 13.2.3 Registration (정합)
 
-두 포인트 클라우드를 정렬하는 과정이다. SLAM에서 연속 프레임을 이어 붙이거나, 여러 뷰에서 스캔한 데이터를 합칠 때 필요하다.
+두 포인트 클라우드가 겹치도록 맞추는 과정이다. SLAM에서 연속된 프레임을 이어 붙이거나 여러 위치에서 스캔한 데이터를 합칠 때 쓴다.
 
 **ICP (Iterative Closest Point)**:
 1. 가장 가까운 점 쌍 찾기
@@ -137,13 +138,13 @@ reg = o3d.pipelines.registration.registration_icp(
 transformation = reg.transformation
 ```
 
-ICP는 두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 쌍이 최대한 겹치도록 회전·이동 변환을 구하는 과정을 반복한다. 선형대수적으로는 SVD(특이값 분해)로 최적의 회전 행렬 R과 이동 벡터 t를 구한다.
+ICP는 두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 쌍의 거리를 최소로 만드는 회전·이동을 구하는 과정을 반복한다. point-to-point ICP에서는 SVD(특이값 분해)로 회전 행렬 R과 이동 벡터 t를 닫힌 형태로 구한다.
 
-**Point-to-Plane ICP**: 점과 평면 거리 최소화 (더 정확)
+Point-to-Plane ICP: 점과 평면 사이 거리를 최소화. 평면이 많은 장면에서 더 빨리 수렴
 
-**GICP (Generalized ICP)**: 점 분포 고려
+**GICP (Generalized ICP)**: 각 점 주변의 분포(공분산)를 함께 써서 정합
 
-**NDT (Normal Distributions Transform)**: 공간을 셀로 나누고 각 셀의 정규분포 매칭
+NDT (Normal Distributions Transform): 공간을 셀로 나누고 각 셀의 정규분포에 점을 매칭
 
 **Feature-based Registration**:
 - FPFH, SHOT 등 특징 추출
@@ -151,8 +152,8 @@ ICP는 두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 
 - ICP로 정밀화
 
 > **추천 자료**
-> - [Open3D — ICP Registration Tutorial](http://www.open3d.org/docs/release/tutorial/pipelines/icp_registration.html) — ICP 실습 코드
-> - [Open3D — Global Registration (RANSAC + Feature)](http://www.open3d.org/docs/release/tutorial/pipelines/global_registration.html) — Feature 기반 정합
+> - [Open3D — ICP Registration Tutorial](https://www.open3d.org/docs/release/tutorial/pipelines/icp_registration.html) — ICP 실습 코드
+> - [Open3D — Global Registration (RANSAC + Feature)](https://www.open3d.org/docs/release/tutorial/pipelines/global_registration.html) — Feature 기반 정합
 > - [Cyrill Stachniss — ICP & Point Cloud Registration](https://www.youtube.com/watch?v=dhzLQfDBx2Q) — ICP 알고리즘의 직관적 설명
 
 > **실습**: [ICP 2D 단계별 시각화](https://alexjunholee.github.io/robotics-practice/app.html#icp_steps) | [ICP 3D](https://alexjunholee.github.io/robotics-practice/app.html#icp_3d)
@@ -160,11 +161,11 @@ ICP는 두 포인트 클라우드에서 가장 가까운 점 쌍을 찾고, 그 
 
 ## 13.3 3D Object Detection
 
-포인트 클라우드에서 3D bounding box를 예측하는 분야다. 자율주행에서 "저 차가 어디에 있고 얼마나 큰지"를 파악하는 핵심 기술이다.
+포인트 클라우드에서 물체를 감싸는 3D bounding box를 예측한다. 자율주행에서는 주변 차량의 위치와 크기를 이렇게 구한다.
 
 ### 13.3.1 Point-based Methods
 
-PointNet은 포인트 클라우드를 복셀이나 이미지로 변환하지 않고 raw 포인트에 직접 신경망을 적용한다. 격자 구조를 전제로 하는 CNN과 달리, 불규칙한 점 집합을 그대로 입력으로 받는다.
+PointNet은 raw 포인트 집합을 신경망 입력으로 바로 받는다. CNN은 격자 구조의 입력을 받으므로, 이전 방법들은 점을 복셀이나 이미지로 바꿔 넣었다.
 
 **PointNet (2017)**:
 - Raw 포인트에 직접 적용
@@ -183,7 +184,7 @@ PointNet은 포인트 클라우드를 복셀이나 이미지로 변환하지 않
 # 3. PointNet: 각 그룹에서 특징 추출
 ```
 
-PointNet의 출력은 포인트 클라우드의 점 순서가 바뀌어도 같아야 한다(permutation invariance). 이를 위해 각 점을 독립적으로 MLP에 통과시킨 뒤 max pooling으로 집계한다. 수학적으로 f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn))) 형태이다.
+PointNet의 출력은 포인트 클라우드의 점 순서가 바뀌어도 같아야 한다(permutation invariance). 그래서 각 점을 같은 MLP에 따로 통과시킨 뒤 max pooling으로 모은다. 식으로 쓰면 f({x1, ..., xn}) = g(MAX(h(x1), ..., h(xn)))다.
 
 ### 13.3.2 Voxel-based Methods
 
@@ -195,18 +196,18 @@ PointNet의 출력은 포인트 클라우드의 점 순서가 바뀌어도 같�
 **SECOND (Sparsely Embedded Convolutional Detection)**:
 - Sparse Convolution 사용
 - VoxelNet 대비 훨씬 빠름
-- 널리 사용되는 베이스라인
+- 널리 쓰는 베이스라인
 
 **PointPillars (2019)**:
 - Pillar (수직 기둥) 단위 처리
 - 2D CNN으로 변환하여 빠른 속도
 - 실시간 가능
 
-PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar 안의 점을 하나의 특징 벡터로 압축해 2D 이미지처럼 배열한다. 이렇게 하면 2D CNN을 그대로 활용할 수 있어 3D CNN보다 계산이 빠르다.
+PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar 안의 점을 특징 벡터 하나로 압축해 2D 이미지처럼 배열한다. 그 위에 2D CNN을 돌리므로 3D 합성곱보다 계산이 빠르다.
 
 ### 13.3.3 Multi-modal Methods
 
-카메라가 풍부한 색상과 텍스처 정보를 제공하는 데 반해 정밀 깊이 정보를 직접 주지 못한다면, 라이다는 정확한 3차원 기하 좌표를 측정하되 표면 텍스처가 결여된다. 따라서 두 센서의 상보적 강점을 어떻게 유기적으로 결합할지가 핵심이다.
+카메라는 색상과 텍스처를 준다. 라이다는 정확한 3차원 좌표를 측정한다. 융합 방법은 두 정보를 한 표현(예: BEV)에 모아 함께 쓴다.
 
 **BEVFusion**:
 - Camera + LiDAR 융합
@@ -219,7 +220,7 @@ PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar �
 > **추천 자료**
 > - [Qi et al., "PointNet: Deep Learning on Point Sets" (2017)](https://arxiv.org/abs/1612.00593) — 3D 딥러닝의 시작점
 > - [Lang et al., "PointPillars" (2019)](https://arxiv.org/abs/1812.05784) — 실시간 3D 감지
-> - [Liu et al., "BEVFusion" (2023)](https://arxiv.org/abs/2205.13542) — 멀티모달 융합의 대표작
+> - [Liu et al., "BEVFusion" (ICRA 2023)](https://arxiv.org/abs/2205.13542) — 카메라·라이다 특징을 BEV에서 융합
 > - [MMDetection3D GitHub](https://github.com/open-mmlab/mmdetection3d) — 3D Object Detection 통합 프레임워크
 
 > **실습**: [BEV Projection 시각화](https://alexjunholee.github.io/robotics-practice/app.html#bev_projection)
@@ -227,13 +228,11 @@ PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar �
 
 ## 13.4 3D Reconstruction
 
-여러 뷰 또는 깊이 정보로부터 3D 모델을 생성한다. 로봇이 환경을 3D로 "기억"하려면 이 기술이 필요하다.
+여러 시점의 이미지나 깊이 정보로 3D 모델을 만든다. 로봇은 이 모델을 환경 지도로 쓴다.
 
 ### 13.4.1 Structure from Motion (SfM)
 
-여러 장의 2D 사진만으로 3D 구조를 복원할 수 있다. 스마트폰 사진 몇 장으로 건물의 3D 모델을 만드는 방식이며, NeRF나 3D Gaussian Splatting에 필요한 카메라 포즈를 만드는 전처리 단계이기도 하다.
-
-여러 이미지에서 카메라 포즈와 3D 구조를 동시에 복원한다.
+여러 장의 2D 사진으로 카메라 포즈와 3D 구조를 함께 복원한다. 스마트폰 사진 여러 장으로 건물의 3D 모델을 만들 때 이 방법을 쓴다. NeRF나 3D Gaussian Splatting에 넣을 카메라 포즈도 SfM으로 구한다.
 
 **파이프라인**:
 1. 특징점 추출 및 매칭
@@ -241,10 +240,10 @@ PointPillars는 3D 공간을 수직 기둥(pillar)으로 나누고, 각 pillar �
 3. 점진적 카메라 추가
 4. Bundle Adjustment (BA)
 
-Bundle Adjustment는 모든 카메라 포즈와 3D 점 위치를 동시에 최적화한다. 비선형 최소자승법(Levenberg-Marquardt 등)을 쓰며, 변수는 수만~수십만 개가 될 수 있다. 선형대수의 최소자승법을 대규모 비선형 문제로 확장한 형태다.
+Bundle Adjustment는 모든 카메라 포즈와 3D 점 위치를 동시에 최적화한다. Levenberg-Marquardt 같은 비선형 최소자승법으로 푼다. 변수가 수만에서 수십만 개에 이르기도 한다.
 
 **도구**:
-- **COLMAP**: 널리 쓰이는 공개 SfM/MVS 참조 구현, GUI/CLI
+- COLMAP: 널리 쓰이는 공개 SfM/MVS 구현, GUI/CLI
 - **OpenMVG**: 라이브러리 형태
 
 ```bash
@@ -262,9 +261,7 @@ colmap mapper --database_path db.db --image_path ./images --output_path ./sparse
 
 ### 13.4.2 Multi-View Stereo (MVS)
 
-SfM 결과를 기반으로 dense 포인트 클라우드를 생성한다.
-
-SfM이 "카메라가 어디 있었는지"와 "sparse한 3D 점들"을 복원한다면, MVS는 그 카메라 포즈를 이용해 조밀한(dense) 3D 포인트 클라우드를 만든다. SfM → MVS → Mesh 생성이 전형적인 3D 복원 파이프라인이다.
+SfM은 카메라 포즈와 듬성듬성한(sparse) 3D 점을 복원한다. MVS는 그 카메라 포즈로 조밀한(dense) 3D 포인트 클라우드를 만든다. SfM → MVS → Mesh 생성이 전형적인 3D 복원 파이프라인이다.
 
 **도구**: COLMAP (dense reconstruction), OpenMVS
 
@@ -294,12 +291,12 @@ mesh = volume.extract_triangle_mesh()
 ```
 
 > **추천 자료**
-> - [Open3D — TSDF Integration Tutorial](http://www.open3d.org/docs/release/tutorial/pipelines/rgbd_integration.html) — TSDF 실습 코드
+> - [Open3D — TSDF Integration Tutorial](https://www.open3d.org/docs/release/tutorial/pipelines/rgbd_integration.html) — TSDF 실습 코드
 > - [Curless & Levoy, "A Volumetric Method for Building Complex Models from Range Images" (1996)](https://graphics.stanford.edu/papers/volrange/volrange.pdf) — TSDF 원 논문 (고전이지만 읽어볼 가치가 있다)
 
 ## 13.5 Neural Rendering
 
-딥러닝으로 3D 장면을 표현하고 렌더링하는 방식이다. 기존 방법(mesh, point cloud)은 반사·투명체·가는 구조가 있는 복잡한 장면을 표현하는 데 한계가 있었다. Neural Rendering은 장면을 학습 가능한 함수로 표현해 이런 효과를 다룬다. 최근에는 SLAM과 결합해 온라인 매핑에도 활용된다.
+신경망이나 학습으로 정하는 파라미터로 3D 장면을 표현하고 렌더링한다. mesh나 point cloud로는 반사, 투명체, 가는 구조를 사실적으로 표현하기 어렵다. Neural Rendering은 장면을 학습된 함수로 표현해 이런 효과를 재현한다. SLAM과 결합해 로봇이 움직이는 동안 지도를 만드는 데도 쓴다.
 
 ### 13.5.1 NeRF (Neural Radiance Fields)
 
@@ -311,9 +308,9 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 - 색상 (r, g, b)과 밀도 (σ) 출력
 ```
 
-직관적으로 설명하면: NeRF는 "3D 공간의 모든 점에 대해, 어떤 방향에서 보면 어떤 색과 밀도를 가지는지"를 신경망으로 학습하는 것이다. 학습이 끝나면 어떤 카메라 위치에서든 새로운 뷰를 합성(novel view synthesis)할 수 있다.
+NeRF는 3D 공간의 각 점이 어느 방향에서 어떤 색으로 보이고 밀도가 얼마인지 신경망으로 학습한다. 학습이 끝나면 찍지 않은 카메라 위치에서 본 영상도 합성한다(novel view synthesis).
 
-**렌더링**: 광선을 따라 색상과 밀도를 적분 (volume rendering)
+렌더링: 광선을 따라 색상과 밀도를 적분 (volume rendering)
 
 **장점**:
 - 사실적인 novel view synthesis
@@ -329,16 +326,16 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 - Block-NeRF: 대규모 장면
 
 > **추천 자료**
-> - [Mildenhall et al., "NeRF: Representing Scenes as Neural Radiance Fields" (2020)](https://arxiv.org/abs/2003.08934) — NeRF 원 논문
-> - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF 실험을 쉽게 할 수 있는 통합 프레임워크. NeRF를 직접 돌려보고 싶다면 여기서 시작하자.
+> - [Mildenhall et al., "NeRF: Representing Scenes as Neural Radiance Fields" (ECCV 2020)](https://arxiv.org/abs/2003.08934) — NeRF 원 논문
+> - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF 실험용 통합 프레임워크
 > - [Yannic Kilcher — NeRF Explained](https://www.youtube.com/watch?v=CRlN-cYFxTk) — NeRF의 표현 방식을 직관적으로 설명
-> - [Jon Barron — Understanding NeRF (ECCV 2022 Tutorial)](https://www.youtube.com/watch?v=HfJpQCBTqZs) — NeRF 저자 직강
+> - [Jon Barron — Understanding and Extending Neural Radiance Fields](https://www.youtube.com/watch?v=HfJpQCBTqZs) — MIT Vision & Graphics Seminar 강연. 연사는 NeRF 공저자다
 
 ### 13.5.2 3D Gaussian Splatting (3DGS)
 
-3DGS는 NeRF에서 오래 걸리던 렌더링 시간을 크게 줄이면서 빠르게 채택됐다. NeRF는 한 프레임을 렌더링하는 데 수 초가 걸릴 수 있지만, 3DGS는 100 FPS 이상의 실시간 렌더링 결과를 보였다. 이 차이로 SLAM과 온라인 매핑 같은 로봇 응용에서도 활용할 수 있게 됐다.
+원래 NeRF는 한 프레임을 렌더링하는 데 수 초씩 걸리기도 한다. 3DGS 논문은 1080p 해상도에서 30 FPS 이상으로 실시간 렌더링했다고 보고했다. 이 속도 덕분에 SLAM과 온라인 매핑에도 쓴다.
 
-**개념**: 장면을 수백만 개의 3D Gaussian으로 표현
+개념: 장면을 수백만 개의 3D Gaussian으로 표현
 
 각 Gaussian:
 - 위치 (mean)
@@ -346,13 +343,13 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 - 색상 (Spherical Harmonics)
 - 불투명도
 
-선형대수에서 배운 공분산 행렬을 떠올려보자. 3×3 공분산 행렬의 고유벡터가 타원체의 축 방향을, 고유값이 축의 길이를 결정한다. 3DGS는 이 개념을 그대로 활용해서, 각 Gaussian의 모양과 크기를 표현한다.
+3×3 공분산 행렬의 고유벡터가 타원체의 축 방향이다. 축 길이는 고유값의 제곱근에 비례한다. 3DGS는 각 Gaussian의 모양과 크기를 이 공분산으로 표현한다.
 
 **렌더링**: Gaussian을 이미지에 투영 (splatting)
 
 **장점**:
-- NeRF 대비 실시간 렌더링 (100+ FPS)
-- 빠른 학습 (수 분)
+- 실시간 렌더링 (1080p에서 30 FPS 이상)
+- 학습이 비교적 빠름 (원 논문 Mip-NeRF360 기준 7K iteration 약 6분, 최고 품질 30K iteration 약 42분)
 - 명시적 표현 (편집 용이)
 
 **응용**:
@@ -366,23 +363,23 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 # 렌더링: 카메라 뷰로 투영하여 이미지 생성
 ```
 
-**3DGS + SLAM (최신 트렌드)**:
+**3DGS + SLAM**:
 
-3D Gaussian Splatting이 SLAM과 결합되면서 Neural SLAM의 새로운 방향이 열리고 있다. 기존 SLAM이 sparse한 포인트 맵이나 복셀 맵을 만들었다면, 3DGS-SLAM은 포토리얼리스틱한 3D 맵을 만든다. 실시간에 해당하는 100 FPS급 수치는 학습이 끝난 장면의 렌더링 처리율이고, tracking과 mapping 최적화를 포함한 종단 처리율은 그보다 훨씬 낮게 보고된다.
+3DGS-SLAM은 3D Gaussian으로 사진처럼 보이는 맵을 만든다. 앞의 실시간 수치는 학습이 끝난 장면을 렌더링할 때의 속도다. tracking과 mapping 최적화까지 넣은 전체 속도는 훨씬 낮다. MonoGS 논문은 시스템이 3 fps로 돈다고 보고했다.
 
-- **SplaTAM (2024)**: RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 수행한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가/업데이트)을 번갈아 수행하며, 기존 Neural SLAM 대비 렌더링 품질과 속도를 크게 높인다.
-- **MonoGS (2024)**: 단안(monocular) 카메라만으로 3DGS 기반 SLAM을 수행한다. 깊이 센서 없이도 dense한 3D 맵을 구축할 수 있다.
-- **Gaussian-SLAM (2024)**: 서브맵(sub-map) 기반으로 대규모 환경에서도 3DGS SLAM을 돌릴 수 있다.
+- SplaTAM (CVPR 2024): RGB-D 카메라 입력으로 3DGS 기반 dense SLAM을 한다. Tracking(카메라 포즈 추정)과 Mapping(Gaussian 추가·갱신)을 번갈아 돌린다. 논문은 카메라 포즈 추정, 지도 복원, 새 시점 합성에서 기존 방법보다 최대 2배 좋은 성능을 보고했다.
+- MonoGS (CVPR 2024): 단안(monocular) 카메라만으로도 3DGS 기반 SLAM을 한다. RGB-D 입력도 지원한다.
+- Gaussian-SLAM (arXiv 2023 프리프린트): RGB-D 입력을 서브맵(sub-map)으로 나눠 관리해 더 큰 장면을 다룬다.
 
-로봇이 돌아다니면서 포토리얼리스틱한 3D 맵을 실시간으로 만들 수 있다면, 디지털 트윈이나 AR/VR 콘텐츠 생성 같은 응용이 열린다.
+이렇게 만든 맵은 디지털 트윈이나 AR/VR 콘텐츠에도 쓴다.
 
 > **추천 자료**
-> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (2023)](https://arxiv.org/abs/2308.04079) — 3DGS 원 논문
+> - [Kerbl et al., "3D Gaussian Splatting for Real-Time Radiance Field Rendering" (SIGGRAPH 2023)](https://arxiv.org/abs/2308.04079) — 3DGS 원 논문
 > - [Huang et al., "2D Gaussian Splatting for Geometrically Accurate Radiance Fields" (SIGGRAPH 2024, arXiv:2403.17888)](https://arxiv.org/abs/2403.17888) — 2D Gaussian으로 표면 복원 품질 향상
-> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (2024)](https://arxiv.org/abs/2312.02126) — 3DGS + SLAM의 대표작
-> - [Matsuki et al., "Gaussian Splatting SLAM" (2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
+> - [Keetha et al., "SplaTAM: Splat, Track & Map 3D Gaussians for Dense RGB-D SLAM" (CVPR 2024)](https://arxiv.org/abs/2312.02126) — 3DGS + SLAM의 대표작
+> - [Matsuki et al., "Gaussian Splatting SLAM" (CVPR 2024)](https://arxiv.org/abs/2312.06741) — MonoGS 논문
 > - [Wang et al., "DUSt3R: Geometric 3D Vision Made Easy" (CVPR 2024, arXiv:2312.14132)](https://arxiv.org/abs/2312.14132) — 카메라 내부/외부 파라미터 없이 이미지 쌍에서 dense 3D를 복원한다.
-> - [Leroy et al., "Grounding Image Matching in 3D with MASt3R" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching 추가. 복원 + 정밀 대응점 동시 제공
+> - [Leroy et al., "Grounding Image Matching in 3D with MASt3R" (ECCV 2024, arXiv:2406.09756)](https://arxiv.org/abs/2406.09756) — DUSt3R에 local feature matching을 붙여 3D 복원과 정밀한 대응점을 함께 낸다
 > - [NeRFStudio Documentation](https://docs.nerf.studio/) — NeRF/3DGS 실험 통합 프레임워크
 > - [3DGS Original Implementation (GitHub)](https://github.com/graphdeco-inria/gaussian-splatting) — 공식 코드
 
@@ -391,7 +388,7 @@ F: (x, y, z, θ, φ) → (r, g, b, σ)
 
 ## 13.6 심화: Neural Implicit Representations
 
-13.5에서 NeRF와 3DGS를 다뤘다. NeRF는 density field를 사용하여 volume rendering을 수행하지만, density에서 명확한 surface를 추출하기 어렵다는 한계가 있다. 로보틱스에서 물체를 잡거나 충돌을 판단하려면 정확한 surface가 필요하다. 여기서 부호 있는 거리 함수(Signed Distance Function, SDF) 기반 접근이 등장한다.
+NeRF는 density field로 volume rendering을 한다. density field에서는 표면 위치가 흐릿하게 퍼져 있어 깨끗한 surface를 뽑기 어렵다. 물체를 잡거나 충돌을 판단하려면 정확한 surface가 필요하므로, 부호 있는 거리 함수(Signed Distance Function, SDF)로 장면을 표현한다.
 
 **SDF (Signed Distance Function)**
 
@@ -403,13 +400,13 @@ f(x) < 0  : 표면 안쪽
 f(x) = 0  : 표면 위 (zero level set)
 ```
 
-SDF의 핵심 성질: 미분 가능한 점에서 gradient의 크기가 1이다 (Eikonal equation).
+SDF는 미분 가능한 점에서 gradient의 크기가 1이다 (Eikonal equation).
 
 ```
 ||∇f(x)|| = 1
 ```
 
-이 조건을 만족하는 함수만이 올바른 거리 함수이다. Neural network로 SDF를 학습할 때 이 조건을 정규화 항(regularization)으로 추가하는데, 이를 **Eikonal loss**라 한다.
+거리 함수는 이 조건을 만족한다. Neural network로 SDF를 학습할 때 이 조건을 정규화 항(regularization)으로 넣는데, 이를 Eikonal loss라 한다.
 
 ```
 L_eikonal = E_x[ (||∇f_θ(x)|| - 1)^2 ]
@@ -417,17 +414,17 @@ L_eikonal = E_x[ (||∇f_θ(x)|| - 1)^2 ]
 
 **DeepSDF**
 
-SDF를 신경망으로 학습하는 초기 대표 연구다. Decoder-only architecture를 사용하며, 각 물체의 형상을 latent code `z`로 표현한다.
+DeepSDF(2019)는 SDF를 신경망으로 학습한 초기 연구다. 인코더 없이 decoder만 쓰고, 물체마다 형상을 latent code `z` 하나로 나타낸다.
 
 ```
 f_θ(z, x) → SDF value
 ```
 
-새로운 물체에 대해서는 test-time optimization으로 `z`를 추정한다.
+새 물체의 `z`는 test-time optimization으로 추정한다.
 
 **NeuS**
 
-NeRF의 volume rendering 품질과 SDF의 깨끗한 surface를 결합한 연구다. SDF 값을 density로 변환하는 함수를 도입하여, volume rendering framework 안에서 SDF를 학습한다.
+NeuS(2021)는 SDF 값을 density로 바꾸는 함수를 두어, volume rendering으로 SDF를 학습한다. 렌더링 품질은 NeRF에 가깝고 surface는 SDF의 0-level set에서 바로 뽑는다.
 
 ```
 density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d 는 광선 위의 점
@@ -437,7 +434,7 @@ density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d �
 
 **VolSDF**
 
-유사한 접근이지만, density를 SDF의 Laplace 분포 CDF로 정의한다.
+VolSDF(2021)는 density를 SDF에 Laplace 분포 CDF를 적용한 값으로 정의한다.
 
 ```
 σ(x) = (1/β) · Ψ_β(-f(x))
@@ -447,7 +444,7 @@ density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d �
 
 **Surface 추출**
 
-학습된 SDF에서 `f(x) = 0`인 iso-surface를 mesh로 변환하는 표준 방법이 **Marching Cubes** 알고리즘이다. 공간을 격자로 나누고, 각 격자 꼭짓점에서 SDF 부호를 확인해 surface가 지나가는 위치를 보간으로 결정한다.
+학습된 SDF에서 `f(x) = 0`인 iso-surface를 mesh로 바꿀 때는 Marching Cubes 알고리즘을 쓴다. 공간을 격자로 나누고, 각 격자 꼭짓점에서 SDF 부호를 확인해 surface가 지나가는 위치를 보간으로 결정한다.
 
 **비교표**
 
@@ -466,28 +463,31 @@ density ρ(t) = max(-dΦ_s(f(r(t)))/dt, 0) / Φ_s(f(r(t))),   r(t) = o + t·d �
 
 ## 13.7 심화: Differentiable Rendering
 
-NeRF, 3DGS, NeuS는 렌더링 과정을 미분 가능하게 만들고, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화한다. 관측 이미지를 가장 잘 재현하는 장면 표현을 찾는 이 방식을 analysis-by-synthesis라 한다.
+NeRF, 3DGS, NeuS는 렌더링 과정을 미분 가능하게 만들고, 렌더링 결과와 실제 이미지의 차이로 3D 표현을 최적화한다. 관측 이미지를 가장 잘 재현하는 장면 표현을 찾는 방식을 analysis-by-synthesis라 한다.
 
 **Volume Rendering Equation**
 
-NeRF 계열에서 사용하는 기본 렌더링 공식이다. 카메라에서 발사한 ray `r(t) = o + td` 위의 색상을 적분한다.
+NeRF 계열이 쓰는 기본 렌더링 공식이다. 카메라에서 발사한 ray `r(t) = o + td` 위의 색상을 적분한다.
 
 ```
-C(r) = ∫ T(t) · σ(t) · c(t) dt
+C(r) = ∫_{t_n}^{t_f} T(t) · σ(t) · c(t) dt
 
 where T(t) = exp( -∫_{t_n}^{t} σ(s) ds )
 ```
 
-- `σ(t)`: 위치 `t`에서의 density (부피 밀도, 길이의 역수 차원)
-- `c(t)`: 위치 `t`에서의 색상 (RGB)
+- `t_n`, `t_f`: ray 위 적분 구간의 가까운 끝과 먼 끝
+- `σ(t)`: 위치 `t`의 density (부피 밀도, 길이의 역수 차원)
+- `c(t)`: 위치 `t`의 색상 (RGB)
 - `T(t)`: 누적 투과도 (ray가 `t`까지 도달할 확률)
 
-실제로는 이 연속 적분을 discretize하여 ray 위의 N개 샘플 점에서 근사한다 (ray marching).
+구현에서는 ray 위의 N개 샘플 점으로 이 적분을 근사한다 (ray marching).
 
 ```
 C(r) ≈ Σ_i T_i · α_i · c_i
 where α_i = 1 - exp(-σ_i · δ_i),  T_i = Π_{j<i} (1 - α_j)
 ```
+
+`δ_i = t_{i+1} - t_i`는 이웃한 두 샘플 점 사이의 거리다.
 
 **3DGS의 Rasterization 기반 렌더링**
 
@@ -497,15 +497,15 @@ where α_i = 1 - exp(-σ_i · δ_i),  T_i = Π_{j<i} (1 - α_j)
 C(p) = Σ_i c_i · α_i · Π_{j<i} (1 - α_j)
 ```
 
-수식 구조는 volume rendering과 유사하지만, ray를 따라 샘플링하는 대신 Gaussian을 정렬(depth sorting)하여 순서대로 합성한다. 이것이 GPU rasterization pipeline과 호환되어 실시간 렌더링이 가능한 이유이다.
+수식 구조는 volume rendering과 비슷하다. 3DGS는 ray를 따라 샘플링하는 대신 Gaussian을 깊이 순으로 정렬해 차례로 합성한다. 화면을 작은 타일로 나누고 타일마다 이 정렬과 합성을 GPU에서 병렬로 처리하므로 실시간으로 렌더링된다.
 
 **Differentiable Rasterization 라이브러리**
 
 mesh 기반 3D 표현을 미분 가능하게 렌더링하는 도구들이다.
 
-- **PyTorch3D** (Meta): differentiable mesh renderer, point cloud renderer 제공
-- **nvdiffrast** (NVIDIA): CUDA 기반 고성능 differentiable rasterizer
-- **Kaolin** (NVIDIA): 3D 딥러닝 전반을 위한 라이브러리
+- PyTorch3D (Meta): 미분 가능한 mesh renderer와 point cloud renderer
+- nvdiffrast (NVIDIA): CUDA 기반 고성능 differentiable rasterizer
+- Kaolin (NVIDIA): 3D 딥러닝 전반을 위한 라이브러리
 
 **Analysis-by-Synthesis 파이프라인**
 
@@ -517,14 +517,14 @@ mesh 기반 3D 표현을 미분 가능하게 렌더링하는 도구들이다.
 5. 반복
 ```
 
-이 패러다임은 3D 표현 형태에 관계없이 "이미지"라는 공통 supervision을 쓸 수 있다. 별도의 3D ground truth가 필요 없다.
+3D 표현이 어떤 형태든 supervision은 이미지에서만 온다.
 
 **SLAM과의 연결**
 
-Differentiable rendering을 SLAM에 적용하면, tracking과 mapping을 모두 렌더링 loss로 최적화할 수 있다.
+Differentiable rendering을 SLAM에 적용하면 tracking과 mapping을 모두 렌더링 loss로 최적화한다.
 
-- **NeRF-SLAM**: NeRF를 map representation으로 사용. 새 프레임이 들어오면 현재 맵을 렌더링하여 포즈를 추정(tracking)하고, 맵을 업데이트(mapping).
-- **3DGS-SLAM** (SplaTAM, MonoGS 등): 3DGS를 맵으로 사용. 실시간 렌더링이 가능하므로 NeRF-SLAM보다 빠르다.
+- iMAP, NICE-SLAM: 신경망 implicit 표현을 맵으로 쓴다. 새 프레임이 들어오면 현재 맵을 렌더링해 포즈를 추정(tracking)하고 맵을 갱신(mapping)한다.
+- 3DGS-SLAM (SplaTAM, MonoGS 등): 3DGS를 맵으로 쓴다. SplaTAM 논문에 따르면 rasterization으로 렌더링이 빨라서, implicit 표현을 쓰는 SLAM보다 훨씬 많은 픽셀로 loss를 계산하면서도 프레임당 처리 시간은 비슷하다.
 
 ```
 [새 프레임] → [현재 맵 렌더링] → [렌더링 vs 실제 비교]
@@ -540,13 +540,13 @@ Differentiable rendering을 SLAM에 적용하면, tracking과 mapping을 모두 
 
 ## 13.8 심화: 3D Scene Graph
 
-로봇에게 "주방에 있는 빨간 컵을 가져와"라고 명령하면, 포인트 클라우드나 mesh만으로는 이 명령을 수행하기 어렵다. "주방"이 어디인지, "빨간 컵"이 어떤 물체인지, 그것이 주방 "안에 있다"는 관계를 이해해야 한다. 3D Scene Graph는 환경을 기하학적 표현을 넘어 의미론적 관계 그래프로 표현하는 방법이다.
+"주방에 있는 빨간 컵을 가져와"를 해내려면 로봇은 주방의 위치, 빨간 컵이라는 물체, 컵이 주방 안에 있다는 관계를 알아야 한다. 포인트 클라우드나 mesh에는 이 정보가 없다. 3D Scene Graph는 물체와 장소를 노드로, 그 관계를 엣지로 두어 환경을 표현한다.
 
 **구조**
 
 - **노드(Node)**: 물체, 방, 건물 등 — 계층적(hierarchical) 구조
   - 건물 → 층 → 방 → 물체
-  - 각 노드는 3D 위치, 바운딩 박스, 의미론적 라벨을 가짐
+  - 노드마다 3D 위치, 바운딩 박스, 의미 라벨이 붙음
 - **엣지(Edge)**: 노드 간 관계
   - "위에 있다" (on), "안에 있다" (in), "가까이 있다" (near), "지지한다" (support) 등
 
@@ -564,41 +564,39 @@ Differentiable rendering을 SLAM에 적용하면, tracking과 mapping을 모두 
 
 **Hydra**
 
-MIT에서 개발한 실시간 3D scene graph 구축 시스템이다. RGB-D 또는 LiDAR 입력을 받아, 로봇이 이동하면서 계층적 scene graph를 점진적으로 구축한다.
+Hydra는 MIT에서 개발한 실시간 3D scene graph 구축 시스템이다. 로봇이 이동하는 동안 센서 입력으로 계층적 scene graph를 점진적으로 만든다.
 
 파이프라인:
 1. Metric-semantic mesh 구축 (TSDF + semantic segmentation)
-2. 방(room) 단위 분할 (free-space clustering)
-3. 물체 노드 추출 및 관계 설정
+2. 물체 노드 추출 및 관계 설정
+3. 방(room) 단위 분할 (free-space clustering)
 4. 계층 구조 연결
-
-Hydra는 이 모든 과정을 실시간(online)으로 수행한다. 로봇이 탐색하면서 동시에 scene graph가 갱신된다.
 
 **ConceptGraphs**
 
-Foundation model(CLIP, LLM)을 활용하여 open-vocabulary scene graph를 구축하는 연구다.
+ConceptGraphs는 Foundation model(CLIP, LLM)로 open-vocabulary scene graph를 만든다.
 
-기존 scene graph는 미리 정의된 카테고리(의자, 테이블 등)에 의존했다. ConceptGraphs는 CLIP으로 임의의 자연어 쿼리에 대응하는 물체를 찾고, LLM으로 물체 간 관계를 추론한다.
+이전 scene graph는 의자, 테이블처럼 미리 정한 카테고리로 노드를 만들었다. ConceptGraphs는 CLIP으로 자연어 쿼리에 맞는 물체를 찾고, LLM으로 물체 간 관계를 추론한다.
 
 ```
-1. RGB-D 프레임에서 open-vocabulary detector로 물체 감지
+1. RGB-D 프레임에서 class-agnostic segmentation으로 물체 후보 분할
 2. CLIP feature로 물체 임베딩 추출
 3. 3D 공간에서 동일 물체 병합 (multi-view association)
 4. LLM으로 물체 간 관계 추론
 5. Scene graph 구축
 ```
 
-훈련 시 본 적 없는 "빨간 컵" 같은 쿼리도 처리할 수 있다.
+"빨간 컵"처럼 학습 카테고리에 없는 쿼리도 넣을 수 있다.
 
 **왜 필요한가?**
 
-| 표현 | "주방의 빨간 컵을 가져와" 수행 가능? | 이유 |
+| 표현 | "주방의 빨간 컵을 가져와"를 처리할 수 있나 | 이유 |
 |------|------|------|
 | Point Cloud | 불가 | 의미 정보 없음 |
 | Semantic Map | 부분적 | "컵"은 찾지만 "주방에 있는"이라는 관계 처리 어려움 |
 | 3D Scene Graph | 가능 | 물체 + 관계 + 계층 모두 표현 |
 
-task planning이나 자연어 기반 내비게이션에서 scene graph는 3D 표현과 고수준 추론을 연결하는 다리 역할을 한다.
+task planning이나 자연어 기반 내비게이션에서는 scene graph를 3D 맵과 고수준 추론 사이의 중간 표현으로 쓴다.
 
 > **추천 자료**
 > - [Hughes et al., "Hydra: A Real-time Spatial Perception System for 3D Scene Graph Construction and Optimization" (RSS 2022)](https://arxiv.org/abs/2201.13360) — Hydra 원 논문
@@ -607,10 +605,10 @@ task planning이나 자연어 기반 내비게이션에서 scene graph는 3D 표
 > - [Armeni et al., "3D Scene Graph: A Structure for Unified Semantics, 3D Space, and Camera" (ICCV 2019)](https://arxiv.org/abs/1910.02527) — 3D Scene Graph 초기 연구
 
 > **기술 흐름: 3D Vision**
-> - **~2010**: 포인트 클라우드 처리 고전기. PCL 라이브러리, ICP 정합, TSDF 기반 볼류메트릭 복원이 주류.
-> - **2010~**: Kinect 출시(2010)와 KinectFusion(2011, TSDF + ICP)이 실시간 RGB-D 3D 복원의 문을 열고 대중화를 이끌었다.
-> - **2017~**: PointNet/PointNet++로 포인트 클라우드 딥러닝이 시작되었다. VoxelNet, PointPillars 등 3D Object Detection 연구도 이 시기에 급증했다.
-> - **2020~**: NeRF 등장으로 Neural Rendering이 주목받았다. 사진 몇 장으로 포토리얼리스틱한 3D 장면을 만들 수 있게 되었고, Instant-NGP, Mip-NeRF 등 후속 연구가 빠르게 이어졌다.
-> - **2023~**: 3D Gaussian Splatting이 NeRF의 속도 한계를 극복했다. 실시간 렌더링과 명시적 표현의 장점을 동시에 갖추었고, BEVFusion 등 멀티모달 3D 감지가 자율주행에서 기준점이 되었다.
-> - **2024~**: 3DGS + SLAM 결합(SplaTAM, MonoGS, Gaussian-SLAM)으로 Neural SLAM의 새 방향이 열리고 있다. 로봇이 이동하면서 포토리얼리스틱 3D 맵을 구축하는 방식이며, 렌더링은 실시간이지만 tracking·mapping을 포함한 종단 처리율은 아직 그에 못 미친다.
-> - **최근 흐름**: SLAM과 로보틱스에서 3DGS 기반 장면 표현을 사용하는 연구가 늘고 있다. NeRFStudio에서는 NeRF와 3DGS의 표현과 렌더링 속도를 같은 데이터로 비교할 수 있다.
+> - ~2010: ICP 정합(1992), TSDF 기반 볼류메트릭 복원(1996).
+> - 2010~: Kinect 출시(2010). PCL 공개(Rusu & Cousins, ICRA 2011). KinectFusion(2011)이 TSDF와 ICP로 실시간 RGB-D 3D 복원을 보였다.
+> - 2017~: PointNet/PointNet++가 raw 포인트를 신경망에 직접 넣었다. VoxelNet(2018), PointPillars(2019) 등 LiDAR 3D Object Detection이 이어졌다.
+> - 2020~: NeRF 발표. 여러 장의 사진으로 새 시점 영상을 사진처럼 사실적으로 합성했다. Mip-NeRF(2021), Instant-NGP(2022) 등이 뒤따랐다.
+> - 2023~: 3D Gaussian Splatting이 명시적 Gaussian 표현으로 실시간 렌더링을 보였다. BEVFusion(ICRA 2023)은 카메라와 LiDAR 특징을 BEV에서 융합했다.
+> - 2024~: 3DGS를 맵으로 쓰는 SLAM 발표(SplaTAM·MonoGS는 CVPR 2024, Gaussian-SLAM은 arXiv 2023 프리프린트).
+> - 도구: NeRFStudio에서는 NeRF와 3DGS의 표현과 렌더링 속도를 같은 데이터로 비교할 수 있다.

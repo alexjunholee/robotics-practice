@@ -38,14 +38,14 @@ Typical camera sensors:
 ```
 
 > **Further reading**
-> - [First Principles of Computer Vision — Camera and Imaging](https://www.youtube.com/playlist?list=PL2zRqk16wsdoCCLpou-dGo7QQNks1Ppzo) — Columbia University Prof. Shree Nayar's lectures on camera principles. Covers from pinhole models to lens distortion.
+> - [First Principles of Computer Vision — Camera Calibration / Uncalibrated Stereo](https://www.youtube.com/playlist?list=PL2zRqk16wsdoCCLpou-dGo7QQNks1Ppzo) — Columbia University Prof. Shree Nayar's lectures. Covers the linear (pinhole) camera model, intrinsic/extrinsic calibration, and stereo geometry.
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — Hands-on guide to performing camera calibration yourself.
 
 ### 2.1.2 Stereo Camera
 
 Two cameras placed at a fixed interval (baseline) measure depth. The principle is similar to human binocular vision.
 
-Obtaining depth outdoors requires stereo vision. A stereo camera is almost the only passive way (without actively emitting light) to measure depth. In outdoor settings such as autonomous driving and drones, structured light and ToF break down under sunlight, so the principles of stereo vision matter. It ties directly to epipolar geometry and therefore to the mathematical foundations.
+A stereo camera is a representative passive way (without actively emitting light) to obtain depth outdoors. Structured light and ToF can degrade outdoors because of sunlight interference. It ties directly to epipolar geometry and therefore to the mathematical foundations.
 
 **Depth computation principle**:
 
@@ -72,7 +72,7 @@ Depth (Z) = (focal_length × baseline) / disparity
 - OAK-D: built-in edge AI
 
 > **Further reading**
-> - [Cyrill Stachniss — Stereo Vision](https://www.youtube.com/watch?v=SyB7Wg1e62A) — Explains the mathematical principles of stereo vision clearly.
+> - [Cyrill Stachniss — Stereo Normal Case (5 Minutes with Cyrill)](https://www.youtube.com/watch?v=OpiqzVkwNz4) — Explains the geometry of the parallel (normal-case) stereo configuration in five minutes.
 > - [Stanford CS231A — Epipolar Geometry and Stereo](https://web.stanford.edu/class/cs231a/) — Stanford's computer vision course. Covers epipolar geometry well.
 
 > **Exercise**: [Stereo Disparity visualization](https://alexjunholee.github.io/robotics-practice/app.html#stereo_disparity)
@@ -94,15 +94,19 @@ The first sensor you are likely to encounter in a lab is an RGB-D camera, becaus
 - Projects a known pattern and analyzes its deformation
 - Pros: high accuracy, low cost
 - Cons: hard to use outdoors, multi-sensor interference
-- Examples: Intel RealSense D400 series, Orbbec Astra
+- Examples: Orbbec Astra
+
+**Active IR stereo method**:
+- Stereo matching between the left and right infrared cameras, assisted by an IR projector
+- Examples: Intel RealSense D400 series
 
 **Comparison**:
 | Characteristic | ToF | Structured Light |
 |------|-----|------------------|
 | Outdoor use | Limited | Difficult |
 | Accuracy | Medium | High |
-| Range | 0.2-5m | 0.2-10m |
-| Multi-sensor | Possible | Interference occurs |
+| Range | 0.2-5m | 0.2-8m |
+| Multi-sensor | Possible with synchronization (staggered exposures); interference otherwise | Interference occurs |
 
 > **Further reading**
 > - [Intel RealSense — Depth Cameras D415 & D435](https://www.youtube.com/watch?v=A4Kjvosvx5I) — Intel's own explanation of depth camera principles.
@@ -113,8 +117,8 @@ The first sensor you are likely to encounter in a lab is an RGB-D camera, becaus
 ```bash
 # Install the Intel RealSense SDK
 sudo mkdir -p /etc/apt/keyrings
-curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | sudo tee /etc/apt/keyrings/librealsense.pgp > /dev/null
-echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo `lsb_release -cs` main" | \
+curl -sSf https://librealsense.realsenseai.com/Debian/librealsenseai.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/librealsenseai.gpg > /dev/null
+echo "deb [signed-by=/etc/apt/keyrings/librealsenseai.gpg] https://librealsense.realsenseai.com/Debian/apt-repo `lsb_release -cs` main" | \
     sudo tee /etc/apt/sources.list.d/librealsense.list
 sudo apt-get update
 sudo apt-get install -y librealsense2-dkms librealsense2-utils librealsense2-dev
@@ -163,7 +167,7 @@ Event-camera research has continued to expand around high-speed motion and HDR c
 - Samsung: mobile event sensor in development
 
 > **Further reading**
-> - [Davide Scaramuzza — Event Cameras: A Paradigm Shift for Computer Vision](https://www.youtube.com/watch?v=LauQ6LWTkxM) — Overview lecture by Prof. Scaramuzza, a pioneer in event cameras.
+> - [Davide Scaramuzza — Event Cameras: a New Way of Sensing (ICCP 2024 Keynote)](https://www.youtube.com/watch?v=0wGBpgIrd9M) — Overview lecture by Prof. Scaramuzza, a pioneer in event cameras.
 > - [Gallego et al. — Event-based Vision: A Survey (TPAMI 2020)](https://arxiv.org/abs/1904.08405) — Comprehensive survey of event camera technology. A good starting point for understanding this field.
 > - [rpg_dvs_ros — Event Camera ROS driver](https://github.com/uzh-rpg/rpg_dvs_ros) — Open-source package for handling event cameras in ROS.
 
@@ -200,7 +204,7 @@ Solid-state LiDAR is replacing spinning (mechanical) LiDAR in some applications.
 - Examples: Velodyne, Ouster
 
 **Solid-State**:
-- No large spinning assembly (MEMS and flash designs have no moving parts; Livox's non-repetitive scan uses internal rotating prisms)
+- No large spinning assembly (flash designs have no moving parts, MEMS designs oscillate only a micro-mirror; Livox's non-repetitive scan uses internal rotating prisms)
 - Limited FoV (usually under 120°)
 - Pros: high durability, potential for low cost
 - Examples: Livox (non-repetitive scan pattern), Innoviz
@@ -213,7 +217,7 @@ The difference directly affects algorithm design. Spinning LiDAR produces a unif
 | --- | --- |
 | Channels | Number of vertical layers (16, 32, 64, 128) |
 | Range | Maximum measurement distance (50m ~ 300m) |
-| Points/sec | Points per second (300K ~ 2M) |
+| Points/sec | Points per second (300K to several million; 128-channel units exceed 2M) |
 | Accuracy | Measurement accuracy (±2cm ~ ±5cm) |
 | FoV | Horizontal/vertical field of view |
 
@@ -257,17 +261,16 @@ If you cannot model IMU errors, the entire sensor fusion system wobbles.
 **Integration drift**:
 - Double integration of acceleration → accumulated position error
 - Integration of angular velocity → accumulated orientation error
-- Trustworthy only for a short time (usually a few seconds)
+- Without external observations, error keeps accumulating over time
 
 Double-integrating acceleration accumulates noise, bias, scale-factor error, and initial-attitude error. The growth depends on the sensor, motion, calibration, temperature, and initialization, so no single elapsed time characterizes it. Unaided position from a low-cost MEMS IMU can quickly exceed a long-term position-error budget; systems that need sustained position therefore use external observations from a camera, LiDAR, GNSS, or another reference to limit drift.
 
 **IMU grades** are not a single standardized price ladder. Compare bias stability, noise density, scale-factor error, temperature calibration, vibration tolerance, and certification requirements. Consumer MEMS prioritizes size and power; products described as industrial, tactical, or navigation grade generally add long-term stability and calibration. For devices such as the `VN-100`, `MTi`, `KVH 1750`, and `HG1700`, compare current datasheets in common units and confirm them with Allan measurements.
 
 > **Further reading**
-> - [Probabilistic Robotics, Ch.5–6 — Robot Motion / Robot Perception (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — A leading reference on motion models (Ch.5) and sensor measurement models (Ch.6). It does not cover IMU error models (bias, random walk, Allan variance); see Titterton & Weston for those.
-> - [Titterton & Weston — Strapdown Inertial Navigation Technology](https://ieeexplore.ieee.org/book/5765860) — The textbook on IMU principles and inertial navigation.
-> - [Cyrill Stachniss — IMU and Inertial Navigation](https://www.youtube.com/watch?v=uHbRKvD8TWg) — Explains IMU operating principles and error characteristics visually.
-> - [Allan Variance — IMU noise analysis guide (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--background/specifications--allan-variance) — How to extract IMU noise parameters using Allan variance.
+> - [Probabilistic Robotics, Ch.5–6 — Robot Motion / Robot Perception (Thrun, Burgard, Fox)](http://probabilistic-robotics.org/) — A leading reference on motion models (Ch.5) and sensor measurement models (Ch.6). It does not cover IMU error models (bias, random walk, Allan variance); see Titterton & Weston for those.
+> - [Titterton & Weston — Strapdown Inertial Navigation Technology](https://doi.org/10.1049/PBRA017E) — The textbook on IMU principles and inertial navigation.
+> - [Allan Variance — IMU noise analysis guide (Vectornav)](https://www.vectornav.com/resources/inertial-navigation-primer/specifications--and--error-budgets/specs-imucal) — How to extract IMU noise parameters using Allan variance.
 > - [Jinyong Jeong's blog — IMU Filter (AHRS)](https://jinyongjeong.github.io/2020/01/10/IMU_filter/) — Overview of AHRS filters for IMU sensors. Introduces the Madgwick filter and ROS packages.
 
 ## 2.4 GPS/GNSS
@@ -276,7 +279,7 @@ Double-integrating acceleration accumulates noise, bias, scale-factor error, and
 
 GNSS provides outdoor autonomous vehicles and drones with coordinates in an Earth-fixed frame. SLAM estimates position relative to a starting point, whereas GNSS expresses location as latitude, longitude, and altitude. Outdoor robots combine these frames, and RTK-GPS measurements are also used as ground truth in high-precision localization evaluations.
 
-**Interpreting accuracy**: a standalone code solution is commonly meter-class in open sky, while differential corrections may produce sub-meter or meter-class results depending on the setup. RTK can reach horizontal centimeter-class results when a short baseline, sufficient satellite geometry, low multipath, and fixed ambiguities are maintained. Any quoted number should state the metric (CEP, RMS, or 95%), horizontal versus vertical component, baseline, correction link, and fix state.
+**Interpreting accuracy**: a standalone code solution is commonly meter-class in open sky, while differential corrections can reduce the error to sub-meter or centimeter level depending on conditions; RTK reaches horizontal centimeter-class results when a short baseline, sufficient satellite geometry, low multipath, and fixed ambiguities are maintained. In urban canyons with severe multipath, even RTK can fail to resolve ambiguities and jump to errors of several meters, which is why urban autonomous driving combines LiDAR and camera SLAM instead of relying on GNSS alone. Any quoted number should state the metric (CEP, RMS, or 95%), horizontal versus vertical component, baseline, correction link, and fix state.
 
 **RTK-GPS principle**:
 - A fixed base station provides correction data
@@ -284,13 +287,13 @@ GNSS provides outdoor autonomous vehicles and drones with coordinates in an Eart
 - Requires real-time communication (radio or internet)
 
 **Limitations**:
-- Unusable indoors, in tunnels, and in urban canyons
+- Hard to use indoors and in tunnels; reception degrades in urban canyons
 - Multipath errors (building reflections)
 - Altitude accuracy is lower than horizontal
 
 > **Further reading**
 > - [Cyrill Stachniss — Robot Localization Overview](https://www.youtube.com/watch?v=8VJ-A9OlhAE) — Overview of the principles and methods of robot localization.
-> - [u-blox GNSS guide](https://www.u-blox.com/en/technologies/gnss) — A practical guide from GNSS basics to RTK.
+> - [u-blox — RTK and GNSS corrections](https://www.u-blox.com/en/technologies/rtk-real-time-kinematic) — A practical guide to code-based GNSS ranging versus carrier-phase RTK and correction services.
 
 ## 2.5 Other sensors
 
@@ -314,16 +317,16 @@ Autonomous-driving and robotics systems use radar alongside cameras and LiDAR. R
 |------|--------|-------|-------|
 | Resolution | Very high | High | Low |
 | Range measurement | Not possible (monocular) | Accurate | Possible |
-| Velocity measurement | Not possible | Not possible (directly) | Possible (Doppler) |
+| Velocity measurement | Not possible | Not possible for ToF units (FMCW LiDAR: possible via Doppler) | Possible (Doppler) |
 | Adverse weather | Weak | Weak (rain, fog) | Robust |
 | Price | Cheap | Expensive | Medium |
-| Nighttime | Not possible | Possible | Possible |
+| Nighttime | Weak (needs illumination) | Possible | Possible |
 
 **Representative products**: Texas Instruments AWR1843, Continental ARS548, Navtech CTS350-X (spinning radar)
 
 > **Further reading**
 > - [Giseop Kim's blog — ICRA 2021 Radar in Robotics Workshop summary](https://gisbi-kim.github.io/blog/2021/05/31/icra21-radar-ws.html) — Overall trends in radar robotics.
-> - [Giseop Kim's blog — Radar Odometry Results on MulRan dataset](https://gisbi-kim.github.io/blog/2021/05/30/yeti-radar-odom-mulran1.html) — Radar odometry experimental results. LiDAR-level performance in urban environments.
+> - [Giseop Kim's blog — Radar Odometry Results on MulRan dataset](https://gisbi-kim.github.io/blog/2021/05/30/yeti-radar-odom-mulran1.html) — Trajectories from Yeti radar odometry (Cen2018 and Cen2019 methods) run on MulRan urban sequences.
 > - [Kim et al., "MulRan: Multimodal Range Dataset for Urban Place Recognition" (ICRA 2020)](https://sites.google.com/view/mulran-pr/home) — LiDAR + radar + GPS multimodal dataset.
 
 **Ultrasonic**:
@@ -339,7 +342,7 @@ Autonomous-driving and robotics systems use radar alongside cameras and LiDAR. R
 Classifying these as "other" does not make them unimportant. Radar acts as the safety net in adverse weather where LiDAR fails in autonomous driving, and the wheel encoder is the most basic odometry source for ground robots. In sensor fusion, such "auxiliary" sensors determine the robustness of the whole system.
 
 > **Further reading**
-> - [Probabilistic Robotics, Ch.6 — Robot Perception (Thrun, Burgard, Fox)](https://www.probabilistic-robotics.org/) — Thoroughly covers probabilistic models of various sensors. The textbook on sensor modeling.
+> - [Probabilistic Robotics, Ch.6 — Robot Perception (Thrun, Burgard, Fox)](http://probabilistic-robotics.org/) — Thoroughly covers probabilistic models of various sensors. The textbook on sensor modeling.
 
 ## 2.6 Sensor Fusion
 
@@ -385,7 +388,7 @@ Bayes filters, SLAM, and MCL need a number that says "how much to trust this rea
 
 Fire a laser range sensor at the same wall from the same pose one hundred times, and the hundred measurements differ. Reflectance angle, a passing person, and multi-path reflections each leave a different variance signature. The probability distribution $p(z_t^k \mid x_t, m)$ captures that variance structure. $z_t^k$ is the $k$-th beam reading at time $t$, $x_t$ is the robot pose, and $m$ is the map.
 
-A single scan contains tens to hundreds of beams. PR §6.2 assumes the error on each beam is independent (conditional independence assumption); under that assumption the full-scan likelihood is the product of the per-beam likelihoods:
+A single scan contains tens to hundreds of beams. PR §6.1 (Eq. 6.2) assumes the error on each beam is independent (conditional independence assumption); under that assumption the full-scan likelihood is the product of the per-beam likelihoods:
 
 $$p(z_t \mid x_t, m) = \prod_{k=1}^{K} p(z_t^k \mid x_t, m)$$
 
@@ -401,7 +404,7 @@ The four measurement model families:
 
 ### 2.7.2 Beam Model — Four-Component Mixture
 
-A range reading is approximated using four hypotheses about how it was produced. [Thrun et al. 2005](https://www.probabilistic-robotics.org/) (PR §6.3.1) assigns a probability distribution to each hypothesis and builds the likelihood as a weighted mixture. These components are terms in an observation model, not independent physical channels inside the sensor.
+A range reading is approximated using four hypotheses about how it was produced. [Thrun et al. 2005](http://probabilistic-robotics.org/) (PR §6.3.1) assigns a probability distribution to each hypothesis and builds the likelihood as a weighted mixture. These components are terms in an observation model, not independent physical channels inside the sensor.
 
 The most frequent component is **hit** — the beam actually detects the obstacle. A truncated Gaussian centered on the predicted range $z_t^{k*}$ with variance $\sigma_{\text{hit}}^2$ models this. The truncation removes probability mass outside $[0, z_{\max}]$.
 
@@ -555,7 +558,7 @@ The beam model and likelihood field work with raw range measurements. The landma
 
 Feature extraction takes different forms depending on the sensor. From range scans: line segments, corners, local minima. From cameras: edges, corners, SIFT/ORB-style local patterns (see §2.1.1 on monocular camera texture, and §2.6 for VIO/Visual SLAM). Each extracted feature is represented as a triple $(r, \phi, s)$: $r$ is range, $\phi$ is bearing, and $s$ is signature (ID, color, descriptor, etc.).
 
-The $j$-th landmark in the map sits at $(m_{j,x}, m_{j,y})$ with signature $s_j$. From pose $x_t = (x, y, \theta)^T$, the relationship between predicted and observed measurement is (PR Eq. 6.41):
+The $j$-th landmark in the map sits at $(m_{j,x}, m_{j,y})$ with signature $s_j$. From pose $x_t = (x, y, \theta)^T$, the relationship between predicted and observed measurement is (PR Eq. 6.40):
 
 $$\begin{pmatrix} r_t^i \\ \phi_t^i \\ s_t^i \end{pmatrix} = \begin{pmatrix} \sqrt{(m_{j,x} - x)^2 + (m_{j,y} - y)^2} \\ \operatorname{atan2}(m_{j,y} - y,\, m_{j,x} - x) - \theta \\ s_j \end{pmatrix} + \begin{pmatrix} \varepsilon_{\sigma_r^2} \\ \varepsilon_{\sigma_\phi^2} \\ \varepsilon_{\sigma_s^2} \end{pmatrix}$$
 
@@ -609,9 +612,9 @@ The four families in PR §6 remain useful for classifying and designing systems.
 
 The [Nav2 AMCL documentation](https://docs.nav2.org/configuration/packages/configuring-amcl.html) exposes three laser models: `beam`, `likelihood_field`, and `likelihood_field_prob`; its default is `likelihood_field`. `max_beams` selects an evenly spaced subset of a scan. By contrast, the `beam_skip_*` parameters belong to `likelihood_field_prob` and skip beams that disagree with many particles, so they are not ordinary beam subsampling. Defaults such as `sigma_hit` and `lambda_short` are implementation starting points, not universally converged values traceable to one EM experiment.
 
-Other LiDAR systems use distinct matching objectives. Cartographer combines correlative scan matching on a probability grid with nonlinear optimization, while `hdl_localization` uses NDT/GICP-family registration on 3D point clouds. They share the broad idea of comparing an observation against a map, but they do not all implement a likelihood-field distance transform. ESDF planners and neural implicit maps also use distance or implicit fields; similarity in data structure alone does not establish descent from the likelihood-field sensor model.
+Other LiDAR systems use distinct matching objectives. Cartographer combines correlative scan matching on a probability grid with nonlinear optimization, while `hdl_localization` uses NDT registration (NDT_OMP or NDT_CUDA) on 3D point clouds. They share the broad idea of comparing an observation against a map, but they do not all implement a likelihood-field distance transform. ESDF planners and neural implicit maps also use distance or implicit fields; similarity in data structure alone does not establish descent from the likelihood-field sensor model.
 
-The same distinction applies to landmarks and visual SLAM. The range-bearing model in Eq. 6.41, camera reprojection models, and DROID-SLAM's dense bundle adjustment all predict observations from pose and scene structure and form residuals. Their measurement spaces, association procedures, noise models, and optimization variables differ, so one should not assert a single historical lineage among them. Fiducial IDs simplify association but do not eliminate false detections.
+The same distinction applies to landmarks and visual SLAM. The range-bearing model in Eq. 6.40, camera reprojection models, and DROID-SLAM's dense bundle adjustment all predict observations from pose and scene structure and form residuals. Their measurement spaces, association procedures, noise models, and optimization variables differ, so one should not assert a single historical lineage among them. Fiducial IDs simplify association but do not eliminate false detections.
 
 `hit`, `short`, `max`, and `rand` are mixture components that approximate possible causes of a range measurement, not independent physical channels. The choice of components and map representation depends on the sensor, environment, outliers, compute budget, and calibration data. These four families are a starting point for comparison, not a genealogy that covers every modern system.
 

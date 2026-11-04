@@ -1,6 +1,6 @@
 # Ch.16 — 개발 환경 & 도구
 
-로봇 연구 코드는 CUDA, Python, ROS, 시스템 라이브러리의 버전 조합에 민감하다. 안정적인 개발을 위해서는 실행 환경을 분리하고 재현하는 언어 도구, 패키지 환경, Docker가 기본으로 뒷받침되어야 한다.
+로봇 연구 코드는 CUDA, Python, ROS, 시스템 라이브러리의 버전 조합에 민감하다. 그래서 실행 환경을 프로젝트마다 분리하고 다른 컴퓨터에서도 똑같이 재현하는 도구부터 갖춘다. 언어별 패키지 환경과 Docker가 그런 도구다.
 
 ## 16.1 프로그래밍 언어
 
@@ -10,7 +10,7 @@ AI 코딩 에이전트가 코드 작성의 상당 부분을 돕더라도 기존 
 
 **용도**: 실시간 시스템, ROS 노드, SLAM, 성능 중요 모듈
 
-연구실에서 다루는 핵심 코드는 대부분 C++이다. SLAM, 실시간 제어, ROS 패키지의 핵심 로직이 C++로 작성되어 있어 읽고 수정할 일이 많다. ORB-SLAM3, LOAM, VINS-Mono 같은 코드를 이해하려면 C++에 익숙해야 한다.
+연구실에서 다루는 SLAM, 실시간 제어, ROS 패키지의 핵심 로직은 대부분 C++로 작성되어 있어 읽고 수정할 일이 많다(Ch.1 §1.5). ORB-SLAM3, LOAM, VINS-Mono 같은 코드를 이해하려면 C++에 익숙해야 한다.
 
 **장점**:
 - 빠른 실행 속도
@@ -70,6 +70,7 @@ Ubuntu는 ROS의 1차 지원 플랫폼이며 GPU 드라이버, CUDA, cuDNN 조�
 **권장 버전**:
 - Ubuntu 22.04 LTS (ROS2 Humble)
 - Ubuntu 24.04 LTS (ROS2 Jazzy)
+- Ubuntu 26.04 LTS (ROS2 Lyrical, 2026년 5월 출시)
 
 **초기 설정**:
 
@@ -91,7 +92,7 @@ sudo apt install -y vim tmux htop
 
 ### 16.2.2 CUDA / cuDNN
 
-딥러닝 모델 학습에는 대개 GPU 가속을 쓴다. NVIDIA GPU를 쓰는 환경에서는 드라이버가 PyTorch에 번들된 CUDA 런타임을 지원하지 않으면 GPU를 잡지 못한다.
+딥러닝 모델 학습에는 대개 GPU를 쓴다. PyTorch가 NVIDIA GPU를 쓰려면 설치된 드라이버가 PyTorch에 들어 있는 CUDA 런타임 버전을 지원해야 한다.
 
 **설치 확인**:
 
@@ -129,7 +130,7 @@ nvidia-smi
 
 **CUDA/cuDNN 버전 호환성**
 
-PyTorch 공식 wheel은 자체 CUDA 런타임을 포함하므로 호스트의 CUDA toolkit(nvcc) 버전과 같아야 하는 것은 아니다. 실제 조건은 드라이버가 wheel의 CUDA 런타임을 지원하는지다. 이 조건이 깨지면 `import torch`는 되지만 `torch.cuda.is_available()`이 False가 되거나 첫 CUDA 호출에서 오류가 난다. 확인 순서:
+PyTorch 공식 wheel은 자체 CUDA 런타임을 포함하므로 호스트의 CUDA toolkit(nvcc) 버전과 무관하게 동작한다. 드라이버가 이 런타임을 지원하지 않으면 `import torch`는 되지만 `torch.cuda.is_available()`이 False가 되거나 첫 CUDA 호출에서 오류가 난다. 확인 순서:
 
 ```bash
 # 1. GPU 확인
@@ -179,7 +180,7 @@ make -j$(nproc)
 sudo make install
 ```
 
-`CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus)에서 확인.
+`CUDA_ARCH_BIN`은 자기 GPU에 맞춰야 한다. 틀리면 빌드는 되지만 런타임에 느리거나 에러가 난다. [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda/gpus)에서 확인.
 
 주의: ROS 환경에서 pip opencv와 apt cv_bridge가 충돌하는 문제가 있다 (21장 부록 C.4 트러블슈팅 참고). CUDA OpenCV를 직접 빌드하면 이 문제가 더 복잡해질 수 있으니, Docker로 격리하는 것을 권장한다.
 
@@ -187,7 +188,7 @@ sudo make install
 
 ### 16.2.3 환경 관리
 
-프로젝트마다 필요한 Python 버전과 라이브러리 버전이 다르다. 환경 관리 도구 없이 `pip install`을 전역으로 하면 프로젝트 A의 라이브러리가 프로젝트 B와 충돌하는 "의존성 지옥(dependency hell)"에 빠질 수 있다. Conda나 venv로 프로젝트별 독립 환경을 만드는 것이 기본이다.
+프로젝트마다 필요한 Python 버전과 라이브러리 버전이 다르다. 환경 관리 도구 없이 `pip install`을 전역으로 하면 프로젝트 A의 라이브러리가 프로젝트 B와 충돌하는 "의존성 지옥(dependency hell)"에 빠질 수 있다. 그래서 Conda나 venv로 프로젝트마다 독립된 환경을 만들어 쓴다.
 
 **Conda** (권장):
 
@@ -195,6 +196,7 @@ sudo make install
 # Miniconda 설치
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
+# 설치 마지막에 conda init을 허용했다면 셸을 다시 연다 (그래야 conda activate가 동작한다)
 
 # 환경 생성
 conda create -n myenv python=3.10
@@ -202,7 +204,7 @@ conda activate myenv
 
 # 패키지 설치
 # PyTorch는 2.6부터 pytorch Anaconda 채널 게시를 중단했다. conda 환경 안에서 pip 인덱스를 쓴다
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 ```
 
 **venv** (가벼움):
@@ -213,7 +215,7 @@ source myenv/bin/activate
 pip install -r requirements.txt
 ```
 
-가령 SLAM 연구에는 Python 3.8이, 최신 트랜스포머 모델에는 Python 3.10이 필요할 수 있다. Conda에서는 `conda activate slam_env`, `conda activate transformer_env`로 환경을 전환하면 된다.
+가령 SLAM 연구 코드에는 Python 3.8이, 트랜스포머 모델 코드에는 Python 3.10이 필요할 수 있다. Conda에서는 `conda activate slam_env`, `conda activate transformer_env`로 환경을 전환하면 된다.
 
 > **추천 자료**
 > - [Conda Documentation - Managing Environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) — Conda 환경 관리 공식 가이드
@@ -226,6 +228,8 @@ pip install -r requirements.txt
 Docker는 OS 사용자 공간, 라이브러리, 환경 설정을 이미지로 묶는다. 같은 이미지를 쓰면 개발자 사이의 의존성 차이를 줄일 수 있고, 논문 코드의 실행 환경도 함께 전달할 수 있다.
 
 ### 16.3.2 기본 사용법
+
+아래 예시는 CUDA 12.1, Ubuntu 22.04 이미지(`nvidia/cuda:12.1.0-devel-ubuntu22.04`)에 맞춰 썼다. 다른 CUDA·Ubuntu 버전을 쓰려면 이미지 태그를 바꾼다.
 
 ```bash
 # 이미지 다운로드
@@ -262,9 +266,9 @@ WORKDIR /workspace
 
 ### 16.3.3 NVIDIA Container Toolkit
 
-일반 Docker 컨테이너 안에서는 GPU가 보이지 않는다. 딥러닝 학습이나 CUDA 기반 연산에는 nvidia-container-toolkit과 `--gpus all` 플래그가 필요하다.
+컨테이너에서 GPU를 쓰려면 nvidia-container-toolkit을 설치하고 `--gpus all` 플래그로 실행한다.
 
-참고: NVIDIA의 현재 문서는 `nvidia-container-toolkit`을 사용한다. 현대 Docker에서는 과거의 `--runtime=nvidia` 방식 대신 `--gpus all`로 GPU 접근을 요청한다.
+참고: Docker 19.03부터는 과거의 `--runtime=nvidia` 방식 대신 `--gpus all`로 GPU 접근을 요청한다.
 
 ```bash
 # nvidia-container-toolkit 설치 (Ubuntu 22.04/24.04)
@@ -285,9 +289,7 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 
 ### 16.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
 
-로보틱스용 컨테이너는 GPU, GUI(RViz/Gazebo), USB 센서 접근을 함께 요구할 수 있다. 아래 레시피는 세 권한과 실행 환경을 한곳에서 설정한다.
-
-아래 레시피는 [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)의 구조를 nvidia-container-toolkit과 ROS2 Humble 환경에 맞춘 것이다.
+로보틱스용 컨테이너에는 GPU, GUI(RViz/Gazebo), USB 센서 접근이 한꺼번에 필요할 때가 많다. 아래 레시피는 이 권한과 실행 환경을 한곳에서 설정한다. [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)의 구조를 가져와 nvidia-container-toolkit과 ROS2 Humble(Ubuntu 22.04 기반 `osrf/ros:humble-desktop` 이미지) 환경에 맞췄다. 다른 ROS 2 배포판(예: Jazzy)을 쓰려면 이미지 태그와 `humble`이 들어간 패키지 이름·경로를 함께 바꾼다.
 
 **1단계: X11 포워딩 준비 (호스트)**
 
@@ -297,7 +299,7 @@ sudo apt-get install -y xauth
 xhost +local:docker
 ```
 
-`xhost +local:docker`는 로컬 연결을 허용하는 항목을 추가한다. xhost는 호스트 기반 접근 제어라 컨테이너 신원을 구별하지 못하므로 Docker에만 열리는 것은 아니다. 컨테이너를 지정해 제한하려면 `xauth` 쿠키 기반 인증을 쓴다.
+`xhost +local:docker`는 로컬 연결을 허용하는 항목을 추가한다. xhost는 호스트 기반 접근 제어라, 이 설정은 Docker 컨테이너를 포함한 모든 로컬 연결에 X 서버를 연다. 컨테이너를 지정해 제한하려면 `xauth` 쿠키 기반 인증을 쓴다.
 
 **2단계: 실행 스크립트**
 
@@ -316,7 +318,7 @@ docker run --rm -it \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
     -v $HOME/.Xauthority:/root/.Xauthority:ro \
     -v /dev:/dev \
-    -v $HOME/catkin_ws:/root/catkin_ws \
+    -v $HOME/ros2_ws:/root/ros2_ws \
     --name ros2_dev \
     osrf/ros:humble-desktop \
     bash
@@ -329,16 +331,16 @@ docker run --rm -it \
 | `--gpus all` | GPU 패스스루 (nvidia-container-toolkit) |
 | `--privileged` | USB/시리얼 디바이스 전체 접근. 프로덕션에서는 `--device`로 개별 매핑할 것 |
 | `--net=host` | DDS multicast 설정을 간단히 하려고 호스트 네트워크 공유. 통신 구성에 따라 선택 |
-| `--ipc=host` | 공유 메모리. Rviz 등 GUI 도구에서 필요 |
+| `--ipc=host` | 공유 메모리. RViz 등 GUI 도구에서 필요 |
 | `-e QT_X11_NO_MITSHM=1` | MIT-SHM 호환성 문제로 RViz 등이 종료될 때 사용하는 우회 설정 |
 | `-e ROS_DOMAIN_ID=42` | 같은 네트워크의 다른 ROS2 시스템과 격리. 여러 시스템이 함께 있을 때 도메인 값을 분리 |
 | `-v /dev:/dev` | 센서 USB가 언제 꽂힐지 모르므로 /dev 전체 마운트. `--privileged`와 세트 |
 | `-v .Xauthority` | X11 인증. 1단계의 xhost 설정을 쓰지 않을 때 이것이 없으면 `cannot open display` |
 
-**3단계: 작업 후 컨테이너 저장** — 2단계를 `--rm`으로 실행하면 셸을 나가는 순간 컨테이너가 삭제되므로 commit할 대상이 남지 않는다. 컨테이너가 살아 있는 동안 다른 셸에서 commit하거나, `--rm` 없이 실행한다.
+**3단계: 작업 후 컨테이너 저장** — 2단계를 `--rm`으로 실행하면 셸을 나가는 순간 컨테이너가 삭제된다. 컨테이너가 살아 있는 동안 다른 셸에서 commit하거나, `--rm` 없이 실행한다.
 
 ```bash
-# 컨테이너 안에서 패키지 설치 등 작업을 했으면 커밋
+# 컨테이너 안에서 패키지 설치 등 작업을 했으면, 컨테이너를 띄운 채 호스트의 다른 셸에서 커밋
 docker commit ros2_dev my_ros2_workspace:v1
 
 # 다음번에는 저장된 이미지로 실행
@@ -375,7 +377,7 @@ CMD ["bash"]
 `docker commit`보다 Dockerfile이 나은 이유: 나중에 "이 이미지에 뭐가 깔려있지?"를 추적할 수 있다. commit으로 만든 이미지도 layer history는 남지만, 구성 절차가 Dockerfile로 기록되지 않아 다시 만들기 어렵다.
 
 > **추천 자료**
-> - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — ROS + NVIDIA + GUI Docker 설정 레퍼런스. Melodic부터 Humble까지 지원
+> - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — ROS + NVIDIA + GUI Docker 설정 레퍼런스. 현재 README는 ROS 1 Noetic과 ROS 2 Jazzy 등을 예로 든다
 > - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — 공식 설치 가이드
 > - [OSRF Docker Images](https://hub.docker.com/r/osrf/ros) — ROS 공식 Docker 이미지. `humble-desktop`이 GUI 포함 버전
 
@@ -423,7 +425,7 @@ git push origin main
 - `main`: 항상 배포 가능
 - `feature-branch`: 기능별 브랜치 → PR → Merge
 
-여러 사람이 같은 코드를 수정할 때는 기능별 branch에서 변경을 분리하고 PR에서 검토한 뒤 `main`에 합칠 수 있다. 단순한 GitHub Flow만으로도 충돌 범위와 변경 목적을 구분하기 쉽다.
+여러 사람이 같은 코드를 수정할 때는 기능별 branch에서 변경을 분리한다(PR 절차는 §16.4.1.3). 단순한 GitHub Flow만으로도 충돌 범위와 변경 목적을 구분하기 쉽다.
 
 ### 16.4.1.3 협업
 
@@ -445,7 +447,6 @@ chore: 빌드/설정 변경
 ```
 
 > **추천 자료**
-> - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — GitHub에서 직접 만든 Git 입문 가이드
 > - [Conventional Commits Specification](https://www.conventionalcommits.org/) — 커밋 메시지 규칙 공식 스펙
 
 ### 16.4.2 SSH
@@ -466,7 +467,7 @@ ssh user@server_ip
 ssh -L 8888:localhost:8888 user@server_ip
 ```
 
-**~/.ssh/config**를 설정해 두면 매번 IP와 사용자명을 입력하지 않아도 된다:
+~/.ssh/config를 설정해 두면 매번 IP와 사용자명을 입력하지 않아도 된다:
 
 ```
 Host lab-server
@@ -479,7 +480,7 @@ Host lab-server
 
 ### 16.4.3 SCP & rsync
 
-서버와 로컬 간 파일 전송 도구다. **SCP**는 단순 파일 복사, **rsync**는 변경된 부분만 전송한다.
+서버와 로컬 간 파일 전송 도구다.
 
 **SCP**:
 
@@ -507,11 +508,11 @@ rsync -avz user@server:/home/user/results/ ./results/
 rsync -avz --delete source/ user@server:/data/source/
 ```
 
-`scp`는 매번 전체를 복사하지만, `rsync`는 diff만 보내므로 수십 GB 데이터셋을 동기화할 때 차이가 크다.
+`rsync`는 이미 받은 파일을 건너뛰고 바뀐 부분만 보내므로, 수십 GB 데이터셋을 동기화할 때 매번 전체를 복사하는 `scp`보다 훨씬 빠르다.
 
 ### 16.4.4 Tailscale
 
-연구실 서버가 NAT/방화벽 뒤에 있으면 외부에서 SSH 접속이 안 된다. Tailscale은 WireGuard 기반 VPN으로, 설치만 하면 어디서든 연구실 서버에 직접 접속할 수 있게 해 준다.
+연구실 서버가 NAT/방화벽 뒤에 있으면 외부에서 SSH 접속이 안 된다. Tailscale은 WireGuard 기반 VPN으로, 설치만 하면 연구실 서버에 직접 접속할 수 있게 해 준다.
 
 ```bash
 # 설치 (서버와 로컬 양쪽에)
@@ -525,9 +526,9 @@ tailscale status
 ssh user@100.x.y.z
 ```
 
-포트 포워딩이나 공유기 설정이 필요 없고, 카페·집·학교 어디서든 같은 IP로 서버에 접속할 수 있다. Tailscale SSH를 쓰면 SSH 키 관리도 자동화된다.
+포트 포워딩이나 공유기 설정이 필요 없고, 카페·집·학교 어디서든 같은 IP로 서버에 접속한다. Tailscale SSH를 쓰면 SSH 키를 따로 관리하지 않고 Tailscale 계정으로 인증한다.
 
-**~/.ssh/config**에 Tailscale IP를 등록해 두면 편하다:
+~/.ssh/config에 Tailscale IP를 등록해 두면 편하다:
 
 ```
 Host lab-gpu
@@ -536,14 +537,14 @@ Host lab-gpu
 ```
 
 > **추천 자료**
-> - [Tailscale 공식 문서](https://tailscale.com/kb/) — 설치부터 ACL 설정까지
+> - [Tailscale 공식 문서](https://tailscale.com/docs) — 설치부터 ACL 설정까지
 > - [The Missing Semester - Remote Machines](https://missing.csail.mit.edu/2020/command-line/#remote-machines) — SSH, 포트 포워딩, tmux 등 원격 작업 기초
 
 ## 16.5 실험 관리
 
 ### 16.5.1 Weights & Biases (wandb)
 
-딥러닝 실험을 하다 보면 "어제 돌린 모델의 하이퍼파라미터가 뭐였지?"라는 상황이 매일 발생한다. 실험 관리 도구 없이 엑셀이나 노트로 기록하면 금방 한계에 부딪힌다. wandb는 학습 과정을 자동으로 로깅하고 시각화해 주고, 하이퍼파라미터와 모델 버전을 추적하며, 팀원과 결과를 공유하기도 쉽다.
+딥러닝 실험을 하다 보면 "어제 돌린 모델의 하이퍼파라미터가 뭐였지?" 하고 묻게 되는 일이 잦다. 실험 관리 도구 없이 엑셀이나 노트로 기록하면 금방 한계에 부딪힌다. wandb는 학습 과정을 자동으로 기록해 그래프로 보여 주고, 하이퍼파라미터와 모델 버전을 추적한다. 팀원과 결과를 공유하기도 쉽다.
 
 ```python
 import wandb
@@ -555,7 +556,7 @@ wandb.init(project="my-project", config={
 })
 
 # 로깅
-for epoch in range(epochs):
+for epoch in range(wandb.config.epochs):
     loss = train_one_epoch()
     wandb.log({"loss": loss, "epoch": epoch})
 
@@ -564,12 +565,12 @@ wandb.finish()
 ```
 
 > **추천 자료**
-> - [Weights & Biases 공식 문서 및 Quickstart](https://docs.wandb.ai/quickstart) — wandb 시작 가이드. 5분이면 첫 실험 로깅 가능
-> - [Weights & Biases YouTube](https://www.youtube.com/@WeightsBiases) — 사용법 튜토리얼 및 MLOps 관련 강연
+> - [Weights & Biases 공식 문서 및 Quickstart](https://docs.coreweave.com/products/wandb/quickstart) — wandb 시작 가이드. 5분이면 첫 실험 로깅 가능
+> - [Weights & Biases YouTube](https://www.youtube.com/@CoreWeaveYT) — 사용법 튜토리얼 및 MLOps 관련 강연. 옛 W&B 공식 채널 주소(youtube.com/c/weights-biases)가 지금은 CoreWeave 채널로 이어진다
 
 ### 16.5.2 MLflow
 
-wandb가 클라우드 기반 서비스라면, MLflow는 자체 서버에서 운영할 수 있는 오픈소스 대안이다. 데이터 보안이 중요한 환경에서 유용하다.
+MLflow는 자체 서버에 설치해 운영하는 오픈소스 실험 관리 도구다. 실험 데이터를 외부 서비스에 올리기 어려운 환경에서 쓴다.
 
 ```python
 import mlflow
@@ -600,14 +601,14 @@ tensorboard --logdir runs
 TensorBoard는 PyTorch에서도 쓸 수 있고, 별도의 계정 없이 로컬에서 바로 시각화된다. 간단한 실험이라면 wandb 대신 TensorBoard만으로도 충분하다.
 
 > **추천 자료**
-> - [PyTorch TensorBoard Tutorial](https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) — PyTorch에서 TensorBoard 사용하는 공식 가이드
+> - [PyTorch TensorBoard Tutorial](https://docs.pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) — PyTorch에서 TensorBoard 사용하는 공식 가이드
 > - [MLflow Documentation](https://mlflow.org/docs/latest/index.html) — MLflow 공식 문서
 
 ## 16.6 코드 포매팅
 
 ### 16.6.1 Linting & Formatting
 
-코드 스타일이 사람마다 다르면 코드 리뷰에서 로직보다 스타일 논쟁에 시간을 더 쓰게 된다. 자동 포매터를 쓰면 이 문제가 사라진다. 혼자 연구할 때도 일관된 코드 스타일은 나중에 자기 코드를 다시 읽을 때 큰 도움이 된다.
+코드 스타일이 사람마다 다르면 코드 리뷰에서 로직보다 스타일 논쟁에 시간을 더 쓰게 된다. 자동 포매터를 쓰면 이런 논쟁이 줄어든다. 혼자 연구할 때도 일관된 코드 스타일은 나중에 자기 코드를 다시 읽을 때 큰 도움이 된다.
 
 **Python**:
 
@@ -640,7 +641,7 @@ clang-format -i src/*.cpp
 **Python (pytest)**:
 
 ```python
-# test_module.py
+# tests/test_module.py
 def test_addition():
     assert 1 + 1 == 2
 
@@ -665,7 +666,6 @@ TEST(MyTest, BasicTest) {
 
 > **추천 자료**
 > - [Real Python - Python Testing with pytest](https://realpython.com/pytest-python-testing/) — pytest 사용법 상세 튜토리얼
-> - [The Missing Semester (MIT)](https://missing.csail.mit.edu/) — 셸, 에디터, 디버깅, 프로파일링 등 개발 도구 전반. 연구실 입학 전에 한 번 쭉 보면 좋다
 > - [Fireship YouTube](https://www.youtube.com/@Fireship) — 각종 개발 도구를 "100 Seconds" 시리즈로 빠르게 훑어볼 수 있다
 > - [정진용 블로그 — 로봇 소프트웨어 개발 문화](https://jinyongjeong.github.io/2025/02/14/developmen_culture/) — 코드 리뷰, CI/CD, 스타일 가이드 등 로봇 개발팀의 개발 문화 정착 방법
 > - [정진용 블로그 — 로봇 개발과 테스트 코드](https://jinyongjeong.github.io/2025/02/19/test_code/) — 로봇 소프트웨어에서 테스트 코드가 필수인 6가지 이유
@@ -674,31 +674,25 @@ TEST(MyTest, BasicTest) {
 
 ```
 2005 ─── Git 탄생 (Linus Torvalds)
-  │       분산 버전 관리의 시작
   │
 2008 ─── GitHub 출시
-  │       오픈소스 협업의 중심지가 됨
   │
 2012 ─── Conda (Anaconda) 등장
-  │       데이터 과학에서 널리 쓰이는 Python 환경 관리 도구가 됨
   │
 2013 ─── Docker 공개
   │       컨테이너 이미지로 사용자 공간 의존성 재현이 쉬워짐
   │
 2015 ─── TensorBoard (TensorFlow와 함께 공개)
-  │       딥러닝 학습 시각화의 시작
   │
-2017 ─── nvidia-docker 공개
+2016 ─── nvidia-docker 공개 (1.0 정식은 2017년 1월)
   │       Docker 컨테이너에서 GPU 사용 가능
   │
 2018 ─── Weights & Biases 출시
   │       실험 추적·시각화·팀 협업을 클라우드로
   │
-2020~2022 ─── Black 대중화, Ruff 등장 (2022)
-  │       Python 코드 품질 도구의 고속화
+2022 ─── GitHub Copilot 정식 출시 (2022년 6월, 기술 미리보기는 2021년)
+  │       에디터 안에서 코드를 제안하는 AI 코딩 보조 도구
   │
-2023+ ── AI-assisted 개발 도구 확산
-          Copilot, Cursor 등 AI 코딩 보조 도구
-          Dev Container 표준화 (VS Code Remote)
-          재현 가능한 연구를 위한 Docker + wandb 조합 보편화
+2022 ─── Ruff 공개 (2022년 8월, Black은 2018년 공개)
+          Rust로 작성한 Python 린터
 ```

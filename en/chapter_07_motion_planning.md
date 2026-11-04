@@ -1,6 +1,6 @@
 # Ch.7 — Motion Planning & Trajectory Optimization
 
-A robot moving from A to B needs a path that satisfies obstacle, joint-limit, and dynamic constraints. Finding such a path is motion planning; following it optimally over time is trajectory optimization.
+A robot moving from A to B needs a path that satisfies obstacle, joint-limit, and dynamic constraints. Motion planning searches for a collision-free geometric path; trajectory optimization accounts for dynamic limits and an objective function to produce a concrete, time-parameterized trajectory.
 
 ---
 
@@ -210,8 +210,8 @@ arm.set_goal_state(configuration_name="home")
 plan_result = arm.plan()
 
 if plan_result:
-    # execute
-    arm.execute()
+    # execute: PlanningComponent has no execute(); the MoveItPy object executes the trajectory
+    moveit.execute(plan_result.trajectory, controllers=[])
 ```
 
 > **Further reading**
@@ -432,7 +432,7 @@ TAMP assumes the environment dynamics and actions are deterministic. When both d
 
 ## 7.9 Advanced: Decision-Making Under Uncertainty (POMDP and Belief Space Planning)
 
-§7.1–§7.8 assumed the robot knows its own state and the environment exactly. Real robots observe only partial information through noisy sensors. A robot that does not know which side of a symmetric corridor it is on, a situation where it is uncertain whether a door is open or closed — planning from the "current best-estimate state" fails in these cases. The plan must be built directly over the belief (the posterior distribution). Thrun, Burgard, and Fox's *Probabilistic Robotics* §15.2 and §16 address this problem.
+§7.1–§7.8 assumed the robot knows its own state and the environment exactly. Real robots observe only partial information through noisy sensors. A robot that does not know which side of a symmetric corridor it is on, a situation where it is uncertain whether a door is open or closed — planning from the "current best-estimate state" fails in these cases. The plan must be built directly over the belief (the posterior distribution). Thrun, Burgard, and Fox's *Probabilistic Robotics* §15.2 and §16 address this problem. The section, table, equation, and figure numbers cited in this section follow the 1999–2000 early draft; in the 2005 MIT Press edition, MDPs are Chapter 14, POMDPs Chapter 15, and approximate techniques such as QMDP, AMDP, and MC-POMDP Chapter 16.
 
 ### 7.9.1 Introduction: Three Paradigms
 
@@ -510,16 +510,16 @@ $C^1(b)$ is the max of two linear functions. It bends at $p_1 = 0.5$. If $p_1 > 
 **Horizon 2 computation:**
 
 Integrating over the probabilities of observing $o_1, o_2$ after $a_1$:
-$$C^2(b, a_1) \approx \max\{0,\; -33.05 p_1 + 13.61 p_2\}$$
+$$C^2(b, a_1) = \max\{0,\; -18.79 p_1 + 38.23 p_2\} + \max\{0,\; -33.05 p_1 + 13.61 p_2\} = \max\{0,\; -18.79 p_1 + 38.23 p_2,\; -51.84 p_1 + 51.84 p_2\}$$
 
-(Coefficients are computed through the observation probabilities and the belief update.)
+(Coefficients are computed through the observation probabilities and the belief update. Of the four linear functions obtained by combining the per-observation choices, $-33.05 p_1 + 13.61 p_2$ lies below $-18.79 p_1 + 38.23 p_2$ for every belief and is pruned.)
 
-Full $T=2$:
-$$C^2(b) = \max\{ 0,\; -33.05 p_1 + 13.61 p_2,\; 72 p_1 - 72 p_2 \}$$
+Full $T=2$ (once the $a_2$ piece is included, the constant 0 piece is dominated as well):
+$$C^2(b) = \max\{ -51.84 p_1 + 51.84 p_2,\; -18.79 p_1 + 38.23 p_2,\; 72 p_1 - 72 p_2 \}$$
 
 The max of three linear pieces. As the horizon grows, more pieces are added.
 
-"Knowledge always helps" — $\beta C(b) + (1-\beta) C(b') \geq C(\beta b + (1-\beta) b')$. The value at a certain belief is always at least as high as at an uncertain one.
+The value function is convex over belief space: $\beta C(b) + (1-\beta) C(b') \geq C(\beta b + (1-\beta) b')$. So the value at a mixture of two beliefs is no greater than the weighted average of their values.
 
 <!-- DEMO: pomdp_toy_pwlc.html -->
 

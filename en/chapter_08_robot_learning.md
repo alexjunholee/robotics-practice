@@ -29,7 +29,7 @@ In these situations, learning-based approaches approximate the input-output rela
 
 If a problem can be solved with traditional methods, use traditional methods. Learning is a tool to apply where traditional methods hit their limits. Combining the two appropriately is the most realistic approach in practice.
 
-Where, then, are these limits in concrete terms? Chapter 15 of *Probabilistic Robotics* (Thrun, Burgard, and Fox) uses four domains — a manipulator, an underwater vehicle, a helicopter, and a team of planetary exploration robots — to show why action selection under uncertainty is necessary. Read from the perspective of learning, those examples go as follows. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a model in advance is difficult. A helicopter contends with disturbances such as gusts large enough that the question becomes how much clearance to keep from obstacles, and planetary exploration robots cannot know the terrain or their positions relative to one another in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
+Where, then, are these limits in concrete terms? The MDP chapter of *Probabilistic Robotics* (Thrun, Burgard, and Fox; Chapter 15 of the 1999–2000 early draft) uses four domains — a manipulator, an underwater vehicle, a helicopter, and a team of planetary exploration robots — to show why action selection under uncertainty is necessary. Read from the perspective of learning, those examples go as follows. An industrial manipulator working inside a controlled workspace is well served by traditional control. An autonomous underwater vehicle, however, faces changing currents, limited visibility, and shifting buoyancy — building a model in advance is difficult. A helicopter contends with disturbances such as gusts large enough that the question becomes how much clearance to keep from obstacles, and planetary exploration robots cannot know the terrain or their positions relative to one another in advance. Across these domains, how much learning is needed tracks directly with how large the model uncertainty is.
 
 
 ---
@@ -282,7 +282,7 @@ Robot RL usually relies on simulation because collecting millions of interaction
 
 ### MuJoCo (Multi-Joint dynamics with Contact)
 
-After being acquired by DeepMind, it was open-sourced in 2022. Thanks to its contact simulation quality and stable numerical integration, it has become the standard benchmark environment for RL research. The default engine is CPU-based, and MuJoCo 3.0+ supports GPU parallelization through MJX (JAX backend), but its ecosystem is smaller than Isaac Lab's. It is suited for algorithm benchmarks and small-scale experiments.
+DeepMind acquired it, released it for free in 2021, and completed open-sourcing the full codebase in 2022. Thanks to its contact simulation quality and stable numerical integration, it has become the standard benchmark environment for RL research. The default engine is CPU-based, and MuJoCo 3.0+ supports GPU parallelization through MJX (JAX backend), but its ecosystem is smaller than Isaac Lab's. It is suited for algorithm benchmarks and small-scale experiments.
 
 ### Isaac Lab (NVIDIA)
 

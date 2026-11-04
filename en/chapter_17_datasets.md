@@ -36,7 +36,7 @@ Since its release in 2012, KITTI has provided a common comparison point for auto
 
 nuScenes is a large-scale autonomous driving dataset.
 
-It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and is much larger in scale. Alongside KITTI, it is one of the most cited datasets in recent autonomous driving papers. It is central to 3D Object Detection and BEV (Bird's Eye View) based perception research.
+It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and is much larger in scale. It is central to 3D Object Detection and BEV (Bird's Eye View) based perception research.
 
 **Composition**:
 - 6 cameras (360° coverage)
@@ -59,7 +59,7 @@ It has a richer sensor suite than KITTI (360-degree cameras, Radar included) and
 
 The Waymo Open Dataset is a large-scale autonomous driving dataset released by Waymo (an Alphabet subsidiary).
 
-Together with nuScenes, it is one of the two main benchmarks in current autonomous driving research. It leads in data quality and scale, and its annual challenge lets you track the latest technical trends.
+Together with nuScenes, it is a major benchmark in current autonomous driving research. It offers high data quality and large scale, and its annual challenge lets you track the latest technical trends.
 
 **Scale**:
 - 1,150 scenes (20 seconds each)
@@ -101,7 +101,7 @@ TUM RGB-D and EuRoC MAV are used for indoor RGB-D SLAM and drone VIO evaluation,
 
 ImageNet is the standard benchmark for image classification.
 
-This is the dataset that marked the turn into deep learning. After AlexNet's overwhelming performance on ImageNet in 2012, nearly every vision model started using ImageNet-pretrained weights. In robotics too, the backbone of camera-based perception modules is mostly an ImageNet-pretrained model.
+This is the dataset that marked the turn into deep learning. After AlexNet's large performance gain on ImageNet in 2012, ImageNet-pretrained weights became a standard starting point for many vision models. In robotics too, ImageNet-pretrained models are widely used as backbones for camera-based perception modules.
 
 - 1000 classes
 - 1.2M training images
@@ -221,7 +221,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 
 > **Further reading**
 > - [PyTorch Data Loading Tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html) — official guide for writing a custom Dataset.
-> - [Real Python - PyTorch DataLoader](https://realpython.com/python-data-loading/) — detailed walkthrough of DataLoader usage.
+> - [PyTorch documentation — torch.utils.data](https://docs.pytorch.org/docs/stable/data.html) — reference for DataLoader batching, samplers, `num_workers`, and `collate_fn`.
 
 ## 17.4 Collecting Your Own Data
 
@@ -275,7 +275,7 @@ If calibration is inaccurate, the object position seen by the camera and the one
 
 ### 17.4.3 Labeling Tools
 
-Once data is collected, you have to annotate it. Labeling is one of the most time-consuming tasks in research, and label quality determines model performance. Recently, semi-automatic labeling using foundation models such as SAM (Segment Anything Model) has become widespread.
+Once data is collected, you have to annotate it. Labeling is one of the most time-consuming tasks in research, and label quality determines model performance. Since 2023, semi-automatic labeling using foundation models such as SAM (Segment Anything Model) has also begun to be used in research settings.
 
 **CVAT (Computer Vision Annotation Tool)**:
 - Web-based, free
@@ -291,7 +291,7 @@ Once data is collected, you have to annotate it. Labeling is one of the most tim
 - SUSTechPOINTS: LiDAR point clouds
 - KITTI-360 labeling tool
 
-**Automatic labeling via synthetic data**: when you generate data in a simulator (NVIDIA Isaac Sim, AI2-THOR, and so on), labels are produced along with the data, so no manual labeling is needed. Domain randomization, which randomly varies texture, lighting, and background, can also improve a model's generalization. Collection cost is close to zero compared to real data.
+**Automatic labeling via synthetic data**: when you generate data in a simulator (NVIDIA Isaac Sim, AI2-THOR, and so on), labels are produced along with the data, so manual labeling can be reduced. Domain randomization, which randomly varies texture, lighting, and background, can also improve a model's generalization. Synthetic data can reduce the cost of real-data collection and manual annotation, but the costs of building the simulator, rendering, and reviewing the data remain.
 
 > **Further reading**
 > - [CVAT Documentation](https://docs.cvat.ai/) — official documentation for the open-source labeling tool.

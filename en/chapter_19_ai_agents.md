@@ -17,7 +17,7 @@ ros2 topic list
 ros2 topic info /camera/image_raw --verbose
 ros2 node list
 ros2 topic hz /cmd_vel
-dmesg | tail -30
+sudo dmesg | tail -30
 lsusb -t
 ```
 

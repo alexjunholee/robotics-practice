@@ -49,7 +49,7 @@ RNEA solves the inverse dynamics of a serial manipulator in two passes:
 
 **Backward pass (end-effector → base):** Propagate forces and torques acting on each link backward. Use the Newton-Euler equations to obtain the net force/torque required at link i, then convert to the torque of joint i.
 
-Why solve it recursively? The dynamics of a single rigid body is O(1). Handling n links sequentially gives O(n). Solving the Lagrange equations directly, in contrast, costs O(n^3) for computing the M(q) matrix. For robots with many joints (e.g., a humanoid with 30+ DOF), this difference determines whether real-time control is feasible.
+Why solve it recursively? The dynamics of a single rigid body is O(1). Handling n links sequentially gives O(n). Expanding the Lagrange equations mechanically, in contrast, costs O(n^3) or more just to compute the M(q) matrix. For a 6-DOF arm, the difference between O(n) and O(n^3) decides whether the control loop runs in real time.
 
 The pseudo-code for RNEA is:
 
@@ -104,6 +104,7 @@ The same computation in Drake:
 ```python
 from pydrake.multibody.plant import MultibodyPlant
 from pydrake.multibody.parsing import Parser
+from pydrake.multibody.tree import MultibodyForces
 import numpy as np
 
 plant = MultibodyPlant(time_step=0.0)
@@ -635,7 +636,7 @@ Splitting the manipulator equation into base and joints:
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_{c,j}^T ] λ
 ```
 
-The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force, and J_{c,b} (6×k) and J_{c,j} (n×k) are the blocks of the contact Jacobian J_c split into its base columns and joint columns. Contact forces and gravity accelerate the base.
+The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force (of dimension k), and J_{c,b} (k×6) and J_{c,j} (k×n) are the blocks of the contact Jacobian J_c (k×(6+n)) split into its base columns and joint columns. Contact forces and gravity accelerate the base.
 
 This constraint is what makes locomotion control hard. For a fixed-base manipulator, the desired joint torque can simply be commanded to the motors; a legged robot, in contrast, must generate appropriate contact forces to make the base move as desired.
 

@@ -33,7 +33,7 @@ RT-1 (Robotics Transformer 1) was trained on large-scale robot demonstrations: 1
 
 RT-2 (Robotics Transformer 2) fine-tunes VLMs such as PaLI-X and PaLM-E to produce robot actions. Its paper reports transfer from web-scale data and a separate robot-chain-of-thought experiment.
 
-The idea behind RT-2 is simple. Large language/vision models trained on the internet already carry "knowledge about the world," so fine-tuning them to produce robot actions lets them handle new objects or situations zero-shot. For example, RT-2 can pick up objects it never saw in training by leveraging its language knowledge.
+RT-2 fine-tunes large language/vision models trained on the internet, which carry "knowledge about the world," to produce robot actions. Experiments in the original paper showed that this design can handle new objects or situations zero-shot. For example, RT-2 can pick up objects it never saw in training by leveraging its language knowledge.
 
 > **Further reading**
 > - [Google DeepMind — RT-2 Demo Video](https://deepmind.google/discover/blog/rt-2-new-model-translates-vision-and-language-into-action/) — footage and commentary on RT-2 in action

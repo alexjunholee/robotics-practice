@@ -1,6 +1,6 @@
 # Ch.20 — 추천 자료
 
-교과서, 강의, 논문을 주제별로 묶고, 맨 아래 **학습 경로**에서 선수지식에 따른 읽기 순서를 제시한다.
+교과서, 강의, 논문을 주제별로 모았다. 20.7절의 학습 경로에는 수준에 따라 무엇부터 읽을지 적었다.
 
 ## 20.1 교과서
 
@@ -9,14 +9,13 @@
 **Multiple View Geometry in Computer Vision** (Hartley & Zisserman)
 - 다시점 기하학의 핵심 교재
 - 카메라 모델, Epipolar Geometry, 3D 복원
-- 수학적으로 엄밀하며, 필요한 주제의 장을 골라 참고하기 좋음
+- 수학적으로 엄밀하다. 필요한 장만 골라 읽어도 된다
 - 링크: [Cambridge University Press](https://www.cambridge.org/core/books/multiple-view-geometry-in-computer-vision/0B6F289C78B2B23F596CAA76D3D43F7A)
-- 저자 홈페이지에서 일부 챕터 PDF 제공: https://www.robots.ox.ac.uk/~vgg/hzbook/
+- 저자 홈페이지에서 일부 장의 PDF를 받을 수 있다: https://www.robots.ox.ac.uk/~vgg/hzbook/
 
 **Computer Vision: Algorithms and Applications** (Szeliski)
-- 포괄적인 CV 교과서
-- 최신 버전 (2022)에 딥러닝 포함
-- 무료 PDF 제공
+- CV 전반을 다루는 교과서
+- 2022년에 나온 2판에는 딥러닝을 다룬 장이 있다
 - 무료 PDF: https://szeliski.org/Book/
 
 ### Robotics
@@ -24,21 +23,19 @@
 **Probabilistic Robotics** (Thrun, Burgard, Fox)
 - 확률적 로보틱스의 표준 교재
 - Kalman Filter, Particle Filter, SLAM
-- SLAM을 연구할 때 읽어야 할 교재
+- SLAM을 연구한다면 읽어 둘 책
 - 링크: [MIT Press](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/)
-- PDF는 공식적으로 무료가 아니지만, 저자의 강의 슬라이드가 대부분의 내용을 커버한다
+- 공식 무료 PDF는 없다
 
 **State Estimation for Robotics** (Tim Barfoot)
 - 상태 추정 심화
 - Lie Groups, Factor Graph — 수학적으로 깊지만 설명이 친절하다
-- 무료 PDF 제공
-- 무료 PDF: http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf
+- 무료 PDF: https://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf
 
 ### Deep Learning
 
 **Deep Learning** (Goodfellow, Bengio, Courville)
 - 딥러닝 이론 표준 교과서
-- 무료 온라인 제공
 - 무료 온라인(장별 HTML): https://www.deeplearningbook.org/
 
 **Dive into Deep Learning** (d2l.ai)
@@ -50,13 +47,12 @@
 ### 수학 보충
 
 **Introduction to Linear Algebra** (Gilbert Strang)
-- 선형대수를 직관적으로 설명하는 명저
-- MIT OCW 강의와 함께 보면 이해에 도움이 됨
+- 선형대수를 직관적으로 설명하는 교재
+- MIT OCW 강의와 함께 보면 좋다
 - 링크: https://math.mit.edu/~gs/linearalgebra/ila6/indexila6.html
 
 **Convex Optimization** (Boyd & Vandenberghe)
 - 최적화 이론의 표준 교재
-- 무료 PDF 제공
 - 무료 PDF: https://web.stanford.edu/~boyd/cvxbook/
 
 ## 20.2 온라인 강의
@@ -77,8 +73,7 @@
 ### SLAM
 
 **Cyrill Stachniss SLAM Course** (YouTube)
-- SLAM 이론 강의 — 독일어 억양이 있지만 설명이 명확함
-- SLAM 입문자에게 먼저 권할 만한 강의
+- Freiburg 대학 Robot Mapping 강의(2013/14 겨울학기) 녹화. Bayes filter부터 graph-based SLAM까지 다룬다
 - YouTube: https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_
 
 **Multiple View Geometry** (TUM, Daniel Cremers 교수)
@@ -86,19 +81,18 @@
 - YouTube: https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4
 
 **SLAM 입문 (한국어)**:
-- SLAM KR 커뮤니티(국내 SLAM 연구자 모임)의 스터디 자료
+- SLAM KR(국내 SLAM 연구자 모임)의 스터디 자료
 
 ### ROS
 
 **ROS2 공식 튜토리얼**
-- 가장 최신 정보
 - 링크: https://docs.ros.org/en/humble/Tutorials.html (Humble 기준)
-- ROS2 Iron/Jazzy 등 다른 버전은 상단 드롭다운에서 변경
+- Jazzy, Lyrical 같은 다른 배포판은 문서 상단의 버전 메뉴에서 고른다
 
 **The Construct** (온라인 플랫폼)
 - ROS 전문 강의
 - 일부 무료
-- 링크: https://www.theconstructsim.com/
+- 링크: https://www.theconstruct.ai/
 
 ### 딥러닝 기초
 
@@ -108,7 +102,6 @@
 
 **Neural Networks: Zero to Hero** (Andrej Karpathy)
 - 신경망을 밑바닥부터 구현하면서 배우기
-- 설명과 코드를 함께 진행
 - YouTube: https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ
 
 ## 20.3 유튜브 채널 추천
@@ -117,15 +110,15 @@
 
 | 채널 | 주제 | 특징 |
 | --- | --- | --- |
-| **Cyrill Stachniss** | SLAM, Robotics | 학부 수업 수준으로 SLAM을 체계적으로 설명 |
-| **First Principles of Computer Vision** (Shree Nayar) | Computer Vision | CV 기초를 개념별로 설명 |
-| **Andrej Karpathy** | Deep Learning, AI | Tesla AI Director 출신. Neural Net을 밑바닥부터 구현 |
-| **Yannic Kilcher** | 논문 리뷰 | 최신 ML/AI 논문을 매주 리뷰. 논문 읽는 법을 배울 수 있다 |
-| **Two Minute Papers** | AI 연구 트렌드 | 최신 연구를 2~3분 영상으로 소개. "What a time to be alive!" |
-| **3Blue1Brown** | 수학 시각화 | 선형대수, 미적분을 시각적으로 설명. 수학이 막힐 때 |
-| **Computerphile** | CS 전반 | 컴퓨터과학의 다양한 주제를 쉽게 설명 |
-| **sentdex** | Python, ML | Python으로 ML/로보틱스 실습. 코드 중심 |
-| **The Coding Train** | 알고리즘 시각화 | 알고리즘을 시각적으로 이해. 에너지 넘치는 진행 |
+| Cyrill Stachniss | SLAM, Robotics | SLAM과 로보틱스를 강의 단위로 차례대로 설명 |
+| First Principles of Computer Vision (Shree Nayar) | Computer Vision | CV 기초를 개념별로 설명 |
+| Andrej Karpathy | Deep Learning, AI | Tesla AI Director 출신. Neural Net을 밑바닥부터 구현 |
+| Yannic Kilcher | 논문 리뷰 | ML/AI 논문을 한 편씩 읽으며 설명 |
+| Two Minute Papers | AI 연구 동향 | 최근 연구를 짧은 영상으로 소개 |
+| 3Blue1Brown | 수학 시각화 | 선형대수, 미적분을 시각적으로 설명. 수학이 막힐 때 |
+| Computerphile | CS 전반 | 컴퓨터과학의 다양한 주제를 쉽게 설명 |
+| sentdex | Python, ML | Python으로 ML/로보틱스 실습. 코드 중심 |
+| The Coding Train | 알고리즘 시각화 | 알고리즘을 직접 코딩하며 그림으로 보여 줌 |
 
 링크:
 - Cyrill Stachniss: https://www.youtube.com/@CyrillStachniss
@@ -148,47 +141,47 @@
 
 **Classical CV/SLAM**:
 - ORB-SLAM: Mur-Artal et al., 2015 — [arXiv:1502.00956](https://arxiv.org/abs/1502.00956)
-- LOAM: Zhang & Singh, 2014 — [RSS 2014](https://www.ri.cmu.edu/pub_files/2014/7/Ji_LidarMapping_RSS2014_v8.pdf)
+- LOAM: Zhang & Singh, 2014 — [RSS 2014](https://publications.ri.cmu.edu/storage/publications/pub_files/2014/7/Ji_LidarMapping_RSS2014_v8.pdf)
 - VINS-Mono: Qin et al., 2018 — [arXiv:1708.03852](https://arxiv.org/abs/1708.03852)
 
 **Deep Learning 기초**:
-- ResNet: He et al., 2015 — [arXiv:1512.03385](https://arxiv.org/abs/1512.03385)
+- ResNet: He et al., CVPR 2016 — [arXiv:1512.03385](https://arxiv.org/abs/1512.03385)
 - Transformer (Attention Is All You Need): Vaswani et al., 2017 — [arXiv:1706.03762](https://arxiv.org/abs/1706.03762)
-- ViT: Dosovitskiy et al., 2020 — [arXiv:2010.11929](https://arxiv.org/abs/2010.11929)
+- ViT: Dosovitskiy et al., ICLR 2021 — [arXiv:2010.11929](https://arxiv.org/abs/2010.11929)
 
 **Object Detection**:
 - Faster R-CNN: Ren et al., 2015 — [arXiv:1506.01497](https://arxiv.org/abs/1506.01497)
-- YOLO (original): Redmon et al., 2015 — [arXiv:1506.02640](https://arxiv.org/abs/1506.02640)
+- YOLO (original): Redmon et al., CVPR 2016 — [arXiv:1506.02640](https://arxiv.org/abs/1506.02640)
 - DETR: Carion et al., 2020 — [arXiv:2005.12872](https://arxiv.org/abs/2005.12872)
 
 **Foundation Models**:
 - CLIP: Radford et al., 2021 — [arXiv:2103.00020](https://arxiv.org/abs/2103.00020)
 - SAM (Segment Anything): Kirillov et al., 2023 — [arXiv:2304.02643](https://arxiv.org/abs/2304.02643)
-- DINOv2: Oquab et al., 2023 — [arXiv:2304.07193](https://arxiv.org/abs/2304.07193)
+- DINOv2: Oquab et al., TMLR 2024 — [arXiv:2304.07193](https://arxiv.org/abs/2304.07193)
 
-**최신 트렌드**:
-- RT-2: Brohan et al., 2023 — [arXiv:2307.15818](https://arxiv.org/abs/2307.15818)
-- 3D Gaussian Splatting: Kerbl et al., 2023 — [arXiv:2308.04079](https://arxiv.org/abs/2308.04079)
+**2023–2024 논문**:
+- RT-2: Brohan et al., CoRL 2023 — [arXiv:2307.15818](https://arxiv.org/abs/2307.15818)
+- 3D Gaussian Splatting: Kerbl et al., SIGGRAPH 2023 — [arXiv:2308.04079](https://arxiv.org/abs/2308.04079)
 - Depth Anything: Yang et al., 2024 — [arXiv:2401.10891](https://arxiv.org/abs/2401.10891)
 
-> 논문 검색에는 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [arXiv](https://arxiv.org/)를 활용할 수 있다. 벤치마크 순위와 코드 링크를 함께 보여 주던 Papers With Code는 2025년 서비스를 종료해 현재 도메인은 Hugging Face로 넘어간다.
+> 논문은 [Google Scholar](https://scholar.google.com/), [Semantic Scholar](https://www.semanticscholar.org/), [arXiv](https://arxiv.org/)에서 찾는다. 벤치마크 순위와 코드 링크를 함께 보여 주던 Papers With Code는 2025년에 문을 닫았고, 지금 그 주소로 들어가면 Hugging Face로 넘어간다.
 
 ### 논문 작성 도구
 
 > **추천 자료**
-> - [Overleaf](https://www.overleaf.com/) — 공동 작성 기능을 제공하는 온라인 LaTeX 에디터
+> - [Overleaf](https://www.overleaf.com/) — 여럿이 함께 쓸 수 있는 온라인 LaTeX 에디터
 > - [Mathpix](https://mathpix.com/) — 수식 스크린샷을 LaTeX 코드로 변환
-> - [Detexify](http://detexify.kirelabs.org/classify.html) — 손으로 그려서 LaTeX 기호를 검색
+> - [Detexify](https://detexify.kirelabs.org/classify.html) — 손으로 그려서 LaTeX 기호를 검색
 > - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 테이블 생성기
-> - [QuillBot](https://quillbot.com/) — 영어 문장 paraphrasing 도구. 논문 영작에 유용
+> - [QuillBot](https://quillbot.com/) — 영어 문장을 다른 표현으로 바꿔 주는 도구
 > - [Ludwig](https://ludwig.guru/) — 영어 표현 검색 엔진. 원어민이 실제로 쓰는 표현을 확인
 > - [DL Monitor (deeplearn.org)](https://deeplearn.org/) — 주요 학회/arXiv의 딥러닝 논문을 자동 추적
 
 ## 20.5 주요 학회
 
-CV·로보틱스·자율주행 학회의 일정과 성격은 [「연구노트」 Ch.34 — 학회 2~3주 전 체크리스트](../research-notes/guide.html#chapter-34)의 *분야별 학회 reference* 표에 정리되어 있다.
+CV·로보틱스·자율주행 학회의 성격은 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)의 *분야별 학회 reference* 표에 정리되어 있다.
 
-학회에 참석하는 목적과 발표를 시작하는 방법도 같은 장에서 확인할 수 있다.
+발표 준비도 같은 장에서 다룬다.
 
 ## 20.6 유용한 GitHub 저장소
 
@@ -198,7 +191,7 @@ CV·로보틱스·자율주행 학회의 일정과 성격은 [「연구노트」
 # ORB-SLAM3 — Visual(-Inertial) SLAM의 레퍼런스
 https://github.com/UZ-SLAMLab/ORB_SLAM3
 
-# VINS-Fusion — 다중 카메라+IMU 융합
+# VINS-Fusion — 단안+IMU, 스테레오, 스테레오+IMU 지원
 https://github.com/HKUST-Aerial-Robotics/VINS-Fusion
 
 # LIO-SAM — LiDAR-Inertial SLAM (factor graph 기반)
@@ -217,7 +210,7 @@ https://github.com/spla-tam/SplaTAM
 ### Deep Learning
 
 ```
-# Ultralytics YOLO — YOLOv8/v11, 가장 쓰기 쉬운 detection 프레임워크
+# Ultralytics YOLO — YOLOv8·YOLO11 등, 가장 쓰기 쉬운 detection 프레임워크
 https://github.com/ultralytics/ultralytics
 
 # HuggingFace Transformers — NLP/Vision 모델 허브
@@ -302,11 +295,11 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 
 ## 20.7 추천 학습 경로
 
-1.4절의 학습 경로를 확장해 단계마다 구체적인 자료와 링크를 더했다. 자기 수준에 맞는 단계부터 시작하면 된다.
+1.4절에서 소개한 학습 경로를 단계별 자료와 함께 정리했다.
 
 ### 입문 단계 (1~3개월)
 
-**목표**: 기초 도구 습득 — 일단 뭔가 돌려볼 수 있는 상태
+**목표**: 기초 도구를 익혀 코드를 직접 돌려 볼 수 있게 된다
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
@@ -315,56 +308,56 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | 선형대수 복습 | 행렬, 고유값, SVD | [3Blue1Brown: Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) |
 | 확률/통계 복습 | 베이즈 정리, 가우시안 | [StatQuest](https://www.youtube.com/@statquest) |
 | ROS2 기본 | 노드, 토픽, 서비스 | [ROS2 공식 튜토리얼](https://docs.ros.org/en/humble/Tutorials.html) |
-| Git 사용법 | commit, branch, PR | [Git 입문](https://backlog.com/git-tutorial/kr/) (한국어) |
+| Git 사용법 | commit, branch, PR | [Git 입문](https://nulab.com/ko/learn/software-development/git-tutorial/) (한국어) |
 
 **실습 과제**:
 - OpenCV로 이미지 처리 (grayscale 변환, edge detection, feature 추출)
 - 간단한 ROS2 노드 작성 (publisher/subscriber)
-- 카메라 캘리브레이션 수행 — 본 문서 9장 참고
-- 본 문서의 **3장, 9장**을 읽으면서 좌표 변환과 카메라 모델을 이해한다
+- 카메라 캘리브레이션 — 이 가이드 9장 참고
+- 이 가이드의 3장, 9장을 읽으면서 좌표 변환과 카메라 모델을 이해한다
 
 **마일스톤**: Python으로 이미지를 읽어서 특징점을 추출하고, 두 이미지 간 매칭을 시각화할 수 있으면 입문 단계 졸업이다.
 
 ### 중급 단계 (3~6개월)
 
-**목표**: 핵심 기술 이해 — 논문을 읽고 코드를 돌려볼 수 있는 상태
+**목표**: 핵심 기술을 이해해 논문을 읽고 그 코드를 돌려 볼 수 있게 된다
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
-| 딥러닝 기초 (PyTorch) | CNN, 학습, 역전파 | [CS231n](https://www.youtube.com/playlist?list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv) + [PyTorch 공식 튜토리얼](https://pytorch.org/tutorials/) |
-| Object Detection | YOLO, Faster R-CNN | [Ultralytics 문서](https://docs.ultralytics.com/) + 본 문서 10장 |
-| Visual SLAM 이해 | ORB-SLAM3 분석 | [Cyrill Stachniss SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) + 본 문서 14장 |
-| 포인트 클라우드 처리 | Open3D 사용법 | [Open3D 튜토리얼](http://www.open3d.org/docs/release/tutorial/) + 본 문서 13장 |
-| Depth Estimation | 단안 카메라 depth 추정 | 본 문서 10장 + [Depth Anything 코드](https://github.com/DepthAnything/Depth-Anything-V2) |
+| 딥러닝 기초 (PyTorch) | CNN, 학습, 역전파 | [CS231n](https://www.youtube.com/playlist?list=PL3FW7Lu3i5JvHM8ljYj-zLfQRF3EO8sYv) + [PyTorch 공식 튜토리얼](https://docs.pytorch.org/tutorials/) |
+| Object Detection | YOLO, Faster R-CNN | [Ultralytics 문서](https://docs.ultralytics.com/) + 이 가이드 10장 |
+| Visual SLAM 이해 | ORB-SLAM3 분석 | [Cyrill Stachniss SLAM 강의](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) + 이 가이드 14장 |
+| 포인트 클라우드 처리 | Open3D 사용법 | [Open3D 문서의 Tutorial 목차](https://www.open3d.org/docs/release/) + 이 가이드 13장 |
+| Depth Estimation | 단안 카메라 depth 추정 | 이 가이드 10장 + [Depth Anything 코드](https://github.com/DepthAnything/Depth-Anything-V2) |
 
 **실습 과제**:
 - KITTI 데이터셋 다루기 — [KITTI 홈페이지](https://www.cvlibs.net/datasets/kitti/)
-- YOLOv8 파인튜닝 — 커스텀 데이터셋으로 fine-tuning
+- YOLOv8 파인튜닝 — 직접 모은 데이터셋으로 다시 학습
 - ORB-SLAM3 실행 및 분석 — TUM RGB-D 데이터셋으로 평가
-- TUM RGB-D 벤치마크 — ATE, RPE 계산해보기
-- 본 문서의 **9~14장**을 읽으면서 이론적 배경을 다진다
+- TUM RGB-D 벤치마크 — ATE(Absolute Trajectory Error), RPE(Relative Pose Error) 계산해보기
+- 이 가이드의 9~14장을 읽으면서 이론적 배경을 다진다
 
 **마일스톤**: ORB-SLAM3를 직접 빌드하고 데이터셋으로 돌려서, trajectory를 ground truth와 비교할 수 있으면 중급 단계 졸업이다.
 
 ### 고급 단계 (6개월+)
 
-**목표**: 연구 능력 개발 — 새로운 아이디어를 내고 실험할 수 있는 상태
+**목표**: 새 아이디어를 내고 실험할 수 있게 된다
 
 | 주제 | 학습 내용 | 추천 자료 |
 | --- | --- | --- |
-| VFM 심화 (1.4절 중급 항목의 확장) | DINOv2, SAM, CLIP | 본 문서 10~11장 + 논문 직접 읽기 |
-| 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 본 문서 13장 |
+| VFM 심화 (1.4절 중급 항목의 확장) | DINOv2, SAM, CLIP | 이 가이드 10~11장 + 논문 직접 읽기 |
+| 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 이 가이드 13장 |
 | 논문 읽기 및 구현 | 최신 논문 분석 | [Hugging Face Papers](https://huggingface.co/papers/trending) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 Ch.6–15 — 읽기](../research-notes/guide.html#chapter-6)* |
-| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *본격은 [「연구노트」 Ch.1–5 — 시작하기](../research-notes/guide.html#chapter-1)* |
-| 벤치마크 평가 | 정량적 비교 | 각 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석 frame은 [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#chapter-32)* |
+| 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *가설 수립은 [「연구노트」 Ch.1–5 — 시작하기](../research-notes/guide.html#chapter-1)* |
+| 벤치마크 평가 | 정량적 비교 | 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석은 [「연구노트」 Ch.26 — 결과와 논의](../research-notes/guide.html#chapter-26)* |
 
 **실습 과제**:
 - 최신 논문 코드 분석 — GitHub에서 코드를 받아 직접 돌려보기
 - 자체 개선 아이디어 실험 — 이 부분을 바꾸면 어떻게 될지 직접 시도
-- 논문 작성 시도 — *본격 frame은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)* 참고
-- 본 문서의 **10~13장**을 읽으면서 최신 연구 방향을 파악한다
+- 논문 작성 시도 — *[「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)* 참고
+- 이 가이드의 10~13장을 읽으면서 최신 연구 방향을 파악한다
 
-**마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교할 수 있으면 고급 단계에 진입한 것이다. 학회 워크숍에 제출할 수 있는 수준이 되는 것을 목표로 하자.
+**마일스톤**: 기존 논문의 방법을 수정/개선한 실험을 하고, 그 결과를 정량적으로 비교한다. 학회 워크숍 제출을 목표로 한다.
 
 ### 학습 순서 요약
 
@@ -383,43 +376,41 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 ## 20.8 연구 실전
 
-*대학원 수준.* 논문 읽기·쓰기, 실험 설계, 학회 발표, peer review는 [research-notes](../research-notes/guide.html)에서, 박사과정의 장기 운영은 [grad-notes](../grad-notes/guide.html)에서 자세히 다룬다. 여기서는 SLAM·CV·로보틱스에 직접 적용되는 항목을 연결한다.
-
-연구를 운영할 때는 방향, 지속 가능한 작업 방식, 도구를 함께 살펴야 한다.
+*대학원 수준.* 논문 읽기·쓰기, 실험 설계, 학회 발표, peer review는 [research-notes](../research-notes/guide.html)에서, 박사과정의 장기 운영은 [grad-notes](../grad-notes/guide.html)에서 자세히 다룬다.
 
 ### 20.8.0 연구자 마인드셋
 
-- 방향·엔진·도구 세 layer + 통합 frame → [「대학원노트」 Ch.17 — 연구가 삶이 되는 조건](../grad-notes/guide.html#chapter-17) § 5
-- 자율성의 무게 + Hyun *모든 것이 optimization* + optimization horizon = 장기전 → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#chapter-14) § 1
-- 꾸준함 vs 폭발적 성장 + 옆 사람 속도 비교 함정 → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#chapter-15) § 3
-- 견고한 기초 — *리젝 이유가 없는 논문* frame → [「연구노트」 Ch.16 — 마음가짐](../research-notes/guide.html#chapter-16) § 1
+- 연구의 방향, 오래 버티는 작업 방식, 도구 → [「대학원노트」 Ch.17 — 연구가 삶이 되는 조건](../grad-notes/guide.html#chapter-17) § 5
+- 스스로 정해야 하는 대학원 생활과 장기전 → [「대학원노트」 Ch.14 — 자율성의 무게](../grad-notes/guide.html#chapter-14) § 1
+- 꾸준한 성장과 옆 사람과 속도를 비교하는 함정 → [「대학원노트」 Ch.15 — 비교의 함정](../grad-notes/guide.html#chapter-15) § 3
+- 떨어뜨릴 이유가 없는 논문 → [「연구노트」 Ch.16 — 마음가짐](../research-notes/guide.html#chapter-16) § 1
 
 ### 20.8.1 논문 쓰기
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조와 Introduction의 문제 정의·기존 한계·접근·contribution 구성은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)와 [「연구노트」 Ch.23 — Introduction](../research-notes/guide.html#chapter-23)에서 다룬다.
+Abstract → Introduction → Related Work → Method → Experiments → Conclusion 구조와 Introduction의 문제 정의·기존 한계·접근·contribution 구성은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)와 [「연구노트」 Ch.23 — 서론은 어떻게 좁혀지는가](../research-notes/guide.html#chapter-23)에서 다룬다.
 
 ### 20.8.2 실험 설계와 Ablation
 
-SLAM·CV 실험에서는 ablation, 변인 통제, 반복 실험, 같은 데이터·split·하드웨어에서의 비교가 필요하다. 다른 논문의 baseline 숫자를 그대로 가져오면 조건 차이 때문에 공정한 비교가 되지 않을 수 있다.
+SLAM·CV 실험에는 ablation, 변인 통제, 반복 실험이 필요하다. 비교는 같은 데이터, split, 하드웨어에서 한다. 다른 논문의 baseline 숫자를 그대로 가져오면 조건이 달라 공정한 비교가 되지 않는다.
 
 ### 20.8.3 학회 발표
 
-5분·20분 발표의 slide budget, 포스터 30초 elevator pitch와 2분 walk-through — 본격 가이드는 [「연구노트」 Part 4 — 발표](../research-notes/guide.html#chapter-33).
+5분·20분 발표의 슬라이드 수는 [「연구노트」 Ch.34 — 학회 2-3주 전 체크리스트](../research-notes/guide.html#chapter-34)에서, 학회장에서 처음 말을 거는 30초는 [Ch.35](../research-notes/guide.html#chapter-35)에서 다룬다.
 
 ### 20.8.4 논문 리뷰 — Peer Review
 
-리뷰어 관점 체크리스트(novelty·soundness·experiments·clarity·reproducibility), 건설적 피드백, rebuttal — 본격 가이드는 [「연구노트」 Ch.10 — Reviewer로 읽기](../research-notes/guide.html#chapter-10) (reviewer로 읽기) + [「연구노트」 Ch.32 — Revision/Rebuttal](../research-notes/guide.html#chapter-32) (rebuttal 작성).
+건설적인 피드백을 쓰는 법은 [「연구노트」 Ch.10 — 심사위원으로 읽기](../research-notes/guide.html#chapter-10)에서, rebuttal 작성은 [「연구노트」 Ch.32 — 개정과 답변서](../research-notes/guide.html#chapter-32)에서 다룬다.
 
 ### 20.8.5 도구
 
 - LaTeX: Overleaf 또는 로컬 (texlive + vscode)
-- 참고 문헌: PDF 리더에서 원문을 표시하고 Zotero + Better BibTeX로 서지 정보를 관리한다. AI 요약·related work 비교·BibTeX 초안은 원문과 DOI 메타데이터를 대조한 뒤 사용한다.
+- 참고 문헌: PDF 리더로 원문에 표시해 두고 Zotero + Better BibTeX로 서지 정보를 관리한다. AI가 만든 요약, related work 비교, BibTeX 초안은 원문과 DOI 메타데이터에 맞춰 본 뒤 쓴다.
 - 파이프라인 그림: TikZ (정밀), draw.io (빠른 제작), Inkscape (SVG)
 - 테이블: booktabs (\toprule, \midrule, \bottomrule)
 - 알고리즘: algorithm2e
 - 수식: notation table을 따로 만들어 논문 전체에서 통일
 
-LaTeX 표기와 notation table, 수식 설명을 통일하는 방법은 [「연구노트」 Ch.30 — 수식·정리·증명 쓰기](../research-notes/guide.html#chapter-30)에서 다룬다.
+수식 표기를 통일하고 수식을 문장 안에서 설명하는 방법은 [「연구노트」 Ch.30 — 수식·정리·증명 쓰기](../research-notes/guide.html#chapter-30)에서 다룬다.
 
 > 추천 자료:
 > - [How to Write a Great Research Paper (Simon Peyton Jones, Microsoft Research)](https://www.microsoft.com/en-us/research/academic-program/write-great-research-paper/) — 논문 쓰기의 고전 강연

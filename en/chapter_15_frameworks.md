@@ -318,7 +318,7 @@ For example, Eigen and Sophus are core libraries in robotics for handling coordi
 2022 ─── ROS2 Humble LTS released
   │       Industry adoption accelerates, Nav2/MoveIt2 stabilize
   │
-2024 ─── ROS1 Noetic EOL (end of support)
+2025 ─── ROS1 Noetic EOL (end of support)
   │       The effective deadline for the ROS2 transition
   │
 2025+ ── Era of embodied AI + foundation models

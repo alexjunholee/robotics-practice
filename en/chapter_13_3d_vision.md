@@ -77,7 +77,7 @@ In practice, Open3D is good for prototyping because you can use it directly from
 
 ### 13.2.1 Filtering
 
-Raw point clouds are noisy and have uneven point density. Using them as-is slows down downstream algorithms (registration, segmentation, and so on) or degrades their results. Filtering is the first stage of every point cloud pipeline.
+Raw point clouds are noisy and have uneven point density. Using them as-is slows down downstream algorithms (registration, segmentation, and so on) or degrades their results. Filtering is the first stage of most point cloud pipelines.
 
 **Voxel grid downsampling**:
 Partition the space into a grid and collapse the points in each cell into one.
@@ -403,7 +403,7 @@ f(x) < 0  : inside the surface
 f(x) = 0  : on the surface (zero level set)
 ```
 
-The key property of an SDF: its gradient has unit magnitude everywhere (Eikonal equation).
+The key property of an SDF: its gradient has unit magnitude wherever it is differentiable (Eikonal equation).
 
 ```
 ||∇f(x)|| = 1

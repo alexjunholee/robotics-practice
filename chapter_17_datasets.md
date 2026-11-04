@@ -1,16 +1,14 @@
 # Ch.17 — 데이터셋 & 벤치마크
 
-데이터셋의 센서 구성, 수집 조건, split, annotation은 학습 결과와 비교가 성립하는 범위를 정한다. 연구에 널리 쓰이는 주요 벤치마크의 구조를 비교하고 자체 데이터를 수집·관리하는 절차를 차례로 짚는다.
+데이터셋의 센서 구성, 수집 조건, split, annotation 방식에 따라 학습한 모델이 어떤 환경까지 통하는지, 어떤 결과끼리 비교할 수 있는지가 정해진다.
 
-최근 **합성 데이터(Synthetic Data)**의 비중이 커지고 있다. 실제 데이터 수집과 라벨링에는 비용과 시간이 많이 들기 때문에, 시뮬레이터가 자동 생성한 합성 데이터로 사전학습한 뒤 소량의 실제 데이터로 미세조정(fine-tuning)하는 방식을 쓴다. NVIDIA Isaac Sim의 Domain Randomization과 Habitat의 대규모 장면 생성이 대표적이다. 시뮬레이터 데이터와 대응하는 실제 데이터를 쌍으로 제공하는 **Sim-to-Real 데이터셋**도 활발히 구축되고 있다.
+실제 데이터를 모으고 라벨을 붙이는 데는 비용과 시간이 많이 든다. 그래서 시뮬레이터로 합성 데이터(Synthetic Data)를 만들어 사전학습하고, 적은 양의 실제 데이터로 파인튜닝(fine-tuning)하는 방식을 함께 쓴다. NVIDIA Isaac Sim에서 Domain Randomization으로 합성 영상을 만들거나, Habitat에서 대규모 3D 스캔 장면을 렌더링해 학습 데이터를 만드는 것이 그 예다.
 
 ## 17.1 자율주행/로봇 데이터셋
 
 ### 17.1.1 KITTI / KITTI360
 
-자율주행 연구의 시작점이 된 오래된 데이터셋이다.
-
-KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으로 쓰여 왔다. 더 크고 다양한 데이터셋이 나온 뒤에도 VO·SLAM, stereo depth estimation 결과를 과거 연구와 비교할 때 자주 사용된다.
+KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으로 쓰여 왔다. 연구자들은 지금도 VO·SLAM과 stereo depth estimation 결과를 과거 연구와 비교할 때 KITTI를 쓴다.
 
 구성:
 - 스테레오 카메라
@@ -25,8 +23,6 @@ KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으
 - 3D object detection
 - Semantic segmentation
 
-다운로드: https://www.cvlibs.net/datasets/kitti/
-
 > **추천 자료**
 > - [KITTI Benchmark 공식 사이트](https://www.cvlibs.net/datasets/kitti/) — 데이터셋 다운로드 및 각 태스크별 리더보드 확인
 > - [KITTI-360 사이트](https://www.cvlibs.net/datasets/kitti-360/) — 더 넓은 범위의 360도 데이터셋
@@ -34,9 +30,7 @@ KITTI는 2012년 공개 뒤 자율주행과 3D 비전의 공통 비교 기준으
 
 ### 17.1.2 nuScenes
 
-대규모 자율주행 데이터셋이다.
-
-KITTI보다 센서 구성이 풍부하고(360도 카메라, Radar 포함) 데이터 규모도 크다. 3D Object Detection과 BEV(Bird's Eye View) 기반 인식 연구에서 KITTI와 함께 표준 평가셋으로 자리 잡았다.
+Motional(당시 nuTonomy)이 2019년에 공개한 자율주행 데이터셋이다. 360도 카메라와 Radar를 갖췄고, 3D Object Detection과 BEV(Bird's Eye View) 인식 연구에서 평가셋으로 많이 쓰인다.
 
 구성:
 - 6개 카메라 (360° 커버)
@@ -49,7 +43,7 @@ KITTI보다 센서 구성이 풍부하고(360도 카메라, Radar 포함) 데이
 - 풍부한 Annotation (속성, 가시성)
 - 밤, 비 등 다양한 조건
 
-평가 메트릭: mAP, NDS
+평가 메트릭: mAP, NDS(nuScenes Detection Score)
 
 > **추천 자료**
 > - [nuScenes devkit Documentation](https://www.nuscenes.org/nuscenes) — 데이터셋 사용법, devkit API, 튜토리얼 노트북
@@ -57,9 +51,7 @@ KITTI보다 센서 구성이 풍부하고(360도 카메라, Radar 포함) 데이
 
 ### 17.1.3 Waymo Open Dataset
 
-Waymo(Alphabet 산하)가 공개한 대규모 자율주행 데이터셋이다.
-
-nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이터 품질이 높고 규모가 크며, 매년 챌린지를 통해 최신 기술 동향을 확인할 수 있다.
+Waymo(Alphabet 산하)가 2019년에 공개한 자율주행 데이터셋이다.
 
 규모:
 - 1,150 장면 (20초)
@@ -67,7 +59,6 @@ nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이�
 - 12M 카메라 라벨
 
 특징:
-- 높은 품질의 센서
 - 다양한 환경 (도시, 교외, 밤)
 - 연간 챌린지 개최
 
@@ -77,7 +68,7 @@ nuScenes와 함께 최신 자율주행 연구의 대표 벤치마크다. 데이�
 
 ### 17.1.4 RGB-D SLAM 및 VIO / VINS용 데이터셋
 
-TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰이는 데이터셋이다.
+TUM RGB-D는 실내 RGB-D SLAM 평가에, EuRoC MAV는 드론 VIO(Visual-Inertial Odometry, 카메라·IMU 결합 주행 거리 추정) 평가에 많이 쓴다.
 
 **TUM RGB-D**:
 - RGB-D 카메라 시퀀스
@@ -99,19 +90,17 @@ TUM RGB-D와 EuRoC MAV는 각각 실내 RGB-D SLAM과 드론 VIO 평가에 쓰�
 
 ### 17.2.1 ImageNet
 
-이미지 분류의 표준 벤치마크이다.
-
-딥러닝 전환기의 출발점이 된 데이터셋이다. 2012년 AlexNet이 ImageNet에서 큰 성능 향상을 보인 뒤, ImageNet 사전학습(pretrained) 가중치는 여러 비전 모델의 표준적인 출발점이 됐다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)에 ImageNet 사전학습 모델을 널리 쓴다.
+이미지 분류 벤치마크다. 2012년 AlexNet이 ImageNet 분류 대회(ILSVRC)에서 top-5 오류율을 크게 낮춘 뒤, ImageNet 사전학습(pretrained) 가중치는 여러 비전 모델의 초기값으로 쓰였다. 로보틱스에서도 카메라 기반 인식 모듈의 백본(backbone)에 ImageNet 사전학습 모델을 널리 쓴다.
 
 - 1000 클래스
 - 120만 학습 이미지
-- 사전학습(pretraining) 표준
+- 사전학습 표준
 
 ### 17.2.2 COCO
 
 COCO는 객체 탐지와 instance segmentation을 함께 평가한다.
 
-COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU threshold를 쓰는 PASCAL VOC 방식과 구분해야 한다.
+COCO mAP는 여러 IoU(Intersection over Union, 예측 영역과 정답 영역의 겹침 비율) threshold에서 AP를 계산해 평균한다. 기본값은 IoU 0.50부터 0.95까지 0.05 간격의 10개 threshold다. PASCAL VOC는 IoU 0.5 하나로 AP를 계산한다.
 
 특징:
 - 80 객체 카테고리
@@ -127,7 +116,7 @@ COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU 
 ### 17.2.3 ScanNet / NYU Depth V2
 
 **ScanNet**:
-- 1513개 실내 장면
+- 실내 공간 707곳을 찍은 RGB-D 스캔 1513개
 - RGB-D 시퀀스
 - 3D semantic segmentation
 - 카메라 포즈, 메시 제공
@@ -137,20 +126,17 @@ COCO mAP는 여러 IoU threshold에서 AP를 계산해 평균한다. 단일 IoU 
 - Depth estimation 벤치마크
 - 464 장면, 407K 프레임
 
-실내 로봇(가정용, 서비스 로봇 등)을 다룬다면 ScanNet과 NYU Depth V2는 핵심 벤치마크다. 특히 ScanNet은 3D 장면 이해(Scene Understanding) 연구에서 빠지지 않는다.
+가정용·서비스 로봇처럼 실내에서 움직이는 로봇을 다룰 때 ScanNet과 NYU Depth V2로 성능을 비교한다. 3D 장면 이해(Scene Understanding) 연구에는 ScanNet을 많이 쓴다.
 
 > **추천 자료**
 > - [COCO Dataset](https://cocodataset.org/) — 공식 사이트, 데이터셋 다운로드 및 evaluation 도구
 > - [ScanNet Benchmark](http://www.scan-net.org/) — 3D Scene Understanding 벤치마크
-> - [Papers With Code - Datasets](https://paperswithcode.com/datasets) — 태스크별 데이터셋 검색 및 리더보드 통합 사이트
 
 ## 17.3 데이터셋 활용법
 
 ### 17.3.1 다운로드 및 포맷 이해
 
-각 데이터셋마다 고유한 디렉토리 구조와 포맷이 있다.
-
-데이터셋을 내려받고도 디렉터리 구조와 라벨 포맷을 이해하지 못하면 데이터 로더 작성에만 며칠이 걸릴 수 있다. 특히 3D 라벨은 데이터셋마다 좌표계(coordinate system)가 다르므로(카메라 좌표계 vs LiDAR 좌표계, y-up vs z-up 등) 문서를 꼼꼼히 읽어야 한다.
+데이터셋마다 디렉터리 구조와 라벨 포맷이 다르다. 데이터 로더를 짜기 전에 문서에서 이 둘을 먼저 확인한다. 3D 라벨은 데이터셋마다 기준 좌표계(카메라 좌표계나 LiDAR 좌표계, y-up이나 z-up)가 달라서 특히 꼼꼼히 읽는다.
 
 예시 — KITTI Object Detection:
 
@@ -184,9 +170,7 @@ with open('label.txt', 'r') as f:
 
 ### 17.3.2 DataLoader 구현
 
-PyTorch에서 데이터 로딩을 위한 표준 패턴이다.
-
-PyTorch의 `Dataset`은 샘플 읽기와 전처리를 정의하고, `DataLoader`는 batch 구성과 병렬 로딩을 맡는다. `__getitem__`의 전처리 비용과 `num_workers` 설정은 학습 처리량에 영향을 준다.
+PyTorch에서 샘플 읽기와 전처리는 `Dataset`에 정의한다. batch 구성과 병렬 로딩은 `DataLoader`가 맡는다. `__getitem__`의 전처리 비용과 `num_workers` 값에 따라 학습 처리량이 달라진다.
 
 ```python
 from torch.utils.data import Dataset, DataLoader
@@ -220,18 +204,16 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 ```
 
 > **추천 자료**
-> - [PyTorch Data Loading Tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html) — 커스텀 Dataset 작성 공식 가이드
-> - [Real Python - PyTorch DataLoader](https://realpython.com/python-data-loading/) — DataLoader 활용법 상세 설명
+> - [PyTorch Data Loading Tutorial](https://docs.pytorch.org/tutorials/beginner/data_loading_tutorial.html) — 커스텀 Dataset 작성 공식 가이드
+> - [PyTorch 공식 문서 — torch.utils.data](https://docs.pytorch.org/docs/stable/data.html) — DataLoader의 batch·sampler·`num_workers`·`collate_fn` 옵션 레퍼런스
 
 ## 17.4 자체 데이터 수집
 
-공개 데이터셋만으로는 자기 연구에 딱 맞는 데이터를 구하기 어렵다. 자체 로봇에 맞는 센서 구성, 특수한 환경 조건을 위해 직접 데이터를 수집해야 할 때가 있다. 이때 센서 동기화, 캘리브레이션, 라벨링 과정을 체계적으로 해 두지 않으면 나중에 데이터를 쓸 수 없게 된다.
+자기 로봇의 센서 구성이나 특수한 환경 조건에 맞는 데이터가 필요하면 직접 수집한다. 수집할 때는 센서 동기화, 캘리브레이션, 라벨링을 처음부터 정해 둔 절차대로 진행한다.
 
 ### 17.4.1 센서 동기화
 
-여러 센서의 데이터를 시간 동기화하지 않으면 퓨전 자체가 의미가 없다.
-
-카메라와 LiDAR의 타임스탬프가 10 ms만 어긋나도 고속 주행 시 수십 cm의 위치 오차가 생긴다. 센서 퓨전의 기본 전제가 "같은 시점의 데이터"인데, 동기화가 안 되면 그 전제가 무너진다.
+센서 퓨전은 여러 센서가 같은 시점에 잰 데이터를 합친다고 가정한다. 카메라와 LiDAR의 타임스탬프가 10 ms 어긋나면, 30 m/s(108 km/h)로 달리는 차에서 약 30 cm의 위치 오차가 생긴다.
 
 하드웨어 동기화:
 - 트리거 신호로 동시 촬영
@@ -241,7 +223,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 - 타임스탬프 기반 근사 동기화
 - 보간(interpolation) 사용
 
-ROS의 `message_filters`는 메시지 header의 stamp를 기준으로 동기화한다. header가 없는 메시지에 `allow_headerless`를 지정할 때만 도착 시점을 쓴다:
+ROS의 `message_filters`는 메시지 header의 stamp를 기준으로 동기화한다. header가 없는 메시지에 `allow_headerless`를 지정하면 도착 시점을 쓴다:
 
 ```python
 import message_filters
@@ -267,7 +249,7 @@ Camera-LiDAR Extrinsic:
 
 Camera-IMU: Kalibr 사용 권장
 
-캘리브레이션이 부정확하면 카메라에서 본 객체 위치와 LiDAR에서 본 객체 위치가 일치하지 않는다. 센서 퓨전 정확도는 캘리브레이션 품질에 달려 있다. 선형대수 기준으로 보면, intrinsic은 3×3 카메라 행렬 K다. extrinsic은 카메라 투영에 들어갈 때는 3×4 블록 [R|t]이고, 센서 간 좌표 변환으로 쓸 때는 아래에 [0 0 0 1] 행을 붙인 4×4 동차 변환이다.
+캘리브레이션 오차가 있으면 카메라에서 본 객체 위치와 LiDAR에서 본 객체 위치가 어긋나고, 그만큼 퓨전 결과도 틀어진다. 행렬로 쓰면 intrinsic은 3×3 카메라 행렬 K다. extrinsic을 카메라 투영에 넣을 때는 3×4 블록 [R|t]로 쓴다. 센서 간 좌표 변환에 쓸 때는 여기에 [0 0 0 1] 행을 붙여 4×4 동차 변환으로 만든다.
 
 > **추천 자료**
 > - [OpenCV Camera Calibration Tutorial](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html) — 체커보드 기반 카메라 캘리브레이션
@@ -275,7 +257,7 @@ Camera-IMU: Kalibr 사용 권장
 
 ### 17.4.3 라벨링 도구
 
-데이터를 수집했으면 라벨링(annotation)을 해야 한다. 라벨링은 연구에서 가장 시간이 많이 드는 작업 중 하나이며, 라벨 품질이 모델 성능을 좌우한다. SAM(Segment Anything Model) 같은 기초 모델을 활용한 반자동 라벨링도 2023년 이후 연구 환경에서 쓰이기 시작했다.
+수집한 데이터에는 라벨(annotation)을 붙인다. 라벨링에는 시간이 많이 들고, 라벨 품질에 따라 모델 성능이 달라진다. 2023년 SAM(Segment Anything Model)이 공개된 뒤로 SAM을 쓴 반자동 라벨링 도구가 나왔다.
 
 **CVAT (Computer Vision Annotation Tool)**:
 - 웹 기반, 무료
@@ -291,43 +273,33 @@ Camera-IMU: Kalibr 사용 권장
 - SUSTechPOINTS: LiDAR 포인트 클라우드
 - KITTI-360 labeling tool
 
-합성 데이터를 통한 자동 라벨링: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 생성하면 라벨도 함께 만들어지므로 수동 라벨링을 줄일 수 있다. Domain Randomization으로 텍스처, 조명, 배경을 무작위 변형하면 모델의 일반화 성능도 높일 수 있다. 실제 데이터 수집·수동 주석 비용을 줄일 수 있지만, 시뮬레이터 구축·렌더링·검수 비용은 남는다.
+합성 데이터로 라벨 자동 생성: 시뮬레이터(NVIDIA Isaac Sim, AI2-THOR 등)에서 데이터를 만들면 라벨이 함께 나와 수동 라벨링이 줄어든다. Domain Randomization은 텍스처, 조명, 배경을 무작위로 바꿔 가며 데이터를 만든다. Tobin et al.(2017)은 이렇게 만든 시뮬레이션 영상만으로 학습한 물체 위치 검출기가 실제 로봇에서도 동작함을 보였다. 실제 데이터 수집과 수동 라벨링 비용은 줄지만, 시뮬레이터를 꾸미고 렌더링하고 결과를 검수하는 비용이 새로 든다.
 
 > **추천 자료**
 > - [CVAT Documentation](https://docs.cvat.ai/) — 오픈소스 라벨링 도구 공식 문서
-> - [Roboflow](https://roboflow.com/) — 라벨링, 데이터 증강, 모델 학습을 통합 제공하는 플랫폼
-> - [NVIDIA Isaac Sim - Synthetic Data Generation](https://docs.omniverse.nvidia.com/isaacsim/latest/replicator_tutorials/index.html) — 합성 데이터 생성 가이드
+> - [Roboflow](https://roboflow.com/) — 라벨링, 데이터 증강, 모델 학습을 한 서비스에서 처리하는 플랫폼
+> - [NVIDIA Isaac Sim - Synthetic Data Generation](https://docs.isaacsim.omniverse.nvidia.com/latest/replicator_tutorials/index.html) — 합성 데이터 생성 가이드
 
 ## 기술 흐름: 데이터셋 & 벤치마크의 과거 → 현재 → 미래
 
 ```
 2009 ─── ImageNet 공개
-  │       대규모 이미지 분류 벤치마크의 시작
+  │       WordNet 계층에 맞춰 모은 대규모 이미지 데이터베이스 (CVPR 2009)
   │
 2012 ─── KITTI 공개 / AlexNet의 ImageNet 제패
-  │       자율주행 벤치마크의 탄생, 딥러닝 혁명 시작
   │
 2014 ─── COCO 공개
-  │       Object Detection, Segmentation 표준 벤치마크
   │
 2017 ─── ScanNet 공개
-  │       실내 3D Scene Understanding 연구 활성화
   │
 2019 ─── nuScenes, Waymo Open Dataset 공개
-  │       대규모·고품질 자율주행 데이터셋 시대
   │
-2020 ─── 합성 데이터 연구 본격화
-  │       Domain Randomization, Sim-to-Real Transfer
-  │       NVIDIA Isaac Sim 기반 대규모 합성 데이터 생성
+2021 ─── Omniverse 기반 NVIDIA Isaac Sim 공개 (2021.1)
   │
-2023 ─── Foundation Model 시대의 데이터셋
-  │       SA-1B (SAM 학습용, 10억 마스크)
+2023 ─── SA-1B, Open X-Embodiment 공개
+  │       SA-1B (SAM 학습용, 약 11억 마스크)
   │       Open X-Embodiment (로봇 조작 데이터 통합)
   │
-2024+ ── 데이터셋의 미래 트렌드
-          합성 데이터 + 실제 데이터 혼합 학습 보편화
-          Sim-to-Real 데이터셋 (시뮬·실제 쌍 데이터)
-          자동 라벨링 (Foundation Model 기반)
-          로봇 조작 데이터의 대규모 수집·공유 (Open X-Embodiment)
-          멀티모달 데이터셋 (비전 + 언어 + 촉각 + 힘/토크)
+2024 ─── DROID 공개 (RSS 2024)
+          Franka 로봇 조작 시연 76k 궤적(350시간), 564개 장면에서 수집
 ```

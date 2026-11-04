@@ -29,7 +29,7 @@ Sensors always carry noise. Wheels slip, camera images shake. This uncertainty a
 | Compute | Light | Heavy |
 
 > **Further reading**
-> - [Cyrill Stachniss — SLAM Course (University of Bonn)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — a public lecture series running from Bayes filters to graph-based SLAM.
+> - [Cyrill Stachniss — SLAM Course (2013)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — a public lecture series running from Bayes filters to graph-based SLAM.
 > - [Thrun, Burgard, Fox, "Probabilistic Robotics" (Textbook)](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/) — Textbook covering the mathematical foundations of SLAM. Kalman filter, particle filter, EKF-SLAM, and more.
 > - [Barfoot, "State Estimation for Robotics" (Free PDF)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Textbook with deep coverage of the mathematics of state estimation. Free PDF available.
 > - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — Curated list of SLAM-related papers, libraries, and datasets.
@@ -43,7 +43,7 @@ Sensors always carry noise. Wheels slip, camera images shake. This uncertainty a
 
 ### 14.2 Visual Odometry (VO)
 
-Estimate relative motion from the camera alone. This corresponds to the SLAM "front-end"; if the motion estimated here is inaccurate, the entire SLAM system falls apart.
+Estimate relative motion from the camera alone. This corresponds to the SLAM "front-end"; if the motion estimated here is inaccurate, the estimation accuracy of the entire SLAM system degrades.
 
 #### 14.2.1 Feature-based vs Direct Method
 
@@ -836,32 +836,30 @@ Modern VIO/LIO systems such as VINS-Mono, ORB-SLAM3 (visual-inertial mode), and 
 
 Run a SLAM/VIO system and you run into phenomena like "why is drift so bad in this situation?" and "why does the pose wobble when I stand still?" Many of these phenomena stem from limits of the system's **observability**.
 
-**Unobservable states of visual-inertial systems**: VIO has 4 degrees of freedom that cannot be estimated (unobservable):
+**Unobservable states of visual-inertial systems**: Hesch et al. (2014) analyzed an ideal linearized VINS model that undergoes arbitrary motion while observing a single point feature, and found the following 4 directions to be unobservable:
 
 1. **Global position (3 DoF)** — The absolute position is unknown. Without an absolute reference like GPS, you can only treat the starting point as the origin.
 2. **Global yaw (1 DoF)** — The rotation (heading) about the gravity-direction axis. Without a compass, you cannot tell "which way is north."
 
-On the other hand, the following are observable:
-- **Roll/pitch**: The IMU accelerometer senses the gravity direction, so roll/pitch relative to gravity can be estimated.
-- **Scale** (when stereo/IMU is present): The stereo camera's baseline or the IMU's acceleration measurement lets you recover scale. However, **with a monocular camera alone, scale is unobservable**.
+This result applies to the stated model and motion conditions. Whether roll/pitch, metric scale, IMU bias, and calibration parameters can be estimated depends on the sensor configuration and on motion excitation. A stereo baseline provides a metric reference, but monocular images alone cannot determine scale. Monocular VIO estimates scale by also using IMU measurements under sufficiently informative motion.
 
 **Degenerate motion** — Under specific motion patterns, additional states become unobservable:
 
-- **Pure rotation**: In monocular VO, translation cannot be estimated. The reason is that in epipolar geometry the epipole goes to infinity. This is the cause of the practical phenomenon "tracking breaks when you rotate the camera in place."
-- **Constant velocity**: The IMU accelerometer distinguishes gravity from acceleration, and when there is no acceleration (constant velocity), the accelerometer bias cannot be distinguished from a small error in the gravity direction. IMU bias becomes unobservable.
-- **Stationary**: A special case of constant velocity. Stand still and there is no parallax in the visual features and no IMU acceleration, so both bias and scale are unobservable. This is the answer to "why does VINS drift when I stand still?"
+- **Pure rotation**: With no translational parallax, translation cannot be recovered from monocular images alone. Estimating the rotation itself and whether tracking can continue are separate matters.
+- **Insufficient motion during initialization**: If monocular VIO initialization observes only constant-velocity motion or a stationary state, multiple solutions for the IMU bias can remain. Scale, gravity, and bias initialization can then become weak; the exact degeneracy depends on the state and measurement models.
 
 **Problem in EKF-based systems**: Apply a standard EKF to VIO and, due to linearization error, the covariance shrinks even along theoretically unobservable directions (the uncertainty is reduced artificially). This is a major cause of inconsistency.
 
 **OC-EKF (Observability-Constrained EKF)**: To fix this problem, the EKF's Jacobian is modified to preserve the null space of the unobservable directions. It forces the estimator to "keep not knowing what it does not know."
 
 Practical implications:
-- When using a VIO system, initialize by **moving in diverse directions**. With motion in only one direction, IMU bias cannot be estimated reliably.
-- A VIO without loop closure will always drift over long-term operation. Error along the unobservable yaw direction keeps accumulating.
-- Monocular VIO's scale is observable only when there is acceleration/deceleration. Moving at a constant velocity produces scale drift.
+- During VIO initialization, provide enough rotational and translational motion to meet the conditions of the implementation you use, and check the convergence indicators for scale, gravity, and bias.
+- Loop closure can reduce accumulated drift through revisit constraints, but it does not by itself create a new absolute reference for global position or yaw.
+- Because monocular VIO's metric scale is not determined by images alone, check that the IMU measurements and motion during initialization provide enough information.
 
 > **Further reading**
-> - [Hesch et al., "Consistency Analysis and Improvement of Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6672119) — The original paper for OC-EKF/OC-VINS.
+> - [Hesch et al., "Consistency Analysis and Improvement of Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6605544) — The original paper for OC-EKF/OC-VINS.
+> - [Hong & Lim, "Visual-Inertial Odometry with Robust Initialization and Online Scale Estimation" (Sensors 2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6308559/) — An implementation example that addresses the conditions under which initialization weakens during constant-velocity or stationary segments.
 > - Barfoot, "State Estimation for Robotics" Ch.9 — Theoretical foundation of observability analysis.
 > - [Huang & Dissanayake, "A critique of current developments in Simultaneous Localization and Mapping" (IJRR 2016)](https://journals.sagepub.com/doi/10.1177/0278364916643566) — A critical summary of observability/consistency issues in SLAM.
 
