@@ -2,15 +2,15 @@
 
 ## 19.1 The Order of Work at the Robot
 
-AI coding agents are useful for small ROS2 nodes, launch files, log summaries, and experiment-script cleanup. In a robot experiment, first capture the current state in command output: whether the sensors are visible, the topics exist, the QoS settings match, and the devices are mapped into the container.
+AI coding agents are genuinely helpful for drafting small ROS2 nodes, launch files, log summaries, and cleanup scripts for experiments. When debugging on a physical robot, however, always start by capturing live runtime state in terminal output: verify that sensors are enumerated, expected topics exist, QoS profiles match, and hardware devices are mapped into the container.
 
-A detailed workflow is available in [*Researching with AI and Robotics*, Ch.11 — Record the Conditions of Robot Experiments](../../ai-research-practice/guide.html#part-03-rules-11장-로봇-실험의-조건을-기록한다). This chapter keeps only the runtime observations needed while reading `robotics-practice`.
+For the full workflow, see [*Researching with AI and Robotics*, Ch.11 — Record the Conditions of Robot Experiments](../../ai-research-practice/guide.html#part-03-rules-11장-로봇-실험의-조건을-기록한다). This chapter summarizes only the runtime checks you need on hand while working through `robotics-practice`.
 
 ## 19.2 Runtime Signals to Capture First
 
-The robot's current state is not visible from code alone. Check ROS2 topics, DDS QoS, `/clock`, the TF buffer, Docker device mapping, the USB bus, the LiDAR IP address, camera exposure, and the Jetson architecture in command output.
+You cannot read a robot's current state from source code alone. Check ROS2 topics, DDS QoS profiles, `/clock`, the TF buffer, Docker device mappings, the USB bus, the LiDAR IP address, camera exposure, and the Jetson architecture directly from live command output.
 
-When a problem appears, first inspect these signals.
+When something breaks, capture these baseline signals first:
 
 ```bash
 ros2 topic list
@@ -21,25 +21,25 @@ sudo dmesg | tail -30
 lsusb -t
 ```
 
-For LiDAR and networked sensors, inspect the packets first.
+If you are debugging LiDAR or other networked sensors, verify packet delivery next:
 
 ```bash
 ping 192.168.1.201
 sudo tcpdump -i eth0 udp port 2368 -c 10
 ```
 
-Use the commands below to inspect camera devices and supported video formats.
+For camera issues, check which video devices are attached and which pixel formats or frame rates they advertise:
 
 ```bash
 v4l2-ctl --list-devices
 v4l2-ctl -d /dev/video0 --list-formats-ext
 ```
 
-Without these outputs, defer the diagnosis. Correct code still fails when a required device is missing inside the container, when the QoS settings form an incompatible combination, or when multiple sensors share the same USB controller and run short of bandwidth and power.
+Hold off on guessing a root cause until you have these outputs. Even bug-free code will fail if a device node never made it into the container, if publisher and subscriber QoS profiles are incompatible, or if multiple sensors share the same USB controller and run short of bandwidth or power.
 
 ## 19.3 Information to Attach to a Question
 
-For a robot runtime problem, attach at least the following bundle.
+Whenever you ask a colleague or an AI agent to help diagnose a robot runtime issue, attach at least the following context bundle:
 
 ```text
 OS / ROS version:
@@ -55,10 +55,10 @@ dmesg or device log:
 what changed since last working run:
 ```
 
-This bundle is the basis for evaluating an answer. Before executing a suggestion, verify package support, the current configuration, device permissions, the target architecture, and the metric conditions.
+This bundle gives anyone reading the question a concrete basis for evaluating a fix. Before running any suggested command or patch, verify package support, your active configuration, device permissions, the target CPU/GPU architecture, and the metric conditions.
 
 ## 19.4 Where to Read Next
 
-For a detailed checklist on robot runtime and collaboration with an AI agent, see [`ai-research-practice` Ch.11 and Appendix F](../../ai-research-practice/guide.html#part-03-rules-11장-로봇-실험의-조건을-기록한다).
+For a complete checklist on robot runtime logs and collaborating effectively with AI agents, see [`ai-research-practice` Ch.11 and Appendix F](../../ai-research-practice/guide.html#part-03-rules-11장-로봇-실험의-조건을-기록한다).
 
-Chapters 1–10 and 12–13 of the same guide cover the general principles for turning an AI answer into research action. Reading them together with the runtime checklist clarifies how to compare papers with code, preserve the conditions behind experimental numbers, and connect reviewer claims to evidence.
+Chapters 1–10 and 12–13 of that same guide lay out broader principles for turning AI-assisted answers into sound research practice. Reading them alongside the runtime checklist helps you compare papers against actual code, keep experimental conditions intact behind every reported number, and tie reviewer claims directly to evidence.

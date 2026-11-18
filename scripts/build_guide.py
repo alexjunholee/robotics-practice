@@ -33,6 +33,10 @@ def read_chapters(lang):
     else:
         pattern = os.path.join(EN_DIR, "chapter_*.md")
     files = sorted(glob.glob(pattern))
+    if lang == "ko":
+        # 본문 1~20장, 부록(A~E), 부록 F 순서
+        order = [f"{i:02d}" for i in list(range(1, 18)) + [19, 20, 22, 21, 18]]
+        files.sort(key=lambda f: order.index(os.path.basename(f)[8:10]))
     parts = []
     for f in files:
         with open(f, "r", encoding="utf-8") as fh:

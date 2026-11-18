@@ -1,28 +1,14 @@
 # Ch.16 — Development Environment & Tools
 
-Robotics research code depends heavily on precise combinations of CUDA, Python, ROS, and system library versions. Reproducible workflows rely on disciplined language toolchains, isolated package environments, and containerized Docker images.
+The frameworks and simulators introduced in Ch.15 depend heavily on exact combinations of Ubuntu, CUDA, Python, ROS2, and system libraries. Without disciplined environment management, a minor driver upgrade or conflicting `pip` install can break an entire pipeline. Reproducible robotics engineering rests on three habits: knowing the host language toolchains, isolating dependencies with virtual environments and Docker, and standardizing remote workflows, experiment tracking, and automated checks.
 
 ## 16.1 Programming Languages
 
-Even when AI coding agents assist with much of the writing, researchers still need to read and understand existing code. They must inspect the structure of cloned research code, verify generated code, and identify where to make corrections when something goes wrong.
+Even when AI coding assistants generate boilerplate or draft functions, robotics engineers still have to read existing repositories, trace runtime bugs, and verify generated patches. Inspecting cloned SLAM pipelines or tuning real-time control loops requires fluency in both C++ and Python.
 
 ### 16.1.1 C++
 
-**Use cases**: real-time systems, ROS nodes, SLAM, performance-critical modules
-
-Most of the core code in a lab is C++. SLAM, real-time control, and the core logic of ROS packages are all written in C++, and you often have to read and modify this code. To understand code like ORB-SLAM3, LOAM, or VINS-Mono, you need to be comfortable with C++.
-
-**Pros**:
-- Fast execution
-- Direct memory control
-- Most ROS/SLAM code is C++
-
-**Cons**:
-- Hard to learn
-- Slow development
-- Memory management mistakes
-
-**modern C++ (C++17/20)**:
+Most performance-critical robotics codebases—including real-time control loops, core ROS packages, and SLAM systems such as ORB-SLAM3, LOAM, and VINS-Mono—are written in C++. Engineers regularly read and extend these repositories because C++ delivers deterministic execution speed and direct control over memory layout. Those advantages come with trade-offs: a steeper learning curve, slower compile-edit cycles, and memory-management bugs that can crash a node silently or corrupt state. Modern C++ (C++17/20) mitigates many of those hazards through smart pointers, range-based loops, and lambdas:
 
 ```cpp
 // Smart pointer
@@ -36,19 +22,15 @@ auto func = [&](int x) { return x * 2; };
 ```
 
 > **Further reading**
-> - [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) — modern C++ coding guide (Bjarne Stroustrup, Herb Sutter)
-> - [The Cherno - C++ Playlist](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) — video series covering C++ from basics to advanced topics
-> - [Modernes C++](https://www.modernescpp.com/index.php) — blog with a systematic treatment of modern C++ (C++17/20/23) features
+> - [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) — Modern C++ coding guidelines maintained by Bjarne Stroustrup and Herb Sutter.
+> - [The Cherno - C++ Playlist](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) — Video series covering C++ from fundamentals to advanced internals.
+> - [Modernes C++](https://www.modernescpp.com/index.php) — Blog offering a systematic treatment of C++17, C++20, and C++23 features.
 
-> **⚠ Target-environment check**: State whether the target is x86 or Jetson (ARM) and whether cross-compilation is involved. Then verify that the generated dependencies and build flags support that architecture.
+> **⚠ Target-environment check**: Always state whether your target hardware is x86 or Jetson (ARM) and whether cross-compilation is involved, then verify that every generated dependency and compiler flag supports that architecture.
 
 ### 16.1.2 Python
 
-**Use cases**: prototyping, deep-learning training/inference, data analysis, visualization
-
-Python is widely used for PyTorch training scripts, data preprocessing, and related tasks. An agent can help produce a first draft, but the researcher still needs to read the code and inspect its outputs and performance bottlenecks.
-
-**Frequently used libraries**:
+Python dominates rapid prototyping, PyTorch model training and inference, data preprocessing, and visualization. While coding agents can scaffold training scripts quickly, the researcher still needs to audit tensor shapes, verify preprocessing logic, and profile data-loading bottlenecks. Most robotics ML workflows rely on a compact set of core packages covering numerical arrays, 2D/3D vision, deep learning, and foundation models:
 
 ```bash
 pip install numpy scipy matplotlib
@@ -58,20 +40,22 @@ pip install transformers  # HuggingFace
 ```
 
 > **Further reading**
-> - [Real Python](https://realpython.com/) — systematic tutorials covering Python from basics to advanced
-> - [Fireship - Python in 100 Seconds](https://www.youtube.com/watch?v=x7X9w_GIm1s) — video that skims all of Python quickly
+> - [Real Python](https://realpython.com/) — Structured tutorials covering Python from fundamentals to advanced patterns.
+> - [Fireship - Python in 100 Seconds](https://www.youtube.com/watch?v=x7X9w_GIm1s) — Fast high-level overview of Python's syntax and ecosystem.
 
 ## 16.2 Development Environment Setup
 
+Building a reliable workstation or lab server starts with aligning the operating system, GPU driver stack, and per-project Python environments.
+
 ### 16.2.1 Ubuntu
 
-Ubuntu is the primary supported platform for ROS, and it has extensive documentation for GPU driver, CUDA, and cuDNN combinations. Some development is also possible on macOS and Windows; the appropriate choice depends on the ROS distribution and the operating system deployed on the robot.
+Ubuntu is the primary supported operating system for ROS and provides the best-documented paths for NVIDIA driver, CUDA, and cuDNN installation. Partial workflows on macOS or Windows are feasible, though the right host choice ultimately depends on your target ROS distribution and the OS running on the physical robot.
 
 **Recommended versions**:
 - Ubuntu 22.04 LTS (ROS2 Humble)
 - Ubuntu 24.04 LTS (ROS2 Jazzy)
 
-**Initial setup**:
+On a fresh Ubuntu install, configure compilers, Python environment tools, and terminal utilities first:
 
 ```bash
 # Basic tools
@@ -86,29 +70,27 @@ sudo apt install -y vim tmux htop
 ```
 
 > **Further reading**
-> - [The Missing Semester of Your CS Education (MIT)](https://missing.csail.mit.edu/) — systematic treatment of shell, vim, tmux, Git, and other "development tools you use every day but no class teaches". Recommended
-> - [Fireship - Linux in 100 Seconds](https://www.youtube.com/watch?v=rrB13utjYV4) — quickly get a feel for what Linux is
+> - [The Missing Semester of Your CS Education (MIT)](https://missing.csail.mit.edu/) — Practical course covering shell scripting, Vim, `tmux`, Git, and everyday developer tools rarely taught in standard CS classes.
+> - [Fireship - Linux in 100 Seconds](https://www.youtube.com/watch?v=rrB13utjYV4) — Rapid conceptual overview of Linux.
 
 ### 16.2.2 CUDA / cuDNN
 
-Deep-learning models are usually trained with GPU acceleration. In an NVIDIA environment, if the driver does not support the CUDA runtime bundled with PyTorch, the GPU will not be picked up.
-
-**Installation check**:
+Deep-learning models rely on GPU acceleration for training and high-throughput inference. On NVIDIA machines, if the host driver is too old for the CUDA runtime bundled inside PyTorch, `torch.cuda` fails to initialize the GPU. Start by inspecting the driver status and any locally installed CUDA compiler:
 
 ```bash
 nvidia-smi          # GPU status
 nvcc --version      # CUDA version
 ```
 
-**Version selection**: choose the CUDA/cuDNN combination supported in the official installation table for the PyTorch/TensorFlow release you will use.
+For clean setups, match your CUDA and cuDNN versions directly against the official installation matrix of the PyTorch or TensorFlow release you plan to run.
 
 > **Further reading**
-> - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — check PyTorch-CUDA version matching. Consult before installing
-> - [NVIDIA CUDA Toolkit Documentation](https://docs.nvidia.com/cuda/) — official CUDA documentation
+> - [PyTorch - Previous Versions](https://pytorch.org/get-started/previous-versions/) — Compatibility matrix for matching PyTorch releases with CUDA versions.
+> - [NVIDIA CUDA Toolkit Documentation](https://docs.nvidia.com/cuda/) — Official NVIDIA CUDA documentation.
 
 **NVIDIA driver install troubleshooting**
 
-When installing NVIDIA drivers on Ubuntu, the most common issue is a conflict with `nouveau` (the open-source driver).
+When installing proprietary NVIDIA drivers on Ubuntu, the most frequent failure is a conflict with `nouveau`, the default open-source kernel driver. Blacklist `nouveau`, rebuild the initramfs, and install the driver via `apt`:
 
 ```bash
 # Disable nouveau
@@ -125,11 +107,11 @@ sudo reboot
 nvidia-smi
 ```
 
-If the GPU does not show up in `nvidia-smi` after installation: (1) check with `sudo dkms status` whether the module was built and installed, and with `lsmod | grep nvidia` whether it is actually loaded; (2) if Secure Boot is on, unsigned modules will not load, so enroll a MOK key, use a distribution-signed driver package, or turn Secure Boot off. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
+If `nvidia-smi` still fails to detect the GPU after rebooting, check two things. First, run `sudo dkms status` to verify that the kernel module compiled cleanly and `lsmod | grep nvidia` to confirm it actually loaded. Second, if UEFI Secure Boot is enabled, the kernel will reject unsigned modules—either enroll a Machine Owner Key (MOK), switch to a distribution-signed driver package, or disable Secure Boot in firmware. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
 
 **CUDA/cuDNN version compatibility**
 
-Official PyTorch wheels ship their own CUDA runtime, so the host's CUDA toolkit (`nvcc`) version does not have to match. What actually matters is whether the driver supports the CUDA runtime bundled in the wheel. When that condition breaks, `import torch` still succeeds but `torch.cuda.is_available()` returns False or the first CUDA call errors out. Check in this order:
+Official PyTorch wheels bundle their own CUDA runtime libraries, which means the host's standalone CUDA toolkit (`nvcc`) does not need to match PyTorch's CUDA version. What actually matters is whether the installed NVIDIA display driver is new enough to support the runtime inside the wheel. When that requirement fails, `import torch` succeeds silently, only for `torch.cuda.is_available()` to return `False` or throw an error on the first GPU call. Diagnose mismatches in the following order:
 
 ```bash
 # 1. Check the GPU
@@ -150,7 +132,7 @@ python -c "import torch; print(torch.version.cuda)"
 
 **Building OpenCV + CUDA from source**
 
-`python3-opencv` installed via apt and `pip install opencv-python` do not have CUDA acceleration. If you need GPU acceleration (DNN module, optical flow, etc.), you have to build from source.
+Prebuilt OpenCV packages from `apt` (`python3-opencv`) and `pip` (`opencv-python`) omit CUDA support. Workflows that require GPU-accelerated vision—such as OpenCV's DNN module or CUDA optical flow—must compile OpenCV together with `opencv_contrib` from source:
 
 ```bash
 # Install dependencies
@@ -179,17 +161,17 @@ make -j$(nproc)
 sudo make install
 ```
 
-`CUDA_ARCH_BIN` must match your GPU. If it is wrong, the build succeeds but you get slow runtime or errors. Check [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
+Set `CUDA_ARCH_BIN` carefully to match your GPU's compute capability; an incorrect architecture flag can compile cleanly yet produce degraded performance or runtime kernel errors. Consult [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus) before building.
 
-Caveat: pip opencv and apt cv_bridge conflict in ROS environments (see Ch.21 Appendix C.4, troubleshooting). Building CUDA OpenCV directly can make this problem more tangled, so isolating it with Docker is recommended.
+Caveat: `pip`-installed OpenCV and `apt`-installed `cv_bridge` frequently collide in ROS environments due to conflicting shared library versions (see Ch.21 Appendix C.4, troubleshooting). Compiling CUDA OpenCV directly onto the host amplifies that collision risk, so isolating custom OpenCV builds inside a Docker container is strongly preferred.
 
 (Reference: [Dark Programmer — building OpenCV + CUDA from source](https://darkpgmr.tistory.com/184))
 
 ### 16.2.3 Environment Management
 
-Each project needs different Python and library versions. Without an environment manager, running `pip install` globally puts you in "dependency hell", where a library required by project A conflicts with project B. Creating an isolated per-project environment with Conda or venv is the baseline.
+Different projects routinely demand incompatible Python interpreters and library versions. Installing packages with global `pip` quickly creates "dependency hell," where upgrading a library for one repository silently breaks another. Isolating each project inside a dedicated **Conda** or **`venv`** environment prevents those collisions.
 
-**Conda** (recommended):
+**Conda** (recommended when managing multiple Python versions or compiled binary toolchains):
 
 ```bash
 # Install Miniconda
@@ -205,7 +187,7 @@ conda activate myenv
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
-**venv** (lightweight):
+**venv** (lightweight standard-library option when the system Python version already matches):
 
 ```bash
 python3 -m venv myenv
@@ -213,24 +195,26 @@ source myenv/bin/activate
 pip install -r requirements.txt
 ```
 
-For example, SLAM research might need Python 3.8 while a recent Transformer model might need Python 3.10. With Conda, `conda activate slam_env` or `conda activate transformer_env` switches between them.
+In practice, a legacy SLAM codebase might require Python 3.8 while a newer Transformer model requires Python 3.10. With Conda, switching contexts is as clean as running `conda activate slam_env` or `conda activate transformer_env`.
 
 > **Further reading**
-> - [Conda Documentation - Managing Environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) — official Conda environment management guide
-> - [Python venv Documentation](https://docs.python.org/3/library/venv.html) — official Python virtual environment docs
+> - [Conda Documentation - Managing Environments](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) — Official guide to creating, exporting, and managing Conda environments.
+> - [Python venv Documentation](https://docs.python.org/3/library/venv.html) — Official Python virtual environment reference.
 
 ## 16.3 Docker
 
 ### 16.3.1 Why Docker?
 
-Docker packages the operating-system user space, libraries, and environment settings into an image. Sharing the same image reduces dependency differences across machines and lets a paper distribute its execution environment with the code.
+Docker packages the OS user space, system libraries, and runtime configuration into a portable container image. Distributing that image alongside research code minimizes machine-to-machine drift across labs and deployment targets:
 
-- **Reproducibility**: pins the user-space image and reduces environment drift; host kernel, driver, hardware, and external services still matter
-- **Isolation**: avoids polluting the system
-- **Deployment**: easy sharing and deployment
-- **Dependencies**: handles complex dependencies
+- **Reproducibility**: Pinning the user-space image eliminates most dependency drift across machines, though host kernel, GPU driver, hardware, and external services still influence execution.
+- **Isolation**: Heavy system packages and custom builds stay contained inside the image rather than polluting the host OS.
+- **Deployment**: Teams and reviewers can pull an identical runtime environment across workstations, servers, and robots.
+- **Complex dependencies**: Intricate combinations of ROS2, CUDA, and C++ libraries can be built once and versioned cleanly.
 
 ### 16.3.2 Basic Usage
+
+The three core Docker operations—pulling a prebuilt base image, launching an interactive GPU container with a mounted workspace, and building a custom image from a `Dockerfile`—look like this:
 
 ```bash
 # Pull an image
@@ -246,7 +230,7 @@ docker run -it --rm \
 docker build -t my_image .
 ```
 
-**Dockerfile example**:
+A minimal `Dockerfile` layers system packages and Python requirements on top of an NVIDIA CUDA base image:
 
 ```dockerfile
 FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
@@ -261,15 +245,13 @@ WORKDIR /workspace
 ```
 
 > **Further reading**
-> - [Docker official Getting Started Guide](https://docs.docker.com/get-started/) — start here if Docker is new to you. Explains containers, images, and volumes well
-> - [NetworkChuck - Docker Tutorial](https://www.youtube.com/watch?v=eGz9DS-aIeY) — video that explains Docker in a fun, accessible way. Good for beginners
-> - [Fireship - Docker in 100 Seconds](https://www.youtube.com/watch?v=Gjnup-PuquQ) — quick skim of Docker's core concepts
+> - [Docker official Getting Started Guide](https://docs.docker.com/get-started/) — Best starting point for understanding containers, images, and bind mounts.
+> - [NetworkChuck - Docker Tutorial](https://www.youtube.com/watch?v=eGz9DS-aIeY) — Accessible introductory video on Docker concepts.
+> - [Fireship - Docker in 100 Seconds](https://www.youtube.com/watch?v=Gjnup-PuquQ) — Quick overview of how Docker containers work.
 
 ### 16.3.3 NVIDIA Container Toolkit
 
-A plain Docker container does not see the GPU. Deep-learning training and CUDA-based computation require nvidia-container-toolkit and the `--gpus all` flag.
-
-Note: NVIDIA's current documentation uses `nvidia-container-toolkit`; with modern Docker, GPU access is requested with `--gpus all` rather than the older `--runtime=nvidia` pattern.
+Standard Docker containers cannot see host GPUs by default. Running PyTorch training or GPU-accelerated robotics packages inside Docker requires installing `nvidia-container-toolkit` on the host and passing `--gpus all` to `docker run` (modern Docker uses `--gpus all` rather than the older `--runtime=nvidia` flag):
 
 ```bash
 # Install nvidia-container-toolkit (Ubuntu 22.04/24.04)
@@ -290,11 +272,11 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 
 ### 16.3.4 Practical Recipe: ROS2 + GPU + GUI + Sensors
 
-A robotics container may need GPU, GUI (RViz/Gazebo), and USB-sensor access together. The recipe below configures these permissions and the runtime in one place.
-
-The recipe adapts the structure of [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) to an nvidia-container-toolkit and ROS2 Humble environment.
+Robotics development frequently requires GPU compute, GUI tools such as RViz and Gazebo, and live USB sensor access inside the same container. The recipe below—adapting [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) for `nvidia-container-toolkit` and ROS2 Humble—configures those permissions and mounts together.
 
 **Step 1: Prepare X11 forwarding (host)**
+
+Grant local X11 display access on the host before starting GUI tools inside the container:
 
 ```bash
 # Run once on the host
@@ -302,9 +284,11 @@ sudo apt-get install -y xauth
 xhost +local:docker
 ```
 
-`xhost +local:docker` adds an entry that allows local connections. xhost is host-based access control and cannot tell containers apart, so this does not open access to Docker alone. To restrict access to a specific container, use `xauth` cookie-based authentication.
+Note that `xhost +local:docker` adds a host-based access rule permitting local connections without distinguishing between containers; when stricter per-container isolation is needed, rely on `xauth` cookie-based authentication instead.
 
 **Step 2: Run script**
+
+Save the launch command in a helper script so runtime flags stay consistent across sessions:
 
 ```bash
 #!/bin/bash
@@ -327,7 +311,7 @@ docker run --rm -it \
     bash
 ```
 
-What each flag does:
+Each flag serves a specific role in bridging GPU hardware, DDS networking, X11 graphics, and USB devices:
 
 | Flag | Role |
 |--------|------|
@@ -340,7 +324,9 @@ What each flag does:
 | `-v /dev:/dev` | Sensor USB may be plugged in at any time, so mount all of /dev. Pairs with `--privileged` |
 | `-v .Xauthority` | X11 authentication. If you are not using the xhost setup from Step 1, without it you get `cannot open display` |
 
-**Step 3: Save the container after work** — if you ran Step 2 with `--rm`, the container is deleted the moment you leave the shell, so nothing is left to commit. Either commit from another shell while the container is still running, or run it without `--rm`.
+**Step 3: Save the container after work**
+
+Because Step 2 passes `--rm`, Docker deletes the container the moment you exit its shell, discarding any changes made inside it. To snapshot an interactive session with `docker commit`, either commit from a second terminal while the container is still running or omit `--rm` when launching:
 
 ```bash
 # If you installed packages or did other work inside the container, commit it
@@ -350,7 +336,7 @@ docker commit ros2_dev my_ros2_workspace:v1
 # In run_ros2_docker.sh just change the image name
 ```
 
-**Managing it with a Dockerfile** (more recommended):
+**Managing it with a Dockerfile** (recommended over `docker commit`):
 
 ```dockerfile
 FROM osrf/ros:humble-desktop
@@ -377,24 +363,26 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 ```
 
-Why a Dockerfile beats `docker commit`: later you can trace "what is installed in this image?". An image built by commit still keeps its layer history, but the build steps are not recorded in a Dockerfile, so it is hard to rebuild.
+A `Dockerfile` beats `docker commit` for long-term maintenance because every installed package and build step stays readable and version-controlled in plain text. While a committed image preserves binary layer history, reconstructing what was installed months later—or rebuilding for a newer base image—becomes guesswork without a `Dockerfile`.
 
 > **Further reading**
-> - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — reference for ROS + NVIDIA + GUI Docker setup. Supports Melodic through Humble
-> - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — official install guide
-> - [OSRF Docker Images](https://hub.docker.com/r/osrf/ros) — official ROS Docker images. `humble-desktop` is the version that includes GUI
+> - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — Reference repository for ROS + NVIDIA + GUI Docker setups (supports Melodic through Humble).
+> - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) — Official NVIDIA Container Toolkit installation guide.
+> - [OSRF Docker Images](https://hub.docker.com/r/osrf/ros) — Official ROS Docker images (`humble-desktop` includes GUI packages).
 
-> **Docker requirements check**: State up front whether the setup combines ROS2, a GPU, USB sensors, and GUI visualization. Independently generated snippets can conflict in their permissions and network options. Check whether the final command needs `QT_X11_NO_MITSHM`, `ROS_DOMAIN_ID`, and explicit device mappings.
+> **Docker requirements check**: State up front whether your setup combines ROS2, GPU acceleration, USB sensors, and GUI visualization. Snippets generated in isolation often conflict in their permission and network flags; verify explicitly whether the final `docker run` command requires `QT_X11_NO_MITSHM`, `ROS_DOMAIN_ID`, and explicit `--device` mappings.
 
 ## 16.4 Remote Management: Git, SSH, File Transfer
 
-A remote experiment environment is managed through SSH access, Git history, and file transfer between servers.
+Robotics research rarely happens on a single machine: code is edited locally, trained on remote GPU servers, and deployed onto onboard robot computers. Managing that distributed workflow reliably rests on Git history, key-authenticated SSH, and delta-aware file transfers.
 
 ### 16.4.1 Git/GitHub
 
+Version control anchors both team collaboration and experimental reproducibility across local laptops, GPU servers, and robot platforms.
+
 ### 16.4.1.1 Basic Workflow
 
-Git records code changes and the state used for each experiment. Recording the commit with a result makes it possible to reproduce an earlier state or compare the source of a change.
+Git tracks code changes and ties every experiment back to the exact source state that produced it. Logging the commit hash alongside an experiment makes it straightforward to reproduce prior results or pinpoint regressions:
 
 ```bash
 # Clone a repository
@@ -413,32 +401,19 @@ git push origin main
 ```
 
 > **Further reading**
-> - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — official guide that cleanly organizes Git's core concepts
-> - [The Missing Semester - Version Control (Git)](https://missing.csail.mit.edu/2020/version-control/) — MIT lecture. Explains Git's internal model (DAG), giving a deeper understanding
+> - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — Official guide introducing Git's core model and workflows.
+> - [The Missing Semester - Version Control (Git)](https://missing.csail.mit.edu/2020/version-control/) — MIT lecture explaining Git's internal DAG data model.
 
 ### 16.4.1.2 Branching Strategy
 
-**Git Flow**:
-- `main`: stable version
-- `develop`: development version
-- `feature/*`: feature development
-- `hotfix/*`: urgent fixes
+When multiple lab members modify the same repository, feature branches isolate unfinished work before review and integration into `main`. Two branching conventions cover most robotics teams:
 
-**GitHub Flow** (simple):
-- `main`: always deployable
-- `feature-branch`: per-feature branch → PR → merge
-
-When several people edit the same code, feature branches can isolate each change before review and merge into `main`. A simple GitHub Flow is often enough to separate conflict scope and change intent.
+- **Git Flow**: Separates `main` (stable releases), `develop` (integration), `feature/*` (new work), and `hotfix/*` (urgent patches) for larger multi-release codebases.
+- **GitHub Flow** (simpler): Keeps `main` always deployable and routes every change through `feature-branch` → Pull Request → merge, which is usually sufficient for research labs to bound merge conflicts and isolate change intent.
 
 ### 16.4.1.3 Collaboration
 
-**Pull Request (PR)**:
-1. Fork or create a branch
-2. Commit changes
-3. Open a PR and request review
-4. Merge after code review
-
-**Commit message convention** (Conventional Commits):
+In collaborative repositories, changes move from local development into `main` through a structured **Pull Request (PR)** cycle: fork or create a feature branch, commit focused changes, open a PR for peer review, and merge once tests and review pass. Adopting **Conventional Commits** keeps commit logs scannable when bisecting bugs or assembling release notes:
 
 ```
 feat: new feature
@@ -450,12 +425,12 @@ chore: build/config changes
 ```
 
 > **Further reading**
-> - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — Git introduction written by GitHub itself
-> - [Conventional Commits Specification](https://www.conventionalcommits.org/) — official spec for commit message conventions
+> - [GitHub's Git Handbook](https://docs.github.com/en/get-started/using-git/about-git) — Git introduction published by GitHub.
+> - [Conventional Commits Specification](https://www.conventionalcommits.org/) — Official specification for structured commit messages.
 
 ### 16.4.2 SSH
 
-The basic tool for accessing a lab GPU server. Using key authentication instead of a password is both convenient and secure.
+SSH is the standard entry point into lab GPU servers and onboard robot computers. Using Ed25519 key-based authentication rather than passwords improves both security and daily speed, and SSH port forwarding lets you inspect remote Jupyter notebooks or TensorBoard dashboards safely in a local browser:
 
 ```bash
 # Generate keys (once, the first time)
@@ -471,7 +446,7 @@ ssh user@server_ip
 ssh -L 8888:localhost:8888 user@server_ip
 ```
 
-Configuring **~/.ssh/config** removes the need to type the IP and username every time:
+Defining host aliases in **`~/.ssh/config`** eliminates repeated typing of IP addresses, usernames, and key paths:
 
 ```
 Host lab-server
@@ -480,13 +455,11 @@ Host lab-server
     IdentityFile ~/.ssh/id_ed25519
 ```
 
-After this, `ssh lab-server` connects directly. VS Code Remote-SSH also reads this config.
+Once configured, `ssh lab-server` connects directly, and tools such as VS Code Remote-SSH automatically pick up the same host definition.
 
 ### 16.4.3 SCP & rsync
 
-Tools for file transfer between server and local. **SCP** is simple file copy; **rsync** transfers only changed parts.
-
-**SCP**:
+Moving model weights, logs, and datasets between laptops and GPU servers relies on **`scp`** and **`rsync`**. Use `scp` for quick, one-off copies of individual files or small directories:
 
 ```bash
 # Local → server
@@ -499,7 +472,7 @@ scp user@server:/home/user/results/log.txt ./
 scp -r dataset/ user@server:/data/
 ```
 
-**rsync** — better for large datasets or repeated transfers:
+For large datasets or repeated syncs, switch to **`rsync`**:
 
 ```bash
 # Local → server (transfer only changes, show progress)
@@ -512,11 +485,11 @@ rsync -avz user@server:/home/user/results/ ./results/
 rsync -avz --delete source/ user@server:/data/source/
 ```
 
-`scp` copies the whole thing every time; `rsync` sends only the diff, which makes a big difference when syncing datasets of tens of GB.
+Whereas `scp` re-copies every file unconditionally, `rsync` transfers only changed blocks—saving substantial bandwidth and time when syncing datasets spanning tens of gigabytes.
 
 ### 16.4.4 Tailscale
 
-If the lab server sits behind NAT or a firewall, SSH from outside does not work. Tailscale is a WireGuard-based VPN; install it and you can connect directly to the lab server from anywhere.
+When a lab server or robot sits behind NAT or a campus firewall, inbound SSH from off-campus fails. **Tailscale**, a mesh VPN built on WireGuard, assigns persistent private IPs across your devices so you can connect directly from off-site without router port forwarding:
 
 ```bash
 # Install (on both server and local)
@@ -530,12 +503,7 @@ tailscale status
 ssh user@100.x.y.z
 ```
 
-**Pros**:
-- No port forwarding or router configuration needed
-- Reach the server from cafe, home, or school at the same IP
-- With Tailscale SSH, SSH key management is also automated
-
-Registering the Tailscale IP in **~/.ssh/config** is convenient:
+Beyond bypassing NAT and router configuration, Tailscale provides a stable IP regardless of whether you connect from home, campus, or on the road, and **Tailscale SSH** can automate SSH key distribution across authorized devices. Adding the Tailscale address to **`~/.ssh/config`** keeps remote access seamless:
 
 ```
 Host lab-gpu
@@ -544,14 +512,16 @@ Host lab-gpu
 ```
 
 > **Further reading**
-> - [Tailscale official docs](https://tailscale.com/kb/) — from installation to ACL configuration
-> - [The Missing Semester - Remote Machines](https://missing.csail.mit.edu/2020/command-line/#remote-machines) — SSH, port forwarding, tmux, and other remote work basics
+> - [Tailscale official docs](https://tailscale.com/kb/) — Guides covering installation, networking, and ACL configuration.
+> - [The Missing Semester - Remote Machines](https://missing.csail.mit.edu/2020/command-line/#remote-machines) — Practical coverage of SSH, port forwarding, and `tmux` for remote sessions.
 
 ## 16.5 Experiment Management
 
+Running dozens of training jobs quickly raises the question of which hyperparameters, dataset splits, and code revisions produced a given checkpoint. Structured experiment trackers replace ad-hoc spreadsheets with searchable run histories.
+
 ### 16.5.1 Weights & Biases (wandb)
 
-When running deep-learning experiments, the question "what were the hyperparameters of the model I ran yesterday?" comes up every day. Logging in Excel or a notebook hits its limits quickly. wandb automatically logs and visualizes training, and it also makes sharing results with teammates easy. It can track metrics and hyperparameters, version model artifacts, and share dashboards with a team.
+Weights & Biases (**wandb**) logs hyperparameters, training metrics, and model artifacts automatically to a shared cloud dashboard, making it straightforward to compare runs and share progress across a lab:
 
 ```python
 import wandb
@@ -572,12 +542,12 @@ wandb.finish()
 ```
 
 > **Further reading**
-> - [Weights & Biases official docs and Quickstart](https://docs.wandb.ai/quickstart) — wandb getting-started guide. You can log your first experiment in 5 minutes
-> - [Weights & Biases YouTube](https://www.youtube.com/@WeightsBiases) — tutorials and MLOps talks
+> - [Weights & Biases official docs and Quickstart](https://docs.wandb.ai/quickstart) — Quickstart guide to logging your first experiment in minutes.
+> - [Weights & Biases YouTube](https://www.youtube.com/@WeightsBiases) — Tutorials and MLOps engineering talks.
 
 ### 16.5.2 MLflow
 
-Where wandb is a cloud-based service, MLflow is an open-source alternative you can run on your own server. Useful where data security matters.
+Whereas wandb runs as a hosted cloud service, **MLflow** is an open-source tracking platform you can self-host on internal lab infrastructure—a useful advantage when proprietary datasets or strict data-governance rules prohibit external logging:
 
 ```python
 import mlflow
@@ -592,6 +562,8 @@ with mlflow.start_run():
 
 ### 16.5.3 TensorBoard
 
+**TensorBoard** integrates directly with PyTorch via `SummaryWriter` and runs completely locally without any external account or tracking server. For focused single-machine experiments, logging scalars and sample images to disk and launching the local viewer is often all you need:
+
 ```python
 from torch.utils.tensorboard import SummaryWriter
 
@@ -601,23 +573,25 @@ writer.add_image("Sample", image, epoch)
 writer.close()
 ```
 
+Serve the recorded event files locally with:
+
 ```bash
 tensorboard --logdir runs
 ```
 
-TensorBoard works directly with PyTorch and visualizes locally without a separate account. For simple experiments, TensorBoard alone is enough, without wandb.
-
 > **Further reading**
-> - [PyTorch TensorBoard Tutorial](https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) — official guide to using TensorBoard from PyTorch
-> - [MLflow Documentation](https://mlflow.org/docs/latest/index.html) — official MLflow documentation
+> - [PyTorch TensorBoard Tutorial](https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) — Official guide to logging PyTorch training runs to TensorBoard.
+> - [MLflow Documentation](https://mlflow.org/docs/latest/index.html) — Official MLflow tracking and model registry reference.
 
 ## 16.6 Code Formatting
 
+Clean formatting and lightweight automated tests keep research codebases readable as projects grow from quick prototypes into shared lab infrastructure.
+
 ### 16.6.1 Linting & Formatting
 
-When code style differs between people, code reviews spend more time on style disputes than on logic. Automatic formatters remove this problem. Even when working alone, a consistent code style helps a lot when you re-read your own code later.
+When contributors follow inconsistent formatting conventions, code reviews bog down in whitespace nitpicks instead of algorithmic logic. Enforcing automated formatters and static checks eliminates those disputes—and pays off even on solo projects when revisiting code months later.
 
-**Python**:
+**Python** workflows commonly pair **Ruff** (a fast linter and Black-compatible formatter) or **Black** with **mypy** for static type checking:
 
 ```bash
 # Ruff (fast linter, Black-compatible formatter)
@@ -634,7 +608,7 @@ pip install mypy
 mypy .
 ```
 
-**C++**:
+**C++** packages standardize indentation and brace style with `clang-format`:
 
 ```bash
 # clang-format
@@ -643,9 +617,9 @@ clang-format -i src/*.cpp
 
 ### 16.6.2 Testing
 
-Writing tests matters even for research code. Just having basic tests for "does the model forward pass work" or "is the data preprocessing output as expected" makes refactoring much less stressful.
+Even fast-moving research code benefits from basic automated tests. Verifying invariants such as "does a model's forward pass emit expected tensor shapes?" or "does the dataset parser produce valid bounding boxes?" lets you refactor confidently without silently breaking downstream experiments.
 
-**Python (pytest)**:
+**Python (`pytest`)** keeps unit tests concise and easy to run after every edit:
 
 ```python
 # test_module.py
@@ -657,11 +631,13 @@ def test_function():
     assert result == expected
 ```
 
+Execute the test suite with verbose reporting:
+
 ```bash
 pytest tests/ -v
 ```
 
-**C++ (gtest)**:
+**C++ (`gtest`)** integrates cleanly into CMake and `colcon` builds for validating core geometry, control, and ROS node logic:
 
 ```cpp
 #include <gtest/gtest.h>
@@ -672,11 +648,11 @@ TEST(MyTest, BasicTest) {
 ```
 
 > **Further reading**
-> - [Real Python - Python Testing with pytest](https://realpython.com/pytest-python-testing/) — detailed tutorial on using pytest
-> - [The Missing Semester (MIT)](https://missing.csail.mit.edu/) — shell, editor, debugging, profiling, and development tools broadly. Worth a full pass before you start graduate school
-> - [Fireship YouTube](https://www.youtube.com/@Fireship) — skim various development tools quickly through the "100 Seconds" series
-> - [Jinyong Jeong's blog — robot software development culture](https://jinyongjeong.github.io/2025/02/14/developmen_culture/) — establishing code review, CI/CD, style guides, and other development-culture practices in a robotics team
-> - [Jinyong Jeong's blog — robot development and test code](https://jinyongjeong.github.io/2025/02/19/test_code/) — six reasons test code is essential in robot software
+> - [Real Python - Python Testing with pytest](https://realpython.com/pytest-python-testing/) — Detailed tutorial on writing and structuring tests with `pytest`.
+> - [The Missing Semester (MIT)](https://missing.csail.mit.edu/) — Broad coverage of shells, editors, debugging, profiling, and developer tools; worth completing early in graduate research.
+> - [Fireship YouTube](https://www.youtube.com/@Fireship) — Fast conceptual overviews of developer tooling via the "100 Seconds" series.
+> - [Jinyong Jeong's blog — robot software development culture](https://jinyongjeong.github.io/2025/02/14/developmen_culture/) — Building code review, CI/CD, and style-guide practices in a robotics team.
+> - [Jinyong Jeong's blog — robot development and test code](https://jinyongjeong.github.io/2025/02/19/test_code/) — Six reasons automated tests are essential in robot software.
 
 ## Technical Timeline: Development Environment & Tools — Past → Present → Future
 
@@ -710,3 +686,5 @@ TEST(MyTest, BasicTest) {
           Dev Container standardization (VS Code Remote)
           Docker + wandb combination for reproducible research becomes common
 ```
+
+With reproducible environments, containerized GPU stacks, remote workflows, and experiment tracking in place, the remaining pillar of empirical robotics is data. Ch.17 examines the public datasets and benchmarks used across autonomous driving, SLAM, and 3D vision, along with practical procedures for writing data loaders and collecting synchronized, calibrated custom recordings.

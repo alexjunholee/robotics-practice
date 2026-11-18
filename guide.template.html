@@ -570,10 +570,12 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
       topbarTitle: 'Spatial AI 로보틱스 가이드',
       overviewTitle: 'Spatial AI 로보틱스 가이드',
       groups: [
-        { label: '기초 지식', chapters: [1, 2, 3] },
-        { label: '로봇', chapters: [4, 5, 6, 7, 8] },
-        { label: '인식과 공간 이해', chapters: [9, 10, 11, 12, 13, 14] },
-        { label: '연구 실전', chapters: [15, 16, 17, 18, 19, 20, 21, 22] }
+        { label: '1부 기초', chapters: [1, 2, 3] },
+        { label: '2부 매니퓰레이터와 제어', chapters: [4, 5, 6, 7, 8] },
+        { label: '3부 인식', chapters: [9, 10, 11, 12, 13, 14] },
+        { label: '4부 개발 환경', chapters: [15, 16, 17] },
+        { label: '5부 연구 실전', chapters: [18, 19, 20] },
+        { label: '부록', chapters: [100] }
       ],
       searchPlaceholder: '섹션 검색... (Ctrl+K)',
       noResults: '검색 결과 없음',
@@ -686,10 +688,10 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     }
 
     h1s.forEach(function(h1) {
-      var m = h1.textContent.trim().match(/(?:Chapter|Ch\.?)\s*(\d+)\s*[\u2014\u2013-]\s*(.+)/);
+      var m = h1.textContent.trim().match(/^(?:(?:Chapter|Ch\.?)\s*(\d+)\s*[\u2014\u2013-]\s*|(\d+)장\s+|(부록)$)(.*)/);
       if (!m) return;
-      var chNum = parseInt(m[1], 10);
-      if (!h1.id) h1.id = 'chapter-' + chNum;
+      var chNum = m[3] ? 100 : parseInt(m[1] || m[2], 10);
+      if (!h1.id) h1.id = m[3] ? 'appendix' : 'chapter-' + chNum;
 
       var sections = [];
       var node = h1.nextElementSibling;
@@ -701,7 +703,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
         node = node.nextElementSibling;
       }
 
-      chapters[chNum] = { title: m[2].trim(), id: h1.id, sections: sections };
+      chapters[chNum] = { title: m[3] ? m[3] : m[4].trim(), id: h1.id, sections: sections };
     });
 
     if (Object.keys(chapters).length === 0) return;
@@ -739,7 +741,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
         chLink.href = '#' + ch.id;
         var numSpan = document.createElement('span');
         numSpan.className = 'overview-chapter-num';
-        numSpan.textContent = 'Ch.' + chNum;
+        numSpan.textContent = chNum === 100 ? '' : (state.lang === 'ko' ? chNum + '장' : 'Ch.' + chNum);
         chLink.appendChild(numSpan);
         chLink.appendChild(document.createTextNode(ch.title));
         chWrap.appendChild(chLink);
@@ -784,8 +786,10 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
     });
 
     function getChapterNumber(text) {
-      var m = text.trim().match(/(?:Chapter|Ch\.?)\s*(\d+)/);
-      return m ? parseInt(m[1], 10) : null;
+      var t = text.trim();
+      if (/^부록$/.test(t)) return 100;
+      var m = t.match(/^(?:(?:Chapter|Ch\.?)\s*(\d+)|(\d+)장)/);
+      return m ? parseInt(m[1] || m[2], 10) : null;
     }
 
     headings.forEach(function(heading, index) {

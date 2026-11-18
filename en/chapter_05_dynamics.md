@@ -1,25 +1,26 @@
 # Ch.5 — Rigid Body Dynamics
 
+Kinematics in Ch. 4 describes how joint angles map to link poses, velocities, and workspaces without asking what actually moves the joints. To command real motors, simulate physical contact, or keep a legged robot upright, we need to bring in mass, inertia, and force—the domain of rigid body dynamics.
 
 ---
 
 ## 5.1 Why Study Dynamics
 
-If kinematics addresses "*where* the robot moves", dynamics addresses "*with what forces* it moves". Kinematics alone is enough to control a robot in some cases — slow industrial manipulators are one example. When joint velocities are low enough, inertial and Coriolis forces are negligible, and a PID controller handles the rest.
+Where kinematics asks *where* a robot moves, dynamics asks *what forces* produce that motion. For slow industrial manipulators, kinematics alone can take you surprisingly far: when joint speeds stay low, inertial and Coriolis forces are negligible, and a basic PID loop can absorb what little remains.
 
-But the following situations cannot be handled without dynamics:
+Once you leave that slow, fixed-base regime, dynamics becomes indispensable:
 
-- **High-speed manipulation**: Reducing cycle time in industrial settings requires moving the robot fast. Moving fast increases inertial, centrifugal, and Coriolis forces. Ignoring them inflates path-tracking error and, in the worst case, saturates the joint motors.
-- **Legged robots**: Whether bipedal or quadrupedal, the robot must manage ground contact forces without falling. This is a purely dynamic problem.
-- **Simulation**: A physics simulator takes forces/torques, computes accelerations, and integrates to obtain the next state. The dynamics model is the core of the simulator.
-- **Optimal control**: Finding trajectories that minimize energy or time requires the dynamics model as a constraint.
-- **Collision/contact handling**: Grasping, pushing, or throwing objects is impossible without contact dynamics.
+- **High-speed manipulation**: Shortening industrial cycle times means accelerating joints rapidly. High speeds amplify inertial, centrifugal, and Coriolis forces; ignoring them widens tracking error and can saturate the actuators.
+- **Legged robots**: Walking and running—whether on two legs or four—require regulating ground contact forces at every step so the body does not tip over. Balancing and locomotion are inherently dynamic problems.
+- **Simulation**: Every physics engine runs forward dynamics at its core—taking applied forces and torques, solving for link accelerations, and integrating forward to the next state.
+- **Optimal control**: Planning trajectories that minimize energy consumption or travel time requires the dynamics model directly as a physical constraint.
+- **Collision and contact handling**: Tasks like grasping, pushing, or throwing objects depend on how forces transfer across making and breaking contacts.
 
-Kinematics is the "geometry" of the robot; dynamics is its "physics". Geometry alone does not explain how forces produce motion.
+In short, kinematics captures the geometry of motion, whereas dynamics captures its physics—connecting applied torques to resulting accelerations.
 
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Chapter 1 — a concise account of why dynamics is needed.
-> - Russ Tedrake, *Underactuated Robotics* Ch.1 (https://underactuated.csail.mit.edu/) — gives intuition for why dynamics-based control is more powerful than kinematics-based.
+> - Russ Tedrake, *Underactuated Robotics* Ch.1 (https://underactuated.csail.mit.edu/) — gives intuition for why dynamics-based control is more capable than kinematics-based control.
 
 ---
 
@@ -27,31 +28,30 @@ Kinematics is the "geometry" of the robot; dynamics is its "physics". Geometry a
 
 ### Basic Principles
 
-Newtonian mechanics treats translational and rotational motion separately.
+Every link in a robot manipulator is a rigid body coupled to its neighbors through joints. Before analyzing an entire kinematic chain, we start with the equations of motion for a single rigid body, where Newtonian mechanics treats translation and rotation separately.
 
 **Translational motion:**
 ```
 F = ma
 ```
-The net force F on a body equals mass m times the acceleration a of the center of mass (CoM).
+The net force `F` acting on the body equals its mass `m` times the linear acceleration `a` of its center of mass (CoM).
 
 **Rotational motion:**
 ```
 τ = Iα + ω × (Iω)
 ```
-The net torque τ on a body equals the product of the inertia tensor I and the angular acceleration α, plus the gyroscopic term ω × (Iω). In 2D the latter term vanishes and the equation reduces to τ = Iα, but a 3D model must retain it. Omitting the term produces unrealistic rotational behavior in simulation.
+The net torque `τ` equals the inertia tensor `I` times the angular acceleration `α`, plus the gyroscopic term `ω × (Iω)`. In 2D, the rotation axis stays fixed so the gyroscopic term vanishes and the equation reduces to `τ = Iα`. In 3D, however, a spinning body's angular momentum changes direction whenever the body rotates about another axis—omitting `ω × (Iω)` produces unphysical rotational behavior in simulation.
 
 ### Recursive Newton-Euler Algorithm (RNEA)
 
-RNEA solves the inverse dynamics of a serial manipulator in two passes:
+To compute the joint torques required to execute a given motion on an `n`-link serial arm, notice the natural dependency: a joint near the wrist only supports the hand, whereas a joint at the shoulder must accelerate every link downstream. The Recursive Newton-Euler Algorithm (RNEA) exploits this chain structure in two linear sweeps:
 
-**Forward pass (base → end-effector):** Propagate velocities and accelerations of each link forward. The velocity of link i equals the velocity of link i-1 plus the contribution from joint i.
+- **Forward pass (base → end-effector):** Starting from the fixed base, propagate velocities and accelerations outward link by link. Each link's velocity is its parent's velocity plus the motion added by its own joint.
+- **Backward pass (end-effector → base):** Starting from the tip, propagate forces and torques inward. Using the Newton-Euler balance on each link, find the net wrench needed to produce its acceleration, project it onto the joint axis to read off the motor torque, and pass the reaction wrench back to the parent link.
 
-**Backward pass (end-effector → base):** Propagate forces and torques acting on each link backward. Use the Newton-Euler equations to obtain the net force/torque required at link i, then convert to the torque of joint i.
+Why favor this recursive structure? Evaluating the dynamics of a single rigid body takes O(1) work, so marching through `n` links sequentially costs O(n) time overall. By contrast, expanding the Euler-Lagrange equations to build the dense inertia matrix `M(q)` directly scales as O(n^3) or worse—a difference that determines whether a multi-DOF controller can hit a kilohertz real-time loop.
 
-Why solve it recursively? The dynamics of a single rigid body is O(1). Handling n links sequentially gives O(n). Expanding the Lagrange equations mechanically, in contrast, costs O(n^3) or more just to compute the M(q) matrix. For a 6-DOF arm, the difference between O(n) and O(n^3) decides whether the control loop runs in real time.
-
-The pseudo-code for RNEA is:
+Putting both sweeps together yields the RNEA pseudocode:
 
 ```
 RNEA(model, q, q̇, q̈):
@@ -69,11 +69,11 @@ RNEA(model, q, q̇, q̈):
     return τ
 ```
 
-Here S[i] is the motion subspace matrix of joint i (the joint axis direction), v[i] is the spatial velocity of link i, and I[i] is the spatial inertia of link i. The notation follows Featherstone's spatial vector convention. §5.7 covers it in more detail.
+Here `S[i]` is the motion subspace matrix of joint `i` (specifying the joint axis direction), `v[i]` is the spatial velocity of link `i`, and `I[i]` is its spatial inertia, following Featherstone's spatial vector convention (covered in detail in §5.7).
 
 ### Real Code: Pinocchio
 
-Pinocchio is a C++/Python library that implements RNEA and a variety of other dynamics algorithms. Here is an example of computing inverse dynamics with RNEA:
+Pinocchio is a C++/Python library that implements RNEA and related rigid-body algorithms. In the snippet below, we load a URDF model, sample a joint state `(q, v, a)`, compute full inverse dynamics torques, and then isolate gravity compensation torques by setting velocities and accelerations to zero:
 
 ```python
 import pinocchio as pin
@@ -97,9 +97,9 @@ tau_g = pin.rnea(model, data, q, np.zeros(model.nv), np.zeros(model.nv))
 print("Gravity compensation torques:", tau_g)
 ```
 
-Gravity compensation drops out of RNEA immediately by setting the joint velocities and accelerations to zero and initializing the base acceleration to a[0] = -g. The pseudocode above omits this initialization. Even this alone keeps the robot from sagging under gravity. It is one of the first controllers implemented in practice.
+Why does zeroing `v` and `a` yield gravity torques? Internally, RNEA initializes the base acceleration to `a[0] = -g` (an detail omitted from the simplified pseudocode above): accelerating the base upward at `g` produces the exact inertial forces of a downward gravitational field. Commanding `tau_g` alone prevents a manipulator from sagging under its own weight, making gravity compensation one of the first building blocks implemented on real hardware.
 
-The same computation in Drake:
+If your workflow uses Drake rather than Pinocchio, the equivalent inverse-dynamics call lives on `MultibodyPlant`:
 
 ```python
 from pydrake.multibody.plant import MultibodyPlant
@@ -135,71 +135,64 @@ tau = plant.CalcInverseDynamics(context, vdot, MultibodyForces(plant))
 
 ### What Is a Lagrangian
 
-Lagrangian mechanics derives the equations of motion through energy, instead of handling forces and torques directly.
+Tracking reaction forces and moments across every joint quickly becomes tedious when deriving closed-form equations of motion. Lagrangian mechanics sidesteps those internal constraint forces by working with scalar energies instead of vector forces: because energy simply sums across links, you only need the total kinetic and potential energy in whatever coordinates best describe the robot.
 
-The **Lagrangian** L is defined as:
+The **Lagrangian** `L` is defined as the difference between total kinetic energy `T` and total potential energy `V`:
 
 ```
 L(q, q̇) = T(q, q̇) - V(q)
 ```
 
-where T is the kinetic energy of the system and V is the potential energy.
-
-**Euler-Lagrange equation:**
+Applying the **Euler-Lagrange equation** to each generalized coordinate `q_i` yields the system's equations of motion:
 
 ```
 d/dt (∂L/∂q̇_i) - ∂L/∂q_i = τ_i
 ```
 
-Writing this equation for each generalized coordinate q_i yields the equations of motion of the system.
-
-The coordinate frame can be chosen freely. The Newton-Euler approach solves link by link, passing forces and moments between neighbors, so one has to decide which frame to express them in and how to handle the constraints. In Lagrangian mechanics, choosing joint angles as generalized coordinates makes the constraints drop out of the equations — but only for open chains with holonomic constraints, where an independent set of generalized coordinates exists. With closed chains or nonholonomic constraints, Lagrange multipliers remain.
+Unlike the Newton-Euler formulation—which tracks internal forces between adjacent links and requires choosing frames carefully—Lagrangian mechanics lets you pick generalized coordinates freely. For open kinematic chains with holonomic constraints, choosing joint angles as generalized coordinates eliminates joint constraint forces from the equations altogether. (Closed kinematic chains and nonholonomic constraints still require Lagrange multipliers.)
 
 ### Manipulator Equation
 
-Organizing the Euler-Lagrange equations for an n-DOF serial manipulator produces the following standard form:
+Expanding the Euler-Lagrange equations for an `n`-DOF serial manipulator and grouping terms by acceleration, velocity, and position gives the canonical manipulator equation:
 
 ```
 M(q)q̈ + C(q, q̇)q̇ + g(q) = τ
 ```
 
-The meaning of each term:
+Each term has a clear physical role:
 
-- **M(q)**: mass/inertia matrix. An n×n symmetric positive definite matrix. It depends on the robot configuration q — extend the arm and the inertia grows; fold it and the inertia shrinks, by the same principle.
+- **M(q)**: the `n×n` symmetric, positive-definite mass/inertia matrix. Because `M(q)` depends on configuration `q`, extending an arm increases its effective inertia while folding it in reduces it.
+- **C(q, q̇)q̇**: Coriolis and centrifugal forces arising from inertial coupling when multiple joints move simultaneously. Negligible during slow motion, these terms grow quadratically with speed.
+- **g(q)**: the gravity torque vector required at each joint to hold the robot stationary against gravity.
+- **τ**: the applied joint torque vector produced by the actuators (with joint friction typically modeled separately and added on).
 
-- **C(q, q̇)q̇**: Coriolis and centrifugal terms. Inertial coupling that arises when joints move simultaneously. Negligible at low speeds, but large at high speeds.
-
-- **g(q)**: gravity vector. The gravitational torque on each joint when the robot is in a gravitational field.
-
-- **τ**: joint torque vector. The forces produced by the motors. Friction is typically modeled separately and added on.
-
-This equation is the heart of robotic dynamics. Control, simulation, and trajectory optimization all start from it.
+This equation is the backbone of robot dynamics: model-based control, forward simulation, and trajectory optimization all build directly on it.
 
 ### 2-Link Planar Arm Example
 
-The 2-link planar arm is a staple example in any introduction to dynamics. Deriving it by hand on paper is strongly recommended — going through it once makes the structure of the n-DOF case clear.
+The 2-link planar arm is the classic testbed for dynamics—working through it once by hand reveals exactly how `M(q)`, `C(q, q̇)`, and `g(q)` arise in the general `n`-DOF case.
 
-Setup:
-- Link lengths: l_1, l_2
-- Link masses: m_1, m_2 (assume mass concentrated at the link tip — point mass)
-- Joint angles: q_1, q_2 (measured from the base)
-- Gravity: g (pointing down)
+Consider a planar arm with the following parameters:
+- Link lengths: `l_1`, `l_2`
+- Link masses: `m_1`, `m_2` (modeled as point masses concentrated at each link tip)
+- Joint angles: `q_1`, `q_2` (measured relative to the horizontal and the previous link, respectively)
+- Gravity: `g` (pointing downward)
 
 **Kinetic energy T:**
 
-Tip position of link 1:
+From forward kinematics, the tip position of link 1 is:
 ```
 x_1 = l_1 cos(q_1)
 y_1 = l_1 sin(q_1)
 ```
 
-Tip position of link 2:
+And the tip position of link 2 is:
 ```
 x_2 = l_1 cos(q_1) + l_2 cos(q_1 + q_2)
 y_2 = l_1 sin(q_1) + l_2 sin(q_1 + q_2)
 ```
 
-Computing each mass's velocity and expanding T = (1/2)m_1 v_1^2 + (1/2)m_2 v_2^2 gives:
+Differentiating each position with respect to time to get `v_1` and `v_2`, then substituting into `T = (1/2)m_1 v_1^2 + (1/2)m_2 v_2^2`, yields:
 
 ```
 T = (1/2)(m_1 + m_2) l_1^2 q̇_1^2
@@ -209,9 +202,13 @@ T = (1/2)(m_1 + m_2) l_1^2 q̇_1^2
 
 **Potential energy V:**
 
+Summing the gravitational potential energy `m_i g y_i` of both point masses gives:
+
 ```
 V = m_1 g l_1 sin(q_1) + m_2 g [l_1 sin(q_1) + l_2 sin(q_1 + q_2)]
 ```
+
+Applying the Euler-Lagrange equation and collecting coefficients of `q̈`, `q̇`, and `g` separates the dynamics into the standard manipulator matrices.
 
 **M(q) matrix:**
 
@@ -220,7 +217,7 @@ M(q) = [ (m_1+m_2)l_1^2 + m_2 l_2^2 + 2 m_2 l_1 l_2 cos(q_2)    m_2 l_2^2 + m_2 
         [ m_2 l_2^2 + m_2 l_1 l_2 cos(q_2)                          m_2 l_2^2                          ]
 ```
 
-M(q) depends on q_2. Look at M_{11}, the effective inertia seen by the base joint: it is maximal at q_2 = 0, with the arm fully extended, and minimal at q_2 = π, with the arm folded.
+Notice how `M(q)` depends on the elbow angle `q_2`. In particular, `M_{11}`—the effective inertia felt by the base joint—peaks at `q_2 = 0` when the arm is fully extended and reaches its minimum at `q_2 = π` when the arm is folded back.
 
 **C(q, q̇) matrix:**
 
@@ -229,7 +226,7 @@ C(q, q̇) = [ -m_2 l_1 l_2 sin(q_2) q̇_2    -m_2 l_1 l_2 sin(q_2)(q̇_1 + q̇_2
             [  m_2 l_1 l_2 sin(q_2) q̇_1     0                                     ]
 ```
 
-There are several ways to derive C (Christoffel symbols among them). The most systematic route is Christoffel symbols, but for a 2-link arm it is faster to collect the terms directly from the Euler-Lagrange equations.
+In general `n`-DOF derivations, `C(q, q̇)` is systematically constructed via Christoffel symbols of the first kind from `M(q)`, though for a 2-link arm it is faster to read the velocity-product terms directly off the Euler-Lagrange expansion.
 
 **g(q) vector:**
 
@@ -238,7 +235,7 @@ g(q) = [ (m_1 + m_2) g l_1 cos(q_1) + m_2 g l_2 cos(q_1 + q_2) ]
         [ m_2 g l_2 cos(q_1 + q_2)                                 ]
 ```
 
-Code that verifies this with SymPy:
+You can verify the symbolic kinetic and potential energy expressions in Python with SymPy before carrying out the time derivatives:
 
 ```python
 import sympy as sp
@@ -277,7 +274,7 @@ print("T =", T)
 print("V =", V)
 ```
 
-This code prints the kinetic energy T and potential energy V, which can be compared with the energy expressions derived above. After SymPy applies trigsimp, the form comes out cleanly.
+Once SymPy runs `trigsimp`, the expanded trigonometric terms collapse cleanly into the compact `T` and `V` expressions derived above.
 
 > **Further reading**
 > - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation*, Ch. 4 (https://www.cds.caltech.edu/~murray/mlswiki/) — the most rigorous treatment of Lagrangian mechanics in a robotics context. Free PDF available.
@@ -288,7 +285,7 @@ This code prints the kinetic energy T and potential energy V, which can be compa
 
 ## 5.4 Newton-Euler vs. Lagrangian
 
-These are the same physics viewed from different perspectives. The final result (the equations of motion) is identical. The difference lies in derivation and computational efficiency.
+Both formulations express the exact same physical laws and arrive at identical equations of motion. Where they diverge is how you derive those equations, what physical quantities they surface, and how fast they run as the number of joints grows:
 
 | Item | Newton-Euler (RNEA) | Lagrangian |
 |------|-------------------|---------|
@@ -299,14 +296,14 @@ These are the same physics viewed from different perspectives. The final result 
 | Primary use | real-time control, simulation | model derivation, energy-based analysis, Lyapunov stability |
 | Constraint forces | explicitly computable | automatically eliminated when using generalized coordinates |
 
-The practical workflow is typically as follows:
+In practice, robotics engineers pair the two rather than picking one exclusively:
 
-1. **Model derivation**: Use Lagrangian mechanics to understand the structure of the manipulator equation.
-2. **Numerical computation**: Use RNEA (or ABA) for real-time evaluation.
-3. **Controller design**: Design computed torque control, passivity-based control, and similar schemes that exploit the structure (M, C, g) of the manipulator equation.
-4. **Code implementation**: Pinocchio or Drake use RNEA/ABA internally, so calling the library is sufficient.
+1. **Model derivation**: Use Lagrangian mechanics to understand the analytical structure of the manipulator equation (`M`, `C`, `g`).
+2. **Numerical computation**: Evaluate dynamics in real time using recursive Newton-Euler algorithms (RNEA or ABA).
+3. **Controller design**: Formulate computed-torque or passivity-based controllers around the structural properties of `M(q)` and `C(q, q̇)`.
+4. **Code implementation**: Call libraries such as Pinocchio or Drake, which run RNEA and ABA under the hood.
 
-The two formulations serve complementary roles. Lagrangian mechanics exposes the structure used by control theory, while Newton-Euler methods support efficient real-time computation.
+Viewed together, the two formulations play complementary roles: Lagrangian mechanics gives you the algebraic structure needed for control theory and stability proofs, while Newton-Euler recursion delivers the speed required inside real-time control loops.
 
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 3 — a clear account of the relationship between the two formulations
@@ -316,35 +313,35 @@ The two formulations serve complementary roles. Lagrangian mechanics exposes the
 
 ## 5.5 Forward Dynamics vs. Inverse Dynamics
 
-Dynamics has two "directions":
+Every rigid-body dynamics computation runs in one of two directions, depending on whether you are controlling a physical robot or stepping a simulator:
 
 **Inverse Dynamics:**
 ```
 Given: q, q̇, q̈
 Find: τ
 ```
-Answers "what torque must the motor produce to follow this trajectory?". Used primarily in control. The core of computed torque control.
+Inverse dynamics asks: *what motor torques must we apply to follow a desired trajectory?* It sits at the core of model-based controllers such as computed torque control.
 
 **Forward Dynamics:**
 ```
 Given: q, q̇, τ
 Find: q̈
 ```
-It answers the question, "How does the robot accelerate under this torque?" A simulator repeats this computation at every time step.
+Forward dynamics asks the opposite question: *given the current torques, how will the robot accelerate?* Physics simulators solve this problem at every integration time step.
 
-Mathematically, forward dynamics is solving for q̈ in the manipulator equation:
+Algebraically, forward dynamics means isolating `q̈` in the manipulator equation:
 
 ```
 q̈ = M(q)^{-1} [τ - C(q, q̇)q̇ - g(q)]
 ```
 
-Simply inverting M(q) is O(n^3). This is slow for robots with many joints.
+Forming `M(q)` explicitly and inverting it costs O(n^3) operations, which quickly becomes a bottleneck as joint counts rise toward humanoids or multi-arm systems.
 
 ### Articulated Body Algorithm (ABA)
 
-Featherstone's ABA computes forward dynamics in O(n). Just as RNEA is the O(n) algorithm for inverse dynamics, ABA is the O(n) algorithm for forward dynamics.
+Just as RNEA solves inverse dynamics in O(n) time, Featherstone's Articulated Body Algorithm (ABA) solves forward dynamics in O(n) time without ever building or inverting the full `M(q)` matrix.
 
-ABA treats each link as an "articulated body" and recursively accumulates the inertia of its subtree. It computes q̈ directly without explicitly forming the M matrix.
+The intuition is to look at each link together with its entire downstream subtree as a single composite "articulated body." In three passes—sweeping velocities forward, accumulating effective subtree inertias and bias forces backward from the tips to the base, and finally resolving joint accelerations forward—ABA computes `q̈` in linear time:
 
 ```
 ABA(model, q, q̇, τ):
@@ -368,17 +365,17 @@ ABA(model, q, q̇, τ):
     return q̈
 ```
 
-The actual implementation is quite involved. Rather than writing it from scratch, using Pinocchio or Drake is the sensible choice.
+Because the bookkeeping in Pass 2 and Pass 3 is intricate to implement cleanly by hand, production code relies on battle-tested libraries such as Pinocchio or Drake rather than custom ABA implementations.
 
 ### Role in Simulators
 
-The algorithm differs between simulators:
+Each major physics engine builds its forward-dynamics pipeline around a different strategy for branching chains and contacts:
 
-- **MuJoCo**: uses its own algorithm for forward dynamics. Its hallmark is an integrated solver that includes contact. Internally it exploits sparse factorization and is specialized for branching structures.
-- **Drake**: MultibodyPlant uses ABA. Contact is handled by a separate solver (time-stepping, hydroelastic, etc.).
-- **Bullet (PyBullet)**: builds on Featherstone's ABA, with contact handled by a sequential impulse solver.
+- **MuJoCo**: uses its own forward-dynamics algorithm featuring an integrated solver that treats contact forces alongside joint dynamics, exploiting sparse factorization tailored to branching kinematic trees.
+- **Drake**: `MultibodyPlant` uses ABA for articulated inertia, delegating contact to separate solvers (time-stepping, hydroelastic, and related formulations).
+- **Bullet (PyBullet)**: builds on Featherstone's ABA and resolves contact via a sequential impulse solver.
 
-In code:
+In Pinocchio, you can verify directly that ABA and RNEA are exact mathematical inverses of each other—feeding ABA's output acceleration back into RNEA recovers the original torque vector up to floating-point precision:
 
 ```python
 # Pinocchio: forward dynamics (ABA)
@@ -401,8 +398,6 @@ tau_check = pin.rnea(model, data, q, v, qdd)
 print("Torque error:", np.linalg.norm(tau - tau_check))  # ≈ 0
 ```
 
-RNEA and ABA are inverses of each other. RNEA(q, v, ABA(q, v, τ)) ≈ τ holds (within floating-point error).
-
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 7 — the original description of ABA
 > - MuJoCo documentation: Computation (https://mujoco.readthedocs.io/en/latest/computation/) — describes MuJoCo's dynamics pipeline
@@ -412,59 +407,61 @@ RNEA and ABA are inverses of each other. RNEA(q, v, ABA(q, v, τ)) ≈ τ holds 
 
 ## 5.6 Contact Dynamics
 
-The moment a robot makes contact with its environment, dynamics becomes one step more complicated. Dynamics in free space is expressed cleanly as an ODE (ordinary differential equation), but once contact is introduced, inequality constraints and discontinuities appear.
+Free-space robot motion evolves according to smooth ordinary differential equations (ODEs). The moment a link touches a table, wall, or floor, however, unilateral inequality constraints and sudden velocity discontinuities enter the dynamics.
 
 ### Rigid Contact vs. Compliant Contact
 
-There are two large frameworks for modeling contact:
+Contact models fall into two broad families depending on whether they treat bodies as perfectly hard or slightly deformable:
 
 **Rigid contact:**
-- Directly imposes the constraint that bodies do not interpenetrate.
-- Contact forces come out as the Lagrange multipliers of the constraint.
-- Mathematically clean but numerically difficult — discontinuities appear at contact/non-contact transitions, and handling them requires solving an LCP (Linear Complementarity Problem) or NCP (Nonlinear Complementarity Problem).
-- LCP time-stepping methods of the Stewart-Trinkle family belong to this category.
+- Enforces a strict non-penetration constraint so colliding geometries cannot overlap.
+- Recovers normal contact forces as Lagrange multipliers associated with that constraint.
+- Clean mathematically, but numerically challenging: impact and separation introduce discontinuities that require solving a Linear Complementarity Problem (LCP) or Nonlinear Complementarity Problem (NCP) at each step.
+- Time-stepping LCP formulations in the Stewart-Trinkle family belong to this camp.
 
 **Compliant contact:**
-- Places a virtual spring-damper at the contact surface. It generates a restoring force proportional to penetration depth.
-- Numerically stable and easy to implement.
-- Increasing spring stiffness approaches rigid contact, but the integrator's time step must shrink accordingly (stiff ODE).
-- MuJoCo's default contact model belongs to this family.
+- Places a virtual spring-damper at the contact interface, generating a restoring force proportional to penetration depth and indentation velocity.
+- Straightforward to implement and numerically well-behaved for optimization and learning.
+- Raising spring stiffness approaches rigid behavior, at the cost of a stiff ODE that forces smaller integration time steps.
+- MuJoCo's default contact formulation falls into this family.
 
 ### Coulomb Friction Model
 
-Where there is contact, there is friction. The most basic friction model is Coulomb friction:
+Contact almost always brings friction along with it. The classical baseline is Coulomb friction, which distinguishes sticking from sliding using a single coefficient `μ`:
 
 ```
 |f_t| ≤ μ f_n          (static friction)
 |f_t| = μ f_n, f_t ∥ -v_t  (sliding friction)
 ```
 
-Here f_t is the tangential friction force, f_n is the normal force, μ is the friction coefficient, and v_t is the tangential relative velocity.
+Here `f_t` is the tangential friction force, `f_n` is the normal force, `μ` is the friction coefficient, and `v_t` is the tangential relative slip velocity.
 
-Problems with this model:
-- The transition from static to sliding friction is discontinuous.
-- In 3D the friction cone is nonlinear. Linearizing it produces a friction pyramid, which loses accuracy.
-- Painleve's paradox: under certain conditions, rigid contact + Coulomb friction admits no solution, or a non-unique one.
+Despite its simplicity, Coulomb friction introduces thorny numerical and theoretical issues:
+- Switching between static sticking and kinetic sliding creates a sharp discontinuity.
+- In 3D, the feasible friction region forms a nonlinear circular cone; approximating it as a faceted pyramid keeps constraints linear at the cost of directional bias.
+- Under certain geometric and inertial configurations—known as Painleve's paradox—rigid contact paired with Coulomb friction can have no solution or multiple solutions.
 
 ### Why Contact-Rich Manipulation Is Hard
 
-Why are tasks like grasping, rotating, and inserting objects (peg-in-hole, in-hand manipulation, etc.) so difficult?
+Tasks like grasping, in-hand reorientation, and peg-in-hole assembly remain among the hardest problems in robotics for four compounding reasons:
 
-1. **Hybrid dynamics**: the contact mode changes frequently (contact/no-contact, stick/slip). Each mode has different dynamics, and predicting mode-switch timing is hard.
-2. **Discontinuous dynamics**: state can change discontinuously at mode transitions (impact).
-3. **Sensitivity to parameters**: without accurate values of the friction coefficient, contact stiffness, and the like, the sim-to-real gap grows large.
-4. **Combinatorial complexity**: as the number of contact points grows, combinations of contact/separation and stick/slip grow exponentially. The exact mode count depends on the friction model and how tangential directions are discretized.
+1. **Hybrid dynamics**: Each combination of contacts (making/breaking contact, sticking/slipping) acts as a distinct dynamical mode, and predicting exactly when the system switches modes is difficult.
+2. **Discontinuous dynamics**: Impacts cause near-instantaneous jumps in velocity, breaking smooth gradient-based reasoning.
+3. **Sensitivity to parameters**: Small mismatches in friction coefficients, surface compliance, or mass distribution can flip a successful grasp into a slip, widening the sim-to-real gap.
+4. **Combinatorial complexity**: With multiple contact points, the number of active stick/slip/separation combinations grows exponentially (with the exact count depending on the friction model and tangential discretization).
 
 ### Why Contact Handling Differs Across Simulators
 
-Because contact can be approximated numerically in several ways. Each simulator picks a different trade-off between accuracy, speed, and stability:
+Because exact rigid contact with 3D friction is computationally expensive and non-smooth, each physics simulator adopts a different numerical approximation trading off accuracy, speed, and solver stability:
 
-- **MuJoCo**: compliant contact + convex optimization. Fast and stable, but not physically exact. In particular, interpenetration is allowed and treated as part of "soft contact". This stability is one reason MuJoCo is popular as an RL environment.
-- **Drake**: compliant point contact (TAMSI/SAP discrete solvers) and hydroelastic contact, both of which are compliant approaches. More physically rigorous but potentially more expensive. Hydroelastic contact even computes the pressure distribution over the contact surface.
-- **Bullet**: velocity-level LCP + sequential impulse. Originating from games/VR, the engine is optimized for speed. Contact accuracy depends on the settings and the task, so how it ranks against MuJoCo and Drake has to be compared directly on the target task.
-- **DART**: LCP-based rigid contact. Academically rigorous, but with a smaller user base than MuJoCo or Drake.
+- **MuJoCo**: combines compliant soft contact with a convex optimization solver. Fast and numerically smooth, it permits small interpenetrations by design—one reason it became a staple for reinforcement learning.
+- **Drake**: provides both compliant point contact (via its TAMSI and SAP discrete solvers) and hydroelastic contact, which integrates pressure across overlapping contact patches for higher physical fidelity at greater compute cost.
+- **Bullet**: relies on velocity-level LCP with a sequential impulse solver, reflecting its origins in games and real-time graphics; actual accuracy and speed vary strongly with solver settings and task geometry, so benchmarking on the target system is essential.
+- **DART**: implements LCP-based rigid contact with strong academic rigor, though with a smaller ecosystem than MuJoCo or Drake.
 
-The choice of simulator depends on the research goal. MuJoCo is widely used for locomotion RL, while both Drake and MuJoCo can represent contact-rich manipulation. Choose from the required contact model, gradients, throughput, target hardware, and validation cases rather than from a universal ranking.
+No single simulator wins across every metric: MuJoCo is a common default for locomotion RL, while both Drake and MuJoCo serve contact-rich manipulation. Choose based on the contact physics, differentiability, throughput, hardware targets, and validation benchmarks your problem demands.
+
+Once a MuJoCo simulation step finishes, you can inspect every active contact—its world position, normal frame, signed penetration distance, and colliding geometry IDs—directly through `MjData`:
 
 ```python
 # Accessing contact information in MuJoCo
@@ -501,53 +498,55 @@ for i in range(n_contacts):
 
 ## 5.7 Advanced: Featherstone Algorithms and Spatial Algebra
 
-From here on the material is at the graduate level. Featherstone's spatial vector algebra is a mathematical framework for expressing dynamics algorithms concisely and efficiently.
+The remaining two sections enter graduate-level territory. Earlier, in §5.2 and §5.5, we wrote the RNEA and ABA loops using compact symbols `v[i]`, `f[i]`, and `I[i]`. Featherstone's spatial vector algebra is the mathematical machinery behind that notation—packing linear and angular quantities into unified 6D vectors so rigid-body algorithms collapse to a handful of clean matrix operations.
 
 ### Spatial Vectors (6D Vectors)
 
-The motion of a rigid body in 3D space is translation (3 DOF) + rotation (3 DOF) = 6 DOF. A spatial vector bundles this into a single 6D vector.
+A rigid body moving in 3D space has 3 translational and 3 rotational degrees of freedom—6 DOF in total. Rather than carrying separate 3D equations for translation and rotation, spatial algebra bundles them into dual 6D vectors:
 
 **Motion vector (spatial velocity, twist):**
 ```
 v = [ω; v_O]
 ```
-The top 3 entries are the angular velocity (ω); the bottom 3 are the linear velocity at the reference point O (v_O).
+The top three entries store the body's angular velocity `ω`; the bottom three store the linear velocity `v_O` of the body point momentarily passing through reference point `O`.
 
 **Force vector (spatial force, wrench):**
 ```
 f = [n_O; f]
 ```
-The top 3 entries are the moment about the reference point O (n_O); the bottom 3 are the force (f).
+The top three entries store the moment `n_O` about reference point `O`; the bottom three store the linear force `f`.
 
-The key advantage of this notation: the inner product of spatial velocity and spatial force is exactly power.
+Notice the deliberate ordering: pairing `[ω; v_O]` with `[n_O; f]` makes their inner product equal instantaneous mechanical power:
 ```
 P = f^T v = n_O · ω + f · v_O
 ```
 
-This is no accident — spatial vectors are designed to have this property.
+Spatial vectors live in dual vector spaces specifically so that this coordinate-invariant power pairing holds everywhere.
 
 ### Spatial Inertia
 
-The 6×6 spatial inertia matrix bundles mass, CoM position, and rotational inertia into a single matrix:
+To map 6D spatial acceleration to 6D spatial force in a single step, the `6×6` spatial inertia matrix packages mass `m`, center-of-mass offset `c`, and rotational inertia `I_cm` into one block matrix:
 
 ```
 I_sp = [ I_cm + m·[c]×[c]×^T    m·[c]× ]
        [ m·[c]×^T                 m·1    ]
 ```
 
-Here m is the mass, c is the vector to the CoM, I_cm is the rotational inertia about the CoM, and [c]× is the skew-symmetric matrix of c.
+Here `[c]×` denotes the skew-symmetric cross-product matrix of the vector `c` from reference point `O` to the CoM.
 
-Advantages of spatial inertia:
-- Inertias of multiple rigid bodies expressed in the same frame about the same reference point combine by addition: I_composite = I_1 + I_2 + ...
-- Coordinate transformation is a single congruence transform: I_B = X^T I_A X
+Treating inertia as a single `6×6` operator brings two major algebraic payoffs:
+- **Simple composition**: Inertias of multiple bodies expressed in the same frame and reference point add directly (`I_composite = I_1 + I_2 + ...`), which is exactly what the Composite Rigid Body Algorithm (CRBA) uses to build `M(q)`.
+- **Clean frame transforms**: Shifting a spatial inertia between frames `A` and `B` reduces to a single congruence transform, `I_B = X^T I_A X`.
 
 ### Spatial Vector Form of RNEA and ABA
 
-The pseudo-code shown in §5.2 and §5.5 was in fact spatial vector notation. S[i] is the motion subspace of joint i (for a revolute joint, [e_z; 0]; for a prismatic joint, [0; e_z]); v[i] is a spatial velocity; f[i] is a spatial force.
+With 6D motion and force vectors defined, the pseudocode in §5.2 and §5.5 becomes exact rather than schematic. The joint motion subspace `S[i]` encodes the joint type (`[e_z; 0]` for a revolute joint along `z`, `[0; e_z]` for a prismatic joint along `z`), while `v[i]` and `f[i]` carry full 6D twists and wrenches.
 
-With spatial vectors, revolute and prismatic joints are handled by the same code. This is why libraries like Pinocchio and Drake use spatial algebra internally.
+Because joint geometry lives entirely inside `S[i]`, one unified code path handles revolute, prismatic, spherical, and free-flyer joints alike—the architectural reason Pinocchio and Drake build their cores on spatial algebra.
 
 ### Accessing Spatial Quantities in Pinocchio
+
+Pinocchio exposes these spatial velocities, mass matrices, and centroidal momentum maps directly from Python. The script below computes frame twists, builds the full joint-space inertia matrix `M(q)` via CRBA, and extracts the centroidal momentum matrix `A_g`:
 
 ```python
 import pinocchio as pin
@@ -578,7 +577,7 @@ Ag = data.Ag  # 6 x nv matrix
 # h = Ag @ v is the centroidal momentum (linear + angular)
 ```
 
-Using Pinocchio from C++:
+For real-time control loops running at 1 kHz or faster, Pinocchio provides a mirror Eigen-based C++ API that avoids Python interpreter overhead while keeping nearly identical function signatures:
 
 ```cpp
 #include <pinocchio/algorithm/rnea.hpp>
@@ -600,8 +599,6 @@ Eigen::VectorXd tau_id = pinocchio::rnea(model, data, q, v, Eigen::VectorXd::Zer
 Eigen::VectorXd qdd = pinocchio::aba(model, data, q, v, tau);
 ```
 
-Pinocchio's C++ API is Eigen-based and exposes nearly the same interface as its Python API. kHz-rate real-time control uses the C++ API to avoid Python overhead.
-
 > **Further reading**
 > - Featherstone, *Rigid Body Dynamics Algorithms*, Ch. 2 — the original description of spatial vector algebra.
 > - Featherstone, "A Beginner's Guide to 6-D Vectors" (IEEE Robotics & Automation Magazine, 2010) — a more accessible introduction than the textbook
@@ -611,38 +608,38 @@ Pinocchio's C++ API is Eigen-based and exposes nearly the same interface as its 
 
 ## 5.8 Advanced: Floating Base Systems
 
-An industrial manipulator has its base bolted to the floor. Legged robots, drones, and underwater robots have a moving base. Its position and orientation add degrees of freedom and change the structure of the dynamics.
+An industrial manipulator sits bolted to the floor. Legged robots, aerial drones, and underwater vehicles have no fixed anchor—their base moves freely in 3D space, adding six unactuated degrees of freedom that fundamentally reshape the equations of motion.
 
 ### Configuration of a Floating Base
 
-For a fixed-base robot, the configuration is q ∈ R^n. For a floating-base robot, the configuration is:
+For a fixed-base robot, every joint coordinate lives in `R^n`. Once the base is free to translate and rotate, the configuration vector splits into base pose and internal joints:
 
 ```
 q = [q_base; q_joints]
 ```
 
-q_base is an element of SE(3) — position (3) + orientation (3, or 4 with a quaternion). This is why in Pinocchio the dimension of q (nq) and the dimension of v (nv) can differ (with a quaternion, nq = nv + 1).
+Here `q_base` belongs to `SE(3)`—3 coordinates for translation plus 3 for orientation (or 4 when parameterized by a unit quaternion). Because a quaternion lives on the unit 3-sphere rather than in Euclidean space, Pinocchio's configuration dimension `nq` exceeds its velocity dimension `nv` (`nq = nv + 1` for a single free-flyer base).
 
-Because q and v do not live in the same vector space, one cannot simply do q += v*dt when integrating or differencing. In Pinocchio one must use `pin.integrate(model, q, v*dt)`.
+Since `q` and `v` no longer occupy the same vector space, naive Euler updates like `q += v*dt` break unit-quaternion normalization. Instead, integration and differencing must respect the manifold structure via `pin.integrate(model, q, v*dt)`.
 
 ### Underactuated Systems
 
-Floating-base systems are usually **underactuated**. Legged robots have no actuator directly attached to the base, so they must push against the ground with their feet to move it, and a quadrotor, although its rotors are mounted on the base, has to cover 6 DOF with 4 inputs. What decides underactuation is not the floating base itself but the number of independent inputs and the contact conditions. A free-flyer with thrusters along all 6 directions, or an omnidirectional multirotor, is fully actuated, and a legged robot can control all 6 base DOF as well when it has enough contact.
+Most floating-base robots are **underactuated**—they have fewer independent control inputs than degrees of freedom. A legged robot has no thrusters bolted to its pelvis, so it can only accelerate its torso by pushing against the ground with its feet; similarly, a standard quadrotor must control 6-DOF pose using only 4 rotor thrusts. Underactuation depends on both available actuators and active contacts, not the floating base itself: an omnidirectional multirotor or a spacecraft with 6-axis thrusters is fully actuated, and a legged robot with sufficient multi-limb contacts can likewise control all 6 base DOFs.
 
-Splitting the manipulator equation into base and joints:
+Partitioning the manipulator equation into base rows (`b`) and joint rows (`j`) makes this structure explicit:
 
 ```
 [ M_bb  M_bj ] [ a_base  ]   [ C_b ]   [ g_b ]   [  0  ]   [ J_{c,b}^T ]
 [ M_jb  M_jj ] [ q̈_joints] + [ C_j ] + [ g_j ] = [ τ_j ] + [ J_{c,j}^T ] λ
 ```
 
-The top component `0` of the input vector on the right-hand side indicates that no joint torque acts on the base. λ is the contact force (of dimension k), and J_{c,b} (k×6) and J_{c,j} (k×n) are the blocks of the contact Jacobian J_c (k×(6+n)) split into its base columns and joint columns. Contact forces and gravity accelerate the base.
+The `0` in the top block of the torque vector reflects the hard physical constraint that no motor acts directly on the base. Instead, `λ` (dimension `k`) denotes the external contact forces, mapped into generalized forces through the base and joint blocks `J_{c,b}` (`k×6`) and `J_{c,j}` (`k×n`) of the contact Jacobian `J_c` (`k×(6+n)`). Only contact forces and gravity can accelerate the base.
 
-This constraint is what makes locomotion control hard. For a fixed-base manipulator, the desired joint torque can simply be commanded to the motors; a legged robot, in contrast, must generate appropriate contact forces to make the base move as desired.
+This is precisely why legged locomotion is much harder to control than fixed-base manipulation: on a bolted arm, you can command joint torques directly toward a target; on a quadruped or humanoid, you must synthesize joint torques that produce physically valid ground contact forces (`λ`) to steer the unactuated base without slipping or tipping.
 
 ### Centroidal Dynamics
 
-Expressing the total system momentum at the center of mass (CoM) yields centroidal dynamics:
+Looking at all `6+n` DOFs simultaneously can obscure the forest for the trees. Summing linear and angular momentum across every link and expressing the total momentum at the robot's overall center of mass (CoM) yields **centroidal dynamics**—a compact 6D summary of the entire system's momentum:
 
 **Linear momentum:**
 ```
@@ -660,13 +657,13 @@ L = Σ (r_i - r_CoM) × (m_i v_i) + I_i ω_i
 L̇ = Σ (r_contact - r_CoM) × f_contact
 ```
 
-Why this matters in locomotion control:
+Three properties make centroidal dynamics central to modern locomotion control:
 
-1. **CoM dynamics determines balance.** At rest, the vertical projection of the CoM must lie inside the support polygon (the static stability condition). While walking, it is the ZMP (the center of pressure over the contact surface) that must stay inside the support polygon (the ZMP condition). More generally, centroidal momentum must be regulated appropriately.
+1. **Balance reduces to CoM and momentum regulation.** When stationary, static stability requires the CoM's vertical projection to stay inside the support polygon. During dynamic walking, the Zero-Moment Point (ZMP, or center of pressure over the contact patch) must remain inside that polygon, and more broadly, centroidal linear and angular momentum must be kept bounded.
+2. **Sharp dimensionality reduction.** Rather than optimizing over `30+` joint coordinates directly, planners can shape desired motion in the 6D centroidal space (3 linear + 3 angular momentum components) and map the result back to full joint trajectories afterward.
+3. **Direct link to contact forces.** Because internal joint torques cancel out pairwise by Newton's third law, the rate of change of centroidal momentum depends *exclusively* on gravity and external contact forces `f_contact`—turning gait generation into a contact-force planning problem.
 
-2. **Dimensionality reduction.** The full dynamics of an n-DOF legged robot is n-dimensional, but centroidal dynamics is 6-dimensional (3 linear + 3 angular momentum). A common approach is to first plan the desired momentum trajectory in this 6D space, then decompose down to the full joint level.
-
-3. **Direct connection to contact force planning.** As the equations above show, the rate of change of centroidal momentum is determined only by external forces (contact forces + gravity). Planning which contact force pattern produces the desired momentum trajectory is the central problem of locomotion.
+In Pinocchio, initializing a model with `pin.JointModelFreeFlyer()` lets you evaluate centroidal momentum `h`, the `6 × nv` centroidal momentum matrix `A_g(q)`, and the CoM position and velocity directly:
 
 ```python
 # Computing centroidal dynamics in Pinocchio
@@ -699,7 +696,7 @@ print("CoM velocity:", data.vcom[0])
 
 ### Structure of Centroidal-Dynamics-Based Locomotion Control
 
-A typical modern legged-robot control pipeline has the following structure:
+Combining contact scheduling, centroidal trajectory optimization, and whole-body control (covered in §6.7) yields the standard hierarchical architecture used across modern legged robots:
 
 ```
 [Contact Schedule] → [Centroidal Trajectory Optimization] → [Whole-Body Control] → [Joint Torques]
@@ -710,7 +707,7 @@ Stage 3: Compute torques that meet the centroidal target while satisfying joint-
 Stage 4: Command torques to the motors
 ```
 
-This structure applies to systems with a floating base. Drone trajectory optimization and underwater-robot control use similar structures.
+Variants of this same pipeline generalize across floating-base platforms, from aerial vehicle trajectory optimization to underwater vehicle control.
 
 > **Further reading**
 > - Orin et al., "Centroidal Dynamics of a Humanoid Robot", Autonomous Robots 2013 — an analysis of centroidal dynamics for humanoids
@@ -722,28 +719,28 @@ This structure applies to systems with a floating base. Drone trajectory optimiz
 
 ## 5.9 Further Reading
 
-The recommended reading order depends on the reader's background.
+The best entry point depends on your mathematical background and goals:
 
-**Undergraduate junior/senior, introduction to dynamics:**
+**Undergraduate introduction to dynamics:**
 
-> - Spong, Hutchinson, Vidyasagar, *Robot Modeling and Control* — an undergraduate introduction with a detailed derivation of the manipulator equation.
-> - Craig, *Introduction to Robotics: Mechanics and Control* — a shop-floor perspective. Practical but relatively shallow on the mathematical side.
+> - Spong, Hutchinson, Vidyasagar, *Robot Modeling and Control* — an accessible undergraduate text with a thorough step-by-step derivation of the manipulator equation.
+> - Craig, *Introduction to Robotics: Mechanics and Control* — takes a practical engineering perspective, though lighter on mathematical rigor.
 
-**Graduate level, when mathematically rigorous understanding is needed:**
+**Graduate-level mathematical foundations and algorithms:**
 
-> - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation* (https://www.cds.caltech.edu/~murray/mlswiki/) — a rigorous treatment of dynamics from a Lie group/algebra perspective. The PDF is free, but difficult as a first text.
-> - Featherstone, *Rigid Body Dynamics Algorithms* — the central reference for dynamics algorithms. All the core algorithms — spatial vector algebra, RNEA, ABA, composite rigid body algorithm — are here. Required reading for graduate students.
+> - Murray, Li, Sastry, *A Mathematical Introduction to Robotic Manipulation* (https://www.cds.caltech.edu/~murray/mlswiki/) — develops dynamics rigorously via Lie groups and Lie algebras. Free PDF available, though steep as a first text.
+> - Featherstone, *Rigid Body Dynamics Algorithms* — the authoritative reference for spatial vector algebra, RNEA, ABA, and the composite rigid body algorithm; essential reading for graduate researchers.
 
-**Dynamics + control integrated:**
+**Unifying dynamics with control and optimization:**
 
-> - Russ Tedrake, *Underactuated Robotics* (https://underactuated.csail.mit.edu/) — covers how to use dynamics models in control and optimization. Lecture videos are also on MIT OCW. Free.
+> - Russ Tedrake, *Underactuated Robotics* (https://underactuated.csail.mit.edu/) — connects rigid-body dynamics directly to trajectory optimization and feedback control, with free lecture videos on MIT OCW.
 
-**Libraries and tools:**
+**Core libraries and simulators:**
 
-> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — a C++/Python library for pure dynamics computation. Supports RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives, and more. Autodiff via CasADi and CppAD is also available (Pinocchio 3.x).
-> - Drake (https://drake.mit.edu/) — a framework integrating simulation + optimization + control. MultibodyPlant is the dynamics engine. Its powerful mathematical programming interface is particularly useful for trajectory optimization.
-> - MuJoCo (https://mujoco.org/) — a physics simulator maintained by DeepMind and widely used for robot learning with contact.
-> - PyBullet (https://pybullet.org/) — the Python interface to Bullet Physics. The low entry barrier makes it suitable for teaching, but contact physics accuracy and speed depend on the articulated-body setup, the contact settings, and the integration time step, so they have to be compared directly on the target task.
+> - Pinocchio (https://github.com/stack-of-tasks/pinocchio) — fast C++/Python rigid-body dynamics supporting RNEA, ABA, CRBA, centroidal dynamics, analytical derivatives, and autodiff via CasADi and CppAD (Pinocchio 3.x).
+> - Drake (https://drake.mit.edu/) — an integrated simulation, optimization, and control framework built around `MultibodyPlant` and a rich mathematical programming interface suited to trajectory optimization.
+> - MuJoCo (https://mujoco.org/) — a fast physics engine maintained by DeepMind and widely adopted for contact-rich robot learning.
+> - PyBullet (https://pybullet.org/) — the Python interface to Bullet Physics. Easy to install and teach with, though contact fidelity and speed depend heavily on articulated-body tuning, contact parameters, and time step, requiring task-specific benchmarking.
 
 ---
 
@@ -772,12 +769,12 @@ The recommended reading order depends on the reader's background.
 
 ## Summary
 
-Practical points:
+Five takeaways to carry into the next chapter:
 
-1. The manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ` is the standard form for dynamics calculations.
-2. Use RNEA for inverse dynamics (computing τ) and ABA for forward dynamics (computing q̈). Both are O(n).
-3. Contact adds constraints and discontinuities, so the contact model and simulator choice must be considered together.
-4. In floating-base systems, centroidal dynamics is the key tool.
-5. In practice, use libraries such as Pinocchio or Drake, while checking the quantities and assumptions they implement internally.
+1. The manipulator equation `M(q)q̈ + C(q,q̇)q̇ + g(q) = τ` is the standard template for rigid-body dynamics and controller design.
+2. RNEA solves inverse dynamics (finding `τ`) and ABA solves forward dynamics (finding `q̈`), both in `O(n)` time.
+3. Contact introduces unilateral constraints and velocity discontinuities, making contact modeling central to simulator selection and sim-to-real transfer.
+4. For floating-base systems, centroidal dynamics compresses full-body motion into 6D momentum equations driven solely by gravity and contact forces.
+5. In practice, rely on established libraries like Pinocchio or Drake while verifying their coordinate conventions, quaternion orderings, and contact assumptions.
 
-This dynamics model leads directly to computed torque control, operational space control, and whole-body control.
+With a model linking joint torques and contact forces to accelerations in hand, Ch. 6 turns to the control problem: how to choose those torques continuously in real time—using PID, LQR, MPC, impedance control, and whole-body control—while guaranteeing stability despite disturbances and model error.

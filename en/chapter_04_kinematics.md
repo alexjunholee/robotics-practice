@@ -1,28 +1,26 @@
 # Ch.4 — Kinematics & Mechatronics
 
 
-Place a single robot arm on a desk. What angle must each of the six motors take so that the fingertip reaches a coffee cup? Kinematics is the discipline that answers this question. And the real-world problem of actually spinning those motors, reading sensors, and running a control loop at 1kHz is mechatronics.
+Ch.3 introduced the mathematical machinery of coordinate frames, rigid-body transformations, Lie groups, and probabilistic state estimation. This chapter brings that machinery onto physical hardware. Consider a six-axis robot arm resting on a desk: calculating the exact angle each motor must hold for the fingertip to reach a coffee cup is the domain of **kinematics**, while actually driving those motors, reading sensors, and closing a deterministic control loop at 1 kHz is **mechatronics**.
 
-The equations connect to hardware selection and communication protocols, and eventually to motion on a physical robot.
+From rigid-body equations to actuator sizing, fieldbus protocols, and real-time software, the sections that follow trace how geometry becomes motion on a real robot—and then extend that deterministic geometry into the probabilistic motion models used in mobile localization.
 
 ---
 
 ## 4.1 Why Study Kinematics
 
-A robot manipulator is built from multiple joints and links. What we want is the position and pose of the end-effector. What we directly control, however, is the angle (or displacement) of each joint.
+A robot manipulator consists of rigid links connected by actuated joints. In practice, tasks are specified in Cartesian space—the position and orientation (pose) of the end-effector—whereas the controller only commands individual joint angles or linear displacements. **Kinematics** is the mathematical bridge between these two representations, split into two complementary problems:
 
-The mathematical description of the relationship between these two is **kinematics**.
+- **Forward Kinematics (FK)**: given the joint angles, determine the end-effector pose.
+- **Inverse Kinematics (IK)**: given a desired end-effector pose, find the joint angles that achieve it.
 
-- **Forward Kinematics (FK)**: joint angles → end-effector position/pose
-- **Inverse Kinematics (IK)**: end-effector position/pose → joint angles
+Unlike dynamics, kinematics ignores masses, inertias, and forces. It asks *"where is the mechanism?"* rather than *"what torques are needed to move it?"*—a physical layer that Ch.5 takes up next.
 
-This is different from dynamics. Kinematics does not consider forces and masses. It is the question of "where is it," not "what force is required." Dynamics is the subject of the next chapter.
-
-Kinematics is used in the following tasks:
-- Robot arm path planning (motion planning)
-- Teleoperation (master-slave mapping in remote control)
-- Calibration (correcting errors between the real robot and the model)
-- Collision avoidance (you must know where each link sits in space to avoid it)
+Even without dynamics, kinematics underpins much of practical robotics:
+- **Motion planning**: generating collision-free Cartesian or joint-space trajectories for an arm.
+- **Teleoperation**: mapping a human operator's hand or leader-arm pose onto a follower robot in real time.
+- **Calibration**: identifying and correcting geometric discrepancies between the nominal CAD model and the assembled machine.
+- **Collision avoidance**: evaluating where every link occupies 3D space so the arm clears both obstacles and itself.
 
 ---
 
@@ -30,27 +28,25 @@ Kinematics is used in the following tasks:
 
 ### 4.2.1 Homogeneous Transformation Matrix
 
-The basic tool of kinematics is the 4×4 homogeneous transformation matrix:
+Because a manipulator is a serial chain of rigid bodies, tracking where each link sits in space requires bundling rotation and translation into a single algebraic object. Drawing on the $SE(3)$ transformations from Ch.3, kinematics relies on the 4×4 homogeneous transformation matrix:
 
 ```
 T = | R  p |
     | 0  1 |
 ```
 
-Here R is a 3×3 rotation matrix and p is a 3×1 position vector. A homogeneous transformation matrix represents a rigid body's position and orientation together, and matrix multiplication chains multiple transformations.
-
-Given a transformation T_01 between two frames and another transformation T_12:
+Here, `R` is a 3×3 rotation matrix describing orientation and `p` is a 3×1 position vector describing translation. Packing both into a 4×4 matrix turns frame composition into ordinary matrix multiplication: if `T_01` expresses frame 1 relative to frame 0 and `T_12` expresses frame 2 relative to frame 1, their product gives frame 2 directly in frame 0:
 
 ```
 T_02 = T_01 * T_12
 ```
 
-Forward kinematics applies this composition from the base to the end-effector, multiplying each joint transformation in order.
+Forward kinematics applies this chain rule from the robot's base through every link out to the end-effector, multiplying each joint transformation in sequence.
 
 
 ### 4.2.2 DH Parameters (Denavit-Hartenberg)
 
-A convention proposed in 1955 by Denavit and Hartenberg. It remains widely used in robot kinematics, with four parameters defining the relationship between adjacent links:
+An arbitrary rigid-body transformation in 3D has six degrees of freedom, yet a standard single-axis robot joint introduces only one variable. In 1955, Denavit and Hartenberg proposed a systematic frame-assignment convention that reduces the relative transform between any two adjacent links to four scalar parameters, summarized below:
 
 | Parameter | Meaning |
 |---------|------|
@@ -59,10 +55,7 @@ A convention proposed in 1955 by Denavit and Hartenberg. It remains widely used 
 | **d_i** (link offset) | distance from x_{i-1} to x_i along the z_{i-1} axis |
 | **θ_i** (joint angle) | rotation angle from x_{i-1} to x_i about the z_{i-1} axis |
 
-For a revolute joint, θ_i is the variable and the other three are constants.
-For a prismatic joint, d_i is the variable.
-
-The transformation matrix for each joint:
+For a revolute joint, `θ_i` acts as the joint variable while the other three parameters remain fixed geometric constants; for a prismatic joint, `d_i` varies instead. Composing the rotation and translation along `z_{i-1}` with the translation and rotation along `x_i` yields the single-joint transformation matrix:
 
 ```
 T_i = Rot_z(θ_i) * Trans_z(d_i) * Trans_x(a_i) * Rot_x(α_i)
@@ -73,12 +66,12 @@ T_i = Rot_z(θ_i) * Trans_z(d_i) * Trans_x(a_i) * Rot_x(α_i)
       | 0        0               0               1        |
 ```
 
-Caveat: the DH convention comes in two flavors — "standard" and "modified (Craig convention)." If you use Craig's textbook you will see modified DH; many other texts use standard DH. The two differ in how frames are attached. Mixing them yields wrong results, so always state which convention you are using.
+One practical catch is that the DH convention exists in two distinct variants: **standard DH** and **modified DH (Craig's convention)**. Craig's textbook adopts modified DH, whereas many other references use standard DH. Because the two conventions attach link frames at different joints, mixing parameters from one with matrix formulas from the other produces incorrect kinematics—always verify and state which convention a model assumes.
 
 
 ### 4.2.3 Example: FK of a 2-link Planar Arm
 
-Start with the simplest example. A 2-link robot arm in the plane.
+To make these transformations concrete, consider the simplest nontrivial manipulator: a two-link arm moving in the plane.
 
 ```
        q1         q2
@@ -86,21 +79,21 @@ Start with the simplest example. A 2-link robot arm in the plane.
   (base)   L1       L2
 ```
 
-DH table (standard convention):
+Because both joint axes point out of the page in parallel (`α = 0`) and there is no out-of-plane offset (`d = 0`), the standard DH table simplifies to two rows:
 
 | Link | a    | α   | d   | θ    |
 |------|------|-----|-----|------|
 | 1    | L1   | 0   | 0   | θ_1  |
 | 2    | L2   | 0   | 0   | θ_2  |
 
-The end-effector position follows simply from trigonometry:
+Multiplying `T_1 * T_2` reproduces what elementary trigonometry already shows—the end-effector coordinates equal the vector sum of the two links:
 
 ```
 x = L1*cos(θ_1) + L2*cos(θ_1 + θ_2)
 y = L1*sin(θ_1) + L2*sin(θ_1 + θ_2)
 ```
 
-Implemented in Python:
+In Python, `fk_2link` evaluates this position along with the cumulative end-effector orientation `phi`:
 
 ```python
 import numpy as np
@@ -118,37 +111,39 @@ print(f"End-effector position: ({x:.3f}, {y:.3f}), orientation: {np.degrees(phi)
 # Output: End-effector position: (1.125, 1.466), orientation: 75.0°
 ```
 
-If this looks overly simple, that is normal. The FK of a real 6-axis arm works on the same principle — it just multiplies six 4×4 matrices.
+If that derivation feels almost too simple, that is reassuring: the forward kinematics of a full six-axis industrial arm follows the exact same principle, merely chaining six 4×4 matrices instead of two.
 
 
 ### 4.2.4 Product of Exponentials (PoE)
 
-As an alternative to DH parameters, there is the PoE (Product of Exponentials) method, based on Lie group / Lie algebra. This is the method adopted in Lynch & Park's "Modern Robotics."
+While DH parameters are compact, placing intermediate frames along common normals can feel arbitrary and error-prone when joint axes are skewed or parallel. An alternative formulation—the **Product of Exponentials (PoE)** method, rooted in Lie group and Lie algebra theory and popularized in Lynch and Park's *Modern Robotics*—eliminates intermediate link frames altogether.
 
-PoE represents each joint as a twist (screw motion) and computes the transformation via the matrix exponential.
+PoE imagines the robot resting in a fixed zero (home) configuration `M`, then treats each joint as a screw motion (a twist) that rotates and translates the distal links via the matrix exponential:
 
 ```
 T(θ) = e^{[S_1]θ_1} * e^{[S_2]θ_2} * ... * e^{[S_n]θ_n} * M
 ```
 
-Where:
-- S_i is the screw axis of the i-th joint (6×1 vector)
-- [S_i] is the 4×4 matrix representation of S_i (an element of se(3), with a skew-symmetric upper-left 3×3 rotation block)
-- M is the end-effector pose when all joints are at the zero (home) configuration
-- θ_i is the joint variable
+In this expression, each term has a direct geometric interpretation:
+- `S_i` is the screw axis of the i-th joint (a 6×1 vector combining angular axis and linear velocity component).
+- `[S_i]` is the 4×4 matrix representation of `S_i` (an element of `se(3)`, whose upper-left 3×3 block is skew-symmetric).
+- `M` is the end-effector pose when all joints sit at their zero (home) configuration.
+- `θ_i` is the joint variable.
+
+The table below contrasts the practical trade-offs between the DH and PoE conventions:
 
 **DH vs PoE comparison:**
 
 | Item | DH | PoE |
 |------|-----|-----|
 | Frame attachment | a frame needed on each link | only the base frame and end-effector frame needed |
-| Convention confusion | beware standard vs modified | none (though space form vs body form exists) |
+| Convention confusion | standard vs. modified variants | none (though space form vs. body form exists) |
 | Mathematical basis | matrix multiplication | Lie group, matrix exponential |
 | Singularity analysis | requires separate treatment | naturally integrated |
 | Industry adoption | very high | academia-centered, spreading |
 | Textbook | Craig, Siciliano | Lynch & Park |
 
-DH parameters remain common in textbooks and industrial robot manuals, while URDF encodes the equivalent link and joint transformations directly. PoE provides a cleaner Lie-group formulation and is widely used in research. Familiarity with both conventions makes it easier to move between manuals, robot descriptions, and derivations.
+DH parameters remain entrenched in classical textbooks and industrial robot manuals, whereas URDF files encode link and joint offsets directly without DH rules. PoE offers a cleaner Lie-group formulation that dominates modern research derivations. Knowing both makes it straightforward to move between vendor datasheets, URDF models, and control papers. For a hands-on example of the DH approach in Python, `robotics-toolbox-python` builds a classic six-axis Puma 560 model and computes its pose and Roll-Pitch-Yaw angles in a few lines:
 
 ```python
 # Example of DH-based FK with robotics-toolbox-python (Puma 560)
@@ -171,24 +166,21 @@ print(f"RPY angles: {T.rpy()}")  # Roll-Pitch-Yaw
 
 ## 4.3 Inverse Kinematics
 
-FK is easy. Matrix multiplication suffices. The problem is IK.
+Forward kinematics is straightforward: multiplying joint transforms produces a unique end-effector pose. **Inverse kinematics (IK)** reverses the question—*"To place the end-effector at a target pose, what angle must each joint take?"*—and turns out to be dramatically harder for four structural reasons:
 
-"I want to place the end-effector at (x, y, z). What must each joint angle be?"
-
-Why this problem is hard:
-1. **Nonlinear equations** — trigonometric functions are tangled together
-2. **Multiple solutions** — several combinations of joint angles may reach the same end-effector position (elbow-up, elbow-down, etc.)
-3. **No solution may exist** — points outside the workspace are unreachable
-4. **Infinitely many solutions** — if degrees of freedom remain (a redundant manipulator), the number of solutions is infinite
+1. **Nonlinear equations**: nested trigonometric functions couple the joint angles together and resist simple linear algebra.
+2. **Multiple solutions**: several distinct postures (such as elbow-up versus elbow-down) can place the end-effector at the exact same pose.
+3. **No solution**: any target outside the mechanism's reach has no valid joint configuration at all.
+4. **Infinitely many solutions**: whenever the arm has more degrees of freedom than the task requires (a redundant manipulator), a continuous manifold of configurations achieves the same pose.
 
 
 ### 4.3.1 Analytical IK
 
-This method derives a closed-form solution. When one exists, candidate solutions can be computed without iterative optimization, but numerical accuracy and runtime still depend on the implementation and singularity handling.
+Analytical IK derives closed-form trigonometric expressions for the joint variables. When a closed-form solution exists, every candidate posture can be evaluated directly without iterative optimization, though numerical precision and runtime still depend on careful singularity and branch handling.
 
 **IK of a 2-link planar arm:**
 
-Given a target position (x, y):
+For a planar two-link arm reaching toward $(x, y)$, applying the law of cosines to the triangle formed by the two links and the target radius gives the elbow angle $\theta_2$, after which subtracting the inner link angle from the target bearing yields the shoulder angle $\theta_1$:
 
 ```
 cos(θ_2) = (x² + y² - L1² - L2²) / (2 * L1 * L2)
@@ -197,7 +189,7 @@ cos(θ_2) = (x² + y² - L1² - L2²) / (2 * L1 * L2)
 θ_1 = atan2(y, x) - atan2(L2*sin(θ_2), L1 + L2*cos(θ_2))
 ```
 
-The ± sign reveals two solutions (elbow-up and elbow-down). The existence of multiple solutions is one source of difficulty in IK.
+Notice the $\pm$ sign in $\theta_2$: it exposes the two valid branches—elbow-up and elbow-down—that reach the same point, illustrating why IK rarely yields a single answer. The Python script below implements this closed-form solver, checks workspace reachability, and verifies the solution by feeding it back through forward kinematics:
 
 ```python
 def ik_2link(x, y, L1=1.0, L2=1.0, elbow_up=True):
@@ -232,22 +224,24 @@ if result:
 
 **Analytical IK of a 6R manipulator:**
 
-Among 6-axis robots, those satisfying Pieper's condition — where the last three axes meet at a single point (a spherical wrist) — can be solved analytically. Traditional industrial 6-axis robots (KUKA, ABB, etc.) have this structure. UR arms have an offset wrist whose three wrist axes do not meet at a single point, so even though a closed-form solution exists, it requires a separate derivation.
+Extending closed-form IK to six-axis robots relies on **Pieper's condition**: if three consecutive joint axes intersect at a single point—most commonly the last three axes forming a **spherical wrist**—the 6-DOF problem decouples cleanly. Because rotating the wrist does not translate that intersection point, the first three joints alone place the wrist center in space, and the last three joints orient the end-effector around it. Classical industrial six-axis arms (such as KUKA and ABB manipulators) adopt this spherical-wrist geometry specifically to guarantee fast analytical IK. Universal Robots (UR) arms, by contrast, use an offset wrist whose last three axes do not intersect at one point; a closed-form solution still exists, but it requires a dedicated algebraic derivation.
 
-In this case the position problem (first three axes) and the orientation problem (last three axes) can be decoupled and solved. Up to eight solutions exist, and it is common to pick the one that respects joint limits and stays close to the previous joint angles.
+Even with a spherical wrist, decoupling typically yields up to eight distinct configurations (combinations of shoulder, elbow, and wrist flips). Controllers normally filter out solutions that violate joint limits and pick the valid branch closest to the robot's current joint angles to avoid sudden jumps.
 
 
 ### 4.3.2 Numerical IK
 
-When an analytical solution is not available (complex structures, 7 or more axes, non-standard structures), one must solve it numerically. This is an iterative optimization problem.
+When no closed-form expression is practical—as with complex non-standard linkages or 7-DOF redundant arms—IK is framed as an iterative numerical optimization problem. By linearizing the forward kinematics around the current joint configuration $q$, a small Cartesian pose error $\Delta x$ relates locally to a joint increment $\Delta q$ through the Jacobian $J(q)$ (examined in detail in §4.4).
 
 **Jacobian pseudo-inverse method:**
+
+Inverting that local linear relationship with the Moore-Penrose pseudo-inverse $J^\dagger(q)$ produces an update step that drives the pose error toward zero:
 
 ```
 Δq = J†(q) * Δx
 ```
 
-Here J† is the pseudo-inverse of the Jacobian. Iterating this converges to the target.
+Repeating this step in a loop iteratively walks the arm to the target pose, as demonstrated for the two-link planar arm below:
 
 ```python
 def numerical_ik_2link(target_x, target_y, L1=1.0, L2=1.0,
@@ -283,39 +277,36 @@ def numerical_ik_2link(target_x, target_y, L1=1.0, L2=1.0,
 
 **Damped Least Squares (DLS, Levenberg-Marquardt):**
 
-The problem with the pseudo-inverse is that joint velocities blow up near singularities. DLS mitigates this by adding a damping factor λ:
+The pure pseudo-inverse fails badly near kinematic singularities: as the arm approaches a posture where $J$ loses rank, its smallest singular value approaches zero, causing $J^\dagger$ to amplify tiny Cartesian errors into enormous joint jumps. **Damped Least Squares (DLS)** stabilizes the step by adding a positive damping factor $\lambda$ to the normal equations:
 
 ```
 Δq = J^T (J * J^T + λ²I)^{-1} * Δx
 ```
 
-Large λ is stable near singularities but slow to converge; small λ approaches the pseudo-inverse. Adaptive adjustment of λ (Nakamura & Hanafusa, 1986) is widely used in practice.
+Adding $\lambda^2 I$ keeps the inverted matrix well-conditioned even when $J$ is rank-deficient. A large $\lambda$ guarantees smooth, bounded joint velocities near singularities at the cost of slower convergence, whereas a small $\lambda$ recovers the fast behavior of the pure pseudo-inverse. In practice, adaptive schedules that scale $\lambda$ up only as the robot nears a singularity (Nakamura & Hanafusa, 1986) give the best of both worlds.
 
 
 ### 4.3.3 Singularity
 
-A joint configuration where the rank of the Jacobian drops is called a singularity. At a singularity:
+A joint configuration at which the Jacobian loses rank is called a **singularity**. Physically, two or more joint axes align so that their instantaneous motions become linearly dependent, stripping the end-effector of mobility in at least one spatial direction. At or near a singularity, three pathologies emerge:
 
-1. **The end-effector cannot move in a particular direction** — loss of a degree of freedom
-2. **Joint velocities go to infinity for infinitesimal motion** — real motors cannot follow
-3. **IK solutions are discontinuous** — abrupt joint jumps during path following
+1. **Loss of a degree of freedom**: the end-effector cannot produce instantaneous velocity along a particular direction.
+2. **Exploding joint speeds**: demanding even a tiny Cartesian motion along the blocked direction drives required joint velocities toward infinity, far beyond real motor limits.
+3. **Discontinuous IK branches**: passing near a singular posture can cause analytical or numerical solvers to snap abruptly between distant joint configurations.
 
-Singularities of the 2-link arm are simple: θ_2 = 0 (arm fully extended) or θ_2 = π (fully folded). At that instant the end-effector can move only in the tangential direction; it cannot generate any velocity in the radial direction.
+In the two-link planar arm, singularities occur intuitively at $\theta_2 = 0$ (arm fully stretched out) and $\theta_2 = \pi$ (arm folded completely back on itself). At either configuration, the tip can sweep tangentially along a circle, but no joint motion can generate instantaneous radial velocity.
 
-Representative singularities of 6-axis robots:
-- **Wrist singularity**: axes 4 and 6 are aligned (q5 ≈ 0)
-- **Shoulder singularity**: the end-effector lies on axis 1
-- **Elbow singularity**: the arm is fully extended
+On a six-axis manipulator, singularities typically appear in three forms:
+- **Wrist singularity**: joint axes 4 and 6 become collinear ($q_5 \approx 0$), collapsing one rotational degree of freedom at the wrist.
+- **Shoulder singularity**: the wrist center sits directly above the base rotation axis (axis 1).
+- **Elbow singularity**: the arm reaches full extension, matching the planar two-link case.
 
-Practical countermeasures:
-- Path planning that avoids the neighborhood of singularities
-- Velocity limiting while passing through singularities with the DLS method
-- Use of redundancy (extra degrees of freedom)
+In real deployments, engineers manage singularities by planning paths that steer clear of singular regions, clamping joint speeds with DLS regularization when traversing near them, or adding kinematic redundancy (extra joints) so the arm can reconfigure without losing end-effector mobility.
 
 
 ### 4.3.4 IK Solvers
 
-It is rare to implement IK from scratch. Using a proven solver is the sensible choice.
+Outside of learning exercises, production systems rarely build an IK solver from scratch; relying on a well-tested library avoids subtle failures around joint limits, wrap-around angles, and singularities. The table below summarizes the most common solvers in robotics workflows:
 
 | Solver | Method | Notes |
 |------|------|------|
@@ -324,6 +315,8 @@ It is rare to implement IK from scratch. Using a proven solver is the sensible c
 | **TRAC-IK** | KDL + SQP dual | higher solve rate than stock KDL on the paper's tested chains; ROS package available |
 | **MoveIt2 IK** | Integrates the solvers above | ROS2 ecosystem, integrated collision avoidance |
 | **pinocchio** | Jacobian-based numerical iteration (CLIK) | rigid-body dynamics library, fast, provides analytical derivatives |
+
+To put the numerical trade-offs in perspective, the benchmark note below summarizes the empirical comparison from the TRAC-IK paper:
 
 ```python
 # Beeson & Ames (2015) tested 10,000 reachable poses per robot model
@@ -341,12 +334,12 @@ It is rare to implement IK from scratch. Using a proven solver is the sensible c
 
 ## 4.4 Jacobian
 
-The Jacobian is one of the most heavily used tools in kinematics. If FK is the problem of "position," the Jacobian is the problem of "velocity."
+Whereas forward and inverse kinematics relate static joint angles to static poses, real-time motion control needs to know how *velocities* and *forces* transform between joint space and task space. Both mappings revolve around one matrix: the **Jacobian**.
 
 
 ### 4.4.1 Joint Velocity → End-Effector Velocity
 
-The relationship between end-effector velocity (linear v, angular ω) and joint velocity q̇:
+Differentiating the forward kinematics at configuration $q$ yields the linear map from joint velocities $\dot{q}$ to the end-effector's spatial velocity $\dot{x}$ (combining linear velocity $v$ and angular velocity $\omega$):
 
 ```
 ẋ = J(q) * q̇
@@ -356,39 +349,37 @@ where ẋ = [v; ω] ∈ ℝ^6 (for a 6-axis case)
       J(q) ∈ ℝ^{6×n}
 ```
 
-For a six-dimensional end-effector task, n < 6 provides too few joint degrees of freedom, n = 6 matches the task dimension, and n > 6 provides redundant degrees of freedom. The available motion depends on the rank of J(q), while underactuation compares the number of independent control inputs with the system degrees of freedom.
+For a full six-dimensional end-effector task, $n < 6$ leaves too few joint degrees of freedom to span all spatial velocities, $n = 6$ matches the task dimension, and $n > 6$ provides kinematic redundancy. What motions the arm can actually execute at a given posture depends on the rank of $J(q)$, whereas underactuation is a separate question comparing the number of independent control inputs against the system's degrees of freedom.
 
 
 ### 4.4.2 Force/Torque Relation (Duality)
 
-The transpose of the Jacobian maps end-effector force to joint torque:
+Remarkably, the exact same Jacobian—transposed—maps static forces and moments $F$ applied at the end-effector back to the joint torques $\tau$ required to balance them:
 
 ```
 τ = J^T(q) * F
 ```
 
-Here τ is joint torque and F is the force/moment acting on the end-effector.
-
-This is **static duality**. Velocity and force are dual through the Jacobian and its transpose. It follows naturally from the principle of power conservation:
+This relationship, known as **static duality**, connects velocity kinematics and statics directly through conservation of mechanical power (or virtual work). Because instantaneous power must match whether measured at the end-effector or summed across the joints, substituting $\dot{x} = J\dot{q}$ yields:
 
 ```
 P = F^T * ẋ = F^T * J * q̇ = (J^T * F)^T * q̇ = τ^T * q̇
 ```
 
-This relation is central to force control. To apply a desired force F at the end-effector, apply joint torques τ = J^T * F.
+Static duality sits at the heart of force and impedance control: to exert a desired wrench $F$ on the environment with the end-effector, a torque-controlled arm simply commands $\tau = J^T(q) F$ at its joints.
 
 
 ### 4.4.3 Manipulability Ellipsoid
 
-The Jacobian also tells how "well" the robot can move at its current configuration.
+Beyond converting velocities and forces, the Jacobian quantifies how effortlessly a robot can move in different directions from its current posture. Imagine all joint-velocity vectors inside the unit sphere ($\|\dot{q}\| \le 1$); pushing that sphere through $\dot{x} = J\dot{q}$ stretches it into a task-space **manipulability ellipsoid** whose principal axes align with the eigenvectors of $J J^T$. Its overall volume is captured by Yoshikawa's manipulability index:
 
 ```
 manipulability index = √det(J * J^T)
 ```
 
-For a robot whose J normally has full row rank for the six-dimensional task, a zero value indicates a singularity. A larger value means a larger manipulability ellipsoid volume, while uniformity across directions depends on the ratios of its axis lengths.
+For an arm whose Jacobian normally has full row rank for the six-dimensional task, a manipulability index of zero signals a singularity. Larger index values indicate a larger ellipsoid volume, though directional uniformity depends on the ratios of the ellipsoid's semi-axes: large eigenvalues of $J J^T$ mark directions along which the end-effector moves rapidly, whereas small eigenvalues mark sluggish directions. When all eigenvalues match, motion is isotropic; when they diverge sharply, the posture is highly anisotropic.
 
-The eigenvalues and eigenvectors of J * J^T trace out an ellipsoid. Large eigenvalues mean fast motion in that direction; small ones mean slow. If the eigenvalues are all similar the motion is isotropic; if they differ greatly it is anisotropic.
+The script below evaluates the base-frame Jacobian of a Puma 560, computes its manipulability index, extracts the linear-velocity ellipsoid semi-axes, and reports the singular-value condition number:
 
 ```python
 import roboticstoolbox as rtb
@@ -418,6 +409,8 @@ print(f"Condition number: {cond:.2f}")
 
 
 ### 4.4.4 Practical Code: Jacobian-Based Velocity Control
+
+In real-time Cartesian velocity control—often called *resolved-rate control*—a controller reads the current joint angles, solves for joint rates using a damped pseudo-inverse of the Jacobian to stay safe near singularities, clamps those rates within motor limits, and integrates forward over a 1 ms step (`dt=0.001`):
 
 ```python
 import numpy as np
@@ -465,19 +458,21 @@ def jacobian_velocity_control(robot_fk, robot_jacob, q_current,
 
 ## 4.5 Mechatronics Basics
 
-Specifying joint angles does not make the robot move. It also needs motors, sensors, and the electronics and communication that connect them. This is mechatronics.
+Computing joint angles and velocities only solves half the problem. Turning mathematical commands into physical motion requires motors, gearboxes, sensors, deterministic communication buses, and real-time software—the engineering stack of **mechatronics**.
 
 
 ### 4.5.1 Actuators
 
+Electric motors form the muscle of most modern robots, spanning everything from simple brushed units to integrated smart servos and high-transparency direct-drive assemblies.
+
 **DC motor:**
-The most basic actuator. Apply a voltage and it spins. Torque is proportional to current (τ = K_t * i), and back-EMF is proportional to speed (V_emf = K_e * ω). Easy to control and cheap, but the brushes wear.
+A brushed DC motor is the simplest electric actuator: applying a voltage across its terminals spins the rotor, with output torque proportional to current ($\tau = K_t i$) and back-EMF proportional to angular speed ($V_{\text{emf}} = K_e \omega$). Brushed motors are inexpensive and straightforward to drive, though mechanical brush wear limits their operating lifetime.
 
 **BLDC (Brushless DC) motor:**
-Switches current electronically without brushes. Long life, high torque density, and good efficiency make it a common choice in modern robots. FOC (Field-Oriented Control) is used to reduce torque ripple.
+A brushless DC motor replaces physical brushes with electronic commutation, delivering longer service life, higher torque density, and superior efficiency—traits that make it the standard choice on modern robotic platforms. Pairing a BLDC motor with Field-Oriented Control (FOC) keeps stator currents aligned with the rotor flux, minimizing torque ripple at both low and high speeds.
 
 **Servo motors (Dynamixel series):**
-A product that bundles motor + reducer + encoder + controller into a single unit. Robotis's Dynamixel is a widely used servo family on research and educational platforms.
+Rather than assembling motor, gearbox, encoder, and driver electronics separately, all-in-one smart servos package all four into a single modular housing. Robotis's Dynamixel family is ubiquitous across research and educational arms, with representative models summarized below:
 
 | Model | Example advertised maximum torque (Nm) | Communication | Use |
 |------|-----------|------|------|
@@ -485,25 +480,19 @@ A product that bundles motor + reducer + encoder + controller into a single unit
 | XM540 | 10.0 | RS-485 | mid-sized robot arms |
 | PH54  | 44.7 | RS-485 | large manipulators, mobile robots |
 
-Torque in the table depends on model and supply voltage, so actual selection must use each e-Manual's rated or stall conditions and continuous-duty limits. Dynamixel strengths include daisy-chain wiring, position/velocity/current-based control modes, and adjustable PID gains. Its communication, control-cycle, and thermal limits are product-specific; verify that the required bandwidth and control mode are supported by the stock firmware.
+Because advertised maximum torque varies with supply voltage and operating conditions, real actuator sizing must rely on each e-Manual's rated, stall, and continuous-duty curves. Beyond compact packaging, Dynamixel actuators simplify cabling via daisy-chain wiring and expose position, velocity, and current-based control modes with tunable PID gains; however, communication rates, control-cycle timing, and thermal headroom vary by model, so check that the stock firmware supports the required control mode and bandwidth.
 
 **Quasi-Direct Drive (QDD):**
 
-The approach drew attention with the MIT Mini Cheetah (2019) and uses a **lower gear ratio**.
+Traditional robot arms rely on high-ratio gearboxes—often 100:1 or higher using harmonic drives—to multiply torque from compact, high-speed motors. That amplification carries a hidden mechanical cost: reflected rotor inertia scales with the *square* of the gear ratio ($N^2 I_{\text{motor}}$). Through a 100:1 reducer, a light spinning rotor feels 10,000 times heavier at the joint output, turning external impacts into harsh shock loads and masking subtle contact forces behind gearbox friction.
 
-Typical robot joint: gear ratio of 100:1 or higher (harmonic drive)
-QDD: gear ratio of 6:1 to 10:1 (planetary gears or belt)
+**Quasi-Direct Drive (QDD)** actuation, popularized by the MIT Mini Cheetah (2019), flips that trade-off by pairing a high-torque-density motor with a **low gear ratio** of roughly 6:1 to 10:1 (typically a single-stage planetary gearbox or belt):
 
-Advantages of a low gear ratio:
-- **High backdrivability**: the joint yields more readily under external force, which can simplify collision-response and force-control design.
-- **High transparency**: with a suitable friction model, joint torque can be approximated from motor current more readily.
-- **Potential for high bandwidth**: lower reducer friction and compliance leave more room for a fast torque response.
+- **High backdrivability**: the joint yields readily under external forces, simplifying safe collision response and compliant control.
+- **High transparency**: with lower gearbox friction and damping, joint output torque can be estimated accurately from motor phase current once basic friction is modeled.
+- **High torque bandwidth**: minimal reducer compliance and stiction leave room for rapid, clean torque tracking.
 
-Drawbacks: lower output torque for the same size. For large torques, you must use a larger motor.
-
-Recent systems using QDD:
-- MIT Mini Cheetah / Cheetah 3
-- Unitree robot series
+The trade-off is lower torque multiplication per unit volume: achieving high output torques without a large reduction ratio demands a larger-diameter, higher-torque motor. Platforms such as the MIT Mini Cheetah, Cheetah 3, and the Unitree quadruped series all rely on this QDD architecture. The arithmetic below illustrates just how sharply gear ratio governs reflected inertia:
 
 ```
 # Torque-control comparison: QDD vs traditional reducer
@@ -523,17 +512,19 @@ Recent systems using QDD:
 
 **Reducer types:**
 
+Choosing an actuator almost always involves selecting its mechanical reducer alongside the motor. The three most common gearbox families balance gear ratio, backlash, efficiency, and cost in distinct ways:
+
 | Type | Gear ratio | Backlash | Efficiency | Price | Use |
 |------|--------|--------|------|------|------|
 | Planetary | 3~100:1 | medium | 85-95% | cheap | general-purpose, suited to QDD |
 | Harmonic Drive | 30~320:1 | very low | 65-85% | expensive | industrial robots, precision |
 | Cycloidal | 6~120:1 | low | 85-93% | medium | emerging as a recent alternative |
 
-Gear ratio, efficiency, and backlash vary substantially by design and product. Treat these ranges as a starting point and use the manufacturer's rated-load data for selection.
+Because actual gear ratios, efficiencies, and backlash vary considerably across specific geometries and manufacturers, treat the table above as a rough orientation and base final selections on rated-load datasheets.
 
 **Actuator selection criteria:**
 
-For a robot joint, combine static torque, dynamic torque, and impact loads, then choose a design margin appropriate to load uncertainty, lifetime, and the consequence of failure. The factor of two in the code below is an illustration, not a universal rule. Convert maximum joint speed to motor RPM through the gear ratio, and evaluate backdrivability, package mass, continuous torque, and thermal limits together. The choice between QDD and a harmonic drive depends on torque density, transparency, precision, and cost requirements.
+When sizing a joint actuator, combine static holding torque, dynamic acceleration torque, and expected impact loads, then apply a design margin tailored to load uncertainty, fatigue life, and the consequences of failure (the factor of 2 in the code below serves purely as an illustration, not a universal rule). Maximum joint angular speed must also map through the gear ratio into feasible motor RPM, alongside checks on backdrivability, actuator mass, continuous thermal rating, and cost. Ultimately, choosing between a QDD and a harmonic drive comes down to whether the application prizes torque density and positional precision or backdrivable force transparency. The script below walks through a back-of-the-envelope sizing calculation for a single horizontal arm link:
 
 ```python
 # Simple actuator-sizing example
@@ -574,13 +565,17 @@ print(f"Required motor RPM: {motor_rpm:.0f}")
 
 ### 4.5.2 Sensor Interfacing
 
+Closing a feedback loop around those actuators requires accurate measurements of joint position, interaction forces, and body motion.
+
 **Encoder:**
 
-An encoder is the most basic sensor for measuring joint angle.
+Encoders are the foundational sensors for measuring joint angle, coming in two main varieties:
 
-*Incremental encoder*: counts pulses on two channels (A, B) to measure relative rotation. Loses position when power is cut (requires homing). Cheap, with high resolution (10,000 PPR or higher is common).
+*Incremental encoders* track relative rotation by counting pulses across two quadrature channels (A and B). They are inexpensive and readily achieve high resolutions (10,000 PPR or more), though they lose their absolute reference whenever power is cut and therefore require a homing routine on startup.
 
-*Absolute encoder*: outputs the current position as an absolute value. Knows its position the moment power is applied. Multi-turn absolute encoders remember multiple revolutions. They cost more but avoid homing, so they are widely used on industrial robots that must recover position after a restart.
+*Absolute encoders* report the true angular position immediately upon power-up, and multi-turn variants track full revolutions across power cycles as well. Although more expensive, eliminating startup homing makes them standard on industrial manipulators that must resume safely after a reboot.
+
+Notice how gearbox reduction multiplies the effective angular precision seen at the output link:
 
 ```
 Resolution example:
@@ -591,22 +586,24 @@ Resolution example:
 
 **Torque sensors:**
 
-Directly measure joint torque or end-effector force. Most are based on strain gauges.
+When current-based torque estimation is masked by gearbox friction, strain-gauge sensors measure mechanical loads directly at two typical locations:
 
-*Joint Torque Sensor (JTS)*: mounted on the output side of the reducer. The KUKA LBR iiwa set the benchmark for force control by fitting a JTS to all seven joints.
+*Joint Torque Sensors (JTS)* sit on the output side of each reducer so they capture true joint torque free of transmission friction. The KUKA LBR iiwa set the industry benchmark for compliant manipulation by integrating a JTS into all seven of its joints.
 
-*Force/Torque sensor (F/T sensor)*: mounted at the end-effector to measure six axes (Fx, Fy, Fz, Tx, Ty, Tz). ATI Industrial Automation and other vendors supply research sensors; select one by measurement range, resolution, overload limit, interface, and a current quotation.
+*Force/Torque sensors (F/T sensors)* mount at the wrist or end-effector to resolve all six wrench components ($F_x, F_y, F_z, T_x, T_y, T_z$). Vendors such as ATI Industrial Automation supply widely used research units, which should be selected based on measurement range, resolution, overload limits, electrical interface, and a current vendor quote.
 
 **Inertial sensors (IMU):**
 
-Already covered in Ch.2, so only briefly noted here. Accelerometer + gyroscope + (magnetometer). Used for body-pose estimation in mobile robots and legged robots. In manipulators, per-link IMUs are sometimes used for vibration damping.
+Covered in detail in Ch.2, an inertial measurement unit combines an accelerometer, a gyroscope, and often a magnetometer. On mobile and legged platforms, IMUs anchor body-pose estimation; on manipulators, link-mounted IMUs are occasionally added to sense and damp structural vibrations.
 
 
 ### 4.5.3 Communication Protocols
 
-How sensors and actuators connect to a microcontroller or PC. Communication causes more trouble in robot systems than one might expect. Too much latency destabilizes control; too little bandwidth drops data.
+Connecting sensors and motor drivers back to a microcontroller or host PC often causes more headaches in real robot builds than the kinematics equations themselves: excessive latency erodes control stability, while insufficient bandwidth drops telemetry packets.
 
 **Basic protocols:**
+
+On a single circuit board or across short internal harnesses, three serial interfaces cover most microcontroller-level peripherals:
 
 | Protocol | Wiring | Speed | Distance | Notes |
 |---------|------|------|------|------|
@@ -614,17 +611,17 @@ How sensors and actuators connect to a microcontroller or PC. Communication caus
 | **SPI** | 4-wire (MOSI, MISO, SCK, CS) | ~50 Mbps | ~1m (on-PCB) | fast; multiple slaves need extra CS lines |
 | **I2C** | 2-wire (SDA, SCL) | 100k~3.4 Mbps | ~1m | address-based, convenient for sensor buses |
 
-These three are microcontroller-level basics. Robot systems need more robust protocols.
+While UART, SPI, and I2C excel inside a PCB enclosure, multi-joint robots spanning meters of cabling near switching motor currents demand differential signaling, deterministic timing, and multi-node topologies.
 
 **CAN Bus:**
 
-Originating in the automotive industry, it is also used for motor and sensor networks in robots. Differential signaling makes it noise-resistant, and the multi-master architecture supports priority-based arbitration.
+Developed originally for automotive electronics, the Controller Area Network (CAN) bus is widely adopted for motor and sensor backbones in legged and mobile robots. Differential signaling makes it resilient to electromagnetic noise, while its multi-master design resolves bus collisions through priority-based arbitration:
 
-- Speed: up to 1 Mbps (CAN 2.0), 5 Mbps (CAN FD)
-- Distance: up to about 1 km (at 50 kbps; about 500 m at 125 kbps, about 40 m at 1 Mbps)
-- Topology: bus (daisy-chain possible)
+- **Speed**: up to 1 Mbps (CAN 2.0) or 5 Mbps (CAN FD)
+- **Distance**: up to about 1 km at 50 kbps (dropping to ~500 m at 125 kbps and ~40 m at 1 Mbps)
+- **Topology**: linear bus supporting daisy-chained nodes
 
-Usage in robots: communication between motor drivers and the main controller. The MIT Cheetah and many legged robots use CAN.
+In practice, CAN typically links a central controller to distributed motor drivers—a topology used on the MIT Cheetah and many modern quadrupeds. Because standard CAN 2.0 frames hold at most 8 bytes, firmware usually packs floating-point setpoints into scaled 16-bit integers, as shown in the STM32 HAL pseudo-code below:
 
 ```cpp
 // Example of sending a motor command over CAN bus (pseudo-code, STM32 HAL)
@@ -664,20 +661,17 @@ void send_motor_command(CAN_HandleTypeDef* hcan, uint8_t motor_id,
 
 **EtherCAT:**
 
-An industrial real-time Ethernet protocol. It uses standard Ethernet hardware while providing deterministic communication at the microsecond scale.
+When dozens of high-rate joints need tighter synchronization than CAN can provide, **EtherCAT** brings deterministic microsecond-scale timing onto standard Ethernet hardware. Robots such as KUKA arms and many research humanoids rely on EtherCAT for three main reasons:
 
-Why robots use it:
-- **Speed**: 100 Mbps, synchronizing dozens to hundreds of nodes on microsecond cycles
-- **Deterministic timing**: constant packet delay → suited to real-time control
-- **Processing model**: slaves read and write on-the-fly as the master's frame passes through (processed as the frame flows by). Extremely high bandwidth efficiency.
+- **High bandwidth**: 100 Mbps links synchronize dozens to hundreds of nodes at sub-millisecond cycles.
+- **Deterministic timing**: predictable, tightly bounded packet delays keep real-time feedback loops stable.
+- **On-the-fly frame processing**: each slave reads its command and inserts sensor telemetry dynamically as a single master frame passes through, maximizing bus efficiency.
 
-KUKA, Beckhoff, and many recent research robot platforms use EtherCAT.
-
-Drawbacks: a dedicated master stack is required (SOEM, IgH EtherCAT Master, etc.), and configuration is complicated. It is overkill at the hobbyist level.
+The price of that performance is software and configuration complexity: running EtherCAT requires a dedicated master stack (such as SOEM or IgH EtherCAT Master) and careful topology setup, making it unnecessary overhead for hobbyist builds.
 
 **RS-485 / Dynamixel Protocol:**
 
-The communication scheme used by Dynamixel servos. RS-485 is differential-signal serial communication that can reach several Mbps or more over short distances (the 1 Mbps in the example below is the Dynamixel setting), with multiple devices daisy-chained.
+For modular smart servos like Dynamixel units, **RS-485** offers a simpler differential serial alternative capable of several Mbps over short daisy-chained harnesses (configured at 1 Mbps in the example below). Using the Dynamixel SDK, a host script can open a USB-to-RS485 adapter, enable motor torque, command a target position, and read back the encoder value in a few lines of Python:
 
 ```python
 # Example of servo control using the Dynamixel SDK
@@ -712,9 +706,11 @@ print(f"Current position: {pos} (= {pos * 360 / 4096:.1f}°)")
 
 ### 4.5.4 Real-Time Systems
 
-In robot control, "real-time" does not mean "fast" but **"guaranteed to complete within a specified time."** For a 1kHz control loop, every 1ms the sequence of sensor read → control computation → motor command transmission must complete. A single missed deadline can destabilize the robot.
+In robot control, **"real-time" does not mean "fast on average"—it means guaranteed completion before a strict deadline.** On a 1 kHz control loop, every 1 ms cycle must finish reading sensors, computing the control law, and transmitting actuator commands before the clock expires; missing even a single deadline introduces phase lag that can destabilize a high-gain controller.
 
 **RTOS (Real-Time Operating System):**
+
+When closing low-level loops directly on a microcontroller, a Real-Time Operating System (RTOS) lets you assign strict task priorities so background logging or telemetry never preempts the motor control loop. Three common choices span lightweight embedded targets to aerospace hardware:
 
 | RTOS | Notes | Use |
 |------|------|------|
@@ -722,15 +718,10 @@ In robot control, "real-time" does not mean "fast" but **"guaranteed to complete
 | **Zephyr** | modern, broad hardware support, Linux Foundation | IoT, robot embedded |
 | **VxWorks** | commercial, used by NASA | aerospace, industrial |
 
-When driving motors directly from a microcontroller, use an RTOS. Set task priorities so the control loop is not pre-empted by other tasks.
-
 **PREEMPT_RT Linux:**
 
-The problem: ROS2 runs on Linux. But a stock Linux kernel is not real-time. The scheduler can interrupt the control thread at any time, and delays of several milliseconds can occur.
+Higher-level autonomy stacks such as ROS2 typically run on desktop Linux, yet a standard Linux kernel is optimized for throughput rather than determinism—its scheduler can stall a control thread for several milliseconds during disk I/O or interrupts. Patching the kernel with **PREEMPT_RT** makes nearly all kernel code paths preemptible, bringing worst-case scheduling latency down into the deterministic regime. Setting up and verifying a real-time Linux host follows the five-step workflow below:
 
-The solution: a Linux kernel patched with PREEMPT_RT. Most of the kernel's code paths are made preemptible, delivering performance close to real-time.
-
-Setup overview:
 ```bash
 # 1. Install a kernel with PREEMPT_RT (Debian example)
 sudo apt install linux-image-rt-amd64   # Debian metapackage. Ubuntu has no package by this name; it uses a separate path such as the Ubuntu Pro real-time kernel
@@ -752,9 +743,9 @@ sudo cyclictest -m -p 99 -t 1 -n
 
 **Choosing a control period:**
 
-1 kHz (1 ms) is a common design point for torque and impedance control, not a universal standard. Choose the period from closed-loop bandwidth, mechanical resonances, sensor and actuator latency, solver time, and jitter margin. Twice the bandwidth in the Nyquist criterion is only an anti-aliasing lower bound; it does not guarantee control performance. In practice, sample sufficiently faster than the target closed-loop bandwidth and verify the frequency response and delay margins. CAN bandwidth cannot be inferred from motor count alone: include frame size, arbitration, bus load, and feedback rate in the calculation.
+Although 1 kHz (1 ms) is a familiar baseline for torque and impedance control, it is a design point rather than a universal law. An appropriate loop rate depends on the target closed-loop bandwidth, structural resonances, sensor and actuator latency, solver execution time, and acceptable jitter margin. Remember that the Nyquist rate (twice the bandwidth) is merely an anti-aliasing lower bound—not a guarantee of stable closed-loop performance; in practice, sample comfortably faster than the desired closed-loop bandwidth and verify both frequency response and delay margins. Similarly, CAN bus capacity cannot be judged from motor count alone without accounting for frame overhead, arbitration delays, total bus load, and feedback frequency.
 
-Some lightweight robots, high-speed collision responses, and tactile controllers use multi-kilohertz loops. EtherCAT or an FPGA is not automatically required; choose a fieldbus, MCU, or FPGA according to the required determinism, bandwidth, and I/O structure.
+Lightweight arms, rapid collision-reaction reflexes, and tactile controllers sometimes push into multi-kilohertz loops. Even then, EtherCAT or an FPGA is not mandatory by default: select among CAN, EtherCAT, an MCU, or an FPGA based on the determinism, aggregate bandwidth, and I/O topology the mechanism actually demands.
 
 > **Further reading**
 > - FreeRTOS official documentation: https://www.freertos.org/
@@ -767,18 +758,17 @@ Some lightweight robots, high-speed collision responses, and tactile controllers
 
 ## 4.6 Advanced: Workspace Analysis and Optimal Design
 
-Kinematics can also be used to compare robot designs. The following topics relate workspace geometry and manipulability to design optimization.
+Beyond controlling an existing robot, kinematics also serves as a yardstick for designing and comparing mechanisms. Workspace boundaries, directional conditioning, and redundant degrees of freedom all come straight out of the forward map and Jacobian developed above.
 
 
 ### 4.6.1 Reachable Workspace vs Dexterous Workspace
 
-**Reachable workspace**: the set of all points that the end-effector can reach in at least one orientation. "How far the hand can reach."
+Not every point a robot can touch can be approached from arbitrary angles. Kinematic design distinguishes two nested volumes:
 
-**Dexterous workspace**: the set of points the end-effector can reach in any orientation. "Where it can move freely." Naturally a subset of the reachable workspace, and usually much smaller.
+- **Reachable workspace**: the set of all 3D points the end-effector can attain in *at least one* orientation—roughly, how far the arm can stretch.
+- **Dexterous workspace**: the subset of points the end-effector can reach in *every* orientation—where the wrist remains free to rotate without constraint, which is typically much smaller.
 
-For a 6-DOF robot, the dexterous workspace can be quite limited. This is one reason 7-DOF robots exist.
-
-Workspace analysis can be performed with a Monte Carlo method: randomly sample the joint space and compute end-effector positions via FK to build a point cloud.
+On a six-axis arm, joint limits and wrist singularities often shrink the dexterous workspace to a tight core, motivating the move to seven-axis manipulators. Rather than deriving workspace boundaries analytically, engineers routinely map them via Monte Carlo sampling: draw thousands of random configurations within the joint limits, evaluate FK, and plot the resulting end-effector point cloud, as shown below for the Puma 560:
 
 ```python
 import numpy as np
@@ -815,41 +805,37 @@ plt.savefig('workspace.png', dpi=150)
 
 ### 4.6.2 Condition Number and Isotropy
 
-The Jacobian's condition number (κ) indicates how "well" the robot can move at a given configuration.
+Whereas workspace plots show *where* an arm can reach, the Jacobian's **condition number** ($\kappa$) measures *how cleanly* it can move at a given configuration:
 
 ```
 κ(J) = σ_max / σ_min
 ```
 
-σ_max and σ_min are the maximum and minimum singular values of the Jacobian.
+Here $\sigma_{\max}$ and $\sigma_{\min}$ are the largest and smallest singular values of $J$:
 
-- κ = 1: perfect isotropy. Uniform motion in every direction. Attainable for suitable designs and configurations.
-- κ → ∞: singularity. No motion at all in one direction.
+- **$\kappa = 1$**: perfect isotropy, meaning the arm can move with uniform sensitivity in every direction (achievable for well-chosen link geometries and postures).
+- **$\kappa \to \infty$**: a kinematic singularity, where mobility vanishes completely along at least one direction.
 
-In robot design, minimizing the condition number across the entire workspace can be the goal. This is called **kinematic optimization** or **optimal design**.
-
-Caveat: when computing the Jacobian's condition number, linear velocity (m/s) and angular velocity (rad/s) have different units, so comparing them directly is meaningless. Normalize by a characteristic length, or analyze linear and angular velocities separately. This issue is a long-standing debate in the optimization of robot kinematics.
+Minimizing the condition number across a target workspace is a central objective of **kinematic optimization** (optimal mechanical design). One important caveat applies whenever linear and angular rows appear together in $J$: translational velocity ($\text{m/s}$) and angular velocity ($\text{rad/s}$) carry different physical units, making raw singular values scale-dependent and physically inconsistent. Always normalize the rows by a characteristic link length or evaluate the translational and rotational sub-Jacobians separately—a classic subtlety in kinematic optimization.
 
 
 ### 4.6.3 Redundancy Resolution (7-DOF Arms)
 
-A 7-DOF robot arm (Kinova Gen3, KUKA LBR iiwa, Franka Emika Panda, etc.) has one extra degree of freedom relative to a 6-DOF task space. This extra freedom is called **kinematic redundancy**.
+A seven-axis manipulator—such as the Kinova Gen3, KUKA LBR iiwa, or Franka Emika Panda—carries one extra degree of freedom beyond a six-dimensional end-effector pose. Because of this **kinematic redundancy**, the arm can reshape its intermediate posture without shifting the end-effector at all, much like raising or lowering your elbow while keeping your fist pinned to a fixed point in space.
 
-The overall arm configuration can be changed while holding the same end-effector pose. It is like a human raising or lowering the elbow while keeping the fist in place.
+Controllers exploit that internal freedom to pursue secondary goals while tracking the primary task:
+1. **Singularity avoidance**: steer the extra joint away from postures where manipulability collapses.
+2. **Joint-limit avoidance**: bias joints back toward the center of their travel ranges before they hit hard stops.
+3. **Obstacle avoidance**: swing the elbow clear of clutter in the workspace.
+4. **Torque or energy minimization**: settle into postures that carry gravity or task loads with less motor effort.
 
-Strategies for exploiting this freedom:
-1. **Singularity avoidance**: use the extra freedom to maximize the Jacobian's manipulability
-2. **Joint-limit avoidance**: as a joint nears its limit, use the extra freedom to return toward center
-3. **Obstacle avoidance**: adjust the configuration so the elbow does not collide with obstacles
-4. **Energy optimization**: choose the pose that minimizes torque
-
-Mathematically, the extra freedom corresponds to the null space of the Jacobian:
+Mathematically, those internal motions live in the **null space** of the Jacobian—the subspace of joint velocities $\dot{q}$ that map to zero end-effector motion ($J\dot{q} = 0$):
 
 ```
 q̇ = J† * ẋ + (I - J† * J) * q̇_0
 ```
 
-The first term is the minimum-norm joint velocity that achieves the end-effector velocity. The second term (I - J†J) is the null-space projector — it moves the joints without affecting the end-effector velocity. q̇_0 is the gradient of a secondary objective (e.g., maximizing manipulability).
+The first term, $J^\dagger \dot{x}$, produces the minimum-norm joint velocity that realizes the desired end-effector twist $\dot{x}$. The second term multiplies an arbitrary secondary velocity $\dot{q}_0$ (such as the gradient of a manipulability or joint-centering cost) by the null-space projector $(I - J^\dagger J)$, altering the internal posture without disturbing the end-effector trajectory. The function below implements this null-space projection for a 7-DOF arm, using the secondary task to pull joints gently toward their midpoint `q_center`:
 
 ```python
 def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
@@ -885,7 +871,7 @@ def redundancy_resolution(J, x_dot, q, q_center, k_null=0.5):
 > - Dietrich et al., "An Overview of Null Space Projections for Redundant, Torque-Controlled Robots" (2015)
 > - Franka Emika research interface: https://frankaemika.github.io/docs/
 
-Everything so far has been deterministic kinematics. §4.7 layers probability on top of it.
+Every model up to this point has treated kinematics as deterministic: given a joint vector, a single exact pose follows. Once a wheeled robot rolls across a real floor, however, wheel slip and unmodeled terrain turn that single pose into a probability distribution—the subject of §4.7, which connects kinematics directly back to the Bayesian filtering framework of Ch.3.
 
 ---
 
@@ -893,28 +879,27 @@ Everything so far has been deterministic kinematics. §4.7 layers probability on
 
 ### 4.7.1 From Determinism to Probability
 
-§4.2 forward kinematics and §4.3 inverse kinematics are deterministic. Feed in joint angles and one end-effector position comes out; feed in an end-effector position and a set of joint angles comes out. The output is a point estimate given the input. That is a property of the model, however, not of the platform. Manipulators have joint backlash, link compliance, and calibration error of their own, which is why the introduction listed calibration — correcting errors between the real robot and the model — among the uses of kinematics.
+Forward kinematics (§4.2) and inverse kinematics (§4.3) are deterministic mappings: supply joint angles and a single end-effector pose emerges; specify a target pose and a discrete set of joint solutions follows. Even for rigid manipulators, however, that determinism belongs to the idealized equations rather than the physical machine—real arms suffer from gear backlash, link compliance, and assembly tolerances, which is why §4.1 listed kinematic calibration among core applications.
 
-Wheeled mobile robots are different. The wheels do not roll at precisely the commanded speed. There is slip, effective radius changes with wear, and asymmetric wear on left and right wheels generates straight-line error. The result: even after issuing a control command $u_t$, the next pose $x_t$ is not a single point but a probability distribution. Formalizing that distribution is what a **probabilistic motion model** does.
+On wheeled mobile robots, the gap between command and reality widens dramatically. Wheels slip against the floor, tire radii shift as treads wear, and slight left-right asymmetries curve supposedly straight paths. Consequently, after issuing a motion command $u_t$ from pose $x_{t-1}$, the next pose $x_t$ is no longer a single point but a probability distribution over possible outcomes. A **probabilistic motion model** formalizes this transition uncertainty.
 
-The state is a planar pose, $x_t = (x, y, \theta)^T \in SE(2)$. The motion model defines the conditional probability distribution of the next pose given the previous pose $x_{t-1}$ and the control input $u_t$:
+Representing the planar pose as $x_t = (x, y, \theta)^T \in SE(2)$, the motion model defines the conditional transition density of the next pose given the previous pose $x_{t-1}$ and the motion input $u_t$:
 
 $$p(x_t \mid u_t, x_{t-1})$$
 
-Two representations exist for this distribution.
+In mobile robotics, two complementary formulations represent this transition distribution:
 
-**Velocity model**: the control input is given as linear and angular velocity, $u_t = (v, \omega)^T$. Usable at the planning stage. The error between the robot's commanded speed and its actual speed is modeled as noise.
+- **Velocity model**: takes commanded linear and angular velocities $u_t = (v, \omega)^T$ as input and treats discrepancies between commanded and executed speed as stochastic noise. Because it depends only on commands, it works forward in time during motion planning.
+- **Odometry model**: takes a pair of encoder-integrated poses $u_t = (\bar{x}_{t-1}, \bar{x}_t)$ as if it were the control input. Because encoder readings arrive only after the robot has moved, this model is retrospective and cannot guide open-loop planning; despite relying on kinematic wheel integration rather than direct pose sensing, it usually captures real-world displacement more faithfully than trusting raw velocity commands.
 
-**Odometry model**: the control input is a pair of poses obtained by integrating the wheel encoders, $u_t = (\bar{x}_{t-1}, \bar{x}_t)$. It is retrospective, so it cannot be used for planning. The pose pair itself is obtained by integrating encoder rotations through the kinematic model; it is not a direct measurement of pose. Even so, it tends to be more accurate in practice than a velocity model that takes the commanded speed at face value.
-
-For each of the two models there are two ways to use it: **closed-form density evaluation** and **sampling**. Closed-form returns a probability density value answering "how plausible is this hypothesized pose $x_t$?" That is what is needed when the Bayes filter integral is evaluated directly, as in grid localization. EKF and UKF prediction does not use this density value; it propagates the mean and covariance through a Jacobian or through sigma points. Sampling is forward simulation that generates the next pose. A particle filter (MCL) uses this form directly. The four combinations are covered in §4.7.2–§4.7.5.
+Each model also supports two distinct operational modes. **Closed-form density evaluation** outputs a scalar likelihood answering *"how plausible is a candidate pose $x_t$?"*—exactly what grid localization needs when evaluating the Bayes filter integral directly (note that EKF and UKF prediction instead propagate the mean and covariance via Jacobians or sigma points). **Sampling** runs forward in simulation to draw one concrete next pose $x_t$, which particle filters such as Monte Carlo Localization (MCL) invoke once per particle. Sections §4.7.2–§4.7.5 work through all four combinations.
 
 
 ### 4.7.2 Velocity Motion Model — Closed-Form
 
-**Intuition.** Without noise, a robot moving at linear velocity $v$ and angular velocity $\omega$ traces a circular arc. At $\omega = 0$ the arc degenerates to a straight line. Noise means the arc actually traced differs from the commanded one. Closed-form evaluation inverts this logic: given two poses $x_{t-1}$ and $x_t$, it back-computes the center $(x_c, y_c)$ and radius $r^*$ of the arc connecting them, recovers the hypothetical velocity $(\hat{v}, \hat{\omega})$ that would have produced that arc, and then evaluates the difference from the commanded velocity $(v, \omega)$ under a noise distribution.
+**Intuition.** Under ideal noise-free motion, a differential-drive robot holding constant linear velocity $v$ and angular velocity $\omega$ travels along a circular arc (degenerating to a straight line when $\omega = 0$). Real wheel noise bends that arc into a slightly different trajectory. Closed-form evaluation runs the geometry in reverse: given a starting pose $x_{t-1}$ and a hypothesized endpoint $x_t$, it solves for the circle center $(x_c, y_c)$ and radius $r^*$ connecting them, recovers the effective velocities $(\hat{v}, \hat{\omega})$ that would have traced that arc, and scores how likely the discrepancy from the commanded $(v, \omega)$ is under the noise model.
 
-**Equations.** Given $x_{t-1} = (x, y, \theta)^T$ and a hypothesized $x_t = (x', y', \theta')^T$:
+**Equations.** Starting from $x_{t-1} = (x, y, \theta)^T$ and a hypothesized $x_t = (x', y', \theta')^T$, the arc center, radius, sweep angle, and implied velocities are:
 
 $$\mu = \frac{1}{2} \cdot \frac{(x - x')\cos\theta + (y - y')\sin\theta}{(y - y')\cos\theta - (x - x')\sin\theta}$$
 
@@ -926,13 +911,13 @@ $$\Delta\theta = \text{atan2}(y' - y_c,\ x' - x_c) - \text{atan2}(y - y_c,\ x - 
 
 $$\hat{v} = \frac{\Delta\theta \cdot r^*}{\Delta t}, \quad \hat{\omega} = \frac{\Delta\theta}{\Delta t}, \quad \hat{\gamma} = \frac{\theta' - \theta}{\Delta t} - \hat{\omega}$$
 
-The noise model is additive, with variance proportional to command magnitude. The second argument $b$ (variance) of `prob(a, b)` is:
+Motion errors are modeled as zero-mean additive noise whose variances grow linearly with the magnitude of the commanded speeds—capturing the physical intuition that driving or turning faster introduces greater uncertainty:
 
 $$b_v = \alpha_1|v| + \alpha_2|\omega|, \quad b_\omega = \alpha_3|v| + \alpha_4|\omega|, \quad b_\gamma = \alpha_5|v| + \alpha_6|\omega|$$
 
-$b_v$ is the noise variance on linear velocity, $b_\omega$ on angular velocity. $\hat{\gamma}$ is a final-heading correction term. With only two noise variables $(v, \omega)$, hypothesized poses are confined to a 2D manifold within 3D pose space — a *degeneracy* problem. Adding $\hat{\gamma}$ secures full 3D support.
+Here $b_v$ and $b_\omega$ govern the noise variances on linear and angular velocity, respectively. The extra term $\hat{\gamma}$ acts as a final-heading perturbation: with only two noise variables $(v, \omega)$, reachable poses would collapse onto a 2D surface inside 3D $(x, y, \theta)$ space (*degeneracy*), so adding $\hat{\gamma}$ restores full 3D support. Physically, $\alpha_1, \alpha_2$ scale linear-velocity uncertainty, $\alpha_3, \alpha_4$ scale angular-velocity uncertainty, and $\alpha_5, \alpha_6$ scale final-heading jitter; all six parameters are calibrated empirically for each robot across straight, circular, and figure-eight runs.
 
-The six parameters physically: $\alpha_1, \alpha_2$ weight the variance of linear-velocity noise; $\alpha_3, \alpha_4$ weight angular-velocity noise; $\alpha_5, \alpha_6$ weight final-heading noise. Because variance scales linearly with command magnitude, faster motion becomes more uncertain — which matches intuition. Each robot needs its $\alpha_i$ calibrated from straight-line, circular, and figure-eight trajectories.
+Putting the inverse arc geometry together with the three noise likelihoods gives the standard closed-form algorithm (`prob(a, b)` denotes a zero-mean normal or triangular density with variance $b$):
 
 **Algorithm box (PR Table 5.1: `motion_model_velocity`).**
 
@@ -957,29 +942,25 @@ Algorithm motion_model_velocity(x_t, u_t, x_{t-1}):
   return p1 · p2 · p3
 ```
 
-`prob(a, b)` is the density of a zero-mean normal or triangular distribution with variance $b$.
-
-Generating a pose sample from the same noise parameters works in the opposite direction, covered next.
+While `motion_model_velocity` works backward from a candidate pose to score its density, sampling runs the exact same noise model forward in time.
 
 ### 4.7.3 Velocity Motion Model — Sampling
 
-Closed-form evaluated a hypothesized pose by inverting the arc. Sampling runs in the opposite direction: draw noise first, perturb the commanded velocity, then integrate the arc forward to produce one pose sample. A particle filter needs exactly this one sample per particle, and the implementation is simpler than the closed-form version.
+Instead of inverting an arc between two fixed poses, **sampling** starts by drawing random perturbations around the commanded velocities and integrating the resulting arc forward over $\Delta t$ to generate one plausible next pose. Particle filters rely directly on this forward simulation to propagate particles, and avoiding the inverse arc calculation makes the implementation markedly simpler.
 
-Perturbed controls:
+First, draw perturbed linear, angular, and final-heading velocities using the same six noise parameters:
 
 $$\hat{v} = v + \text{sample}(\alpha_1|v| + \alpha_2|\omega|)$$
 $$\hat{\omega} = \omega + \text{sample}(\alpha_3|v| + \alpha_4|\omega|)$$
 $$\hat{\gamma} = \text{sample}(\alpha_5|v| + \alpha_6|\omega|)$$
 
-Forward arc integration:
+Integrating those perturbed controls along a circular arc gives the sampled pose:
 
 $$x' = x - \frac{\hat{v}}{\hat{\omega}}\sin\theta + \frac{\hat{v}}{\hat{\omega}}\sin(\theta + \hat{\omega}\Delta t)$$
 $$y' = y + \frac{\hat{v}}{\hat{\omega}}\cos\theta - \frac{\hat{v}}{\hat{\omega}}\cos(\theta + \hat{\omega}\Delta t)$$
 $$\theta' = \theta + \hat{\omega}\Delta t + \hat{\gamma}\Delta t$$
 
-Note: when $|\hat{\omega}| < \epsilon$ the above diverges. The implementation must fall back to a straight-line approximation: $x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$.
-
-`sample(b)` draws a zero-mean sample with variance $b$. Normal approximation: $\frac{\sqrt{b}}{2}\sum_{i=1}^{12}\text{rand}(-1,1)$ (central-limit-theorem approximation using 12 uniform draws).
+Because dividing by $\hat{\omega}$ blows up near zero rotation, any practical implementation must fall back to straight-line integration—$x' = x + \hat{v}\cos\theta\,\Delta t,\ y' = y + \hat{v}\sin\theta\,\Delta t$—whenever $|\hat{\omega}| < \epsilon$. In the algorithm below, `sample(b)` draws a zero-mean variate with variance $b$, commonly approximated via the central limit theorem using 12 uniform draws: $\frac{\sqrt{b}}{2}\sum_{i=1}^{12}\text{rand}(-1,1)$.
 
 **Algorithm box (PR Table 5.3: `sample_motion_model_velocity`).**
 
@@ -1003,7 +984,7 @@ Algorithm sample_motion_model_velocity(u_t, x_{t-1}):
   return (x', y', θ')ᵀ
 ```
 
-**Closed-form vs. sampling.** `motion_model_velocity` returns a probability density value, used where the density itself is needed — for example grid localization, which evaluates the Bayes filter integral directly. `sample_motion_model_velocity` produces one pose and is called directly to propagate each particle in a particle filter (MCL, §14.7). Both algorithms share the same noise parameters $\alpha_1..\alpha_6$, but their directions are opposite: closed-form *evaluates* a hypothesized pose, sampling *generates* the next pose.
+**Closed-form vs. sampling.** Although both velocity algorithms share the exact same noise parameters $\alpha_1..\alpha_6$, they serve opposite directions of inference. `motion_model_velocity` *evaluates* the probability density of a given hypothesis—needed, for example, in grid localization when integrating the Bayes filter directly—whereas `sample_motion_model_velocity` *generates* a concrete successor state to advance each particle in Monte Carlo Localization (MCL, §14.7). The Python implementation below packages the 12-draw normal sampler and the straight-line fallback into a ready-to-run function:
 
 ```python
 import numpy as np
@@ -1034,29 +1015,29 @@ def sample_motion_model_velocity(v, omega, x, y, theta, dt,
     return x_new, y_new, theta_new
 ```
 
-The two velocity model variants share the same noise parameters $\alpha_1..\alpha_6$ and the same assumption that the control input is a commanded velocity $(v, \omega)$. Changing that assumption leads to the second model family.
+Both velocity variants assume that only the commanded speed $(v, \omega)$ is available. Once wheel encoders have recorded how far the wheels actually turned, the **odometry model** replaces raw commands with measured relative displacement.
 
 ### 4.7.4 Odometry Motion Model — Closed-Form
 
-**Intuition.** The velocity model estimates motion from commanded velocity. The odometry model goes the other way: it treats the pair of poses $u_t = (\bar{x}_{t-1}, \bar{x}_t)$ measured by the wheel encoder as if they were the control. The relative motion between these two poses is decomposed into three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$: first rotate toward the destination, then translate straight, then correct the final heading. This decomposition can represent any planar motion.
+**Intuition.** Rather than predicting motion from velocity commands, the odometry model takes the pair of poses $u_t = (\bar{x}_{t-1}, \bar{x}_t)$ integrated from wheel encoders and treats that step as its control input. Any planar displacement between two poses can be decomposed cleanly into three elementary moves—rotate toward the endpoint ($\delta_{\text{rot1}}$), translate straight across ($\delta_{\text{trans}}$), and rotate to the final heading ($\delta_{\text{rot2}}$)—which together span every planar motion.
 
-Strictly speaking, the odometry measurement is a sensor reading, but here it is treated as a control input. Treating it as a genuine measurement model would require adding velocity to the state space, which enlarges the dimension. This is a practical simplification.
+Strictly speaking, wheel odometry is a sensor measurement rather than a control signal. Treating it as a pseudo-control is a deliberate modeling shortcut: handling odometry as a formal sensor measurement would force us to augment the state vector with velocities, inflating filter dimensionality.
 
-**Equations.** Extract relative motion from the odometry measurement $u_t = (\bar{x}_{t-1}, \bar{x}_t)$:
+**Equations.** From the odometry pose pair $u_t = (\bar{x}_{t-1}, \bar{x}_t)$, the three motion primitives are extracted directly:
 
 $$\delta_{\text{rot1}} = \text{atan2}(\bar{y}' - \bar{y},\ \bar{x}' - \bar{x}) - \bar{\theta}$$
 $$\delta_{\text{trans}} = \sqrt{(\bar{x} - \bar{x}')^2 + (\bar{y} - \bar{y}')^2}$$
 $$\delta_{\text{rot2}} = \bar{\theta}' - \bar{\theta} - \delta_{\text{rot1}}$$
 
-Noise model (four parameters $\alpha_1..\alpha_4$). The variance argument to `prob()` depends on the $(\hat\delta_{\text{rot1}}, \hat\delta_{\text{trans}}, \hat\delta_{\text{rot2}})$ back-computed from the hypothesized pose:
+The same decomposition is computed for the hypothesized state transition $(x_{t-1}, x_t)$ to obtain $(\hat\delta_{\text{rot1}}, \hat\delta_{\text{trans}}, \hat\delta_{\text{rot2}})$, which parameterize four noise coefficients $\alpha_1..\alpha_4$:
 
 $$b_{\text{rot1}} = \alpha_1|\hat\delta_{\text{rot1}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
 $$b_{\text{trans}} = \alpha_3|\hat\delta_{\text{trans}}| + \alpha_4(|\hat\delta_{\text{rot1}}| + |\hat\delta_{\text{rot2}}|)$$
 $$b_{\text{rot2}} = \alpha_1|\hat\delta_{\text{rot2}}| + \alpha_2|\hat\delta_{\text{trans}}|$$
 
-$\alpha_1$: how much rotation disturbs rotation (rotational slip); $\alpha_2$: how much translation disturbs rotation; $\alpha_3$: translation's own variance; $\alpha_4$: how much rotation disturbs translation. The final-heading correction trick from the velocity model ($\alpha_5, \alpha_6$) is unnecessary here. Three independent noise variables naturally secure 3D support.
+Each parameter has a clear physical role: $\alpha_1$ captures rotational error caused by rotation (rotational slip), $\alpha_2$ captures rotational drift caused by translation, $\alpha_3$ scales translational error with distance traveled, and $\alpha_4$ scales translational error induced by turning. Unlike the velocity model, no auxiliary $\alpha_5, \alpha_6$ trick is needed because the three independent perturbations $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ already span the full 3D pose space. One critical implementation detail: always wrap angular differences such as $\delta_{\text{rot1}} - \hat{\delta}_{\text{rot1}}$ into $[-\pi, \pi]$, because forgetting to normalize across the $\pm\pi$ seam causes likelihoods to collapse spuriously.
 
-One implementation note: angular differences must be wrapped to $[-\pi, \pi]$. Omitting this wrap is a common bug that causes the distribution to blow up.
+Comparing the measured primitives against the inverse-model primitives yields the closed-form odometry density:
 
 **Algorithm box (PR Table 5.5: `motion_model_odometry`).**
 
@@ -1083,17 +1064,17 @@ Algorithm motion_model_odometry(x_t, u_t, x_{t-1}):
   return p1 · p2 · p3
 ```
 
-The three parameters $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ are treated as independent noise variables, which yields a density with support in all three directions, so the likelihood of a given hypothesized pose can be evaluated directly.
+Because all three noise components act independently along the three decomposed degrees of freedom, the resulting probability density remains non-degenerate across $(x, y, \theta)$, letting a grid filter score arbitrary candidate poses directly.
 
 ### 4.7.5 Odometry Model — Sampling for Particle Filters
 
-The odometry closed-form used an inverse model to evaluate a hypothesized pose. Sampling reverses the direction: add noise to the $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ extracted from the odometry, then compose the perturbed values forward to generate a new pose. No inverse model is needed at all, making the implementation considerably simpler than the closed-form version.
+Just as velocity sampling inverted closed-form velocity evaluation, odometry sampling reverses `motion_model_odometry`: extract $(\delta_{\text{rot1}}, \delta_{\text{trans}}, \delta_{\text{rot2}})$ from the encoder step, perturb each primitive with random noise, and compose the noisy rotate–translate–rotate sequence forward from $x_{t-1}$. Eliminating the inverse pose decomposition keeps the algorithm concise and fast.
 
-**Equations.** Forward composition (PR eq. 5.40):
+**Equations.** Composing the perturbed primitives forward gives the standard update (PR eq. 5.40):
 
 $$\begin{pmatrix}x'\\y'\\\theta'\end{pmatrix} = \begin{pmatrix}x\\y\\\theta\end{pmatrix} + \begin{pmatrix}\hat{\delta}_{\text{trans}}\cos(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{trans}}\sin(\theta + \hat{\delta}_{\text{rot1}})\\\hat{\delta}_{\text{rot1}} + \hat{\delta}_{\text{rot2}}\end{pmatrix}$$
 
-This approximates motion as *two rotations plus one translation* rather than a circular arc — a first-order arc approximation for small $\Delta t$. Unlike velocity sampling, there is no need for an $\omega \to 0$ branch.
+Modeling each step as *two rotations and a straight translation* serves as a first-order approximation to a curved arc over small $\Delta t$, with the bonus that straight-line motion requires no singular $\omega \to 0$ fallback branch.
 
 **Algorithm box (PR Table 5.6: `sample_motion_model_odometry`).**
 
@@ -1120,7 +1101,7 @@ Algorithm sample_motion_model_odometry(u_t, x_{t-1}):
   return (x', y', θ')ᵀ
 ```
 
-ROS2 Nav2's `nav2_amcl` implements this as the `differential` motion model. It is the direct application to wheeled AMR localization.
+In production robotics, ROS2 Nav2's `nav2_amcl` package implements this exact algorithm as its `differential` motion model for wheeled autonomous mobile robot (AMR) localization. Below is a compact Python version ready to plug into a particle filter:
 
 ```python
 import numpy as np
@@ -1155,55 +1136,53 @@ def sample_motion_model_odometry(bar_x_prev, bar_x_curr, x, y, theta,
 
 <!-- DEMO: probabilistic_motion_model.html -->
 
-All four algorithms so far model motion alone, without a map. In a localization problem, a map $m$ is present.
+All four algorithms so far model open-space kinematics without considering obstacles. Yet in localization problems, a map $m$ is already available and can rule out physically impossible trajectories.
 
 ### 4.7.6 Motion + Map: Map-Conditioned Motion Model
 
-The models above ignored map information. In localization, a map $m$ is available, and it can be used to filter out physically impossible poses.
+When a map $m$ is given, conditioning the transition model on map geometry prevents particles or grid beliefs from drifting through walls.
 
-**Equations.** Computing the map-conditioned transition distribution exactly is hard. A practical approximate factorization:
+**Equations.** Because computing the exact map-constrained transition distribution along every continuous path is intractable, localization systems rely on a practical factored approximation:
 
 $$p(x_t \mid u_t, x_{t-1}, m) \propto p(x_t \mid u_t, x_{t-1}) \cdot p(x_t \mid m)$$
 
-The first factor $p(x_t \mid u_t, x_{t-1})$ is the motion model from §4.7.2–§4.7.5. The second factor $p(x_t \mid m)$ is the map-conditioned probability: in an occupancy grid, it is close to 1 when $x_t$ lies in a free cell and close to 0 in a wall or occupied cell.
+The first factor $p(x_t \mid u_t, x_{t-1})$ is simply the free-space motion model from §4.7.2–§4.7.5. The second factor $p(x_t \mid m)$ encodes map consistency: on an occupancy grid, it sits near 1 when $x_t$ lands in a free cell and drops near 0 inside an obstacle or wall.
 
-**Effect.** Particles in the particle filter are kept from ending up inside walls. The simplest implementation samples a new pose, queries the map, and sets that particle's weight to 0 (or very low) when the cell is occupied. Only the endpoint is checked, so with a large time step a path that jumped clear across a wall is not filtered out. Strictly, $p(x_t \mid m)$ acts as a prior rather than a likelihood here, so the approximation assumes the motion model and the map information are independent — a limitation worth noting.
+**Effect.** In a particle filter, this factor suppresses particles that step into walls—most simply by sampling a candidate pose, checking its occupancy cell, and zeroing (or heavily penalizing) its weight if occupied. Note two subtle limitations of this shortcut: first, checking only the endpoint $x_t$ misses paths that tunnel straight across a thin wall during a large time step $\Delta t$; second, $p(x_t \mid m)$ behaves mathematically as a state prior rather than a sensor likelihood, so the product factorization is exact only under the conditional independence assumptions developed in §3.3 (Bayes' theorem and conditional independence, Ch.3).
 
-In practice an occupancy grid has unknown regions in addition to free space. Whether $p(x_t \mid m)$ is set to 1 or to some intermediate value for unknown cells affects localization quality. ROS2 Nav2's default treats unknown cells as free.
-
-The mathematical basis for this factorization is in §3.3 (Bayes' theorem and conditional independence, Ch.3). The product factorization is exact only when the motion model and the map prior are independent.
+Real occupancy grids also contain *unknown* cells alongside free and occupied space. Assigning $p(x_t \mid m) = 1$ versus an intermediate probability to unknown cells noticeably shifts localization behavior in partially mapped environments—for reference, ROS2 Nav2 treats unknown cells as free by default.
 
 ### 4.7.7 What Survived
 
-The sampled velocity and odometry formulations describe motion priors for particle-filter localization on wheeled robots. ROS2 Nav2 `nav2_amcl`'s `differential` motion model corresponds to the odometry-based formulation. Choose the particle count and update rate by measurement on the target map, sensor update rate, CPU, beam count, and error parameters.
+On wheeled platforms, the sampled velocity and odometry models remain standard motion priors for particle-filter localization, with ROS2 Nav2's `nav2_amcl` (`differential` mode) directly embodying the odometry formulation. In deployment, particle counts and update rates should be tuned empirically against the target map, sensor frequency, CPU budget, beam count, and calibrated noise parameters.
 
-**Platforms where VIO and IMU preintegration are standard.** Humanoids, drones, and legged robots are hard to describe in terms of body velocity $(v, \omega)$. Legs bring a different slip model entirely, and drones move in SE(3) rather than SE(2). On these platforms, IMU preintegration provides the motion prior. That topic is in §14.10. The formal framework — $p(x_t \mid u_t, x_{t-1})$ — is the same; the content is entirely different.
+**Platforms where VIO and IMU preintegration are standard.** Humanoids, aerial drones, and legged robots cannot be modeled cleanly by planar body velocities $(v, \omega)$: legged contacts follow complex intermittent slip dynamics, and drones maneuver in full $SE(3)$ rather than $SE(2)$. On these platforms, **IMU preintegration** (§14.10) supplies the motion prior—preserving the probabilistic structure $p(x_t \mid u_t, x_{t-1})$ while replacing the wheel-kinematic content entirely.
 
-**Limits of the model.** Every model here is SE(2)-only. Holonomic robots (Mecanum wheels) or vehicles with lateral dynamics require separate models.
+**Limits of the model.** Every formulation in this section is strictly $SE(2)$-planar and non-holonomic. Omnidirectional platforms (such as Mecanum-wheel bases) and high-speed vehicles governed by lateral tire dynamics require dedicated motion models.
 
-**Where these models are used next.** §14.7 Monte Carlo Localization (MCL) calls `sample_motion_model_odometry` directly in the prediction step of the particle filter (Ch.14). §14.10 IMU preintegration shows how the wheeled odometry model and the IMU model compare (Ch.14). In both contexts, the $p(x_t \mid u_t, x_{t-1})$ derived here enters the prediction term of the Gaussian filter and nonparametric filter families from §3.10 and §3.11 (Ch.3).
+**Where these models are used next.** Later chapters plug these motion models straight into full localization pipelines: §14.7 Monte Carlo Localization (MCL) invokes `sample_motion_model_odometry` inside the particle filter prediction step (Ch.14), and §14.10 compares wheeled odometry directly against IMU preintegration (Ch.14). Across both settings, $p(x_t \mid u_t, x_{t-1})$ supplies the prediction term for the Gaussian and nonparametric filter families introduced in §3.10 and §3.11 (Ch.3).
 
 ---
 
-Deterministic FK maps joint angles to a single pose, while IK finds the set of joint-angle solutions for a target pose. A probabilistic motion model maps input to an output distribution. Two models (velocity, odometry) times two uses (density evaluation, sampling) yields four combinations that are the basic building blocks of real localization systems. The odometry model, being retrospective information obtained by integrating encoder rotations, cannot be used for planning but is more accurate in practice; the velocity model can be used for planning but does not capture actual slip. Sampling serves the particle filter; density evaluation serves cases such as grid localization, where the density value itself is needed.
+Across this chapter, kinematics has progressed from deterministic geometry to hardware execution and stochastic motion. Forward kinematics maps joint angles to a unique pose, inverse kinematics recovers joint configurations for a target pose, and probabilistic motion models map commands or encoder steps to distributions over $SE(2)$ poses. Combining two motion representations (velocity versus odometry) with two inference modes (closed-form density evaluation versus forward sampling) yields the four building blocks of classical mobile localization: odometry cannot plan ahead because it relies on retrospective encoder readings, yet captures physical displacement more accurately than raw velocity commands; sampling drives particle filters, whereas closed-form density evaluation serves grid-based Bayes filters.
 
-One question remains. Every model here stacks noise on top of the kinematic constraint that wheels do not slip. In mud or on inclines — environments where that constraint itself breaks down — how far can $\alpha_i$ calibration compensate? §4.8 collects the textbooks and software referenced across this chapter.
+One open question lingers over every wheel model above: each formulation layers Gaussian or triangular noise onto a nominal *no-slip* kinematic constraint. When mud, gravel, or steep inclines violate that no-slip assumption altogether, calibrating $\alpha_i$ can only compensate so far. Section §4.8 gathers the textbooks, courses, and libraries referenced throughout this chapter before Ch.5 layers mass, inertia, and forces onto our geometric foundation.
 
 ---
 
 ## 4.8 Further Reading
 
-To study kinematics and mechatronics seriously, the most effective approach is to work through one textbook cover to cover.
+To build lasting fluency in kinematics and mechatronics, nothing beats working systematically through a complete textbook alongside real code.
 
 **Textbooks:**
 
-- **Craig, "Introduction to Robotics: Mechanics and Control"** — covers DH parameters and kinematics using the Modified DH convention. Check its prerequisites and examples against the course in which it will be used.
+- **Craig, "Introduction to Robotics: Mechanics and Control"** — a classic introduction to DH parameters and manipulator kinematics using the Modified DH convention (confirm convention and prerequisites against your course syllabus).
 
-- **Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control"** — PoE-based. Provides a free PDF and Coursera course, making it highly accessible. Mathematically cleaner but hard on first read. https://modernrobotics.org
+- **Lynch & Park, "Modern Robotics: Mechanics, Planning, and Control"** — PoE-based throughout, accompanied by a free PDF and Coursera specialization. Mathematically unified, though demanding on a first pass. https://modernrobotics.org
 
-- **Corke, "Robotics, Vision and Control"** — practice kinematics alongside MATLAB/Python code. robotics-toolbox-python is the companion library for this book. The 3rd edition is Python-based. https://petercorke.com/rvc/
+- **Corke, "Robotics, Vision and Control"** — pairs kinematic theory directly with executable code via `robotics-toolbox-python`; the 3rd edition uses Python throughout. https://petercorke.com/rvc/
 
-- **Siciliano et al., "Robotics: Modelling, Planning and Control"** — a broad graduate text covering kinematics, dynamics, and control.
+- **Siciliano et al., "Robotics: Modelling, Planning and Control"** — a comprehensive graduate reference spanning kinematics, dynamics, and control.
 
 **Online courses:**
 
@@ -1234,4 +1213,4 @@ To study kinematics and mechatronics seriously, the most effective approach is t
 
 ---
 
-*Layering force and mass on top of this kinematics leads to dynamics and control. The viewpoint shifts from "sending joint angles to a desired value" to "applying a desired torque."*
+*Layering mass, inertia, and external forces onto this kinematic geometry brings us to rigid-body dynamics and control in Ch.5—shifting the question from "what angles place the joints at a target pose?" to "what torques must the actuators apply to drive motion?"*

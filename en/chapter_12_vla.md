@@ -1,23 +1,17 @@
 # Ch.12 — Vision-Language-Action (VLA) & Embodied AI
 
-The goal of VLA is for a robot to take a natural-language command like "pick up the red cup and place it on the table" and execute it. It is the field that unifies vision, language models, and control. This conceptual bridge explains why text-only language models cannot directly move a robot and why a policy trained in simulation often degrades on physical hardware.
+The vision foundation models in Ch.11 let a robot recognize and segment "the red cup on the table," yet perception alone does not close the loop to physical motion. **Vision-Language-Action (VLA)** models unify visual perception, language reasoning, and motor control so a robot can execute instructions such as "pick up the red cup and place it on the table." Bridging language to physical action confronts two realities that text-only models never face: contact physics on hardware and the sim-to-real gap when policies leave simulation.
 
 ## 12.1 VLA Concepts
 
-Earlier robot systems separated visual perception, language understanding, and action generation into independent pipelines.
-
-**VLA (Vision-Language-Action)** handles these three roles with a single model.
+Earlier robotic architectures decomposed visual perception, language parsing, and action generation into separate, hand-engineered modules. A **VLA** collapses those three stages into a single policy that maps sensor observations and instructions directly to control outputs:
 
 ```
 Input: image + natural-language command ("pick up the red cup")
 Output: robot action (joint angles, gripper commands, etc.)
 ```
 
-**Embodied AI**: AI that learns while interacting in a physical environment
-- Extends beyond perception to include action
-- The gap between simulation and the real environment (sim-to-real)
-
-What sets embodied AI apart from earlier AI is that the model does not stop at classifying "this is a cup" — it must physically pick the cup up. This process has to account for gravity, friction, and collisions, which makes it far harder than simple image classification.
+This framing belongs to **embodied AI**—intelligence learned through interaction with a physical environment rather than passive prediction on static datasets. Stepping from perception to action changes the problem fundamentally: recognizing "this is a cup" requires no model of physics, whereas picking that cup up forces the system to cope with gravity, friction, and collisions, all while dealing with the gap between simulation and reality (sim-to-real).
 
 > **Further reading**
 > - [Google DeepMind Robotics Blog](https://deepmind.google/discover/blog/) — official blog posts on RT-1, RT-2, PaLM-E, and more
@@ -25,15 +19,13 @@ What sets embodied AI apart from earlier AI is that the model does not stop at c
 
 ## 12.2 Key Models and Research
 
+Recent VLA research spans large closed-weight generalist models, open-weight community policies, and language-grounded navigation systems.
+
 ### 12.2.1 RT-1, RT-2 (Google DeepMind)
 
-RT-1 and RT-2 are examples of combining large robot datasets with web-scale visual and language knowledge in a single policy. In the environment reported by its paper, RT-1 showed that one model could perform hundreds of tasks.
+RT-1 and RT-2 demonstrated that large robot demonstration corpora can be combined with web-scale visual-language priors inside a single policy. **RT-1 (Robotics Transformer 1)** trained on 130K robot episodes covering more than 700 tasks, discretizing continuous control commands into tokenized actions and showing that one Transformer policy could handle hundreds of tasks in its evaluation environment.
 
-RT-1 (Robotics Transformer 1) was trained on large-scale robot demonstrations: 130K episodes spanning more than 700 tasks. Its output is a tokenized action.
-
-RT-2 (Robotics Transformer 2) fine-tunes VLMs such as PaLI-X and PaLM-E to produce robot actions. Its paper reports transfer from web-scale data and a separate robot-chain-of-thought experiment.
-
-RT-2 fine-tunes large language/vision models trained on the internet, which carry "knowledge about the world," to produce robot actions. Experiments in the original paper showed that this design can handle new objects or situations zero-shot. For example, RT-2 can pick up objects it never saw in training by leveraging its language knowledge.
+**RT-2 (Robotics Transformer 2)** went a step further by fine-tuning web-pretrained vision-language models—specifically PaLI-X and PaLM-E—to emit tokenized robot actions alongside text. Because the backbone already encodes broad world knowledge from internet-scale image-text training, RT-2 exhibited zero-shot generalization to unseen objects and instructions, as well as emergent chain-of-thought reasoning about physical steps in experiments reported by the original paper.
 
 > **Further reading**
 > - [Google DeepMind — RT-2 Demo Video](https://deepmind.google/discover/blog/rt-2-new-model-translates-vision-and-language-into-action/) — footage and commentary on RT-2 in action
@@ -42,18 +34,14 @@ RT-2 fine-tunes large language/vision models trained on the internet, which carr
 
 ### 12.2.2 PaLM-E
 
-PaLM-E is a 562B-parameter embodied multimodal language model that combines PaLM, a ViT, and robot-state inputs. It handles several robot tasks in one model.
-
-What makes PaLM-E interesting is that it demonstrated "positive transfer." Jointly training on robot data, web images, and text actually improves robot task performance compared to training on each separately. It empirically showed that general-purpose knowledge also helps robot actions.
+**PaLM-E** scales embodied multimodal reasoning to a 562B-parameter model unifying PaLM, a Vision Transformer, and continuous robot-state inputs within a single architecture. Its key empirical result is **positive transfer**: co-training on robot demonstrations alongside web images and text actually improved robotic task performance compared with training on robot data alone, showing that general-purpose multimodal knowledge reinforces physical reasoning.
 
 > **Further reading**
 > - [Driess et al., "PaLM-E: An Embodied Multimodal Language Model" (2023)](https://arxiv.org/abs/2303.03378) — original PaLM-E paper
 
 ### 12.2.3 OpenVLA
 
-The full weights of RT-2 and PaLM-E are not public. OpenVLA publishes its code and weights, so a lab with sufficient compute can download, fine-tune, and deploy it on a robot.
-
-OpenVLA has 7B parameters, is based on Llama 2, and was trained on 970K robot episodes from multiple embodiments.
+Because full model weights for RT-2 and PaLM-E remain proprietary, **OpenVLA** fills a critical gap for academic and industrial labs by releasing both code and checkpoints for local fine-tuning and deployment. Built on a 7B-parameter Llama 2 backbone, OpenVLA was trained on 970K robot episodes spanning multiple embodiments:
 
 ```python
 # OpenVLA usage example (conceptual)
@@ -67,9 +55,7 @@ action = model.predict(
 )
 ```
 
-The RT-X project is another project to know alongside OpenVLA. It combines robot data from many institutions into the Open X-Embodiment dataset and uses it to train general-purpose robot policies. The dataset includes data from 22 robot embodiments collected by 21 institutions.
-
-**Octo**: Another open-source model trained on RT-X data. It is smaller than OpenVLA (93M parameters) and therefore lighter to use. The model is designed for quick fine-tuning on diverse robot platforms.
+Behind OpenVLA sits the **RT-X** initiative, which pooled demonstrations from 21 institutions across 22 robot embodiments into the **Open X-Embodiment** dataset to train cross-embodiment generalist policies. Alongside OpenVLA, **Octo** offers a much smaller 93M-parameter open-source policy trained on RT-X data, trading raw model capacity for fast fine-tuning and lightweight deployment across diverse robot platforms.
 
 > **Further reading**
 > - [OpenVLA GitHub](https://github.com/openvla/openvla) — code and model weights released
@@ -79,15 +65,14 @@ The RT-X project is another project to know alongside OpenVLA. It combines robot
 
 ### 12.2.4 Navigation
 
-Beyond manipulation, moving (navigation) within an environment is also a core problem for embodied AI. The studies below apply the language understanding of LLMs to navigation.
+Embodied AI extends beyond tabletop manipulation to mobile navigation and driving. Wayve's **LINGO** family brings language into autonomous driving: **LINGO-1** operates open-loop by narrating driving scenes and decisions in natural language, whereas **LINGO-2** closes the loop by pairing language instructions directly with driving control.
 
-LINGO is a family of driving-domain VLA models released by Wayve. LINGO-1 is an open-loop model that narrates driving scenes in language, while LINGO-2 is a closed-loop model that handles language instructions and driving control together.
+In indoor mobile manipulation, **SayCan** addresses a core weakness of standalone LLM planners by separating what the model *should* do from what the robot *can* physically do right now:
 
-**SayCan**: separates what the LLM "can do" from what it "should do"
-- Affordance function: the actions the robot can currently perform
-- LLM: the actions required to achieve the goal
+- **LLM**: scores candidate high-level steps by how well they advance the user's goal.
+- **Affordance function**: estimates which skills the robot can actually execute from its current state.
 
-Consider how SayCan handles a simple request. Tell an LLM to "make me coffee," and it can plan: "1. grab a cup, 2. walk to the coffee machine, 3. press the button..." But if the robot is not near a cup, it cannot execute the first step. SayCan combines the LLM's plan (what should be done) with the robot's feasible actions (what can be done) to select an action that is both executable and likely to advance the goal.
+Ask an unconstrained LLM to "make me coffee," and it might propose "1. grab a cup, 2. walk to the coffee machine, 3. press the button..."—useless if no cup is within reach. By multiplying language utility with learned affordance probabilities, SayCan grounds high-level plans in feasible physical actions.
 
 > **Further reading**
 > - [Ahn et al., "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances" (2022)](https://arxiv.org/abs/2204.01691) — SayCan paper
@@ -95,13 +80,9 @@ Consider how SayCan handles a simple request. Tell an LLM to "make me coffee," a
 
 ## 12.3 World Models
 
-Repeated trial and error on physical robots carries substantial time and equipment costs. A world model predicts a next state or observation from the current state and action, allowing a model-based policy to evaluate candidate actions without executing all of them on hardware.
+Running trial-and-error rollouts directly on physical hardware is slow, expensive, and hazardous. A **world model** learns to predict future latent states, observations, and rewards from the current state and candidate action, allowing a model-based reinforcement learning policy to simulate rollouts and screen risky maneuvers before executing them on a real robot. In autonomous driving, for instance, **GAIA-1** predicts action-conditioned driving video, **DriveDreamer** generates text-conditioned driving scenarios, and **MILE** jointly learns latent future dynamics and a driving policy inside an implicit world model.
 
-A world model can be used for model-based RL rollouts and for evaluating risky actions before hardware execution.
-
-In autonomous driving, GAIA-1 predicts action-conditioned driving video, DriveDreamer generates text-conditioned driving scenes, and MILE jointly learns future states and a driving policy through an implicit world model.
-
-Its structure resembles a state-space model.
+Mathematically, a latent world model mirrors a classical state-space formulation:
 
 ```
 z_{t+1} = f(z_t, a_t)     # Dynamics model (current state + action → next state)
@@ -109,7 +90,7 @@ o_t = g(z_t)              # Observation model (latent state → observation)
 r_t = h(z_t, a_t)         # Reward model (reward prediction)
 ```
 
-You may have noticed this has a structure similar to the state-space model you learned in linear algebra. Think of it as x_{t+1} = Ax_t + Bu_t extended to a nonlinear neural-network version.
+In effect, this extends the linear state-space system `x_{t+1} = Ax_t + Bu_t` from linear algebra into a nonlinear neural representation learned directly from high-dimensional sensory streams.
 
 > **Further reading**
 > - [Hu et al., "GAIA-1: A Generative World Model for Autonomous Driving" (2023)](https://arxiv.org/abs/2309.17080) — Wayve's world model paper
@@ -118,31 +99,23 @@ You may have noticed this has a structure similar to the state-space model you l
 
 ## 12.4 End-to-End vs Modular
 
-End-to-end and modular architectures differ in where they separate perception, planning, and control.
+A central architectural debate in robotics and autonomous driving is how tightly to couple perception, prediction, planning, and control.
 
-**End-to-End**:
+An **end-to-end** architecture maps raw sensor streams straight through a unified neural network to control commands:
 
 ```
 sensor input → [single neural network] → action output
 ```
 
-- Pros: simple pipeline, no bottleneck from intermediate representations
-- Cons: lack of interpretability, requires large-scale data
-- Examples: NVIDIA PilotNet, Tesla FSD (presumed)
+Because there are no hand-designed intermediate bottlenecks, end-to-end policies offer a clean pipeline and joint optimization across the whole stack—exemplified by NVIDIA PilotNet and (presumed) Tesla FSD—at the cost of low interpretability and heavy data demands. Modern autonomous driving research has explored structured variants of this idea: **UniAD** (CVPR 2023 Best Paper) retains explicit detection, tracking, mapping, prediction, and planning heads inside one end-to-end differentiable framework; **VAD** (2023) encodes scenes in a compact vectorized representation; and **GenAD** (2024) formulates driving prediction and planning generatively.
 
-End-to-end autonomous driving has developed in several forms. UniAD (2023) retains detection, tracking, mapping, prediction, and planning modules inside an end-to-end framework and received the CVPR 2023 Best Paper award. VAD (2023) converts a scene into a vectorized representation, while GenAD (2024) uses a generative formulation for driving scenarios.
-
-**Modular**:
+A **modular** stack instead separates the pipeline into well-defined stages with explicit interfaces, as in **Apollo** and **Autoware**:
 
 ```
 sensors → [perception] → [prediction] → [planning] → [control] → action
 ```
 
-- Pros: each module can be developed/debugged independently, interpretable
-- Cons: information loss between modules, hard to jointly optimize
-- Examples: Apollo, Autoware
-
-Hybrid designs are another option: perception can be learning-based while planning and control retain explicit models and safety checks, or explicit modules can sit inside an end-to-end framework as in UniAD.
+Each component can be developed, tested, and debugged independently with clear physical meaning, though handcrafted interfaces between modules can lose information and prevent joint end-to-end tuning. Between the two extremes sit **hybrid** designs, which either use learned perception modules ahead of explicit planning and safety checks or embed modular heads inside an end-to-end architecture like UniAD.
 
 > **Further reading**
 > - [Hu et al., "Planning-oriented Autonomous Driving (UniAD)" (2023)](https://arxiv.org/abs/2212.10156) — CVPR 2023 Best Paper
@@ -151,34 +124,23 @@ Hybrid designs are another option: perception can be learning-based while planni
 
 ### End-to-End vs Modular in Practice
 
-Which architecture is preferable depends on the application and its verification requirements. Practical systems often retain modular or hybrid structure for the following reasons.
+In deployed robotics, verification requirements and engineering budgets often favor modular or hybrid stacks over monolithic end-to-end models for four practical reasons:
 
-- **Debugging**: when an end-to-end model fails, the cause is hard to find. For "why did the robot drop the cup?", a modular system lets you narrow it down to "depth estimation was wrong" or "grasp planning was wrong," but with end-to-end you do not know where it went wrong.
-- **Safety guarantees**: a modular system lets you insert safety checks into each module (speed limits, collision detection, etc.). Putting such guarantees into an end-to-end system is difficult.
-- **Partial updates**: a modular system can replace only the perception module. In an end-to-end system, a change may require joint retraining or revalidation of several components.
-- **Data efficiency**: the general-purpose policies discussed here use large datasets. RT-1's dataset contained about 130K episodes, and OpenVLA was trained on 970K episodes. Most labs cannot collect the same scale of data themselves.
+- **Debugging**: When an end-to-end policy fails—say, dropping a cup—pinpointing the root cause is difficult. A modular pipeline lets engineers isolate whether depth estimation, grasp planning, or low-level tracking misfired.
+- **Safety guarantees**: Explicit intermediate boundaries allow deterministic safety checks such as velocity limits and collision monitors between stages, which are hard to enforce inside an opaque end-to-end network.
+- **Partial updates**: Modular systems let teams swap out an improved perception backbone without touching control. Modifying an end-to-end network can force joint retraining and revalidation across the entire stack.
+- **Data efficiency**: Generalist policies require massive demonstration datasets—around 130K episodes for RT-1 and 970K for OpenVLA—far beyond what most individual robotics labs can collect in-house.
 
-One practical direction is **hybrid**: use a VFM for perception while retaining explicit planning, control, and safety checks. The Local/Global Module design in Ch.18 follows this direction.
-
-For end-to-end systems to replace modular designs broadly, they must demonstrate debuggability, data efficiency on small datasets, and application-specific safety guarantees. Public systems address these requirements over different scopes; no single architecture establishes all three across applications.
+A common middle ground is a **hybrid architecture** that pairs a VFM for open-world perception with explicit geometric planning, control, and safety envelopes—the exact principle behind the Local/Global Module split developed in Ch.18. For monolithic end-to-end systems to displace modular stacks broadly, they must prove comparable debuggability, sample efficiency on modest datasets, and verifiable safety guarantees; existing public systems each satisfy parts of that list over narrower scopes, but none yet settles all three across general robotics applications.
 
 ## 12.5 Spatial AI + VLA Integration
 
-A VLA interprets long-horizon tasks such as "bring me coffee," while a local controller handles real-time obstacle avoidance and stabilization. A physical system must connect outputs at both time scales.
+A VLA can reason over multi-step semantic goals such as "bring me coffee," while low-level controllers must stabilize hardware and dodge obstacles at high frequency. Connecting both time scales in a physical robot motivates our lab's **2-Module Architecture**:
 
-Connection to the lab's 2-Module Architecture:
+- **Local (Fast) Perception**: handles geometric quantities—depth, obstacles, and pose—at real-time rates (10–100 Hz) using classical geometry or lightweight learned models.
+- **Global (Heavy) Understanding**: handles semantic interpretation—objects, spatial relations, and task context—via VFM/VLA models running on a server or cloud backend (1–10 Hz).
 
-**Local (Fast) Perception**:
-- Geometric understanding: depth, obstacles, pose
-- Real-time response (10–100 Hz)
-- Classical or lightweight learned models
-
-**Global (Heavy) Understanding**:
-- Semantic understanding: objects, relations, context
-- VFM/VLA-based
-- Server or cloud processing (1–10 Hz)
-
-**Integration scenario**:
+Under this split, the two modules coordinate asynchronously across perception and motion:
 
 ```
 1. Local: real-time obstacle avoidance, odometry
@@ -190,11 +152,14 @@ Connection to the lab's 2-Module Architecture:
 
 ## 12.6 Sim-to-Real & Simulation Platforms
 
-Gathering data on a real robot is slow, expensive, and risky. Sim-to-real therefore trains first in simulation and transfers the result to a physical robot. A "reality gap" remains between simulation and reality; the main techniques for narrowing it are summarized below.
+Collecting physical robot demonstrations at scale is slow, costly, and hard on hardware. **Sim-to-real transfer** therefore trains policies in simulation before deploying them onto a physical robot, using techniques such as **Domain Randomization**—randomly perturbing textures, lighting, and physical parameters during training so that real-world conditions look like one more sample from the training distribution.
 
-**Domain Randomization**: randomly varies textures, lighting, physics parameters, and so on in simulation during training. Once the model is exposed to many conditions, the real environment can be treated as just one more variation among them.
+Choosing a simulator depends on whether a project prioritizes parallel physics throughput, household semantics, photorealistic indoor scanning, or contact-rich manipulation:
 
-Four major simulation platforms illustrate the range of uses. NVIDIA Isaac Sim/Lab provides GPU-accelerated physics and can run thousands of environments in parallel; Isaac Lab is an integrated robot-learning framework. AI2-THOR provides household environments such as kitchens and living rooms for indoor interaction tasks. Habitat supports navigation learning in large-scale scanned environments such as Matterport3D and Gibson and hosts the Habitat Challenge. MuJoCo emphasizes contact dynamics and is used for manipulation and locomotion; after acquiring it, DeepMind released it as open source.
+- **NVIDIA Isaac Sim/Lab**: delivers GPU-accelerated physics capable of running thousands of environments in parallel, with Isaac Lab providing an integrated framework for robot learning.
+- **AI2-THOR**: models interactive indoor household environments such as kitchens and living rooms for embodied task benchmarks.
+- **Habitat**: supports fast navigation training in large-scale real-world scans such as Matterport3D and Gibson and hosts the Habitat Challenge.
+- **MuJoCo**: specializes in fast, accurate contact dynamics for manipulation and locomotion, and is maintained as open-source software following its acquisition by DeepMind.
 
 > **Further reading**
 > - [NVIDIA Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/) — a simulation framework for robot learning
@@ -204,21 +169,17 @@ Four major simulation platforms illustrate the range of uses. NVIDIA Isaac Sim/L
 
 ## 12.7 Advanced: Imitation Learning
 
-Policy learning in VLA and embodied AI broadly divides into reinforcement learning (RL) and imitation learning (IL). The two approaches differ in how they collect data, define rewards, and pay for exploration on physical robots.
+Policy learning for VLAs and embodied control generally follows either reinforcement learning (RL) or imitation learning (IL), which differ sharply in how they acquire data, specify objectives, and manage physical risk.
 
-**Behavioral Cloning (BC)**
-
-The simplest IL method. Collect demonstration data `{(s_t, a_t)}` from an expert (a human or a script) and perform supervised learning that predicts action `a_t` from state `s_t`.
+The simplest IL baseline is **Behavioral Cloning (BC)**: collect expert demonstrations `{(s_t, a_t)}` from a human operator or scripted planner and train a policy via supervised regression from state `s_t` to action `a_t`:
 
 ```
 Loss = E[ || π_θ(s_t) - a_t ||^2 ]
 ```
 
-The method is simple and easy to implement, but it has an important limitation: **distribution shift**. During training, the policy follows the expert's state distribution. During inference, its own imperfect actions determine each subsequent state. Small errors can accumulate until the policy reaches states the expert never visited, where it may fail to choose an appropriate action.
+Although BC is straightforward to implement, it suffers from **distribution shift** (compounding error). During training, the policy only observes states visited by the expert; at test time, its own imperfect predictions determine the next state. Small errors compound step by step until the robot drifts into unfamiliar states absent from the demonstrations, where the policy has no reliable guidance.
 
-**DAgger (Dataset Aggregation)**
-
-DAgger is a representative method for mitigating distribution shift. It collects data with the learned policy while querying the expert for labels, then adds those labeled examples to the dataset.
+**DAgger (Dataset Aggregation)** counters distribution shift by rolling out the learned policy on the task, querying the expert for corrective actions on the states the policy actually visits, and retraining on the aggregated dataset:
 
 ```
 1. Train policy π_1 on initial data D = {expert demonstrations}
@@ -229,9 +190,9 @@ DAgger is a representative method for mitigating distribution shift. It collects
      train π_{i+1} on D
 ```
 
-Because querying the expert every time is expensive, human-in-the-loop variants or approximate versions of DAgger (HG-DAgger, ThriftyDAgger, etc.) are used.
+Because continuous expert labeling is expensive, practical deployments often adopt human-in-the-loop or selective-querying variants such as HG-DAgger and ThriftyDAgger.
 
-The table summarizes typical tradeoffs. The actual sample count and safety profile depend on the algorithm, simulator, and quality of the expert data.
+The table below contrasts the typical engineering trade-offs between RL and IL, though exact sample budgets and safety profiles depend on the algorithm, simulator, and quality of expert demonstrations:
 
 | Criterion | RL | IL |
 |------|----|----|
@@ -240,7 +201,7 @@ The table summarizes typical tradeoffs. The actual sample count and safety profi
 | Safety | dangerous actions possible during exploration | imitates expert, so relatively safe |
 | Sim-to-Real | reward function's sim-real gap is also a problem | using real demo data reduces the gap |
 
-In robotics, designing a reward function properly is very hard. How do you define the reward for "grasp the cup"? Distance between the cup and the gripper? Then the robot may stop just next to the cup. Whether it was grasped? Then you hit the sparse-reward problem. IL sidesteps this.
+In physical manipulation, reward engineering is notoriously brittle. Defining a reward for "grasp the cup" using gripper-to-cup distance can cause the arm to hover beside the cup indefinitely, while a binary grasp-success reward creates a sparse-reward exploration bottleneck. Imitation learning sidesteps reward shaping altogether by learning directly from successful demonstrations.
 
 > **Further reading**
 > - [Ross et al., "A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning" (2011)](https://arxiv.org/abs/1011.0686) — original DAgger paper
@@ -249,11 +210,9 @@ In robotics, designing a reward function properly is very hard. How do you defin
 
 ## 12.8 Advanced: Diffusion Policy
 
-Diffusion Policy, proposed by Chi et al. (RSS 2023), is used in robot manipulation as an alternative to BC-family methods. It generates an action trajectory through a denoising diffusion process.
+Standard Behavioral Cloning assumes a deterministic mapping `π_θ(s) → a`, which breaks down whenever a state admits multiple valid actions (**multi-modality**). Suppose a robot can grasp a cup equally well from the left or from the right: minimizing squared error against both options causes deterministic BC to predict the average of the two trajectories, colliding with the cup and failing both grasps. Gaussian mixture models can represent multiple modes, but only if the number of modes is fixed beforehand.
 
-Standard BC deterministically predicts a single action as `π_θ(s) → a`. But in reality, several actions are possible from the same state (multi-modality). For example, when grasping a cup on a table you can grab it from the left or from the right. Deterministic BC outputs the average of the two actions and fails at both. Gaussian mixture models are another option, but you must fix the number of modes in advance.
-
-Diffusion Policy represents this multi-modal distribution naturally.
+**Diffusion Policy** (Chi et al., RSS 2023) resolves this limitation by generating future action trajectories via an iterative denoising diffusion process trained with denoising score matching:
 
 ```
 1. Start from random noise a_T ~ N(0, I) (T = diffusion steps)
@@ -262,13 +221,9 @@ Diffusion Policy represents this multi-modal distribution naturally.
 3. The final a_0 is the action trajectory to execute
 ```
 
-An action trajectory is not a single action but a sequence of actions over several future steps `[a(0), a(1), ..., a(H)]`. The number in parentheses is the execution time index, a different axis from the subscript (diffusion step) in the pseudocode above. Only the first few steps are executed (receding horizon), and a new trajectory is generated from the next observation.
+Rather than predicting one isolated step, the model outputs an entire future action sequence `[a(0), a(1), ..., a(H)]`—where the parenthesized index denotes execution time, distinct from the diffusion step subscript `t` above—executes only the first few steps in a receding-horizon loop, and replans from the next observation. This formulation captures arbitrary multi-modal action distributions without pre-specifying mode counts while enforcing temporal smoothness across the trajectory.
 
-This formulation represents a multi-modal action distribution without fixing the number of modes in advance, and it produces a temporally connected action sequence in one trajectory. Training uses denoising score matching.
-
-Its main cost is speed. Inference requires repeated denoising steps (often 10–100), so it may be unsuitable for control above 100 Hz. DDIM-style sampling or consistency distillation can reduce the cost.
-
-The original project page reports an average improvement of 46.9% over prior robot-learning methods across 12 tasks from four benchmarks. Interpret that number within the tasks, metrics, and baselines used in the paper.
+The main trade-off is inference latency: running 10–100 iterative denoising passes per replanning step can be too slow for control loops exceeding 100 Hz, though DDIM-style sampling and consistency distillation help accelerate inference. On the original project benchmarks, Diffusion Policy reports a 46.9% average improvement over prior robot-learning baselines across 12 tasks from four benchmarks—a figure that should be interpreted within the specific task definitions, metrics, and baselines evaluated in the paper.
 
 > **Further reading**
 > - [Chi et al., "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion" (RSS 2023)](https://arxiv.org/abs/2303.04137) — original Diffusion Policy paper
@@ -277,22 +232,21 @@ The original project page reports an average improvement of 46.9% over prior rob
 
 ## 12.9 Advanced: Sim-to-Real Transfer
 
-Section 12.6 introduced simulation platforms and domain randomization. The techniques below address the visual and physical differences encountered when a policy moves from simulation to a physical robot.
+Building on the simulators introduced in Section 12.6, practical sim-to-real pipelines combine randomization, calibration, and disciplined validation to bridge visual and physical discrepancies between simulation and hardware.
 
 **1. Domain Randomization (DR)**
 
-Randomly varies the parameters of the simulation environment each training step. The assumption is that if the model trains under a sufficiently wide variety of conditions, the real environment will be contained among those variations.
+DR perturbs simulator parameters on every training step so that the trained policy becomes robust across a family of environments wide enough to encompass the physical robot:
 
-Randomization targets:
-- **Visual**: textures, lighting direction/intensity, camera position/field of view, background
-- **Physical**: friction coefficients, moments of inertia, link masses, joint damping
-- **Dynamics**: actuator latency, sensor noise, control period
+- **Visual**: textures, lighting direction and intensity, camera pose and field of view, and backgrounds.
+- **Physical**: friction coefficients, moments of inertia, link masses, and joint damping.
+- **Dynamics**: actuator latency, sensor noise, and control period.
 
-If the randomization range is too wide, the training problem becomes harder; if it is too narrow, the simulated variations may not cover the physical system. Choosing a suitable range is therefore important.
+Choosing the randomization bounds requires care: overly wide ranges can make policy optimization unstable or overly conservative, whereas overly narrow ranges leave the real system outside the simulated support.
 
 **2. System Identification (SysID)**
 
-Measures or estimates the physical parameters of the real system and calibrates the simulator accordingly.
+Rather than randomizing broadly, SysID measures or fits the physical parameters of the real robot and tunes the simulator to match:
 
 ```
 1. Execute a specific trajectory on the real robot to collect data
@@ -301,11 +255,11 @@ Measures or estimates the physical parameters of the real system and calibrates 
 3. Train the policy in the calibrated simulator
 ```
 
-Traditional and effective, but estimating every parameter accurately is hard, and it is powerless against phenomena the simulator does not model (cable compliance, microscopic deformation of contact surfaces, etc.).
+While SysID produces accurate models for well-characterized rigid bodies, estimating every parameter is tedious, and calibration cannot capture unmodeled effects such as cable compliance or microscopic surface deformation during contact.
 
 **3. Real-to-Sim-to-Real (R2S2R)**
 
-This approach calibrates the simulator with real data, trains the policy inside that calibrated simulator, and brings it back to the real robot. If randomization is used alongside it, the pipeline must state explicitly which parameters are perturbed, over which ranges, and at which stage.
+R2S2R closes the loop by using real-world rollouts to refine the simulator iteratively before redeploying the policy. Whenever randomization is layered onto R2S2R, the workflow should document explicitly which parameters are perturbed, over what intervals, and at which stage of the loop:
 
 ```
 1. Collect a small amount of real data
@@ -317,13 +271,11 @@ This approach calibrates the simulator with real data, trains the policy inside 
 
 **4. Judging whether transfer succeeded**
 
-The most direct quantitative check: compare the success rate of the same task in sim and real.
+The most direct quantitative test compares task success rates under matched conditions in simulation and on hardware, often supplemented by trajectory similarity or contact-force profiles:
 
-- **Sim success rate ≈ Real success rate**: treat transfer as successful only if both rates are high enough and the failure modes look similar. When both are low, closeness alone is no evidence of transfer, so read the absolute performance and the number of trials together.
-- **Sim >> Real**: large reality gap. Expand DR range or correct with SysID.
-- **Sim < Real**: rare but happens. The simulator was set to a harder (conservative) condition than reality.
-
-Trajectory similarity, contact-force comparisons, and other metrics are sometimes used as additional indicators.
+- **Sim success rate ≈ Real success rate**: indicates successful transfer only when both rates are high and failure modes match; two equally low success rates prove nothing without checking absolute performance and trial counts.
+- **Sim >> Real**: signals a severe reality gap that calls for wider DR bounds or tighter SysID calibration.
+- **Sim < Real**: occurs occasionally when conservative simulator settings make the training environment harder than the real workspace.
 
 > **Further reading**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — original DR paper
@@ -338,9 +290,11 @@ Trajectory similarity, contact-force comparisons, and other metrics are sometime
 > - [Puig et al., "Habitat 3.0: A Co-Habitat for Humans, Avatars, and Robots" (ICLR 2024, arXiv:2310.13724)](https://arxiv.org/abs/2310.13724) — human-robot coexistence simulation. Social navigation, collaborative tasks
 
 > **Technical Timeline: VLA & Embodied AI**
-> - **~2015**: per-task imitation learning, research centered on single-object grasping
-> - **2017–**: sim-to-real transfer via domain randomization takes off, research on MuJoCo/PyBullet
-> - **2020–**: first attempts to combine large language models (LLMs) with vision. Language-based robot control such as CLIPort and SayCan emerges
-> - **2022–**: foundation-model-based robot policies appear, including RT-1, RT-2, and PaLM-E. The Open X-Embodiment dataset is built
-> - **2024–**: open-source VLA models such as OpenVLA and Octo are released. World-model-based planning, end-to-end autonomous driving (UniAD, VAD, GenAD), and modular or hybrid designs are all active research directions
-> - **Recent direction**: foundation-model-based robot policies published since 2023 include RT-2, OpenVLA, Octo, and pi0. OpenVLA and Octo provide public code and weights for adaptation experiments.
+> - **~2015**: Per-task imitation learning dominates, focused largely on single-object grasping.
+> - **2017–**: Sim-to-real transfer via domain randomization accelerates alongside MuJoCo and PyBullet benchmarks.
+> - **2020–**: Early integrations of LLMs with vision emerge for language-conditioned control, including CLIPort and SayCan.
+> - **2022–**: Foundation-scale robot policies arrive with RT-1, RT-2, and PaLM-E, accompanied by the Open X-Embodiment dataset.
+> - **2024–**: Open-weight VLAs such as OpenVLA and Octo expand access, while world-model planning, end-to-end driving (UniAD, VAD, GenAD), and modular/hybrid stacks develop in parallel.
+> - **Recent direction**: Foundation-model robot policies released since 2023—including RT-2, OpenVLA, Octo, and pi0—increasingly rely on public code and weights (such as OpenVLA and Octo) for reproducible adaptation experiments.
+
+Whether an embodied policy operates end-to-end or through a modular stack, physically grounded manipulation and navigation still depend on accurate 3D representations of surfaces, geometry, and semantic relations—the subject of Ch.13.

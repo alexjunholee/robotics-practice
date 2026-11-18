@@ -1,47 +1,46 @@
 # Ch.6 — Control Theory
 
-
-Perception estimates the robot's state and environment; control uses that information to produce the desired motion. An incorrect control input can make a robot unstable or cause a collision, so the system needs an appropriate model and feedback.
+Ch. 5 established how applied torques and contact forces accelerate a rigid-body system. Control theory turns that relationship around in real time: given sensor estimates of the robot's state and environment, what actuator commands will drive the system along a desired motion safely, accurately, and without going unstable?
 
 ---
 
 ## 6.1 Why Learn Control
 
-Perception estimates the environment and state, whereas control computes actuator inputs that move the robot toward a target state.
+Even with an exact dynamics model, commanding raw open-loop torques fails the moment a real robot meets model mismatch, sensor noise, or external disturbances. Closing a feedback loop between sensors and actuators addresses three practical requirements:
 
-Control is needed for three practical reasons:
+- **Accurate trajectory tracking**: Open-loop drive easily overshoots the target or breaks into oscillation when inertia or friction varies. Feedback continuously compares measured state against the reference and corrects the actuator command.
+- **Disturbance rejection**: Slippery floors, wind gusts, and unmodeled payloads shift the physical dynamics away from the nominal model. Real-time feedback compensates for these unpredicted forces on the fly.
+- **Safe physical interaction**: Robots operating around fragile objects or human coworkers must regulate contact forces, not just geometric positions, so small calibration errors never turn into crushing impacts.
 
-- **Accurate position tracking**: Without feedback, a large current can drive a joint past its target angle and produce oscillation. A controller adjusts the input to reduce the error and reach the target smoothly.
-- **Disturbance rejection**: Slippery floors, wind, and unexpected payloads introduce changes not captured by the model. Closing the sensor-actuator loop lets the system respond to them.
-- **Safe contact**: An industrial robot working near people must limit contact forces as well as position error.
+Rather than touring all of classical and modern control theory, this chapter traces the working progression robotics engineers rely on in practice: from PID and state-space feedback (LQR) to constrained receding-horizon optimization (MPC), compliant interaction (impedance control), whole-body coordination, and formal stability guarantees (Lyapunov, adaptive, and robust control).
 
-Control theory is broad; robotics practice usually needs the path from PID to state-space control, MPC, impedance control, and whole-body control.
-
-This chapter assumes familiarity with matrix operations, eigenvalues, and differential equations.
+The sections ahead assume basic familiarity with matrix algebra, eigenvalues, and ordinary differential equations.
 
 ---
 
 ## 6.2 PID Control
 
-PID (Proportional-Integral-Derivative), proposed by Minorsky in 1922 for a ship steering system, has remained widely used in industrial control. Its simple structure and interpretable terms also make it a common first controller in control courses.
+Proposed by Nicolas Minorsky in 1922 for automated ship steering, Proportional-Integral-Derivative (PID) control remains the workhorse of industrial motion control. Its three intuitive terms and modest tuning requirements also make it the standard starting point in control courses and joint-level servos.
 
 ### Basic Structure
 
-Define the error e(t) = r(t) - y(t). r(t) is the reference (target) and y(t) is the current output.
+Define the tracking error `e(t) = r(t) - y(t)` as the difference between the target reference `r(t)` and the measured output `y(t)`. Intuitively, PID blends three complementary actions—a virtual spring pulling toward the target (`P`), a memory of persistent offset (`I`), and a damper resisting rapid error changes (`D`):
 
 ```
 u(t) = Kp * e(t) + Ki * integral(e(τ)dτ, 0, t) + Kd * de(t)/dt
 ```
 
-Role of each term:
+Each term shapes the closed-loop response differently:
 
-- **P (Proportional)**: generates the control input in proportion to the current error. A large Kp gives a fast response but causes more overshoot and oscillation. Give a step input to a plant with no free integrator and the P term alone leaves a steady-state error. This is because as the error becomes small near the target, the control input also becomes small. If the plant does have a free integrator, the steady-state error for step tracking can be zero; constant disturbances such as gravity are a separate source of error.
+- **P (Proportional)**: scales the command linearly with the current error. Raising `Kp` speeds up the response, but pushing it too high invites overshoot and oscillation. On a plant without a free integrator, proportional control alone leaves a non-zero steady-state error under a step command—because the corrective input shrinks right alongside the error near the target. (Even when the plant contains an integrator so step-tracking error vanishes, constant loads like gravity still produce steady-state sag under pure P control.)
 
-- **I (Integral)**: proportional to the accumulated error. Its role is to eliminate steady-state error. It is essential when there are constant disturbances like gravity or friction. However, excessive use produces wind-up. The issue is that when the error has been accumulating for a long time and the control input is saturated, the accumulated integral value causes a large overshoot even after reaching the target. In practice, anti-windup logic must be implemented.
+- **I (Integral)**: accumulates past error over time to wipe out persistent steady-state offsets caused by constant disturbances such as gravity or Coulomb friction. The catch is **integrator wind-up**: if the actuator saturates while the error stays large, the integral keeps growing unchecked, causing massive overshoot once the system finally reaches the target. Real implementations always pair integral action with anti-windup clamping or back-calculation.
 
-- **D (Derivative)**: proportional to the rate of change of the error. If the error is decreasing quickly, it reduces the control input to suppress overshoot. A kind of "brake." The problem is that differentiation is extremely sensitive to noise. On real systems with sensor noise, the D term must be passed through a low-pass filter. For this reason, the field often drops the D term entirely and uses PI control only.
+- **D (Derivative)**: reacts to the rate of change of the error, acting like a mechanical damper or brake that trims the command when the system approaches the target too fast. Because numerical differentiation amplifies high-frequency sensor noise, raw D action can chatter violently on real hardware. In practice, the derivative term is passed through a low-pass filter—or omitted altogether in noisy loops, leaving a PI controller.
 
 ### Python Implementation
+
+A production-ready discrete-time PID loop differs from the textbook formula in three crucial ways: it uses trapezoidal integration for the I term, applies an exponential low-pass filter to the noisy D term, and backs out integral accumulation whenever the output hits actuator limits (anti-windup clamping). The class below demonstrates this on a simple 1-DOF damped mass:
 
 ```python
 class PIDController:
@@ -119,7 +118,7 @@ for step in range(5000):
 
 ### Tuning Methods
 
-**Ziegler-Nichols method**: a classical tuning method. Set Ki = 0 and Kd = 0, raise Kp, and find the critical gain Ku at which the system exhibits sustained oscillation and its oscillation period Tu. Then set the gains according to the following table.
+**Ziegler-Nichols method**: a classic heuristic for choosing baseline gains. Start with `Ki = 0` and `Kd = 0`, raise `Kp` until the system enters sustained marginal oscillation, and record both that critical gain `Ku` and the oscillation period `Tu`. Then compute the initial gains:
 
 ```
 PID:  Kp = 0.6 * Ku,  Ki = 2 * Kp / Tu,  Kd = Kp * Tu / 8
@@ -127,52 +126,52 @@ PI:   Kp = 0.45 * Ku,  Ki = 1.2 * Kp / Tu
 P:    Kp = 0.5 * Ku
 ```
 
-Ziegler-Nichols tuning can produce substantial overshoot. It is best used to obtain initial gains, followed by adjustment based on the measured response.
+Ziegler-Nichols rules tend to yield aggressive responses with noticeable overshoot, so treat them as a starting point to refine against measured step responses.
 
-**Empirical tuning in practice**: the following sequence adjusts the gains empirically.
+**Empirical tuning in practice**: when tuning directly on a plant (or preferably first in simulation), adjust one gain at a time:
 
-1. Set D and I to 0.
-2. Raise P. Stop at the point where the system reacts quickly but does not oscillate.
-3. If a steady-state error remains, raise I little by little. Watch out for wind-up.
-4. If overshoot is large, add a little D. Check the noise filter.
+1. Zero out `Ki` and `Kd`.
+2. Increase `Kp` until the response is crisp without sustained ringing.
+3. If steady-state error persists, nudge `Ki` upward gradually while verifying anti-windup behavior.
+4. If overshoot or sluggish settling appears, add `Kd` carefully and check the derivative low-pass filter cutoff.
 
-When an adequate system model is available, tune the gains in simulation first and then transfer them to the hardware.
+Whenever a reliable dynamics model is available, dial in initial gains in simulation before running on physical actuators.
 
 ### Limits of PID
 
-PID is powerful but has clear limits:
+Despite its ubiquity, PID hits structural limits on complex robots:
 
-- **It is SISO (Single-Input Single-Output) only.** In systems with inter-joint coupling like a 6-axis robot arm, applying independent PID to each joint degrades performance. The motion of one joint acts as a disturbance on the others.
-- **It is weak on nonlinear systems.** PID is a linear controller, whereas robot dynamics are nonlinear. It performs well only near an operating point.
-- **It cannot handle constraints.** Within the PID structure there is no way to explicitly handle physical constraints such as torque limits, joint angle limits, or velocity limits.
-- **It does not predict the future.** It reacts to the current error, accumulated error, and rate of change of the error. Without feedforward, tracking performance is limited.
+- **Single-input, single-output (SISO) design**: Running independent PID loops on each joint of a 6-axis arm ignores dynamic coupling—accelerating the shoulder injects centrifugal and Coriolis disturbances directly into the elbow.
+- **Linearity around an operating point**: Because PID applies fixed linear gains to inherently nonlinear rigid-body dynamics, gains tuned for one pose can feel sluggish or oscillatory in another.
+- **No native constraint handling**: Torque limits, joint stops, and velocity caps sit outside the PID law, handled only after the fact through ad-hoc clamping.
+- **Purely reactive**: PID responds only to present, past, and instantaneous-rate errors; without model-based feedforward, fast trajectory tracking inevitably lags behind.
 
-PID is comparatively simple to implement and analyze. It can be sufficient when plant coupling is weak and the performance requirements are met, and PID-family controllers are also used for industrial robot joint servos.
+When inter-joint coupling is mild—such as geared industrial servos running at moderate speeds—independent joint PID remains simple, fast, and effective. To coordinate coupled multi-DOF dynamics systematically, however, we move from scalar error loops to state-space models.
 
 ---
 
 ## 6.3 State-Space Representation
 
-PID sees only the input-output relationship. It does not know what is happening "inside" the system. The state-space representation explicitly describes the internal state of the system.
+Classical PID treats the plant as a single input-output channel, hiding internal dynamics. The state-space representation opens up that black box, packing every position, velocity, and internal variable into a state vector `x(t)` so multi-input, multi-output (MIMO) coupling can be modeled and controlled directly.
 
 ### Basic Form
 
-Continuous-time linear system:
+A continuous-time linear time-invariant (LTI) system takes the first-order matrix form:
 
 ```
 x_dot(t) = A * x(t) + B * u(t)    (state equation)
 y(t)     = C * x(t) + D * u(t)    (output equation)
 ```
 
-- x(t): state vector (n x 1). The minimal set of variables needed to fully describe the system.
-- u(t): input vector (m x 1). The control input.
-- y(t): output vector (p x 1). The measurable outputs.
-- A: system matrix (n x n). Determines the intrinsic dynamics of the system.
-- B: input matrix (n x m). The influence of the input on the state.
-- C: output matrix (p x n). The mapping from state to output.
-- D: direct transmission matrix (p x m). Zero in most physical systems.
+- `x(t)`: state vector (`n × 1`) — the minimal set of variables whose current values uniquely determine future evolution given future inputs.
+- `u(t)`: input vector (`m × 1`) — the actuator commands.
+- `y(t)`: output vector (`p × 1`) — the measured sensor signals.
+- `A`: system matrix (`n × n`) — governs the plant's natural, unforced dynamics.
+- `B`: input matrix (`n × m`) — maps actuator inputs into state rates of change.
+- `C`: output matrix (`p × n`) — maps internal states to sensor measurements.
+- `D`: feedthrough matrix (`p × m`) — captures any direct input-to-output coupling (zero in most physical mechanical systems).
 
-For example, for the mass-spring-damper system (m * x_ddot + c * x_dot + k * x = F), taking the state as x1 = position and x2 = velocity gives:
+Consider a 1-DOF mass-spring-damper (`m * x_ddot + c * x_dot + k * x = F`). Choosing position `x1` and velocity `x2` as the state vector converts the second-order ODE into first-order state-space form:
 
 ```
 A = [[0, 1], [-k/m, -c/m]]
@@ -183,33 +182,35 @@ D = [[0]]
 
 ### Relationship to Transfer Functions
 
-The transfer function is G(s) = C * (sI - A)^(-1) * B + D. Transfer functions are convenient for SISO systems, while state-space models expose coupling directly when robot controllers handle several inputs and outputs. The system's input-output structure and the purpose of the analysis determine which representation to use.
+Taking the Laplace transform links state-space matrices directly to the transfer function matrix `G(s) = C * (sI - A)^(-1) * B + D`. Transfer functions shine in SISO frequency-domain design, whereas state-space equations expose internal coupling naturally for multi-joint robots with many sensors and actuators. Which representation you choose depends on the system's structure and the analysis tools you need.
 
 ### Controllability
 
-A system is controllable if, from any initial state, it can reach any final state in finite time. The controllability matrix:
+Before designing a controller, ask a fundamental question: *do our actuators actually have enough authority to steer every state variable?* A system is **controllable** if an input signal exists to drive it from any initial state to any target state in finite time. We test this by checking the rank of the controllability matrix:
 
 ```
 C_ctrl = [B, A*B, A^2*B, ..., A^(n-1)*B]
 ```
 
-If this matrix has rank n, the system is controllable. If the rank is less than n, there exist states unreachable by the control input. A stabilizing infinite-horizon LQR solution requires stabilizability rather than full controllability. Conditions such as detectability through the state cost and a positive-definite input cost must also be checked.
+If `rank(C_ctrl) = n`, every mode of the system can be steered by `u`. If `rank(C_ctrl) < n`, some subspace of the state cannot be reached by any control input. (In infinite-horizon LQR design, full controllability can actually be relaxed to **stabilizability**—meaning any uncontrollable modes must already decay on their own—paired with detectability through the state cost and a positive-definite input cost.)
 
 ### Observability
 
-A system is observable if the initial state x(0) can be uniquely determined by observing the output y(t). The observability matrix:
+The dual question applies to sensing: *can we reconstruct the full internal state from our measurements alone?* A system is **observable** if the initial state `x(0)` can be uniquely inferred from future outputs `y(t)`. We test this with the observability matrix:
 
 ```
 O = [C; C*A; C*A^2; ...; C*A^(n-1)]
 ```
 
-If the rank is n, the system is observable. If it is not observable, state estimation (observer, Kalman filter) will not work properly.
+Full rank (`rank(O) = n`) guarantees that a state observer or Kalman filter can reconstruct hidden states such as unmeasured velocities from position readings.
 
 ### Why Move from PID to State-Space
 
-Controlling each joint independently with PID ignores the dynamic coupling between joints. Even in a 2-DOF robot arm, when one joint moves quickly, centrifugal and Coriolis forces act on the other. Treating this as a disturbance makes the I term in PID work hard to compensate, but the response is slow and performance is poor.
+Driving each joint with an isolated PID loop ignores physical cross-coupling: even on a 2-DOF arm, swinging one link rapidly induces centrifugal and Coriolis torques on the other. An independent PID loop perceives that coupling purely as an unknown disturbance for its integral term to chase after the fact.
 
-In state-space, the entire system is described by a single model, and the control input is computed by considering all state variables simultaneously. This becomes the foundation of LQR and MPC in the next sections.
+State-space methods model all joints and velocities inside one coupled system and compute coordinated actuator commands across every state simultaneously—setting the stage for optimal feedback (LQR) and predictive control (MPC) below.
+
+To make these matrices concrete, the script below linearizes a cart-pole (inverted pendulum) around its upright equilibrium `θ ≈ 0`, verifies full controllability and observability, and inspects the open-loop eigenvalues showing its natural instability:
 
 ```python
 import numpy as np
@@ -254,52 +255,52 @@ print(f"System poles: {eigenvalues}")
 
 ## 6.4 LQR (Linear-Quadratic Regulator)
 
-If PID relies on "experience and tuning," LQR is a controller based on "optimization." The control input that minimizes a given cost function is obtained analytically.
+Where PID relies on manual gain tuning, the Linear-Quadratic Regulator (LQR) frames state feedback as an optimization problem: specify what matters—state accuracy versus actuator effort—and solve analytically for the globally optimal feedback matrix `K`.
 
 ### Cost Function
+
+LQR seeks the control sequence `u(t)` that minimizes an infinite-horizon quadratic cost balancing regulation error against control effort:
 
 ```
 J = integral_0^inf (x(t)^T * Q * x(t) + u(t)^T * R * u(t)) dt
 ```
 
-- Q (n x n, positive semi-definite): penalty on state error. "How much is the state departing from zero disliked."
-- R (m x m, positive definite): penalty on the control input. "How much is control energy to be saved."
+- `Q` (`n × n`, positive semi-definite): state-error penalty, encoding how strongly deviations of each state variable from zero are penalized.
+- `R` (`m × m`, positive definite): input-effort penalty, encoding how costly it is to expend actuator energy.
 
-Increasing Q makes the state converge to zero quickly, but the control input grows. Increasing R reduces the control input at the cost of slower state convergence. LQR adjusts the balance between the two.
+Weighting `Q` more heavily drives the state to zero faster at the cost of larger actuator spikes; weighting `R` more heavily saves control effort with gentler, slower convergence.
 
 ### Tuning Q and R
 
-Practical method: make Q and R diagonal matrices, and set each diagonal entry to the inverse square of the allowable range of the corresponding state or input.
+A reliable starting heuristic (Bryson's rule) initializes `Q` and `R` as diagonal matrices using the inverse square of each variable's maximum acceptable deviation, normalizing mismatched units such as meters, radians, and Newtons:
 
 ```
 Q_ii = 1 / (maximum allowable value of x_i)^2
 R_jj = 1 / (maximum allowable value of u_j)^2
 ```
 
-Example: cart position within 0.5 m, pendulum angle within 0.1 rad, force within 20 N:
+For the cart-pole, bounding cart travel within `0.5 m`, pendulum tilt within `0.1 rad`, and force within `20 N` gives:
 
 ```
 Q = diag(1/0.5^2, 0, 1/0.1^2, 0) = diag(4, 0, 100, 0)
 R = [1/20^2] = [0.0025]
 ```
 
-This is only a starting point. Adjust afterward by running simulations.
+Treat Bryson's rule as an initial baseline, then refine the weights against closed-loop simulations.
 
 ### Algebraic Riccati Equation (ARE)
 
-The optimal LQR gain K is obtained from the solution P of the following Algebraic Riccati Equation:
+Because the dynamics are linear and the cost is quadratic over an infinite horizon, the optimal control law turns out to be constant linear state feedback `u(t) = -K * x(t)`. The gain `K` is computed from the unique positive semi-definite solution `P` of the continuous-time Algebraic Riccati Equation:
 
 ```
 A^T * P + P * A - P * B * R^(-1) * B^T * P + Q = 0
 ```
 
-Optimal state feedback gain: K = R^(-1) * B^T * P
-
-Control law: u(t) = -K * x(t)
-
-All eigenvalues of the closed-loop system (A - BK) are guaranteed to lie in the left half-plane. The result therefore provides a mathematical guarantee of stability.
+From `P`, the optimal gain is `K = R^(-1) * B^T * P`, yielding `u(t) = -K * x(t)`. Under standard stabilizability and detectability conditions, every eigenvalue of the closed-loop matrix `(A - BK)` is guaranteed to have a strictly negative real part—providing an automatic mathematical proof of stability.
 
 ### Python Implementation
+
+Applying `scipy.linalg.solve_continuous_are` to our linearized cart-pole computes `K`, shifts the unstable open-loop pole into the left half-plane, and stabilizes a 10-degree initial tilt back to upright:
 
 ```python
 import numpy as np
@@ -362,62 +363,71 @@ print(f"Final pendulum angle: {np.degrees(x_hist[-1, 2]):.4f} deg")
 
 ### Limits of LQR
 
-- **A linear model is required.** Nonlinear systems have to be linearized around an operating point. Performance drops sharply away from the operating point.
-- **Constraints cannot be handled explicitly.** Physical constraints such as torque limits or velocity limits cannot be encoded in the cost function. Once the control input saturates, optimality breaks down.
-- **The full state is required.** Since u = -Kx, every state variable must be either measured or estimated (by an observer).
-- **Not directly applicable to tracking.** Basic LQR is a regulator; it only solves the problem of driving the state to zero. Extensions are needed to track a time-varying target.
+LQR solves unconstrained linear stabilization cleanly, yet four limitations push modern robots beyond it:
 
-MPC emerges to overcome these limits.
+- **Local linearity assumption**: Nonlinear systems must be linearized around an equilibrium or nominal trajectory; far from that point, performance degrades rapidly.
+- **No explicit constraints**: Torque ceilings, joint stops, and obstacle boundaries cannot be enforced inside standard LQR—if actuators saturate, both optimality and the stability guarantee break down.
+- **Full-state feedback required**: Computing `u = -Kx` assumes every state variable is either directly measured or reconstructed by an observer.
+- **Regulation, not native tracking**: Standard LQR drives the state to zero; tracking a moving reference trajectory requires reformulating the error dynamics or adding feedforward (as in time-varying LQR).
+
+Overcoming those constraint and prediction limits is precisely why Model Predictive Control (MPC) became central to modern robotics.
 
 ---
 
 ## 6.5 MPC (Model Predictive Control)
 
-MPC (Model Predictive Control) solves a finite-horizon optimization problem repeatedly to compute control inputs. Its ability to represent constraints directly makes it widely studied and applied in robot control.
+Model Predictive Control (MPC) bridges planning and feedback by solving a finite-horizon constrained optimization problem at every control tick. Think of driving down a winding road: you look ahead several seconds to plan a smooth path that stays inside the lane boundaries, execute only the steering command for the current instant, and re-plan from scratch as soon as you see where the car actually moved.
 
 ### Basic Concept
 
-At every time step k, perform the following:
+At each discrete time step `k`, MPC runs a five-step receding-horizon loop:
 
-1. Measure or estimate the current state x(k).
-2. Predict N steps ahead using the model.
-3. Find the input sequence {u(k), u(k+1), ..., u(k+N-1)} that minimizes the cost function. Constraints are explicitly included at this step.
-4. Apply only the first input u(k); discard the rest.
-5. At the next time step, return to step 1.
+1. Measure or estimate the current state `x(k)`.
+2. Roll the dynamics model forward `N` steps into the future.
+3. Solve for the optimal control sequence `{u(k), u(k+1), ..., u(k+N-1)}` minimizing the cost function subject to state and input constraints.
+4. Apply only the first command `u(k)` to the actuators and discard the rest of the plan.
+5. Advance one step, acquire the new state `x(k+1)`, and repeat from step 1.
 
-This is the "receding horizon" strategy. Since the optimization is re-solved each time, feedback effects against model error and disturbances arise naturally.
+Because the entire optimization is re-solved at every cycle using fresh measurements, this **receding horizon** strategy turns open-loop trajectory optimization into closed-loop feedback capable of rejecting disturbances and model error.
 
 ### Why MPC Is Useful in Robotics
 
-- **Constraint handling**: torque limits, joint angle limits, velocity limits, and collision avoidance can be represented directly in the optimization. Basic PID and LQR do not include such constraints, although saturation handling, reference governors, and constrained-LQR extensions exist.
-- **Nonlinear models**: Nonlinear MPC uses the nonlinear dynamics model as-is.
-- **Future prediction**: rather than reacting to the current error, MPC predicts the future trajectory and responds proactively. A legged robot shifting its center of mass before taking the next step is based on this principle.
-- **Multi-objective optimization**: multiple objectives fit into the cost function simultaneously. "Track the target trajectory while saving energy and respecting torque limits."
+MPC addresses each of the major blind spots in PID and standard LQR:
+
+- **Native constraint handling**: Torque limits, joint range limits, velocity bounds, friction cones, and obstacle avoidance enter directly as inequality constraints—unlike basic PID or LQR, which require add-ons such as saturation clamping, reference governors, or constrained-LQR extensions.
+- **Nonlinear models**: Nonlinear MPC (NMPC) embeds the full nonlinear rigid-body dynamics directly rather than relying on a single fixed linearization.
+- **Proactive lookahead**: Instead of reacting after error accumulates, MPC anticipates upcoming transitions—for instance, a legged robot shifting its center of mass *before* lifting a foot for the next step.
+- **Multi-objective trade-offs**: Competing priorities such as tracking accuracy, energy efficiency, and actuation smoothness coexist inside a single scalar objective alongside hard physical limits.
 
 ### Linear MPC vs Nonlinear MPC
 
-**Linear MPC**: uses a linear model (x(k+1) = A*x(k) + B*u(k)). When the cost is quadratic and the constraints are linear, the problem becomes a QP. A feasible convex QP has a global optimum; actual solve time depends on problem size, sparsity, solver, and hardware.
+Depending on how the dynamics are modeled, MPC takes one of two forms:
 
-**Nonlinear MPC (NMPC)**: uses a nonlinear dynamics model. The problem is generally non-convex and does not guarantee a global optimum. CasADi + IPOPT is one widely used combination of automatic differentiation and a general NLP solver; alternatives include acados, FORCESPRO, and SNOPT.
+- **Linear MPC**: uses a linear discrete-time model (`x(k+1) = A*x(k) + B*u(k)`). Paired with a quadratic cost and linear constraints, the optimization becomes a convex Quadratic Program (QP)—every feasible problem has a unique global optimum, though actual solve time still depends on horizon length, sparsity, solver implementation, and hardware.
+- **Nonlinear MPC (NMPC)**: keeps the nonlinear dynamics directly. The resulting Nonlinear Program (NLP) is generally non-convex without a global-optimality guarantee. Toolchains such as CasADi paired with IPOPT—or specialized real-time solvers like acados, FORCESPRO, and SNOPT—provide automatic differentiation and fast numerical solutions.
 
-Choice in practice: if the system is sufficiently close to linear or the control period is very short, Linear MPC; if the nonlinearity is large and there is slack in the control period, NMPC.
+In practice, choose Linear MPC when the dynamics are mildly nonlinear around a trajectory or when update rates must be very high; turn to NMPC when strong nonlinearities dominate and the control budget allows slightly slower updates.
 
 ### Real-Time Issues
 
-A central challenge in MPC is repeatedly solving the optimization within a time budget. If MPC runs synchronously at the same 1 kHz rate as an inner loop, state handling and the QP must finish within 1 ms. Many systems instead run MPC as a slower outer loop with a faster tracking controller.
+The price of online optimization is compute time: every solve must finish inside the control budget. Running MPC synchronously inside a `1 kHz` loop leaves less than `1 ms` for state acquisition, problem setup, and QP/NLP convergence. Consequently, many robotic stacks run MPC as an outer planner at `50–200 Hz` feeding reference trajectories or contact forces to a faster inner tracking loop.
 
-Major QP solvers:
-- **OSQP** (https://osqp.org/): operator splitting based, strong on sparse QPs. First choice for most Linear MPC setups.
-- **qpOASES**: active-set based, supports warm-starting, efficient for sequences of QPs.
-- **ECOS/Clarabel**: handles up to second-order cone programming.
+Popular solvers for real-time deployment include:
 
-For NMPC:
-- **CasADi** + **IPOPT**: a combination of automatic-differentiation modeling and a general interior-point NLP solver.
-- **acados** (https://docs.acados.org/): CasADi-based but optimized for real time. Generates C code.
+For Linear MPC (QPs):
+- **OSQP** (https://osqp.org/): operator-splitting ADMM solver tailored to sparse QPs; a common first choice for Linear MPC.
+- **qpOASES**: active-set solver with warm-starting, well suited to dense or small-to-medium QP sequences.
+- **ECOS/Clarabel**: interior-point solvers supporting second-order cone constraints (useful for exact 3D friction cones).
 
-A synchronous solve that takes 5 ms cannot nominally complete more than 200 updates per second. End-to-end control timing also includes preprocessing, communication, and jitter; asynchronous solves or a separate inner loop change the architecture.
+For Nonlinear MPC (NLPs):
+- **CasADi** + **IPOPT**: flexible symbolic automatic differentiation coupled to a general-purpose interior-point NLP solver.
+- **acados** (https://docs.acados.org/): builds on CasADi models but generates tailored C code for real-time embedded execution.
+
+As a back-of-the-envelope bound, a synchronous solve taking `5 ms` caps the loop at `200 Hz` before accounting for preprocessing, IPC overhead, and OS jitter—which is why asynchronous execution or a separate inner loop is standard on dynamic hardware.
 
 ### Linear MPC Python Example
+
+To solve Linear MPC with OSQP, we transcribe the `N`-step horizon into a single sparse QP over the stacked decision vector `z = [x(0), ..., x(N), u(0), ..., u(N-1)]`. Dynamics enter as block-banded equality constraints, state and force limits become box bounds, and only the first optimal input `u(0)` is returned:
 
 ```python
 import numpy as np
@@ -536,44 +546,46 @@ print(f"Predicted trajectory (position): {x_pred[:5, 0]}")
 
 ### Industry Cases
 
-- **Boston Dynamics Atlas**: according to the manufacturer's public description, MPC is at the core of Atlas's controller. For experiments in which Atlas picks up and throws objects, the model included whole-body joint motion, the momentum of each link, and the forces between the robot and the object.
+- **Boston Dynamics Atlas**: according to Boston Dynamics' published technical descriptions, MPC sits at the core of Atlas's dynamic behaviors. For whole-body manipulation tasks such as picking up and throwing heavy objects, the predictive model coupled whole-body joint kinematics, link momenta, and object interaction forces directly.
 
 ---
 
 ## 6.6 Impedance/Admittance Control
 
-The control techniques covered so far focus mostly on "sending the position to a desired place." But the moment the robot physically contacts the environment, position control alone is not enough.
+PID, LQR, and basic MPC all focus primarily on moving a robot to a target pose in free space. The moment a robot pushes against a rigid table, wipes a surface, or inserts a peg, pure position control turns hazardous—making it necessary to regulate the mechanical interaction itself.
 
 ### Position Control vs Force Control vs Impedance Control
 
-- **Position Control**: tracks a target position. Suitable in free space or in a compliant environment. In a stiff environment it is instead dangerous, because the contact force grows as the product of the environment stiffness and the position error. When a robot arm tries to pick up a cup from a table and the table height differs by even 1 mm, the position controller does not know and tries to push in, so excessive force is generated.
+Physical interaction highlights a sharp contrast among three control paradigms:
 
-- **Force Control**: tracks a target force. Needed in contact tasks such as grinding and assembly. But pure force control is unstable when not in contact. It is also sensitive to force sensor noise.
-
-- **Impedance Control**: controls the relationship between position and force. Makes the robot behave like a virtual spring-damper system. On contact with the environment, force arises naturally; in non-contact it behaves like position control.
+- **Position Control**: drives tracking error to zero. That works well in free space or against soft materials, but against a stiff surface any tiny calibration offset explodes into huge forces (`F = k_env * Δx`). If a robot reaches for a cup on a table whose height is off by even `1 mm`, a stiff position loop blindly tries to crush through the surface.
+- **Force Control**: regulates a desired contact force directly, which is essential for polishing, grinding, or precision assembly. In free space with zero reaction force, however, pure force control accelerates uncontrollably, and on contact it remains sensitive to force-sensor noise.
+- **Impedance Control**: rather than choosing position *or* force in isolation, impedance control shapes the dynamic *relationship* between them—making the robot behave like a programmable virtual spring-damper. In free space it tracks the desired pose smoothly; on contact, force rises gently in proportion to deflection rather than spiking.
 
 ### Virtual Spring-Damper Model
 
-Impedance control expresses the desired mass-spring-damper relationship as:
+Impedance control commands actuator forces so the end-effector obeys a target mass-spring-damper relation around the desired trajectory `(x_d, x_dot_d, x_ddot_d)`:
 
 ```
 F = M_d * (x_ddot_d - x_ddot) + D_d * (x_dot_d - x_dot) + K_d * (x_d - x)
 ```
 
-Or a simplified version ignoring the inertia term:
+Because shaping virtual inertia `M_d` cleanly requires noisy acceleration feedback or force sensing, practical implementations often drop the inertia term and run pure stiffness-damping impedance:
 
 ```
 F = K_d * (x_d - x) + D_d * (x_dot_d - x_dot)
 ```
 
-- K_d: virtual stiffness. Large values give accurate position tracking but large forces on contact.
-- D_d: virtual damping. Suppresses oscillation.
-- M_d: virtual inertia. Usually hard to tune, so the inertia term is often omitted.
+- `K_d`: virtual stiffness—higher values tighten free-space tracking at the cost of stiffer contact forces.
+- `D_d`: virtual damping—absorbs kinetic energy to prevent ringing on impact.
+- `M_d`: virtual inertia—shapes apparent mass during fast impacts, though often omitted unless force/acceleration feedback is clean.
 
-The task determines the appropriate stiffness K_d and damping D_d:
-- Picking up a glass: low K_d (gentle), high D_d (stable).
-- Tightening a bolt: high K_d (precise).
-- Collaborating with a person: very low K_d (safe).
+Tuning `K_d` and `D_d` directly tailors the robot's mechanical personality to the task:
+- Grasping a fragile glass: low `K_d` for gentle contact, higher `D_d` for well-damped settling.
+- Tightening a bolt: high `K_d` for crisp alignment.
+- Physical human-robot collaboration: very low `K_d` so accidental bumps remain harmless.
+
+The script below simulates a 1-DOF impedance-controlled robot commanded to reach `0.15 m` while an unmodeled stiff wall (`10,000 N/m`) sits in the way at `0.10 m`—showing how virtual compliance settles calmly against the wall instead of generating a `500 N` impact spike:
 
 ```python
 import numpy as np
@@ -642,62 +654,57 @@ print(f"Final contact force: {contact_forces[-1]:.2f} N")
 
 ### Admittance Control
 
-If impedance control is "position deviation → force output," admittance control is the opposite: "force input → position output."
+Impedance and admittance control are causal duals of each other: impedance takes motion deviation in and outputs a force (`position → force`), whereas **admittance control** measures external contact force and outputs a modified position or velocity reference (`force → position`):
 
 ```
 x_d_new = x_d + (1 / K_d) * F_ext      # stiffness term: force -> position offset
 x_dot_d = (1 / D_d) * F_ext             # damping term: force -> desired velocity (not the force derivative)
 ```
 
-More precisely, the measured external force F_ext is fed into a virtual impedance model to modify the target position, and the modified target is passed to the existing (high-stiffness) position controller.
+In practice, an external wrist force/torque (F/T) sensor reads `F_ext`, integrates or scales it through the virtual compliance law to shift `x_d`, and hands the compliant target to an existing inner position controller.
 
-Why admittance control is widely used on industrial robots: industrial robots already have very precise position controllers built in, and torque cannot usually be commanded directly from outside. So measuring the external force with a force sensor (F/T sensor) and modifying the position command — the admittance approach — is more practical.
-
-On research robots with torque control (such as Franka Emika Panda), impedance control is more natural.
+This explains the hardware split seen across robotics: commercial industrial arms ship with locked, high-precision inner position servos and rarely expose raw joint-torque commands, making admittance control via a wrist F/T sensor the practical choice. Torque-controlled research manipulators (such as the Franka Emika Panda), by contrast, implement impedance control directly in torque space.
 
 ---
 
 ## 6.7 Advanced: Whole-Body Control
 
-Humanoid and quadruped robots have dozens of joints, must manage multiple contact points (feet, hands) simultaneously, and must maintain balance. In such systems, "put a PID on each joint" is practically meaningless. Integrated control at the whole-body level is required.
+Humanoids and quadrupeds pack dozens of actuated joints onto an unbolted floating base (Ch. 5, §5.8), juggling multiple foot and hand contacts while staying balanced. Running independent joint PID loops on such a machine breaks down immediately—coordinating balance, manipulation, and contact constraints demands whole-body control (WBC).
 
 ### Task-Space vs Joint-Space
 
-- **Joint-space control**: controls the joint angles q directly. Simple, but to achieve task-level goals (end-effector position, center-of-mass position) inverse kinematics (IK) must be solved first.
+Whole-body controllers work natively in task space rather than joint space:
 
-- **Task-space control**: controls directly in task coordinates (Cartesian position, orientation). Task goals are described naturally. Mapping to joint space is handled inside the controller.
+- **Joint-space control**: regulates joint angles `q` directly. Simple when targets are defined per joint, but achieving Cartesian goals (hand poses, center-of-mass trajectories) requires solving inverse kinematics upstream first.
+- **Task-space control**: regulates task coordinates directly (end-effector pose, CoM position, torso orientation), letting the controller handle the mapping to joint torques internally using the robot's Jacobian and inertia matrix.
 
 ### Operational Space Control (Khatib, 1987)
 
-Khatib's Operational Space Framework underpins task-space control. It derives the dynamics directly in task space.
+Khatib's Operational Space Framework provides the analytical bridge from joint torques to task-space behavior by projecting the manipulator equation directly into task coordinates.
 
-Joint-space dynamics:
+Starting from the joint-space dynamics with external contact forces `F_ext`:
 
 ```
 M(q) * q_ddot + C(q, q_dot) * q_dot + g(q) = tau + J^T * F_ext
 ```
 
-Conversion to task space:
+Projecting through the task Jacobian `J` rewrites the motion directly in Cartesian task coordinates `x`:
 
 ```
 Lambda(q) * x_ddot + mu(q, q_dot) * x_dot + p(q) = F + F_ext
 ```
 
-Here Lambda = (J * M^(-1) * J^T)^(-1) is the task-space inertia matrix.
-
-Joint torques to achieve a desired task-space acceleration x_ddot_d:
+Here `Lambda = (J * M^(-1) * J^T)^(-1)` represents the apparent **task-space inertia matrix** felt at the end-effector. Commanding the joint torques:
 
 ```
 tau = J^T * Lambda * (x_ddot_d - J_dot * q_dot) + C * q_dot + g(q)
 ```
 
-Combining impedance control on top of this framework realizes desired dynamic behavior (impedance) in task space.
+realizes any desired task-space acceleration `x_ddot_d`—and plugging an impedance law into `x_ddot_d` yields compliant Cartesian impedance control across a multi-link arm.
 
 ### QP-Based Whole-Body Control
 
-Modern WBC handles multiple tasks simultaneously by solving a QP (Quadratic Program) at every control cycle.
-
-Basic structure:
+Modern legged and humanoid robots extend operational space control into a Quadratic Program (QP) solved at every tick (often `500–1000 Hz`). Why a QP? Because unlike unconstrained operational space control, a QP enforces the full floating-base dynamics, joint torque limits, and unilateral contact constraints simultaneously while juggling competing task objectives:
 
 ```
 minimize    || J_task * q_ddot + J_task_dot * q_dot - x_ddot_d ||^2  (task tracking)
@@ -706,30 +713,26 @@ subject to  M(q)*q_ddot + h(q,q_dot) = S^T*tau + J_c^T*F_c  (dynamics)
             tau_min ≤ tau ≤ tau_max               (torque limits)
 ```
 
-Here:
-- J_task: task Jacobian
-- J_c: contact Jacobian
-- F_c: contact force
-- S: selection matrix (removes underactuated DoFs)
+Here `J_task` is the task Jacobian, `J_c` is the contact Jacobian, `F_c` denotes the ground contact forces, and `S` is the actuator selection matrix zeroing out the unactuated floating-base DOFs.
 
-**Multi-task priority**: on real robots multiple tasks conflict. For example, "send the right hand to a target position" + "maintain balance" + "respect joint limits." Priorities are assigned:
+**Multi-task priority**: Real robots constantly face conflicting demands—"reach the doorknob with the right hand," "keep the CoM balanced," and "stay clear of joint limits." A typical strict priority ladder orders them as:
 
-1. Highest priority: contact constraints (feet must stay on the ground), joint limits.
-2. High priority: balance maintenance (CoM control).
-3. Medium priority: end-effector position control.
-4. Low priority: posture maintenance (null-space).
+1. Highest priority: physical contact constraints (stance feet must not slip or lift) and joint limits.
+2. High priority: balance and CoM / centroidal momentum regulation.
+3. Medium priority: end-effector trajectory tracking.
+4. Low priority: nominal posture regularization in the remaining null space.
 
-To implement this as a strict hierarchy, use null-space projection, or solve the QP at each priority level sequentially (hierarchical QP). Alternatively, soft priorities combine them into a single QP with different weights.
+Strict priorities can be enforced via null-space projections or sequential **hierarchical QPs** solved top-down; alternatively, **soft priorities** stack all objectives into a single weighted QP for faster, simpler execution.
 
 ### Contact-Consistent Control
 
-On legged robots, contact forces must be physically plausible:
+For a legged robot's stance feet to push reliably without slipping or tipping, the QP restricts every contact wrench `F_c` to physically realizable bounds:
 
-- **Unilateral contact**: a foot cannot pull the ground. F_z >= 0.
-- **Friction cone**: the tangential force must be less than the normal force times the friction coefficient. sqrt(F_x^2 + F_y^2) <= mu * F_z.
-- **ZMP/CoP constraint**: the center of pressure must lie within the support polygon to avoid tipping over.
+- **Unilateral contact**: feet can push into the ground, never pull (`F_z >= 0`).
+- **Friction cone**: tangential shear cannot exceed normal force scaled by friction (`sqrt(F_x^2 + F_y^2) <= mu * F_z`).
+- **ZMP/CoP constraint**: the center of pressure must stay inside the foot's support polygon to avoid rolling onto an edge.
 
-Putting all these constraints into the QP yields physically feasible control inputs. The friction cone is originally nonlinear (second-order cone), but approximated as a polyhedron (linearized friction cone) it fits into a QP.
+Because the Euclidean friction cone is a quadratic second-order cone rather than linear, QP-based WBC typically approximates the circular cone with an inscribed `n`-sided polyhedron (`n_edges = 8` below), turning it into simple linear inequalities `A_cone * F <= 0`:
 
 ```python
 import numpy as np
@@ -761,58 +764,51 @@ print(f"Friction cone constraint matrix shape: {A_friction.shape}")
 
 ## 6.8 Advanced: Lyapunov Stability and Adaptive Control
 
-Once a controller has been designed, "does this controller really make the system stable?" must be proven. Working in simulation and mathematically guaranteed stability are entirely different matters. Lyapunov theory is the central tool for this proof.
+Watching a controller succeed across ten simulation runs is encouraging, yet it offers no mathematical guarantee that the next initial condition won't blow up. Lyapunov theory supplies that missing guarantee—proving stability for nonlinear systems without having to solve their differential equations in closed form.
 
 ### Lyapunov Stability
 
-For a nonlinear system x_dot = f(x), let the origin be an equilibrium (f(0) = 0).
+The intuition comes directly from physical energy: if a damped pendulum starts with positive energy and loses energy continuously whenever it moves, it must eventually settle at the bottom equilibrium.
 
-Lyapunov's direct method: if a function V(x) satisfies the following, the origin is stable.
+Formally, consider an autonomous nonlinear system `x_dot = f(x)` with equilibrium at the origin (`f(0) = 0`). Under **Lyapunov's direct method**, the origin is stable if you can construct a scalar function `V(x)` ("generalized energy") satisfying three conditions:
 
-1. V(0) = 0
-2. V(x) > 0 for all x != 0 (positive definite)
-3. V_dot(x) = dV/dx * f(x) <= 0 (non-increasing)
+1. `V(0) = 0`
+2. `V(x) > 0` for all `x != 0` (positive definite)
+3. `V_dot(x) = dV/dx * f(x) <= 0` (non-increasing along system trajectories)
 
-If V_dot(x) < 0, the origin is asymptotically stable — the state converges to the origin over time.
+If `V_dot(x) < 0` strictly away from the origin, the equilibrium is **asymptotically stable**—every trajectory in its basin actually converges to zero over time.
 
-Physical intuition: V(x) is energy. If the energy is always positive and decreases over time, the system converges to the equilibrium that minimizes the energy.
-
-The hard part: finding V(x). There is no general methodology. For mechanical systems, mechanical energy (kinetic + potential) is a natural Lyapunov function candidate. For linear systems, V(x) = x^T * P * x (where P is the solution of the ARE) serves as a Lyapunov function. This is where the LQR stability proof comes from.
+The hard part is discovering `V(x)`, since no universal recipe exists for arbitrary nonlinear systems. Fortunately, physical structure often hands you a candidate: total mechanical energy (kinetic plus potential) works naturally for mechanical manipulators, while quadratic forms `V(x) = x^T * P * x` (using the Riccati solution `P`) serve as exact Lyapunov functions proving closed-loop LQR stability.
 
 ### Adaptive Control
 
-Used when the model parameters are not precisely known. For example, the payload mass carried by a robot arm is unknown, or the friction coefficient changes over time.
+Even a well-proven model-based controller degrades when physical parameters are unknown or shift mid-task—such as picking up an unweighed payload or encountering changing joint friction. **Adaptive control** handles structured uncertainty by pairing feedback control with an online parameter estimator running simultaneously.
 
-Basic idea: embed a parameter estimator inside the controller and run control and estimation simultaneously.
-
-Robot dynamics can be written in a form linear in the parameters:
+Crucially, rigid-body manipulator dynamics are linear in the unknown inertial parameters `theta` (link masses, moments of inertia, friction coefficients), allowing us to factor out a known kinematic **regressor matrix** `Y`:
 
 ```
 M(q)*q_ddot + C(q,q_dot)*q_dot + g(q) = Y(q, q_dot, q_ddot) * theta
 ```
 
-Here Y is the regressor matrix and theta is the dynamics parameter vector (mass, inertia, friction, etc.).
-
-Adaptive control law:
+Using a sliding tracking variable `s`, the adaptive control law updates the parameter estimate `theta_hat` continuously from tracking errors:
 
 ```
 tau = Y * theta_hat - K_d * s
 theta_hat_dot = -Gamma * Y^T * s
 ```
 
-Here s is the sliding variable, theta_hat is the parameter estimate, and Gamma is the adaptation gain matrix.
-
-With a suitable Lyapunov function (V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamma^(-1)*theta_tilde), V_dot <= 0 can be shown and the tracking error proven to converge to zero. Note that theta_hat is not guaranteed to converge to the true theta. Only the tracking error converges.
+where `Gamma` is a positive-definite adaptation gain matrix. Analyzing the composite Lyapunov candidate `V = 0.5*s^T*M*s + 0.5*theta_tilde^T*Gamma^(-1)*theta_tilde` establishes `V_dot <= 0`, proving that tracking error converges to zero—even though `theta_hat` itself need not converge to the true physical `theta` unless the trajectory sufficiently excites every parameter.
 
 ### Robust Control
 
-Used when there is model uncertainty but the bound is known.
+When parameters are uncertain but lie within known bounded intervals, **robust control** designs a fixed controller guaranteed to hold across the worst-case mismatch without online parameter estimation:
 
-- **H-infinity control**: optimizes performance against the worst-case disturbance. The guarantee takes the form of a bound on the induced L2 norm: the energy gain from disturbance to error stays at or below $\gamma$. It is not an absolute bound on the error, since the error can grow in proportion as the energy of the disturbance grows. The math is heavy (Riccati inequalities, LMI) and tends to be conservative.
-
-- **Sliding Mode Control**: drives the state onto a sliding surface in finite time, then follows the desired dynamics on the sliding surface. Very robust to model uncertainty. The issue is chattering: high-frequency switching near the sliding surface stresses the actuator. Mitigated with a boundary layer approach or higher-order sliding mode.
+- **H-infinity control**: minimizes worst-case disturbance amplification by bounding the induced `L2` gain from disturbance energy to tracking error energy below a prescribed level $\gamma$. (Note that this bounds the *energy ratio* rather than absolute error—if disturbance energy grows, error scales proportionally—and solving the underlying Riccati inequalities or LMIs often yields conservative gains.)
+- **Sliding Mode Control**: forces the system state onto a chosen lower-dimensional "sliding surface" in finite time and holds it there with discontinuous switching feedback. Highly insensitive to bounded disturbances and model error, its classic drawback is high-frequency **chattering** that wears actuators—typically softened using a smooth boundary layer or higher-order sliding modes.
 
 ### When to Use, When Not to Use
+
+Choosing among LQR, MPC, adaptive, and robust control comes down to how well you know the plant and what guarantees the application demands:
 
 | Situation | Recommended | Not recommended |
 |------|------|--------|
@@ -822,7 +818,7 @@ Used when there is model uncertainty but the bound is known.
 | Safety certification required | Lyapunov-based proofs | "It worked in simulation so OK" |
 | Rapid prototyping | PID + feedforward | H-infinity from the start |
 
-Adaptive control and sliding mode are selected according to the structure of the uncertainty and the required guarantees. A stability claim requires a Lyapunov function or comparable mathematical argument. Functional safety standards call for hazard analysis, the assignment of a safety level, and a body of verification and validation evidence; they do not prescribe any particular proof technique. Analyses of this kind are a strong way to build that evidence.
+In short, pick adaptive or sliding-mode schemes according to the structure of your uncertainty and actuation hardware. Whenever safety or formal guarantees matter, back up empirical simulation tests with a Lyapunov argument: while functional safety standards mandate hazard analysis, safety integrity levels, and structured verification and validation rather than a single mathematical proof method, Lyapunov certificates provide strong analytical evidence for that safety case.
 
 ---
 
@@ -877,4 +873,4 @@ Adaptive control and sliding mode are selected according to the structure of the
 
 ---
 
-The further reading develops the mathematical details of each technique. Run the code and change its parameters to observe how the system response changes.
+The references above develop the formal proofs and solver internals behind each method; experiment by running the code snippets and varying gains, weights, and horizons to see the closed-loop response shift directly. Notice one common assumption across PID, LQR, impedance control, and WBC: each takes a reference state or desired motion as given (and short-horizon MPC still looks only a few steps ahead). Where do globally collision-free, dynamically feasible trajectories from A to B come from? Answering that question is the subject of Ch. 7, on motion planning and trajectory optimization.

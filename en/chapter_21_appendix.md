@@ -1,108 +1,117 @@
 # Ch.21 — Appendix
 
+This appendix is a quick-reference toolkit for day-to-day research and engineering. Keep it handy when you run into an unfamiliar acronym (A), a practical question about starting out (B), a broken build or CUDA error (C), pre-project setup checks (D), or your first week in a new lab (E).
 
 ## A. Glossary
 
+Robotics and Spatial AI papers move quickly across geometry, deep learning, and systems engineering. Use the tables and definitions below whenever an acronym or core concept needs a quick refresher.
+
 ### A.1 Abbreviations
+
+The table below gathers the abbreviations that appear most often across papers, codebases, and lab discussions.
 
 | Abbr. | Expansion | Description |
 | --- | --- | --- |
-| SLAM | Simultaneous Localization and Mapping | simultaneous localization and mapping |
-| VO | Visual Odometry | visual odometry |
-| VIO | Visual-Inertial Odometry | visual-inertial odometry |
-| LIO | LiDAR-Inertial Odometry | LiDAR-inertial odometry |
-| IMU | Inertial Measurement Unit | inertial measurement unit |
-| DoF | Degrees of Freedom | degrees of freedom |
-| SE(3) | Special Euclidean Group (3D) | 3D rigid-body transformation group |
-| SO(3) | Special Orthogonal Group (3D) | 3D rotation group |
-| FoV | Field of View | field of view |
-| ToF | Time of Flight | time of flight (distance-measurement method) |
-| CNN | Convolutional Neural Network | convolutional neural network |
-| ViT | Vision Transformer | vision Transformer |
-| VFM | Vision Foundation Model | vision foundation model |
-| VLA | Vision-Language-Action | vision-language-action model |
-| VLM | Vision-Language Model | vision-language model |
-| LLM | Large Language Model | large language model |
-| mAP | mean Average Precision | mean average precision |
-| ICP | Iterative Closest Point | iterative closest point |
-| NDT | Normal Distributions Transform | normal distributions transform |
-| NeRF | Neural Radiance Fields | neural radiance fields |
-| 3DGS | 3D Gaussian Splatting | 3D Gaussian splatting |
-| BEV | Bird's Eye View | bird's-eye view |
-| TSDF | Truncated Signed Distance Function | truncated signed distance function |
-| BA | Bundle Adjustment | bundle adjustment |
-| PGO | Pose Graph Optimization | pose graph optimization |
-| DDS | Data Distribution Service | ROS2's communication middleware |
-| ONNX | Open Neural Network Exchange | model conversion format |
-| TRT | TensorRT | NVIDIA's inference optimization engine |
-| ATE | Absolute Trajectory Error | absolute trajectory error |
-| RPE | Relative Pose Error | relative pose error |
+| SLAM | Simultaneous Localization and Mapping | Jointly estimating pose and building a map of an unknown environment |
+| VO | Visual Odometry | Estimating camera motion from consecutive image frames |
+| VIO | Visual-Inertial Odometry | Motion estimation fusing camera frames with IMU measurements |
+| LIO | LiDAR-Inertial Odometry | Motion estimation fusing LiDAR scans with IMU measurements |
+| IMU | Inertial Measurement Unit | Sensor package measuring linear acceleration and angular velocity |
+| DoF | Degrees of Freedom | Number of independent parameters defining a system's pose or motion |
+| SE(3) | Special Euclidean Group (3D) | Mathematical group representing 3D rigid-body transformations |
+| SO(3) | Special Orthogonal Group (3D) | Mathematical group representing 3D rotations |
+| FoV | Field of View | Angular extent of the scene observable by a sensor |
+| ToF | Time of Flight | Distance-measurement technique based on light travel time |
+| CNN | Convolutional Neural Network | Deep neural architecture built around spatial convolutions |
+| ViT | Vision Transformer | Transformer architecture applied directly to image patches |
+| VFM | Vision Foundation Model | Large-scale pretrained vision model transferable across tasks |
+| VLA | Vision-Language-Action | Multimodal model mapping vision and language directly to robot actions |
+| VLM | Vision-Language Model | Multimodal model reasoning jointly over images and text |
+| LLM | Large Language Model | Large-scale transformer model trained on text |
+| mAP | mean Average Precision | Standard object-detection metric averaged across classes |
+| ICP | Iterative Closest Point | Iterative algorithm for aligning two 3D point clouds |
+| NDT | Normal Distributions Transform | Point cloud registration using voxelized Gaussian distributions |
+| NeRF | Neural Radiance Fields | Implicit 3D scene representation rendered via volume ray marching |
+| 3DGS | 3D Gaussian Splatting | Explicit 3D scene representation using rasterized 3D Gaussians |
+| BEV | Bird's Eye View | Top-down spatial representation projected onto the ground plane |
+| TSDF | Truncated Signed Distance Function | Volumetric 3D surface representation storing signed distances near surfaces |
+| BA | Bundle Adjustment | Joint nonlinear optimization of camera poses and 3D landmarks |
+| PGO | Pose Graph Optimization | Global optimization over relative pose constraints between keyframes |
+| DDS | Data Distribution Service | Publish-subscribe communication middleware underlying ROS2 |
+| ONNX | Open Neural Network Exchange | Portable intermediate format for exchanging neural network models |
+| TRT | TensorRT | NVIDIA's inference engine for optimizing and deploying models on GPUs |
+| ATE | Absolute Trajectory Error | Global trajectory accuracy metric comparing estimated and true poses |
+| RPE | Relative Pose Error | Local drift metric comparing relative motion over fixed intervals |
 
 ### A.2 Terms
 
-**Keyframe**: A selected frame that carries significant information. Processing every frame is too slow, so only frames with meaningful changes are picked and used.
+Beyond abbreviations, the concepts below carry specific geometric or learning meanings that are easy to blur on a first read.
 
-**Loop Closure**: Drift correction through recognition of a previously visited location. "Ah, we were here before" → accumulated error gets corrected all at once.
+**Keyframe**: A representative frame selected as a reference for tracking and mapping. Processing every incoming frame is computationally prohibitive, so SLAM systems retain only frames where the camera has moved enough or the scene has changed meaningfully.
 
-**Drift**: Accumulation of error. Walking 100 m at a 1 m stride with 1 cm of error per step, if those errors all accumulate in the same direction, leaves 100 cm of error on arrival. If their directions are uncorrelated, the error grows with the square root of the number of steps and stays on the order of 10 cm.
+**Loop Closure**: Correcting accumulated drift by recognizing a previously visited place. When the robot realizes it has returned to a known spot, it aligns the current map with the earlier visit and distributes the accumulated error across the trajectory.
 
-**Reprojection Error**: The error when a 3D point is reprojected onto the image. The difference between the predicted "where should this 3D point appear in the camera image" and the actual observation.
+**Drift**: The gradual accumulation of small estimation errors over time or distance. Walk 100 m at a 1 m stride with 1 cm of error per step: if every error points in the same direction, you end up 100 cm off target; if the errors are uncorrelated across steps, the error grows with the square root of the step count, leaving roughly 10 cm of drift.
 
-**Feature Descriptor**: A vector that describes the neighborhood around a keypoint. When finding the same point across two images, these vectors are compared.
+**Reprojection Error**: The pixel distance between where a known 3D point is predicted to project onto an image plane and where it is actually observed. Minimizing reprojection error is the objective behind bundle adjustment.
 
-**Homography**: A transformation between planes. Used when registering two photos taken of a desktop.
+**Feature Descriptor**: A numerical vector summarizing the local appearance around a keypoint. Comparing descriptor distances lets algorithms match the same physical 3D point across two images.
 
-**Essential Matrix**: The geometric relation between a calibrated camera pair. 5 DoF (3 for rotation + 2 for translation direction).
+**Homography**: A 2D projective transformation relating two views of the same planar surface—used, for instance, to align two photos of a tabletop or building facade taken from different angles.
 
-**Fundamental Matrix**: The geometric relation between an uncalibrated camera pair. 7 DoF.
+**Essential Matrix**: The 3×3 matrix encoding the epipolar geometry between two calibrated cameras, carrying 5 DoF (3 for relative rotation and 2 for translation direction up to scale).
 
-**Epipole**: The point where the center of one camera is projected onto the other camera's image.
+**Fundamental Matrix**: The 3×3 matrix encoding the epipolar geometry between two uncalibrated cameras directly in pixel coordinates, carrying 7 DoF.
 
-**Zero-shot**: Performing a new task without training. "Find the cat" works even though "cat" was never trained on.
+**Epipole**: The image point where one camera's optical center projects onto the other camera's image plane.
 
-**Few-shot**: Learning a new task from a small number of examples. Learns from just 3–5 examples.
+**Zero-shot**: Performing a new task with no task-specific training examples—such as querying a model for *"cat"* when *"cat"* never appeared in fine-tuning labels.
 
-**Fine-tuning**: Retraining a pretrained model for a specific task. Adjusting a large model to your own data.
+**Few-shot**: Adapting to a new task from only a handful of examples, typically 3–5 labeled instances.
 
-**Domain Adaptation**: Adapting from a source domain to a target domain. Train in simulation → deploy in the real environment.
+**Fine-tuning**: Adapting a pretrained model to a specific downstream task or dataset by continuing training with your own data.
 
-**Sim-to-Real**: Transferring from simulation to the real environment. The canonical case of domain adaptation.
+**Domain Adaptation**: Bridging a distribution shift between a source domain and a target domain, such as transferring a policy trained in simulation to a physical environment.
 
-**Gaussian Splatting**: A method that represents a 3D scene with millions of 3D Gaussians. Faster than NeRF and editable.
+**Sim-to-Real**: Transferring models or policies learned in a simulator onto physical hardware—the canonical domain-adaptation challenge in robotics.
 
-**Factor Graph**: Representing constraints between variables as a graph. The core data structure of SLAM optimization.
+**Gaussian Splatting**: A method that represents a 3D scene as millions of anisotropic 3D Gaussians rendered via fast rasterization, offering much faster rendering and easier editing than NeRF.
 
-**Knowledge Distillation**: A technique for transferring the knowledge of a large model (teacher) to a small model (student).
+**Factor Graph**: A bipartite graph encoding probabilistic constraints (factors) between state variables—the standard mathematical representation behind modern SLAM optimization.
+
+**Knowledge Distillation**: Training a compact student model to reproduce the outputs or internal representations of a larger teacher model.
 
 ## B. Frequently Asked Questions (FAQ)
 
+These questions come up repeatedly when students start out in a Spatial AI or robotics lab.
+
 **Q: Should I learn Python or C++ first?**
 
-A: Start with the language of the lab code you need to read and run first. C++ is common in SLAM, ROS packages, and real-time control modules, so researchers need it to read and modify lab code. Python is used mainly for deep-learning scripts and data preprocessing. AI coding agents can assist with writing either language, but researchers must still understand existing code and verify its behavior.
+A: Start with whichever language the lab codebase you need to run uses first. C++ dominates SLAM, ROS packages, and real-time control loops, so you will need enough fluency to read, build, and modify existing lab code. Python drives most deep-learning training scripts and data preprocessing pipelines. AI coding agents can accelerate writing in either language, but you still need to read existing code and verify what it actually does.
 
 **Q: Can I do research without a GPU?**
 
-A: Simple experiments are possible on CPU. But training deep-learning models usually requires a GPU. Use Google Colab (free) or the lab server. The free version of Colab is enough for something like YOLO fine-tuning.
+A: Small prototypes and classical geometry experiments run fine on a CPU, though training deep-learning models almost always demands a GPU. When you do not have a local GPU, start with the free tier of Google Colab or your lab's shared server; Colab's free GPUs are plenty for tasks like fine-tuning YOLO.
 
 **Q: Should I learn ROS1 or ROS2?**
 
-A: If you are learning from scratch, ROS2 is recommended. ROS1's official support ended (EOL) in 2025. However, if the package you want to use only supports ROS1, you may have no choice but to learn ROS1 first. That said, knowing ROS1 makes ROS2 quick to pick up.
+A: If you are starting from scratch, go straight to ROS2—official support for ROS1 reached end-of-life (EOL) in 2025. The main exception is if a legacy package your project depends on exists only in ROS1; in that case, learn what you need for ROS1 first, and you will find that picking up ROS2 afterward is straightforward.
 
 **Q: Where do I find papers?**
 
-A: Use [arXiv](https://arxiv.org/) (free preprint server) and [Google Scholar](https://scholar.google.com/) (paper search). If you also need code, check the paper's GitHub link or [Hugging Face Papers](https://huggingface.co/papers/trending) (Papers With Code shut down in 2025). If you want to browse by venue, [CVPR Open Access](https://openaccess.thecvf.com/) and [IEEE Xplore](https://ieeexplore.ieee.org/) are also useful.
+A: Start with [arXiv](https://arxiv.org/) for free preprints and [Google Scholar](https://scholar.google.com/) for citation tracking and literature search. When you also want public code, look for the repository link inside the paper or check [Hugging Face Papers](https://huggingface.co/papers/trending) (Papers With Code shut down in 2025). To browse proceedings by conference, [CVPR Open Access](https://openaccess.thecvf.com/) and [IEEE Xplore](https://ieeexplore.ieee.org/) are reliable starting points.
 
 **Q: Where should I start to study SLAM?**
 
-A: Start with Cyrill Stachniss's [YouTube SLAM lectures](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) and analyze the ORB-SLAM3 code. Reading Ch.9 (camera models) and Ch.14 (visual odometry) of this document beforehand will make the lectures much easier to follow.
+A: Work through Cyrill Stachniss's [YouTube SLAM lectures](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) alongside reading the ORB-SLAM3 codebase. Going through Ch.9 (camera models) and Ch.14 (visual odometry) of this guide beforehand makes the lectures much easier to follow.
 
 **Q: How do I find research ideas?**
 
-A: Read the Limitations section of recent conference papers. You can get ideas from unresolved problems. Another approach is to connect two fields that have not yet been fully merged. The name of a combination alone, however, does not establish that the space is unexplored. Several papers on "3D Gaussian Splatting + Semantic SLAM" already exist, and Ch.18 of this document also covers Gaussian maps that carry semantic information. Survey the prior work first, then look for the space that is left.
+A: Read the Limitations and Future Work sections of recent conference papers to spot unsolved bottlenecks. Another productive angle is bridging two subfields that have not yet been cleanly unified—though combining two buzzwords by name alone does not make an idea novel. Several papers on *"3D Gaussian Splatting + Semantic SLAM"* already exist, and Ch.18 of this guide also discusses Gaussian maps carrying semantic features. Survey prior work carefully first, then look for the specific gap that remains open.
 
 **Q: Which GPU should I buy?**
 
-A: First measure whether the model, optimizer state, activations, and batch fit in **VRAM** under the intended configuration. Then consider precision support, memory bandwidth, power, framework compatibility, and an application-level benchmark. The table narrows candidates by memory class; it is not a purchase ranking.
+A: Begin by measuring whether your target model, optimizer state, activations, and batch size actually fit in **VRAM** under your intended training or inference setup. After VRAM capacity, weigh precision support, memory bandwidth, power draw, framework compatibility, and an actual benchmark on your workload. The tables below group candidates by memory tier rather than ranking them for purchase.
 
 **Personal (desktop)**
 
@@ -125,45 +134,47 @@ A: First measure whether the model, optimizer state, activations, and batch fit 
 | 141GB | H200 SXM | 141GB HBM3e and 4.8TB/s memory bandwidth | [H200 specifications](https://www.nvidia.com/en-us/data-center/h200/) |
 | 180GB | B200 | Blackwell and 180GB HBM3e; delivered in server configurations | [DGX B200 specifications](https://www.nvidia.com/en-us/data-center/dgx-b200/) |
 
-TFLOPS denotes trillions of floating-point operations per second at a stated precision; it is a theoretical peak, not an application benchmark. FP32 is the conventional 32-bit format, while TF32, BF16, FP16, and FP8 trade precision and range differently for accelerated tensor operations. When reading specifications, distinguish precision, CUDA cores from Tensor Cores, dense from structured-sparsity figures, and PCIe from SXM variants. Equal peak TFLOPS does not imply equal training time because memory bandwidth, kernels, batch size, and data loading differ. The benefit of `torch.amp` is also model- and hardware-dependent, so compare cards with a short run of the same repository, batch, and precision.
+Keep in mind that TFLOPS measures theoretical peak floating-point throughput at a stated precision, not real-world training speed. While FP32 is the standard 32-bit format, TF32, BF16, FP16, and FP8 make different trade-offs between numerical range and precision to accelerate tensor operations. When comparing spec sheets, separate precision modes, CUDA cores from Tensor Cores, dense from structured-sparsity figures, and PCIe from SXM variants. Two GPUs with identical peak TFLOPS can still train at very different speeds depending on memory bandwidth, kernel support, batch size, and data loading. Even `torch.amp` speedups vary by model and architecture, so test candidates with a short run of the exact repository, batch size, and precision you intend to use.
 
 **Notes**:
-- For cards such as the RTX 5060 Ti that come with 8GB and 16GB options, estimate the VRAM required by the intended model and batch. Eight gigabytes can be restrictive for local VFM work.
-- When considering an AMD GPU, check whether the required frameworks and libraries support ROCm. CUDA-only dependencies add migration cost.
-- If the lab server has an A100 or H100, a personal GPU may serve mainly for debugging and prototyping. Check the server specifications and availability before purchasing.
-- A used RTX 3090 is a 24GB option, but price, warranty, and cooling condition vary by listing. Check rated power and the PSU and case requirements.
-- Colab and cloud-GPU prices, assigned GPU types, and usage limits change. Benchmark the real workload on a rented GPU before buying, but verify the current price and quota on the provider page.
+- For GPUs sold in both 8GB and 16GB variants (such as the RTX 5060 Ti), estimate the peak VRAM of your model and batch beforehand—8GB quickly becomes restrictive for local VFM experiments.
+- If you are considering an AMD GPU, confirm ROCm support across every framework and library you rely on; CUDA-only dependencies add non-trivial porting work.
+- When your lab already provides A100 or H100 nodes, a personal desktop GPU is mainly useful for interactive debugging and prototyping—check server capacity and queue availability before spending your budget.
+- A used RTX 3090 offers an economical 24GB option, though pricing, warranty, and thermal wear vary widely; verify rated power draw along with your PSU and case clearance.
+- Cloud GPU and Colab pricing, assigned hardware, and usage quotas shift frequently. Renting an instance briefly to benchmark your real workload before buying hardware is smart—just confirm current rates and quotas directly on the provider page.
 
 **Q: How many papers should I read per day?**
 
-A: The purpose and depth of the reading matter more than a daily paper count. At first, reading one paper carefully each week with the three-pass method in §20.4 can be more useful. With experience, the abstract alone becomes enough to judge a paper's type and relevance. Reading for a lab meeting also differs from reading for one's own research, which may extend to code analysis.
+A: Reading depth and purpose matter far more than hitting a daily quota. Early on, working carefully through one paper per week using the three-pass method in §20.4 builds far stronger instincts than skimming dozens. Over time, reading just the abstract becomes enough to classify a paper's type and relevance. How deeply you read also depends on context: preparing for a lab seminar requires a different level of detail than dissecting a paper to modify its code for your own research.
 
 **Q: I am not good at coding — can I still do research?**
 
-A: Coding agents such as Claude and Copilot can quickly draft requests such as "build a KITTI dataset loader" or "add wandb logging to this training loop." They reduce the time spent typing, but the output still needs review.
+A: Coding agents like Claude and Copilot can rapidly scaffold tasks such as *"write a KITTI dataset loader"* or *"add wandb logging to this training loop,"* cutting down boilerplate typing—though you still have to inspect every line they produce.
 
-Judging generated code still requires domain knowledge. An agent may not reliably identify why a DataLoader is slow with `num_workers=0`, why a loss becomes NaN, or where a coordinate frame is reversed in SLAM code (see Ch.14). Run the code and compare it with existing implementations before accepting the result.
+Reviewing generated code requires domain judgment. An agent may miss why a DataLoader bottlenecks with `num_workers=0`, why training loss collapses to NaN, or where a coordinate convention is inverted inside SLAM code (see Ch.14). Always run the code on known inputs and cross-check it against trusted reference implementations before accepting it.
 
-Reading projects such as ORB-SLAM3, Ultralytics, and HuggingFace Transformers and tracing their design choices helps develop code-review skills.
+Reading well-engineered open-source codebases such as ORB-SLAM3, Ultralytics, and HuggingFace Transformers—and tracing why they are structured the way they are—is one of the best ways to sharpen that review instinct.
 
 **Q: How do I prepare a conference presentation?**
 
-A: Conference presentations are largely divided into **oral presentations** and **poster presentations**. Talk length, poster dimensions, and presentation language vary by venue, so the official presenter instructions take precedence.
+A: Conference talks generally fall into **oral presentations** and **poster presentations**. Because session lengths, poster board dimensions, and presentation languages vary by conference, always follow the venue's official presenter guidelines first.
 
-- **Poster**: A0 is a common size, but check the venue's specification. Use large figures and little text so a passerby can locate the topic and result quickly. Rehearse in front of lab colleagues.
-- **Oral**: Fifteen to twenty minutes is a common example, not a rule; the session limit comes first. Set the slide count from that limit and keep one message per slide. Prepare a demo video and supplementary slides when they help.
-- **Common**: Confirm the presentation language, then rehearse from a script while prioritizing delivery and timing over memorization.
+- **Poster**: A0 is a common format, though you should confirm the exact dimensions in the presenter guide. Favor large figures and crisp visual takeaways over dense paragraphs so passersby can grasp the problem and main result in seconds, and rehearse your walk-through with labmates beforehand.
+- **Oral**: Fifteen to twenty minutes is a typical slot, not a universal rule—plan strictly around your assigned time limit. Size your slide deck to that budget, keep one clear message per slide, and prepare backup demo videos or appendix slides for likely Q&A points.
+- **For both**: Confirm the presentation language early, then rehearse from a written script while focusing on pacing, clarity, and timing rather than word-for-word memorization.
 
 **Q: Reading English papers is too hard — what do I do?**
 
-A: Repeated reading and accumulated domain knowledge reduce the burden. A few practical steps help:
+A: It gets noticeably easier once domain familiarity builds up alongside reading mileage. A few practical habits speed up that curve:
 
-- **Grasp the structure first**: Many experimental papers use Introduction → Related Work → Method → Experiments → Conclusion, but contributions can also lie in problem formulation, data, evaluation, or analysis. Use the title and headings to identify the paper's actual structure.
-- **Learn field-specific vocabulary first**: Expressions like "ablation study", "state-of-the-art", and "we empirically show" recur. The number of papers needed for familiarity depends on the reader's background and field.
-- **Do not be embarrassed to use translation tools**: Translating unknown sentences with DeepL or Google Translate is not embarrassing at all. That said, if you rely only on translation, your English will not improve. Read in the order "original → check translation → back to original".
-- **Use the highlighter in your PDF reader**: Marking important sentences makes them easier to find again. Use whichever tool is comfortable, such as Adobe Acrobat or Zotero's built-in viewer.
+- **Map the structure first**: Many empirical papers follow Introduction → Related Work → Method → Experiments → Conclusion, though contributions can also center on problem formulation, datasets, evaluation protocols, or analysis. Scan the title and section headings first to see the paper's real outline.
+- **Learn recurring phrasing early**: Terms like *"ablation study"*, *"state-of-the-art"*, and *"we empirically show"* appear in nearly every paper. How quickly they feel natural varies with your background and subfield, so give yourself a few weeks of steady reading.
+- **Use translation tools without guilt**: Leaning on DeepL or Google Translate for tricky sentences is completely fine; just avoid reading *only* the translation if you want your English fluency to grow. Follow a loop of *"original English → check translation → reread the original."*
+- **Highlight as you read**: Marking key claims in your PDF reader makes revisiting papers weeks later effortless. Use whichever viewer feels comfortable, such as Adobe Acrobat or Zotero's built-in reader.
 
 ## C. Troubleshooting Guide
+
+Keep these quick fixes nearby when package managers, SSH keys, CUDA runtimes, ROS2 graphs, or Docker containers stall an experiment.
 
 **Frequently used apt commands**
 
@@ -194,11 +205,11 @@ ssh-copy-id user@server_ip
 ssh user@server_ip
 ```
 
-Registering the same public key (`~/.ssh/id_ed25519.pub`) on GitHub also removes the need for a password on `git push` for SSH remotes (`git@github.com:...`). A repository cloned over HTTPS uses a token or a credential helper instead, so this key does not apply to it. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
+Adding that same public key (`~/.ssh/id_ed25519.pub`) to your GitHub account also eliminates password prompts on `git push` for SSH remotes (`git@github.com:...`). Note that repositories cloned over HTTPS rely on personal access tokens or a credential helper instead, so this SSH key does not apply to HTTPS remotes. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2016/06/02/SSH_keygen_setting/))
 
 **CPU performance mode setup (for experiments)**
 
-In SLAM or deep-learning experiments, CPU throttling sometimes makes performance uneven.
+In SLAM and deep-learning benchmarks, aggressive CPU frequency scaling can introduce erratic latency spikes. Switch the governor to `performance` during timed runs:
 
 ```bash
 # Check the current CPU governor
@@ -213,13 +224,13 @@ echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
 sudo systemctl restart cpufrequtils
 ```
 
-On laptops, battery drain increases, so use it only while plugged in. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/))
+On laptops, performance mode drains the battery quickly, so enable it only when plugged into AC power. (Reference: [Jinyong Jeong's blog](https://jinyongjeong.github.io/2020/02/04/Ubuntu_cpu_freq_change/))
 
 ### C.1 CUDA / PyTorch
 
 **Problem**: `CUDA out of memory`
 
-**Solution**:
+**Solution**: Lower batch size first, clear cached allocations if needed, or combine gradient accumulation with automatic mixed precision (AMP):
 
 ```python
 import torch
@@ -253,7 +264,7 @@ for i, (inputs, labels) in enumerate(dataloader):
         optimizer.zero_grad()
 ```
 
-The memory savings and speedup from AMP vary with the model, GPU, and operators. Measure peak memory and training stability with the same batch and model.
+Memory savings and speedups from AMP depend on the model, GPU generation, and specific operators used, so check both peak VRAM and numerical stability with the exact same batch and model.
 
 **Problem**: `CUDA version mismatch` (mostly when building CUDA extensions yourself)
 
@@ -275,7 +286,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 
 **Problem**: `RuntimeError: CUDA error: device-side assert triggered`
 
-**Solution**: This usually happens when a label index is out of range. Running on CPU can produce a more detailed error message. The command below is a separate method that synchronizes CUDA calls on the GPU to help locate the failing operation.
+**Solution**: This error typically happens when a class index or tensor index falls out of range. Switching briefly to CPU often surfaces a clearer traceback; alternatively, setting `CUDA_LAUNCH_BLOCKING=1` forces synchronous kernel execution on the GPU so the stack trace points directly to the offending operation:
 
 ```bash
 CUDA_LAUNCH_BLOCKING=1 python train.py
@@ -419,41 +430,43 @@ sudo apt-get install libeigen3-dev
 
 ## D. Checklist: Things to Confirm Before Starting Research
 
+Run through these four checklists before diving into your first real experiment so environment mismatches do not derail you mid-week.
+
 ### D.1 Environment setup
 
 - [ ] Ubuntu installed (22.04 LTS recommended)
-- [ ] NVIDIA driver installed (confirm with `nvidia-smi`)
-- [ ] CUDA toolkit installed (confirm with `nvcc --version`)
-- [ ] cuDNN installed (confirm a system install with `cudnn_version.h`; `torch.backends.cudnn.version()` reports the cuDNN bundled with PyTorch)
-- [ ] Conda or venv environment set up
-- [ ] PyTorch GPU operation confirmed (`torch.cuda.is_available()`)
-- [ ] ROS2 installed (if needed; Humble on Ubuntu 22.04, Jazzy on 24.04)
-- [ ] Git configured (`git config --global user.name/email`)
-- [ ] Docker installed (optional, recommended for reproducibility)
-- [ ] VS Code + essential extensions installed (Python, Remote-SSH, Jupyter)
+- [ ] NVIDIA driver installed (verify with `nvidia-smi`)
+- [ ] CUDA toolkit installed (verify with `nvcc --version`)
+- [ ] cuDNN installed (verify a system install via `cudnn_version.h`; `torch.backends.cudnn.version()` reports the cuDNN version bundled with PyTorch)
+- [ ] Conda or venv environment configured
+- [ ] PyTorch GPU execution verified (`torch.cuda.is_available()`)
+- [ ] ROS2 installed if needed (Humble on Ubuntu 22.04, Jazzy on 24.04)
+- [ ] Git identity configured (`git config --global user.name/email`)
+- [ ] Docker installed (optional, though strongly recommended for reproducibility)
+- [ ] VS Code and core extensions installed (Python, Remote-SSH, Jupyter)
 
 ### D.2 Foundational knowledge
 
-- [ ] Python basics (classes, decorators, list comprehensions)
-- [ ] NumPy array operations (broadcasting, indexing, reshape)
-- [ ] OpenCV image processing (read, transform, filter, keypoints)
-- [ ] Linear algebra basics (matrix multiplication, eigenvalue decomposition, SVD)
-- [ ] Probability/statistics basics (Bayes' theorem, Gaussian distribution, MLE/MAP)
+- [ ] Python fundamentals (classes, decorators, list comprehensions)
+- [ ] NumPy array operations (broadcasting, indexing, reshaping)
+- [ ] OpenCV image processing (reading, geometric transforms, filtering, keypoints)
+- [ ] Linear algebra essentials (matrix multiplication, eigendecomposition, SVD)
+- [ ] Probability and statistics essentials (Bayes' theorem, Gaussian distributions, MLE/MAP)
 
 ### D.3 Research tools
 
-See [Research Notes Ch.15](../../research-notes/guide.html#chapter-15) for paper-reading tools (note templates, citation management), [Research Notes Part 2](../../research-notes/guide.html#chapter-16) for writing tools, and [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) for conference preparation *(Korean only)*. Sections 20.4 and 20.7 cover tools and learning paths specific to Spatial AI.
+For paper-reading tools (note templates and citation workflows), see [Research Notes Ch.15](../../research-notes/guide.html#chapter-15); for manuscript-writing tools, see [Research Notes Part 2](../../research-notes/guide.html#chapter-16); and for conference preparation, see [Research Notes Ch.34](../../research-notes/guide.html#chapter-34) *(Korean only)*. Sections 20.4 and 20.7 cover tools and learning paths tailored specifically to Spatial AI.
 
 ### D.4 Dataset preparation
 
-- [ ] Download the dataset relevant to your research
-- [ ] Understand the data format (image size, depth units, coordinate frame)
-- [ ] Implement a DataLoader (PyTorch Dataset/DataLoader)
-- [ ] Write data visualization code (for debugging)
+- [ ] Download the dataset required for your task
+- [ ] Inspect the data layout (image dimensions, depth scale and units, coordinate conventions)
+- [ ] Implement a clean `Dataset`/`DataLoader` pipeline in PyTorch
+- [ ] Write quick visualization utilities to sanity-check inputs and labels
 
 ## E. First-Week Survival Guide
 
-The first week needs a minimum task list for preparing accounts and the execution environment, then locating the code, data, and documents for the research topic. The Day 1–7 allocation below is an example; reorder it around account provisioning, equipment schedules, and the lab's onboarding process.
+Your first week in a new lab calls for a focused checklist: get your accounts and compute environment working, then locate the codebase, datasets, and documentation tied to your research area. The Day 1–7 schedule below is an example—reorder it around account provisioning, hardware access, and your lab's onboarding routine.
 
 ### Day 1–2: Build the environment
 
@@ -467,7 +480,7 @@ The first week needs a minimum task list for preparing accounts and the executio
 [ ] Join the Slack/Discord channel
 ```
 
-> Tip: When asking a senior about the server environment, include the command you tried, the expected result, and the actual output. This information makes the problem much faster to narrow down.
+> **Tip**: Whenever you ask a senior lab member for help with server setup, include the exact command you ran, what you expected to happen, and the full output or error you got. That context lets them pinpoint the issue in seconds.
 
 ### Day 3–4: Get to know the existing code
 
@@ -479,34 +492,34 @@ The first week needs a minimum task list for preparing accounts and the executio
 [ ] Run a simple demo
 ```
 
-> Tip: Code often fails on its first run because environments, paths, and versions differ. Use the error message to check the official documentation and issue tracker before changing the setup.
+> **Tip**: Code rarely runs cleanly on the first try because environments, file paths, and library versions differ across machines. Read the error message carefully and check the official documentation or issue tracker before tearing down and reinstalling your setup.
 
 ### Day 5: Start reading papers
 
-[Grad Notes Ch.4](../../grad-notes/guide.html#chapter-4) discusses how to ask for a first paper recommendation and talk with lab members, while [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) covers setting a research direction during the first week *(Korean only)*.
+[Grad Notes Ch.4](../../grad-notes/guide.html#chapter-4) covers how to ask for a first paper recommendation and talk productively with labmates, while [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) walks through finding your research footing during the first week *(Korean only)*.
 
-> Tip: It is normal not to understand a paper on the first read. Even grasping just "what problem is this paper trying to solve?" is enough for the first week.
+> **Tip**: Not understanding a paper on your first pass is completely normal. In week one, simply walking away able to answer *"What problem is this paper trying to solve?"* is already a win.
 
 ### Day 6–7: Get the research direction
 
-Read Ch.18 and classify the lab's recent papers and projects by research topic. Mark where they overlap with the work of senior lab members.
+Read Ch.18 and group your lab's recent papers and active projects by research theme, noting where each connects to the work of senior lab members.
 
 ### Things you do not need to do in the first week
 
-- Understand papers perfectly — time will take care of this
-- Grasp every latest research trend — gradually
-- Write code from scratch — start by modifying existing code
-- Set up the GPU server perfectly — begin from an environment file, container, or installation procedure the lab has already verified
-- Produce a fully formed research idea — it is fine to learn the lab's problems and tools first
+- Understand every equation in a paper—fluency comes with repetition.
+- Master the entire research frontier—pick up trends gradually.
+- Write everything from scratch—start by reading and modifying working code.
+- Configure a GPU server from zero—reuse an environment file, Docker image, or setup guide the lab has already verified.
+- Arrive with a polished research proposal—learn the lab's core problems and tools first.
 
 ### Mindset for survival
 
-Research Notes and Grad Notes discuss the habits needed at the beginning of a project. The individual links preserve the five decisions summarized in the Korean edition *(linked chapters are Korean only)*.
+Both *Research Notes* and *Grad Notes* unpack the habits that matter most at the start of a project. The links below preserve the five principles highlighted in the Korean edition *(linked chapters are Korean only)*:
 
 - *Not knowing at first is expected* → [Grad Notes Ch.14 — The Weight of Autonomy](../../grad-notes/guide.html#chapter-14), §2
-- *"It does not work" is not a report; give prediction, attempt, and result* → [Grad Notes Ch.10 — One Question per Email](../../grad-notes/guide.html#chapter-10), §3
-- *Keep records that let your future self reconstruct the work* → [Grad Notes Ch.8 — Using Time](../../grad-notes/guide.html#chapter-8), §5
-- *Start from a small code path* → [Grad Notes Ch.11 — The Tool Trap](../../grad-notes/guide.html#chapter-11), §1
-- *Compare against your past work, not a peer's current position* → [Grad Notes Ch.15 — The Comparison Trap](../../grad-notes/guide.html#chapter-15), §3
+- *"It does not work" is not a report; share your prediction, what you tried, and what happened* → [Grad Notes Ch.10 — One Question per Email](../../grad-notes/guide.html#chapter-10), §3
+- *Keep records clean enough for your future self to reconstruct the experiment* → [Grad Notes Ch.8 — Using Time](../../grad-notes/guide.html#chapter-8), §5
+- *Start from a small, working code path* → [Grad Notes Ch.11 — The Tool Trap](../../grad-notes/guide.html#chapter-11), §1
+- *Measure yourself against your own past work, not a peer's current position* → [Grad Notes Ch.15 — The Comparison Trap](../../grad-notes/guide.html#chapter-15), §3
 
-In a SLAM, CV, or robotics lab, begin with an existing project from a senior member. Reproduce its environment and run the pipeline before modifying it. Reusing a known CUDA, ROS, and simulator configuration reduces setup time and leaves more time for understanding the method.
+In a SLAM, computer vision, or robotics lab, the fastest ramp-up starts with an existing project from a senior member: reproduce its environment and run the full pipeline end to end before changing a line. Reusing a known-good CUDA, ROS, and simulator setup spares you days of debugging and frees up your energy for understanding the method itself.

@@ -1,7 +1,7 @@
 # Ch.14 — SLAM & Odometry
 
 
-Simultaneous localization and mapping (SLAM) estimates a robot's pose while building a map of an unfamiliar environment. It provides the basis for autonomous motion in GPS-denied spaces such as indoor and underground environments.
+In Ch.13, 3D vision algorithms reconstructed point clouds, depth maps, neural fields, and scene graphs under the assumption that camera poses were already known or easy to obtain. On an actual mobile robot operating indoors, underground, or in other GPS-denied environments, no external tracker supplies those poses. Simultaneous localization and mapping (SLAM) solves both sides of the problem at once: it estimates the robot's trajectory over time while assembling a consistent map of an unfamiliar environment, providing the spatial backbone for autonomous navigation.
 
 ---
 
@@ -9,18 +9,12 @@ Simultaneous localization and mapping (SLAM) estimates a robot's pose while buil
 
 ### 14.1 Concept Introduction
 
-Navigation and path planning require the robot's current pose and information about its surroundings. SLAM estimates both.
+Navigation and path planning depend on knowing both where the robot is and what surrounds it. **SLAM (simultaneous localization and mapping)** estimates the robot's pose and builds a map of the environment concurrently, resolving a classic chicken-and-egg coupling: you need a map to localize against, yet you need an accurate pose to register sensor measurements into a map.
 
-**SLAM (simultaneous localization and mapping)** is the problem of estimating one's own pose while at the same time building a map of the surrounding environment.
+Because physical sensors are always noisy—wheels slip on smooth floors and cameras suffer from motion blur and calibration residuals—integrating incremental motion alone causes pose estimates to accumulate error over time. That progressive error growth is called **drift**. The central task of SLAM is to detect when the robot revisits familiar places and correct accumulated drift so that the resulting trajectory and map remain globally consistent.
 
-Chicken-and-egg problem:
-- You need a map to know your position
-- You need your position to build a map
-→ Solve both at once
+The table below summarizes how pure odometry differs from full SLAM across output, error behavior, and computational cost.
 
-Sensors always carry noise. Wheels slip, camera images shake. This uncertainty accumulates over time and the pose estimate gradually drifts (drift). The core challenge of SLAM is to correct this drift and produce a consistent map.
-
-**Odometry vs SLAM**:
 | Feature | Odometry | SLAM |
 |---|---|---|
 | Output | Relative motion | Pose + map |
@@ -29,33 +23,33 @@ Sensors always carry noise. Wheels slip, camera images shake. This uncertainty a
 | Compute | Light | Heavy |
 
 > **Further reading**
-> - [Cyrill Stachniss — SLAM Course (2013)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — a public lecture series running from Bayes filters to graph-based SLAM.
-> - [Thrun, Burgard, Fox, "Probabilistic Robotics" (Textbook)](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/) — Textbook covering the mathematical foundations of SLAM. Kalman filter, particle filter, EKF-SLAM, and more.
-> - [Barfoot, "State Estimation for Robotics" (Free PDF)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Textbook with deep coverage of the mathematics of state estimation. Free PDF available.
-> - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — Curated list of SLAM-related papers, libraries, and datasets.
-> - [Jinyong Jeong's blog — SLAM lecture series (based on Freiburg Robot Mapping)](https://jinyongjeong.github.io/2017/02/13/lec01_SLAM_bayes_filter/) — a 15-part Korean-language series covering Bayes filters, EKF/UKF/particle filters, Graph SLAM, and Robust SLAM.
-> - [Giseop Kim's blog — 5 recommended study materials for SLAM back-end](https://gisbi-kim.github.io/blog/2021/10/03/slam-textbooks.html) — A curated list of core materials including Error-state KF, Factor Graphs, and Bundle Adjustment.
-> - [Robot Mapping Course (Uni Freiburg, Cyrill Stachniss)](http://ais.informatik.uni-freiburg.de/teaching/ws13/mapping/) — Lecture slides and assignments for the SLAM course. Pairs well with the video lectures.
-> - [EKF-SLAM slides (Freiburg)](http://ais.informatik.uni-freiburg.de/teaching/ws12/mapping/pdf/slam04-ekf-slam.pdf) — The EKF-SLAM portion of the course above. The derivations are cleanly organized.
+> - [Cyrill Stachniss — SLAM Course (2013)](https://www.youtube.com/playlist?list=PLgnQpQtFTOGQrZ4O5QzbIHgl3b1JHimN_) — Public lecture series running from Bayes filters to graph-based SLAM.
+> - [Thrun, Burgard, Fox, "Probabilistic Robotics" (Textbook)](https://mitpress.mit.edu/9780262201629/probabilistic-robotics/) — Foundational textbook covering the mathematics of SLAM, including Kalman filters, particle filters, and EKF-SLAM.
+> - [Barfoot, "State Estimation for Robotics" (Free PDF)](http://asrl.utias.utoronto.ca/~tdb/bib/barfoot_ser17.pdf) — Textbook with rigorous coverage of the mathematics of state estimation (free PDF available).
+> - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — Curated index of SLAM papers, open-source libraries, and datasets.
+> - [Jinyong Jeong's blog — SLAM lecture series (based on Freiburg Robot Mapping)](https://jinyongjeong.github.io/2017/02/13/lec01_SLAM_bayes_filter/) — 15-part Korean-language series covering Bayes filters, EKF/UKF/particle filters, Graph SLAM, and Robust SLAM.
+> - [Giseop Kim's blog — 5 recommended study materials for SLAM back-end](https://gisbi-kim.github.io/blog/2021/10/03/slam-textbooks.html) — Curated reading list covering the error-state Kalman filter, factor graphs, and bundle adjustment.
+> - [Robot Mapping Course (Uni Freiburg, Cyrill Stachniss)](http://ais.informatik.uni-freiburg.de/teaching/ws13/mapping/) — Lecture slides and assignments for the SLAM course that pair well with the video lectures.
+> - [EKF-SLAM slides (Freiburg)](http://ais.informatik.uni-freiburg.de/teaching/ws12/mapping/pdf/slam04-ekf-slam.pdf) — Cleanly organized derivations for the EKF-SLAM module of the Freiburg course.
 
 > **Practice**: [SE(2) Odometry](https://alexjunholee.github.io/robotics-practice/app.html#se2_odometry)
 > Interactively drive the odometry accumulation process on a 2D plane and observe how drift arises.
 
 ### 14.2 Visual Odometry (VO)
 
-Estimate relative motion from the camera alone. This corresponds to the SLAM "front-end"; if the motion estimated here is inaccurate, the estimation accuracy of the entire SLAM system degrades.
+Visual odometry (VO) estimates a robot's frame-to-frame relative motion from camera images alone. It serves as the SLAM front-end: if the relative motion estimates produced here are noisy or biased, every downstream mapping and global optimization stage suffers accordingly.
 
 #### 14.2.1 Feature-based vs Direct Method
 
-These two approaches have sharply different strengths and weaknesses. The choice depends on the environment in which you operate the robot.
+Visual odometry splits into two main paradigms—feature-based and direct—whose contrasting strengths dictate which environments they handle reliably.
 
-**Feature-based** methods (ORB-SLAM family) extract invariant distinctive points (corners, blobs, and so on) from images and infer camera motion by matching them between frames. In linear-algebra terms the problem splits into two stages. During initialization, when no map exists yet, 2D-2D correspondences are used to solve for the essential or fundamental matrix (a homography for planar scenes); once a map has been built, tracking instead minimizes the reprojection error between 3D map points and their 2D observations. They are robust to illumination changes and the methodology is well-established, but they have limits in environments where keypoints are hard to extract, such as white walls or textureless floors.
+**Feature-based** methods, exemplified by the ORB-SLAM family, extract repeatable keypoints such as corners or blobs from each image and recover camera motion from cross-frame correspondences. In linear-algebra terms, the pipeline divides into two regimes. During initialization, before any 3D map exists, 2D-2D matches determine an essential or fundamental matrix (or a homography for planar scenes); once 3D map points are triangulated, tracking instead minimizes the reprojection error between those 3D landmarks and their 2D image observations. Feature-based pipelines handle illumination shifts well and rest on mature geometric tooling, though they struggle on textureless surfaces such as blank walls or uniform floors where few reliable keypoints appear.
 
 ```
 Image → Feature extraction → Matching → Motion estimation
 ```
 
-**Direct methods** (DSO, LSD-SLAM family) compare pixel intensities directly. They exploit the assumption that "if the same 3D point is observed in consecutive frames, the intensity must be the same" (brightness constancy), so they do not need to extract keypoints and can operate even in low-texture environments. In return, they are sensitive to illumination changes.
+**Direct methods**, such as DSO and LSD-SLAM, skip keypoint extraction and compare raw pixel intensities across frames. Under the brightness constancy assumption—that a 3D point appears with the same intensity across consecutive views—they exploit intensity gradients anywhere in the image and therefore continue tracking in low-texture scenes. That reliance on raw intensities, however, makes them noticeably more sensitive to sudden exposure or illumination changes.
 
 ```
 Image → Direct pixel intensity comparison → Motion estimation
@@ -63,7 +57,7 @@ Image → Direct pixel intensity comparison → Motion estimation
 
 #### 14.2.2 Mono vs Stereo vs RGB-D
 
-You have to understand each configuration's trade-offs to choose a sensor that fits your robot.
+Beyond the estimation algorithm, the choice of camera configuration determines what geometric quantities are directly observable and where the system can operate. The table below contrasts the three standard visual configurations.
 
 | Configuration | Scale | Characteristics | Suitable environment |
 |---|---|---|---|
@@ -71,37 +65,35 @@ You have to understand each configuration's trade-offs to choose a sensor that f
 | **Stereo** | Available | Baseline limits the measurement range | General indoor/outdoor |
 | **RGB-D** | Available | Measures depth directly; weak outdoors and under direct sunlight | Indoor structured environments |
 
-To elaborate on scale ambiguity: with a single camera you cannot tell "a small object up close" from "a large object far away." A monocular SLAM map comes out at an arbitrary scale, and an IMU or another sensor must recover it. The reason "sufficient motion is required during initialization" is worth splitting in two. What monocular structure initialization needs is translation that generates parallax; under pure rotation the two-view geometry degenerates. Motion excitation for the sake of observability of scale, IMU bias, and the gravity direction belongs to visual-inertial initialization. In the purely monocular case, more motion never makes absolute scale observable.
+Monocular cameras suffer from inherent **scale ambiguity**: from a single viewpoint, a small nearby object projects identically to a large distant one, so a purely monocular map is determined only up to an arbitrary global scale factor unless an inertial measurement unit (IMU) or another metric sensor supplies the missing reference. It is also important to separate two reasons people say "sufficient motion is required during initialization." Monocular structure initialization needs translational parallax because two-view geometry degenerates under pure rotation—yet even with arbitrary motion, pure monocular vision never makes absolute metric scale observable. Motion excitation designed to make metric scale, IMU biases, and the gravity vector observable belongs specifically to visual-inertial initialization.
 
 > **Further reading**
-> - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — public lectures on the multiple-view geometry used by Visual Odometry.
-> - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — Benchmark dataset for Visual(-Inertial) Odometry.
-> - [TUM RGB-D Benchmark](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) — a widely used indoor dataset and evaluation toolkit for RGB-D SLAM/VO.
+> - [Daniel Cremers — Multiple View Geometry (TUM)](https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4) — Public lectures on the multiple-view geometry underlying visual odometry.
+> - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — Benchmark dataset for visual and visual-inertial odometry.
+> - [TUM RGB-D Benchmark](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) — Widely used indoor dataset and evaluation toolkit for RGB-D SLAM and VO.
 
 ### 14.3 Visual SLAM
 
+While VO focuses on local frame-to-frame motion, visual SLAM embeds that front-end inside a persistent mapping and loop-closure architecture so the trajectory stays globally consistent over long runs.
+
 #### 14.3.1 ORB-SLAM2/3
 
-The ORB-SLAM family is one of the public baselines frequently used in visual-SLAM papers. Its open implementation can be built to inspect assumptions and failure cases directly.
+The ORB-SLAM family is one of the most widely used open baselines in visual SLAM, making it an ideal reference for building and inspecting real failure cases and modeling assumptions. Its real-time performance rests on splitting the workload across three parallel threads that operate at different frequencies:
 
-**Structure**:
-1. **Tracking**: Pose estimation on the current frame
-2. **Local Mapping**: Keyframe-based local map management
-3. **Loop Closing**: Loop detection and global optimization
+1. **Tracking** estimates the camera pose on every incoming frame in real time and decides when to promote a frame to a keyframe.
+2. **Local Mapping** processes newly inserted keyframes, triangulates fresh map points, and runs local bundle adjustment to refine nearby poses and landmarks.
+3. **Loop Closing** searches for revisited places across the entire map and triggers global pose-graph and bundle-adjustment optimization whenever a loop is verified.
 
-This three-thread structure is the core design of ORB-SLAM. Tracking runs in real-time on every frame, Local Mapping runs when a keyframe arrives, and Loop Closing runs when a loop is detected. Each runs in parallel at a different rate, allowing real-time performance while preserving global consistency.
+By decoupling frame-rate tracking from slower local optimization and infrequent global corrections, ORB-SLAM maintains real-time responsiveness without sacrificing long-horizon consistency. Building on that foundation, ORB-SLAM3 extends the framework with tightly coupled visual-inertial mode, multi-map management across tracking losses, and support for fisheye camera models.
 
-**ORB-SLAM3 features**:
-- Visual-inertial mode supported
-- Multi-map supported
-- Fish-eye cameras supported
+Historically, this design emerged through several milestones:
+- **MonoSLAM (2007)** demonstrated real-time monocular SLAM using an EKF, though its computational cost scaled poorly as the landmark count grew.
+- **PTAM (Parallel Tracking and Mapping, 2007)** introduced the crucial architectural split between parallel tracking and mapping threads that shaped modern keyframe SLAM.
+- **ORB-SLAM (2015)** combined PTAM's multi-threaded design with ORB keypoints, bag-of-words loop closure, and relocalization into a complete monocular system.
+- **ORB-SLAM2 (2017)** extended the pipeline to stereo and RGB-D cameras.
+- **ORB-SLAM3 (2021)** added visual-inertial fusion, multi-map Atlas support, and wide-angle fisheye models.
 
-Historical context of ORB-SLAM:
-- **MonoSLAM (2007)**: an early representative system for real-time monocular SLAM. It ran on an EKF, but suffered from compute growth as the map grew.
-- **PTAM (Parallel Tracking and Mapping, 2007)**: an influential early system that split tracking and mapping into parallel threads. This architecture strongly influenced later ORB-SLAM.
-- **ORB-SLAM (2015)**: A complete SLAM system that inherited PTAM's design and added ORB keypoints, loop closure, and relocalization.
-- **ORB-SLAM2 (2017)**: Added stereo and RGB-D support.
-- **ORB-SLAM3 (2021)**: Added visual-inertial, multi-map, and more.
+Once built, running ORB-SLAM3 on a standard benchmark sequence such as EuRoC requires passing the vocabulary file, sensor calibration YAML, and dataset path:
 
 ```bash
 # ORB-SLAM3 run example
@@ -113,33 +105,22 @@ Historical context of ORB-SLAM:
 
 > **Further reading**
 > - [Campos et al., "ORB-SLAM3: An Accurate Open-Source Library for Visual, Visual-Inertial and Multi-Map SLAM" (2021)](https://arxiv.org/abs/2007.11898) — The ORB-SLAM3 paper.
-> - [ORB-SLAM3 GitHub](https://github.com/UZ-SLAMLab/ORB_SLAM3) — Official code.
-> - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — Standard test dataset for ORB-SLAM3.
-> - [Jinyong Jeong's blog — Visual SLAM comparison experiment (KAIST Urban Dataset)](https://jinyongjeong.github.io/2019/10/22/visual_slam_compare/) — Head-to-head ORB-SLAM2 vs VINS-Fusion on real data. Analyzes performance differences on actual datasets.
+> - [ORB-SLAM3 GitHub](https://github.com/UZ-SLAMLab/ORB_SLAM3) — Official source repository.
+> - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — Standard evaluation dataset for ORB-SLAM3.
+> - [Jinyong Jeong's blog — Visual SLAM comparison experiment (KAIST Urban Dataset)](https://jinyongjeong.github.io/2019/10/22/visual_slam_compare/) — Head-to-head comparison of ORB-SLAM2 and VINS-Fusion on real urban data, analyzing where each system succeeds or fails.
 
 #### 14.3.2 DSO (Direct Sparse Odometry)
 
-**Direct Method** + **Sparse Points**
-
-Direct methods are often used densely (every pixel), and sparse representations are typical in feature-based methods, but DSO takes the combination of "direct and sparse." It minimizes photometric error using only a selected set of high-quality points.
-
-- Uses pixel intensities directly, no keypoint extraction
-- Uses only selected points (sparse)
-- Photometric bundle adjustment
+Visual odometry often pairs direct methods with dense pixel grids and feature-based methods with sparse keypoints. **Direct Sparse Odometry (DSO)** breaks that convention by combining a direct photometric formulation with a sparse set of sampled points. Instead of extracting geometric descriptors, DSO selects high-gradient pixels distributed across the image and jointly optimizes camera poses, inverse depths, and camera intrinsics via photometric bundle adjustment—minimizing raw intensity residuals without keypoint extraction.
 
 > **Further reading**
 > - [Engel et al., "Direct Sparse Odometry" (2018)](https://arxiv.org/abs/1607.02565) — The DSO paper.
 
 #### 14.3.3 VINS-Mono/Fusion
 
-Monocular tracking can fail under fast motion or in texture-poor environments. An IMU supplements the image stream with high-rate motion constraints. VINS-Mono combines the two in a visual-inertial SLAM system for drones and mobile robots.
+Monocular visual tracking degrades quickly during aggressive motion, motion blur, or featureless corridors. An IMU bridges those blind spots by measuring high-rate angular velocity and linear acceleration, though its own estimates drift rapidly if left uncorrected. **VINS-Mono** (and its multi-sensor successor VINS-Fusion) fuses camera frames and IMU readings in a tightly coupled visual-inertial navigation system widely deployed on drones and mobile robots.
 
-**Visual-Inertial Navigation System**
-
-- Camera + IMU tight coupling
-- Sliding window optimization
-- Loop closure supported
-- Widely used on mobile robots and drones
+The pipeline below illustrates how high-rate inertial measurements and visual feature tracks converge inside a sliding-window optimizer before optional loop closure:
 
 ```
 Sensor input → IMU Preintegration →
@@ -148,41 +129,27 @@ Sliding Window Optimization →
 Loop Closure (optional)
 ```
 
-VINS-Mono uses IMU preintegration to combine the measurements between two keyframes into one relative-motion constraint. Optimization uses this constraint instead of reintegrating every raw measurement.
+A key enabler here is **IMU preintegration**: instead of reintegrating hundreds of raw inertial samples between keyframes whenever pose or bias estimates change during nonlinear optimization, VINS-Mono summarizes the inertial stream between consecutive keyframes into a single relative-motion constraint.
 
 > **Further reading**
 > - [Qin et al., "VINS-Mono: A Robust and Versatile Monocular Visual-Inertial State Estimator" (2018)](https://arxiv.org/abs/1708.03852) — The VINS-Mono paper.
-> - [VINS-Mono GitHub](https://github.com/HKUST-Aerial-Robotics/VINS-Mono) — Official code, with ROS support.
+> - [VINS-Mono GitHub](https://github.com/HKUST-Aerial-Robotics/VINS-Mono) — Official implementation with ROS support.
 
 ### 14.4 LiDAR Odometry & SLAM
 
-Camera-based methods depend on illumination and texture. LiDAR measures 3D range directly and therefore does not depend on image brightness or texture in the same way. This difference motivates the use of LiDAR SLAM in autonomous driving and outdoor robots.
+Camera-based SLAM relies heavily on ambient lighting and visual texture. LiDAR avoids both dependencies by emitting laser pulses to measure 3D range directly, which makes LiDAR odometry and SLAM the workhorse for autonomous driving and outdoor mobile robots.
 
 #### 14.4.1 LOAM (Lidar Odometry and Mapping)
 
-LOAM's separation of edge and planar features, together with its dual-rate odometry and mapping structure, influenced later systems such as LeGO-LOAM and LIO-SAM.
-
-- Classify edge points and planar points
-- Minimize point-to-edge and point-to-plane distances
-- Separate odometry and mapping (at different rates)
-
-It extracts points associated with edges and planes, then builds constraints from those selected features instead of matching every point. This reduces the amount of computation.
+Matching every point in a dense 3D LiDAR scan against a global map at frame rate is computationally expensive. **LOAM** solved this bottleneck with a two-part design that influenced virtually every subsequent LiDAR SLAM pipeline, including LeGO-LOAM and LIO-SAM. First, it classifies incoming points by local smoothness into sharp **edge features** and flat **planar features**, minimizing point-to-edge and point-to-plane distances rather than matching arbitrary raw points. Second, it separates fast scan-to-scan odometry from slower scan-to-map registration so that high-frequency motion estimates can be refined periodically against a consistent global map.
 
 #### 14.4.2 LeGO-LOAM
 
-**Lightweight and Ground-Optimized LOAM**:
-- Ground separation reduces compute
-- Uses the ground plane for an initial estimate
-- Suited to mobile robots
+Targeting lightweight ground robots with limited onboard compute, **LeGO-LOAM (Lightweight and Ground-Optimized LOAM)** refines LOAM's feature pipeline for wheeled and legged platforms. By segmenting out ground points early in each scan, it shrinks the point count fed into feature extraction and exploits the ground plane directly to stabilize roll, pitch, and vertical translation estimates.
 
 #### 14.4.3 LIO-SAM
 
-A representative work that applies factor graph-based optimization to LiDAR-inertial SLAM. The core strength of a factor graph is extensibility. To add one more sensor, you just add one factor.
-
-**LiDAR-Inertial Odometry via Smoothing and Mapping**:
-- Factor graph based
-- Tight IMU-LiDAR coupling
-- Integrates GPS and loop closure
+While early LOAM variants relied on loosely coupled scan matching, **LIO-SAM (LiDAR-Inertial Odometry via Smoothing and Mapping)** casts LiDAR-inertial SLAM as a factor graph optimization problem. A factor graph models unknown states—such as robot poses, velocities, and IMU biases—as variable nodes connected by constraint factors derived from sensor measurements. Each IMU preintegration segment, LiDAR scan match, GPS fix, or loop closure simply adds another factor to the graph, making multi-sensor extensibility clean and modular via the GTSAM library:
 
 ```
                     ┌──────────────┐
@@ -194,78 +161,62 @@ GPS (optional) ───→ │              │
                     └──────────────┘
 ```
 
-What a factor graph is: a graph that represents the relationships between variables (robot poses, landmark positions) and constraints (sensor measurements). An IMU measurement is one factor, a LiDAR match is one factor, GPS is one factor, a loop closure is one factor... To add a sensor, you simply add its factor. The GTSAM library carries out this optimization efficiently.
-
 > **Further reading**
 > - [Shan et al., "LIO-SAM: Tightly-coupled Lidar Inertial Odometry via Smoothing and Mapping" (2020)](https://arxiv.org/abs/2007.00258) — The LIO-SAM paper.
-> - [Vizzo et al., "KISS-ICP: In Defense of Point-to-Point ICP" (RA-L 2023, arXiv:2209.15397)](https://arxiv.org/abs/2209.15397) — A well-built vanilla ICP matches complex LiDAR odometry in performance. The power of simplicity.
-> - [LIO-SAM GitHub](https://github.com/TixiaoShan/LIO-SAM) — Official code, with ROS support.
-> - [GTSAM Documentation](https://gtsam.org/) — Factor graph optimization library. Used as the back-end of many SLAM systems including LIO-SAM.
-> - [Frank Dellaert — Factor Graphs for Perception and Action (MIT Robotics)](https://www.youtube.com/watch?v=-yCC7mpgL4w) — The GTSAM developer explaining factor graphs himself.
-> - [Giseop Kim's blog — Scan Context-based LiDAR Pose-graph SLAM implementation](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — A walk-through of integrating Scan Context into LiDAR SLAM.
+> - [Vizzo et al., "KISS-ICP: In Defense of Point-to-Point ICP" (RA-L 2023, arXiv:2209.15397)](https://arxiv.org/abs/2209.15397) — Shows that a carefully engineered vanilla ICP pipeline can rival complex LiDAR odometry systems, highlighting the power of simplicity.
+> - [LIO-SAM GitHub](https://github.com/TixiaoShan/LIO-SAM) — Official repository with ROS support.
+> - [GTSAM Documentation](https://gtsam.org/) — Factor graph optimization library used as the back-end of many SLAM systems including LIO-SAM.
+> - [Frank Dellaert — Factor Graphs for Perception and Action (MIT Robotics)](https://www.youtube.com/watch?v=-yCC7mpgL4w) — GTSAM's creator explaining factor graphs from first principles.
+> - [Giseop Kim's blog — Scan Context-based LiDAR Pose-graph SLAM implementation](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — Practical walk-through of integrating Scan Context into LiDAR SLAM.
 
 #### 14.4.4 FAST-LIO / FAST-LIO2
 
-**Fast LiDAR-Inertial Odometry**:
-- Iterated Kalman filter based (an iterated update equivalent to Gauss-Newton)
-- ikd-Tree: dynamic KD-tree for fast mapping
-- Real-time performance
-
-Why FAST-LIO is fast: LIO-SAM uses factor graph optimization (nonlinear least squares), whereas FAST-LIO uses an iterated extended Kalman filter (IEKF). The iterated update of an IEKF is equivalent to Gauss-Newton on a MAP objective, so it is not the case that no optimization is being solved. The actual source of the speed is a formulation that makes the Kalman gain computation depend on the state dimension rather than the measurement dimension, together with a structure that does not accumulate states in a sliding window. The follow-up FAST-LIO2 adds an incremental KD-tree, ikd-Tree, on top of this, which also cuts the cost of inserting new points into the map.
+Whereas LIO-SAM solves a nonlinear least squares problem over a factor graph, **FAST-LIO** and **FAST-LIO2** formulate tightly coupled LiDAR-inertial odometry using an iterated extended Kalman filter (IEKF). Because the iterated update of an IEKF is mathematically equivalent to Gauss-Newton optimization on a maximum a posteriori (MAP) objective, FAST-LIO is still solving an optimization problem at each scan. Its speed comes instead from two architectural choices: it reformulates the Kalman gain so its matrix inversion scales with the low state dimension rather than the thousands of LiDAR measurements, and it avoids maintaining a growing sliding window of historical states. **FAST-LIO2** pushes throughput further by replacing static spatial indices with **ikd-Tree**, an incremental KD-tree that supports fast point insertion, deletion, and nearest-neighbor queries without rebuilding the map tree from scratch, enabling direct registration without explicit edge/plane feature extraction.
 
 > **Further reading**
 > - [Xu & Zhang, "FAST-LIO: A Fast, Robust LiDAR-Inertial Odometry Package by Tightly-Coupled Iterated Kalman Filter" (2021)](https://arxiv.org/abs/2010.08196) — The FAST-LIO paper.
 > - [Xu et al., "FAST-LIO2: Fast Direct LiDAR-Inertial Odometry" (2022)](https://arxiv.org/abs/2107.06829) — The FAST-LIO2 paper.
-> - [FAST-LIO2 GitHub](https://github.com/hku-mars/FAST_LIO) — Official code.
+> - [FAST-LIO2 GitHub](https://github.com/hku-mars/FAST_LIO) — Official source code.
 
 ### 14.5 Multi-sensor Fusion
 
-A single sensor struggles to cover every situation. A camera does not like the dark, a LiDAR has a hard time in the rain, and an IMU alone drifts heavily. Combining sensors (fusion) lets each sensor compensate for the others' weaknesses.
+No single sensor covers every operating regime: cameras falter in the dark, LiDAR degrades in heavy rain or smoke, and standalone IMUs drift within seconds. Fusing complementary modalities allows each sensor to cover another's blind spots.
 
 #### 14.5.1 Camera + IMU (VIO)
 
-There are two strategies for combining visual and inertial. **Loosely-coupled** has the camera and the IMU each estimate state separately and then fuses the results based on covariance. Implementation is simple, but it fails to exploit the information fully. **Tightly-coupled** names a coupling level in which the reprojection error of camera keypoints and the IMU measurements constrain one shared state directly. How that state is actually solved is a separate matter: VINS-Mono optimizes a single cost function, whereas MSCKF is a filter — a sliding-window EKF with feature null-space marginalization. The tightly coupled approach is more accurate but more complex to implement.
+Visual and inertial streams can be combined at two levels of integration. In a **loosely-coupled** architecture, the camera and IMU estimate motion independently and their outputs are fused afterward using covariance weighting; this keeps implementation modular but discards cross-correlations between visual features and inertial states. In a **tightly-coupled** architecture, visual reprojection residuals and IMU measurements constrain one shared state directly. How that shared state is solved is a separate design axis: VINS-Mono minimizes a joint nonlinear cost function over a sliding window, whereas the Multi-State Constraint Kalman Filter (MSCKF) runs a sliding-window EKF that marginalizes feature landmarks via null-space projection. Tightly coupled systems demand more engineering effort, but they achieve higher accuracy and robustness under rapid motion.
 
-**IMU Preintegration**:
-Pre-integrate IMU measurements between two keyframes to compute a relative transformation. The raw measurements then do not have to be reintegrated at every optimization iteration.
+Both approaches rely on **IMU preintegration** to summarize high-rate inertial samples between two keyframes into one relative-motion factor, avoiding repeated raw-data integration at every solver iteration (see §14.10 for the mathematical derivation).
 
 #### 14.5.2 LiDAR + IMU (LIO)
 
-LiDAR and IMU rates vary by product, but platform motion within one LiDAR scan causes motion distortion. LIO uses higher-rate inertial measurements and timestamps to de-skew the scan and estimate state jointly with LiDAR observations. The benefit depends on synchronization, IMU bias, motion, and scan pattern.
+LiDAR and IMU sampling rates vary by hardware, yet any platform motion occurring during a single LiDAR sweep warps the resulting point cloud—a phenomenon known as **motion distortion**. LiDAR-inertial odometry uses high-rate IMU measurements and per-point timestamps to de-skew each scan back into a common frame and then estimates the state jointly with LiDAR geometry. How much LIO improves over LiDAR-only odometry depends on hardware time synchronization, IMU bias stability, platform dynamics, and the LiDAR's scan pattern.
 
 #### 14.5.3 Camera + LiDAR + IMU
 
-**Recent trend**: integrate all sensors
-- Examples: R3LIVE, LVI-SAM
-- Exploits each sensor's strengths
-
-R3LIVE combines LiDAR geometry, camera texture and color, and IMU motion measurements. It estimates the pose while building a dense, colored 3D map in real time.
+A growing line of systems—such as **R3LIVE** and **LVI-SAM**—unifies all three modalities so that geometric ranging, dense visual texture, and inertial kinematics reinforce one another. R3LIVE, for example, fuses LiDAR point geometry, camera RGB texture, and IMU measurements to estimate trajectory while reconstructing a dense, photorealistic, colored 3D map in real time.
 
 > **Further reading**
-> - [KITTI Odometry Benchmark](https://www.cvlibs.net/datasets/kitti/eval_odometry.php) — The standard benchmark for LiDAR/Visual Odometry.
+> - [KITTI Odometry Benchmark](https://www.cvlibs.net/datasets/kitti/eval_odometry.php) — Standard benchmark for LiDAR and visual odometry.
 > - [EuRoC MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) — Benchmark dataset for VIO.
-> - [Lin & Zhang, "R3LIVE: A Robust, Real-time, RGB-colored, LiDAR-Inertial-Visual tightly-coupled state Estimation and mapping package" (2022)](https://arxiv.org/abs/2109.07982) — A representative three-sensor fusion work.
-> - [Giseop Kim's blog — Filter-based VIO: a history of the MSCKF family](https://gisbi-kim.github.io/blog/2021/04/27/msckf-history.html) — From the original MSCKF to stereo extensions, a lineage summary.
+> - [Lin & Zhang, "R3LIVE: A Robust, Real-time, RGB-colored, LiDAR-Inertial-Visual tightly-coupled state Estimation and mapping package" (2022)](https://arxiv.org/abs/2109.07982) — Representative tri-sensor fusion system.
+> - [Giseop Kim's blog — Filter-based VIO: a history of the MSCKF family](https://gisbi-kim.github.io/blog/2021/04/27/msckf-history.html) — Lineage overview from the original MSCKF to stereo and modern extensions.
 
 ### 14.6 Loop Closure & Global Optimization
 
-As SLAM runs, the map gradually distorts. A robot may complete a large loop and return to its starting point while the start and end remain misaligned on the map. Loop closure recognizes the previously visited place and corrects the accumulated error. Large-scale environments need this process to keep drift bounded.
+Even with multi-sensor fusion, dead-reckoning drift accumulates steadily as a robot traverses long distances. When the robot completes a large loop and returns to its starting area, the estimated end pose often fails to meet the start of the map. **Loop closure** resolves this discrepancy by recognizing previously visited locations and propagating that geometric constraint backward to bring the entire trajectory and map into global alignment.
 
 #### 14.6.1 Place Recognition
 
-Recognize previously visited places to correct drift.
+The first half of loop closure is **place recognition**: identifying that the current observation corresponds to an earlier location in the trajectory. Appearance can change dramatically with time of day, weather, or viewpoint, yet false positives are far more damaging than missed detections—mistaking an unrelated corridor for a loop closure inserts a contradictory constraint that can warp the entire map. Place recognition algorithms therefore prioritize near-zero false-positive precision alongside geometric verification:
 
-The same place looks entirely different when the time of day, lighting, or season changes. If you mistake a similar-looking different place for the same place (a false positive), the map gets even worse. This is why the precision of place recognition has to be very high.
-
-**Bag of Words (BoW)**: computes similarity between images based on a visual vocabulary. The DBoW2 library is the representative and is used in ORB-SLAM. Fast and well-tested, but fragile against illumination and viewpoint changes.
-
-**NetVLAD**: a deep learning-based end-to-end trained global descriptor that is robust against illumination and weather changes. (see Section 14.14)
-
-**LiDAR Place Recognition**: Scan Context compresses a point cloud into a 2D bird-eye-view descriptor, and PointNetVLAD learns directly from point clouds.
+- **Bag of Words (BoW)** methods quantize local keypoints against a pre-trained visual vocabulary and compare image histograms. The DBoW2 library used in ORB-SLAM is fast and battle-tested, though sensitive to severe illumination and viewpoint shifts.
+- **NetVLAD** replaces hand-crafted vocabularies with an end-to-end learned global descriptor, offering greater resilience across lighting and seasonal appearance changes (see Section 14.14).
+- **LiDAR Place Recognition** avoids appearance sensitivity altogether by matching 3D geometry—for instance, **Scan Context** encodes a point cloud into a compact 2D bird's-eye-view descriptor, while **PointNetVLAD** learns global descriptors directly from 3D points.
 
 #### 14.6.2 Pose Graph Optimization
 
-When a loop is detected, correct the entire trajectory.
+Once place recognition proposes and geometrically verifies a loop closure, **pose graph optimization** distributes the accumulated error consistently across the trajectory. The trajectory is modeled as a graph whose nodes are robot poses and whose edges encode relative transformations from odometry and loop closures:
 
 ```
 Nodes: robot poses
@@ -274,49 +225,42 @@ Edges: relative transformations (odometry, loop closure)
 Goal: find node positions that satisfy all edge constraints
 ```
 
-Intuitively: a trajectory built from odometry is "locally roughly correct but globally twisted." When loop closure adds a constraint that "this place and that place are the same spot," pose graph optimization "smoothly adjusts the entire trajectory to satisfy all the constraints as well as possible." This is a nonlinear least squares problem.
+Intuitively, an odometry trajectory is locally accurate but globally warped over long distances. When a loop-closure edge asserts that two distant nodes actually represent the same physical location, pose graph optimization solves a nonlinear least squares problem to bend the entire trajectory smoothly so that all local odometry and loop constraints are satisfied as closely as possible.
 
-The main tools are **g2o**, a lightweight library dedicated to pose graph / BA (ORB-SLAM); **GTSAM**, based on factor graphs and iSAM2 (LIO-SAM); and **Ceres Solver**, a general-purpose nonlinear least squares library developed by Google. For the selection criteria, refer to the comparison table in Section 14.9.4.
+In practice, three C++ solvers dominate this step: **g2o**, a lightweight solver tailored for pose graphs and bundle adjustment (used in ORB-SLAM); **GTSAM**, built around factor graphs and incremental iSAM2 optimization (used in LIO-SAM); and **Ceres Solver**, Google's general-purpose nonlinear least squares library. Selection trade-offs among these libraries are compared in Section 14.9.4.
 
 > **Further reading**
-> - [GTSAM Documentation & Tutorials](https://gtsam.org/) — Factor graph-based optimization library. Includes pose graph optimization examples.
-> - [Cyrill Stachniss — Graph-based SLAM](https://www.youtube.com/watch?v=uHbRKvD8TWg) — Intuitive explanation of pose graph optimization.
+> - [GTSAM Documentation & Tutorials](https://gtsam.org/) — Factor graph optimization library with pose graph optimization examples.
+> - [Cyrill Stachniss — Graph-based SLAM](https://www.youtube.com/watch?v=uHbRKvD8TWg) — Intuitive lecture on pose graph optimization.
 > - [g2o GitHub](https://github.com/RainerKuemmerle/g2o) — Graph optimization framework.
-> - [Jinyong Jeong's blog — Robust Graph SLAM](https://jinyongjeong.github.io/2017/03/04/lec15_Robust_Graph_SLAM/) — Korean-language walkthrough of robust SLAM techniques including M-estimators, max-mixture, and DCS.
+> - [Jinyong Jeong's blog — Robust Graph SLAM](https://jinyongjeong.github.io/2017/03/04/lec15_Robust_Graph_SLAM/) — Korean-language walkthrough of robust back-end techniques including M-estimators, max-mixture, and DCS.
 
 > **Practice**: [Pose Graph Optimization](https://alexjunholee.github.io/robotics-practice/app.html#pose_graph)
 > Manipulate the nodes (poses) and edges (constraints) of a pose graph and observe how the trajectory is corrected when you add a loop closure.
 
 ### 14.7 Localization
 
-Estimate the current pose given a prior map. If SLAM is "estimate pose while building a map," then localization is "estimate pose only, in an already built map." In practice, service robots often build a map with SLAM ahead of time and then run only localization during operation.
+Once a map already exists, the robot no longer needs to build geometry from scratch—it only needs to estimate its current pose within that map. In production deployments, service robots commonly build a facility map once with SLAM and then run lightweight map-based localization during daily operation, though the map must be updated whenever the physical layout changes substantially.
 
-The derivation of the MCL algorithm is in §3.11 (Ch.3). The mathematical foundation of EKF is in §3.10 (Ch.3). For localization extended with IMU coupling, see §14.10. What follows covers the classification of localization scenarios and algorithm variants.
+The mathematical derivation of Monte Carlo Localization (MCL) appears in §3.11 (Ch.3), and the foundation of the extended Kalman filter (EKF) is covered in §3.10 (Ch.3). For localization extended with IMU coupling, see §14.10. Here, we organize the taxonomy of localization problems and compare the core filtering algorithms.
 
-Map-based localization uses a pre-built map and is thus lighter than SLAM, but the map has to be updated when the environment changes.
-
-**Monte Carlo Localization (MCL)**:
-- Particle filter based
-- 2D LiDAR + occupancy grid map
-- ROS AMCL package
-
-Intuition of MCL: scatter thousands of "virtual robots (particles)" across the map. Each particle is a hypothesis of the form "I am here, facing this direction." Compare against the actual sensor measurements; particles that match survive, and the ones that don't match die out. Over time, the particles cluster around the true position.
-
-**LiDAR Localization**: estimate pose precisely by matching against a point cloud map with ICP or NDT.
+Two classical families dominate map-based localization:
+- **Monte Carlo Localization (MCL)** uses a particle filter—most commonly pairing a 2D LiDAR with an occupancy grid map, as implemented in the ROS `AMCL` package. Intuitively, MCL scatters thousands of virtual robot hypotheses ("particles") across the map, each proposing a candidate position and heading. As sensor scans arrive, particles consistent with the map survive and multiply while inconsistent ones die out, causing the cloud to converge around the true pose.
+- **LiDAR Localization** refines 3D poses directly against a point cloud map using scan-registration methods such as Iterative Closest Point (ICP) or Normal Distributions Transform (NDT).
 
 > **Further reading**
-> - [Cyrill Stachniss — Monte Carlo Localization](https://www.youtube.com/watch?v=MsYlueVDLI0) — Intuitive explanation of MCL/particle filter.
-> - [ROS Navigation Stack — AMCL](http://wiki.ros.org/amcl) — Using MCL in ROS.
+> - [Cyrill Stachniss — Monte Carlo Localization](https://www.youtube.com/watch?v=MsYlueVDLI0) — Intuitive lecture on MCL and particle filtering.
+> - [ROS Navigation Stack — AMCL](http://wiki.ros.org/amcl) — Reference documentation for running MCL in ROS.
 
 > **Practice**: [Particle Filter](https://alexjunholee.github.io/robotics-practice/app.html#particle_filter)
-> Visualize the process of particle filter-based robot localization and observe particle convergence interactively.
+> Visualize particle filter localization interactively and observe how particles converge around the true pose.
 
 > **Practice**: [Occupancy Grid](https://alexjunholee.github.io/robotics-practice/app.html#occupancy_grid)
-> Visualize the construction of a 2D occupancy grid map and observe how sensor measurements turn into a probabilistic map.
+> Visualize 2D occupancy grid construction and see how range measurements turn into a probabilistic map.
 
 #### 14.7.1 Classification of Localization Problems
 
-The difficulty of localization does not collapse into a single number. Four axes interact to determine the algorithm choice.
+Localization difficulty cannot be ranked on a single scale; four operational axes interact to determine which algorithm and belief representation are required.
 
 | Axis | Options | Note |
 |---|---|---|
@@ -325,21 +269,19 @@ The difficulty of localization does not collapse into a single number. Four axes
 | Agency | passive (observe only) → active (choose exploration actions) | active converges faster |
 | Robot count | single → multi (belief sharing via mutual observation) | multi yields richer information |
 
-Two scenarios are canonical, one is an extension.
+Along the prior-knowledge axis, two problems are canonical and the third tests recovery:
 
-**Position tracking**: The initial pose is known and belief stays as a narrow unimodal Gaussian. EKF Localization fits well.
+- **Position tracking** assumes the initial pose is known, so the belief remains a tight unimodal Gaussian around the true state—making EKF Localization a natural fit.
+- **Global localization** begins with no knowledge of the initial pose. The belief starts uniform across all valid space and must represent multiple competing modes until measurements break the symmetry, requiring Grid Localization or MCL.
+- **Kidnapped robot** occurs when an operating robot is abruptly moved to a different location without odometry awareness. It is harder than global localization because the filter has already converged confidently on the wrong pose; surviving this failure is a direct measure of autonomy.
 
-**Global localization**: The initial pose is unknown. The belief must start from a uniform distribution and converge as measurements accumulate. Multi-modal belief representation is needed, so Grid Localization or MCL is appropriate.
-
-**Kidnapped robot**: The robot is forcibly moved to a different location during operation. It is harder than global localization because the robot does not detect the displacement itself. Every algorithm will eventually face this situation, so recovery capability is itself a measure of robot autonomy.
-
-ROS Nav2's `recovery_alpha_slow/fast` parameters are designed with the kidnapped scenario in mind. Warehouse AGV and cleaning robot boot-up corresponds to global localization; normal operation corresponds to tracking.
+In practice, warehouse AGVs and cleaning robots face global localization at boot-up and transition to position tracking during routine operation, while ROS Nav2's `recovery_alpha_slow/fast` parameters explicitly safeguard against kidnapped-robot events.
 
 #### 14.7.2 Markov Localization
 
-Markov localization is less an algorithm than a name for **the direct application of the Bayes filter to the localization problem**. EKF Localization, Grid Localization, and MCL all branch off from this shared Bayes filter framework; what differs is how each one represents the belief.
+Markov localization is less a standalone algorithm than **the direct application of the Bayes filter to pose estimation**. EKF Localization, Grid Localization, and MCL all instantiate this same probabilistic skeleton; they differ only in how they represent and propagate the belief `bel(x_t)`.
 
-The only difference from the Bayes filter (Ch.3 §3.9) is that the motion model and observation model both take **the map m** as an additional input.
+Compared with the general Bayes filter (Ch.3 §3.9), the only change is that both the motion model and the measurement model condition explicitly on **the map `m`**:
 
 ```
 Markov_localization(bel(x_{t-1}), u_t, z_t, m):
@@ -350,20 +292,18 @@ Markov_localization(bel(x_{t-1}), u_t, z_t, m):
   return bel(x_t)
 ```
 
-The initial belief bel(x_0) is initialized differently for each scenario:
-- Position tracking: $\text{bel}(x_0) = \mathcal{N}(x_0;\, \bar{x}_0, \Sigma)$ — narrow Gaussian
-- Global localization: $\text{bel}(x_0) = 1/|X|$ — uniform over all valid poses
-- Partial knowledge: uniform over the known vicinity, zero elsewhere
+Different problem regimes enter through the initial belief `bel(x_0)`:
+- Position tracking starts with a narrow Gaussian: $\text{bel}(x_0) = \mathcal{N}(x_0;\, \bar{x}_0, \Sigma)$.
+- Global localization starts uniform over all valid poses: $\text{bel}(x_0) = 1/|X|$.
+- Partial prior knowledge initializes uniformly over the plausible neighborhood and zero elsewhere.
 
-The algorithms in §14.7.3–§14.7.7 are variations on "how to implement the bel representation in the box above."
+The methods in §14.7.3–§14.7.7 are concrete numerical realizations of how `bel` is stored and updated in the loop above.
 
 #### 14.7.3 EKF Localization
 
-EKF Localization is a special case of Markov localization that represents belief as a Gaussian $(\mu_t, \Sigma_t)$. **The unimodal assumption makes it suitable only for position tracking.** Global localization and the kidnapped problem require multi-modal belief, so EKF cannot address them.
+EKF Localization specializes Markov localization by representing the belief as a single Gaussian $(\mu_t, \Sigma_t)$. Because that representation is strictly unimodal, **EKF Localization is suited only to position tracking**; global localization and the kidnapped-robot problem require multi-modal beliefs that a single Gaussian cannot express.
 
-It applies the EKF of §3.10.2 (Ch.3) to localization. What follows is the assumption structure — a feature-based map with known landmark correspondences — and the concrete algorithm.
-
-**Assumptions**: The map m is feature-based (a set of point landmarks). Each measurement $z_t^i = (r, \phi, s)^T$ (range, bearing, signature). The correspondence $c_t^i$ is known (identifiable landmarks such as ARTags, QR codes, or the Eiffel Tower).
+Applying the EKF from §3.10.2 (Ch.3) to a feature-based map `m` of point landmarks yields the following formulation. Suppose each measurement $z_t^i = (r, \phi, s)^T$ records range, bearing, and a landmark signature, and the correspondence $c_t^i$ is known (as with identifiable fiducials such as ARTags, QR codes, or distinct landmarks like the Eiffel Tower):
 
 ```
 EKF_localization_known_correspondences(μ_{t-1}, Σ_{t-1}, u_t, z_t, c_t, m):
@@ -387,29 +327,25 @@ EKF_localization_known_correspondences(μ_{t-1}, Σ_{t-1}, u_t, z_t, c_t, m):
   return μ_t, Σ_t
 ```
 
-Under the **conditional independence assumption** $p(z_t | x_t, m) = \prod_i p(z_t^i | x_t, m)$, measurements can be stacked into one update or conditioned on sequentially. The pseudocode above is sequential: each measurement uses the $(\mu_t, \Sigma_t)$ produced by the previous one. With nonlinear models, relinearization can make the stacked and sequential forms differ slightly.
+Under the **conditional independence assumption** $p(z_t | x_t, m) = \prod_i p(z_t^i | x_t, m)$, observations from a single time step can either be stacked into one batch update or processed sequentially as written above, where each landmark update immediately refines $(\mu_t, \Sigma_t)$ for the next one. Because the observation model is nonlinear, relinearization at intermediate means can cause the sequential and stacked updates to diverge slightly.
 
-Practical limit: *Probabilistic Robotics* uses heading uncertainty of roughly ±20° as an example of a regime where linearization becomes risky. It is not a universal threshold. The observation geometry, motion, and noise call for NIS/NEES or Monte Carlo consistency checks. EKF localization remains applicable to problems where belief stays unimodal, such as identifiable ARTag or AprilTag landmarks and some GNSS+IMU fusion systems.
+As a practical caveat, *Probabilistic Robotics* cites heading uncertainty around ±20° as an illustrative regime where first-order linearization begins to break down. That figure is not a universal cutoff; actual consistency depends on observation geometry, motion dynamics, and sensor noise, which should be verified with normalized innovation squared (NIS), normalized estimation error squared (NEES), or Monte Carlo consistency tests. When the belief stays unimodal—such as in ARTag/AprilTag navigation or certain GNSS+IMU fusion pipelines—EKF localization remains fast and reliable.
 
-**Unknown correspondences**: In practice $c_t^i$ is usually unknown. Maximum likelihood (ML) data association selects the map landmark with the smallest Mahalanobis distance.
+**Unknown correspondences**: In most real environments, $c_t^i$ is unknown. Maximum likelihood (ML) data association pairs each observation with the map landmark that minimizes the Mahalanobis distance under the innovation covariance $\Psi_k$:
 
 $$j(i) = \arg\min_k (z_t^i - \hat{z}_t^k)^T \Psi_k^{-1} (z_t^i - \hat{z}_t^k), \quad \Psi_k = H_t^k \bar\Sigma_t H_t^{k,T} + Q_t$$
 
-Minimizing Mahalanobis distance corresponds to maximizing Gaussian log likelihood when candidate determinants and priors are equal. Practical systems add (1) a $\chi^2$ gate matched to measurement dimension and (2) one-to-one assignment constraints across measurements in a frame. ORB-SLAM's descriptor matching and geometric verification are comparable as candidate generation followed by outlier rejection, but they do not directly implement this EKF ML-association rule.
+When candidate priors and covariance determinants are equal, minimizing Mahalanobis distance is equivalent to maximizing the Gaussian log-likelihood. Production implementations supplement this rule with a $\chi^2$ validation gate matched to the measurement dimension and one-to-one assignment constraints within each frame. Descriptor matching followed by geometric verification in ORB-SLAM plays a comparable role of candidate proposal and outlier rejection, though it does not directly evaluate this EKF Mahalanobis association rule.
 
 #### 14.7.4 Multi-Hypothesis Tracking (MHT)
 
-EKF uses a unimodal Gaussian and cannot represent data association ambiguity. MHT represents belief as a **Gaussian mixture** and maintains multiple hypotheses in parallel.
+Because an EKF maintains only a single Gaussian, it cannot preserve competing data-association hypotheses when landmarks look alike. **Multi-Hypothesis Tracking (MHT)** overcomes this limitation by representing the belief as a **Gaussian mixture** and propagating multiple association hypotheses in parallel.
 
-Each hypothesis $h$ runs an independent EKF. When a measurement arrives, each hypothesis is extended, and hypotheses whose weight (posterior probability) falls below the threshold $\psi_{\min}$ are pruned. A pruning policy is essential to prevent hypothesis count from exploding.
-
-Multi-object tracking also commonly combines Mahalanobis gating with Hungarian assignment. That selects one assignment and should be distinguished from MHT, which maintains several association hypotheses over time.
+Each hypothesis $h$ runs its own EKF instance. When new observations arrive, candidate associations branch each hypothesis, and any branch whose posterior weight drops below a threshold $\psi_{\min}$ is pruned so the hypothesis tree does not grow exponentially. Note that multi-object tracking pipelines often pair Mahalanobis gating with Hungarian assignment; that chooses a single one-to-one matching per frame and should not be confused with MHT, which preserves multiple competing association histories across time.
 
 #### 14.7.5 Grid Localization
 
-Where MHT represented belief as a Gaussian mixture, Grid Localization takes a more direct approach: it divides the entire pose space into cells and accumulates probability per cell.
-
-A **histogram filter** that discretizes pose space into cells. It can represent global and multi-modal belief that EKF cannot, but the computational cost proportional to the number of cells $K$ is the trade-off.
+Rather than tracking a Gaussian or a small mixture of Gaussians, **Grid Localization** tackles global and multi-modal beliefs directly by partitioning the entire pose space into discrete cells and maintaining a probability mass per cell as a **histogram filter**. It handles global localization cleanly, at the cost of computation scaling linearly with the total cell count $K$:
 
 ```
 Grid_localization({p_{k,t-1}}, u_t, z_t, m):
@@ -420,15 +356,13 @@ Grid_localization({p_{k,t-1}}, u_t, z_t, m):
   return {p_{k,t}}
 ```
 
-$\text{bel}(x_t) = \{p_{k,t}\}$: one probability per cell $x_k$, summing to 1.
+Here $\text{bel}(x_t) = \{p_{k,t}\}$ assigns one probability weight to each cell $x_k$, normalized to sum to 1.
 
-**Resolution trade-off**: a finer grid reduces the quantization error of the pose estimate. But smaller cells mean sharply higher CPU time for global localization. Practical tricks include caching raycast results, scan subsampling, and selective updates (only cells above a threshold).
-
-It serves as an educational bridge: represents global belief on a discrete grid and illustrates why particle filters perform better. ROS `amcl` is Grid Localization with the grid cells replaced by particles.
+This discretization introduces a direct **resolution trade-off**: finer cells reduce pose quantization error, but shrinking cell size causes CPU cost to balloon during global localization. Practical implementations mitigate that cost by pre-caching raycast tables, subsampling laser beams, and skipping updates on cells whose prior probability falls below a threshold. Conceptually, Grid Localization provides the clearest bridge to particle filters—ROS `amcl` can be viewed as Grid Localization with fixed histogram cells replaced by adaptive particles.
 
 #### 14.7.6 MCL Algorithm (Expanded)
 
-The derivation and principles of MCL are in §3.11 (Ch.3). Here the full skeleton of the algorithm as a localization method is stated explicitly.
+With the mathematical derivation of MCL established in §3.11 (Ch.3), we state the complete localization loop explicitly here. Each time step executes three phases—**predict (sample), weight, and resample**—over a set of $M$ weighted pose hypotheses:
 
 ```
 MCL(X_{t-1}, u_t, z_t, m):
@@ -445,17 +379,13 @@ MCL(X_{t-1}, u_t, z_t, m):
   return X_t
 ```
 
-Three phases: **predict (sample) → weight → resample**. Initialization depends on the scenario: for global localization, sample $M$ particles from a uniform distribution over free space; for position tracking, sample from a narrow Gaussian.
+Initialization mirrors Markov localization: sample $M$ particles uniformly over free space for global localization, or from a narrow Gaussian for position tracking. Instead of fixing $M$, systems can also adaptively sample as many particles as time permits before the next scan arrives, automatically trading faster CPUs for higher localization accuracy.
 
-**Computational adaptability**: rather than fixing $M$, sampling "as many as possible before the next measurement arrives" means faster CPUs yield larger $M$ and automatically better accuracy.
-
-The proposal is the motion model, so with a perfect sensor (extremely narrow measurement likelihood) nearly all particle weights approach zero. This is what Mixture MCL (§14.7.8) fixes.
-
-ROS2 Nav2's `nav2_amcl` implements this structure directly.
+One subtle failure mode arises because the proposal distribution is solely the motion model: when a sensor is nearly noiseless, its measurement likelihood peaks sharply in a tiny region of state space, causing almost every motion-predicted particle to receive near-zero weight. Mixture MCL (§14.7.8) resolves this degeneracy. In ROS 2 Nav2, `nav2_amcl` implements this particle-filter architecture directly.
 
 #### 14.7.7 Augmented MCL — Kidnapping Recovery
 
-Standard MCL is fragile against kidnapping. Once particles converge on a single pose and the robot is forcibly moved, no particle sits near the new location and there is no recovery path. Augmented MCL **injects random particles when the short-term average of measurement likelihood suddenly drops relative to the long-term average.** "The sensor suddenly stops matching the map" equals "the robot is lost" — this intuition is quantified as the ratio of two exponential moving averages.
+Standard MCL recovers poorly if a robot is kidnapped after its particle cloud has collapsed onto a single pose, because no particles remain near the new true location. **Augmented MCL** solves this by monitoring two exponential moving averages of the average particle weight—a slow long-term baseline $w_{\text{slow}}$ and a fast short-term average $w_{\text{fast}}$—and injecting random global particles whenever recent measurements suddenly stop matching the map:
 
 ```
 Augmented_MCL(X_{t-1}, u_t, z_t, m):
@@ -479,31 +409,29 @@ Augmented_MCL(X_{t-1}, u_t, z_t, m):
   return X_t
 ```
 
-Requirement: $0 \le \alpha_{\text{slow}} \ll \alpha_{\text{fast}}$ (e.g., $\alpha_{\text{slow}} = 0.001$, $\alpha_{\text{fast}} = 0.1$).
+With smoothing rates satisfying $0 \le \alpha_{\text{slow}} \ll \alpha_{\text{fast}}$ (for example, $\alpha_{\text{slow}} = 0.001$ and $\alpha_{\text{fast}} = 0.1$), the random-injection probability at each resampling draw is:
 
 $$p_{\text{inject}} = \max\!\left(0,\, 1 - \frac{w_{\text{fast}}}{w_{\text{slow}}}\right)$$
 
-Normally $w_{\text{fast}} \approx w_{\text{slow}}$ → ratio $\approx 1$ → injection probability $\approx 0$ → identical to standard MCL. Immediately after kidnapping, measurements no longer match anywhere → $w_{\text{fast}}$ drops sharply → injection probability rises. When the long-term average catches up, the ratio returns to 1 → injection stops.
+During normal operation, $w_{\text{fast}} \approx w_{\text{slow}}$, so the ratio stays near 1, $p_{\text{inject}} \approx 0$, and the filter behaves identically to standard MCL. Immediately after a kidnapping event, measurements fail to match the current hypothesis cluster, driving $w_{\text{fast}}$ down sharply and triggering uniform particle injection until the robot relocalizes and $w_{\text{slow}}$ catches back up. Because a transient burst of sensor noise can also depress $w_{\text{fast}}$—and the slow drift of $w_{\text{slow}}$ serves as the reference baseline rather than a spike filter—avoiding spurious injections depends on tuning $\alpha_{\text{fast}}$.
 
-A transient noise spike also drives $w_{\text{fast}}$ down and raises the injection probability. The slow movement of $w_{\text{slow}}$ is the condition that makes the ratio meaningful, not a filter against spikes, so cutting false positives means tuning the smoothing coefficient of $w_{\text{fast}}$ ($\alpha_{\text{fast}}$).
-
-The `recovery_alpha_slow` and `recovery_alpha_fast` parameters in ROS `amcl` control this adaptive random-pose injection. Research systems sometimes mix pose candidates from NetVLAD-like place recognition and PnP into particle proposals, but this is not default AMCL behavior and must be validated for the target environment.
+In ROS `amcl`, `recovery_alpha_slow` and `recovery_alpha_fast` control this mechanism. While some research systems inject learned pose candidates from NetVLAD-style place recognition and PnP into the particle set, that is not standard AMCL behavior and requires validation in the target environment.
 
 #### 14.7.8 Mixture MCL
 
-Where Augmented MCL injects random poses, Mixture MCL **changes the proposal distribution itself**. A fraction of particles is sampled directly from the **measurement model** rather than the motion model.
+Where Augmented MCL injects uniform random poses when likelihood drops, **Mixture MCL** alters the proposal distribution itself by drawing a fraction $\rho$ of particles directly from the **measurement model** rather than solely from the motion model:
 
 $$x_t^{[k]} \sim \begin{cases} p(z_t | x_t, m) & \text{with probability } \rho \\ \text{sample\_motion\_model}(u_t, x_{t-1}^{[k]}) & \text{with probability } 1 - \rho \end{cases}$$
 
-Particles sampled directly from measurements concentrate in regions of strong sensor information, fixing the proposal inefficiency of basic MCL in low-noise sensor environments. The advantage over Augmented MCL is that it handles both kidnapping recovery and low-noise sensor failure. The implementation burden is that sampling directly from $p(z_t | x_t, m)$ requires an inverse sensor model.
+Sampling directly from observations concentrates particles in high-likelihood regions, eliminating proposal collapse with low-noise sensors while simultaneously enabling kidnapping recovery. Its main implementation cost is requiring an inverse sensor model capable of sampling poses from $p(z_t | x_t, m)$.
 
 #### 14.7.9 Dynamic Environment Filtering
 
-When dynamic objects (people, vehicles) are present, some beams observe obstacles not in the map. The posterior probability of the short-hit component $p_{\text{short}}(z | x, m)$ from the beam sensor model is used to exclude suspicious beams from the localization weight computation.
-
-For each beam $z_t^k$, the four-component mixture model (§2.7, Ch.2) is evaluated and beams with high posterior probability on the short component are excluded from the weight calculation. Without this filtering, MCL becomes unstable when many people occupy a corridor.
+In crowded spaces filled with pedestrians or moving vehicles, range beams frequently strike dynamic obstacles absent from the static map. For each beam $z_t^k$, evaluating the four-component mixture beam model (§2.7, Ch.2) yields the posterior probability of the short-hit component $p_{\text{short}}(z | x, m)$. Excluding beams with high short-hit probability from the particle-weight calculation prevents moving crowds in corridors or lobbies from destabilizing MCL.
 
 #### 14.7.10 Filter Comparison Summary
+
+The table below compares the four localization filters across belief representation, supported operating regimes, and per-step computational scaling, where $N$ is the landmark count, $H$ is the active hypothesis count, $K$ is the grid-cell count, and $M$ is the particle count.
 
 | Algorithm | Belief representation | Position tracking | Global loc | Kidnapped | Compute cost |
 |---|---|---|---|---|---|
@@ -512,47 +440,44 @@ For each beam $z_t^k$, the four-component mixture model (§2.7, Ch.2) is evaluat
 | Grid Loc | histogram | good | possible | possible | O(K) |
 | MCL | particle set | good | possible | possible with Augmented MCL | O(M) |
 
-N is the landmark count, H the hypothesis count, K the grid-cell count, and M the particle count. EKF cannot address global/kidnapped problems because it assumes a unimodal Gaussian. Grid and MCL allow users to choose a balance between computation and accuracy by adjusting the resource budget.
+Because an EKF enforces a unimodal Gaussian belief, it cannot solve global localization or kidnapped-robot recovery. Grid Localization and MCL both support multi-modal beliefs and let engineers tune compute against accuracy by adjusting $K$ or $M$.
 
 #### 14.7.11 Implementation Notes: Landmark Efficiency and Negative Information
 
-Several issues arise frequently when implementing EKF Localization in practice.
+Deploying EKF Localization in practice introduces four recurring engineering details:
 
-**Efficient landmark search**: a full search over N landmarks costs O(N) per observation. In low dimensions a balanced KD-tree has average query behavior near O(log N), but worst-case cost is O(N); a grid index depends on cell occupancy and search radius.
-
-**Mutual exclusion**: Two measurements within one frame cannot correspond to the same landmark. ML data association is a component-wise optimization and does not enforce this constraint automatically. When conflicting pairs occur, a repair step is needed: choose the measurement with the smaller Mahalanobis distance and discard the other.
-
-**Outlier rejection** removes measurements whose Mahalanobis distance exceeds the $\chi^2_{95\%}$ threshold. This single step substantially reduces EKF brittleness.
-
-**Negative information**: "No landmark was observed in this angular range" can also be informative for localization, but the correct probabilistic treatment is complex and the implementation burden is high. Most practical systems ignore negative information.
+- **Efficient landmark search**: Exhaustive correspondence search over $N$ landmarks costs $O(N)$ per observation. In low dimensions, a balanced KD-tree achieves $O(\log N)$ average lookup time (though worst-case remains $O(N)$), while spatial grid hashing depends on local cell occupancy and search radius.
+- **Mutual exclusion**: Two observations in the same scan cannot originate from the same physical landmark, yet element-wise ML association does not enforce uniqueness. When two measurements claim the same landmark, keep the match with the smaller Mahalanobis distance and discard or re-associate the conflicting one.
+- **Outlier rejection**: Dropping observations whose Mahalanobis distance exceeds the $\chi^2_{95\%}$ threshold is one of the simplest and most effective safeguards against EKF divergence.
+- **Negative information**: Failing to observe an expected landmark within the sensor's field of view carries probabilistic evidence about pose, but modeling missed detections rigorously adds substantial algorithmic complexity, so most production systems omit negative information.
 
 ---
 
 ### 14.7B Occupancy Grid Mapping
 
-§14.7 estimated location given a map. This section reverses the direction: Occupancy Grid Mapping **estimates the occupancy probability of each cell given known poses.** It is the core post-processing step that produces the final map from the pose trajectory delivered by pose graph optimization. In a real SLAM pipeline, pose graph optimization fixes the pose trajectory, and then the algorithm in this section completes the final map. The foundation in binary Bayes filters is in §3.11.2 (Ch.3).
+While §14.7 estimated robot pose given a known map, **Occupancy Grid Mapping** flips the problem around: **given known poses, it estimates the occupancy probability of every grid cell.** In a complete SLAM system, pose graph optimization first locks down a consistent pose trajectory, and occupancy grid mapping runs afterward to construct the final navigable map. Its probabilistic foundation in binary Bayes filters is derived in §3.11.2 (Ch.3).
 
 #### 14.7B.1 Introduction: Why Mapping Is Hard
 
-Mapping is said to be harder than localization. A pose is a continuous variable $x_t \in \mathbb{R}^3$, but a map m is a high-dimensional discrete variable composed of tens of thousands to millions of cells. The number of possible maps is $2^{|m|}$, making direct search impossible.
+Mapping is fundamentally higher-dimensional than localization. A planar pose is a continuous vector $x_t \in \mathbb{R}^3$, whereas a discretized map $m$ contains tens of thousands to millions of cells—yielding $2^{|m|}$ possible binary maps and making joint search intractable.
 
-Two assumptions prevent combinatorial explosion: (1) **poses are known** ($x_{1:t}$ given), (2) **cells are conditionally independent**. The second assumption lets the map posterior factor into a product of per-cell marginals, splitting the whole problem into independent binary Bayes filters — one per cell.
+Two assumptions keep the problem tractable: (1) **poses $x_{1:t}$ are known**, and (2) **cells are conditionally independent** given poses and measurements. Independence factors the intractable joint map posterior into a product of single-cell marginals, turning mapping into one independent binary Bayes filter per cell:
 
 $$p(m \mid z_{1:t}, x_{1:t}) = \prod_i p(m_i \mid z_{1:t}, x_{1:t})$$
 
-Additional difficulties include sensor noise, perceptual aliasing (different measurements from the same location), environmental dynamics, and error accumulation over closed loops.
+Even under this factorization, practical mapping must still contend with sensor noise, perceptual aliasing, dynamic obstacles, and residual pose errors around closed loops.
 
 #### 14.7B.2 Standard Algorithm: Log-Odds Accumulation
 
-The occupancy posterior of each cell is accumulated in **log-odds** form.
+To avoid numerical underflow near 0 and 1 and turn multiplicative Bayes updates into simple additions, each cell's occupancy belief is stored in **log-odds** form:
 
 $$l_{t,i} = \log \frac{p(m_i \mid z_{1:t}, x_{1:t})}{1 - p(m_i \mid z_{1:t}, x_{1:t})}$$
 
-Prior log-odds: $l_0 = \log[p(m_i) / (1 - p(m_i))]$. From the binary Bayes filter derivation (§3.11.2, Ch.3), the update rule is:
+Let $l_0 = \log[p(m_i) / (1 - p(m_i))]$ denote the prior log-odds. From the binary Bayes filter derivation (§3.11.2, Ch.3), each cell inside the sensor's perceptual field updates recursively as:
 
 $$l_{t,i} = l_{t-1,i} + \text{inverse\_sensor\_model}(m_i, x_t, z_t) - l_0$$
 
-Intuition: when a new measurement gives hit evidence for cell $m_i$, the log-odds rises; free evidence lowers it. The $-l_0$ term prevents the prior from being counted twice.
+Intuitively, hit evidence for cell $m_i$ raises $l_{t,i}$, free-space rays lower it, and the $-l_0$ term prevents the prior from being counted repeatedly across updates:
 
 ```
 occupancy_grid_mapping({l_{t-1,i}}, x_t, z_t):
@@ -565,9 +490,10 @@ occupancy_grid_mapping({l_{t-1,i}}, x_t, z_t):
   return {l_{t,i}}
 ```
 
-Recovery to probability: $p(m_i | z_{1:t}, x_{1:t}) = 1 - 1/(1 + \exp\{l_{t,i}\})$.
+Whenever probabilities are needed, they are recovered via $p(m_i | z_{1:t}, x_{1:t}) = 1 - 1/(1 + \exp\{l_{t,i}\})$.
 
-**inverse_sensor_model** (simplified example for a range finder):
+For a 2D range finder, a simplified `inverse_sensor_model` assigns each cell within the beam cone to occupied (`l_occ`), free (`l_free`), or uninformative (`l_0`) based on its range relative to the nearest ray:
+
 ```
 inverse_range_sensor_model(m_i, x_t, z_t):
   compute range r and bearing φ to cell center
@@ -580,33 +506,29 @@ inverse_range_sensor_model(m_i, x_t, z_t):
     return l_free                // free (< l_0)
 ```
 
-$\alpha$ is the obstacle thickness parameter, $\beta$ is the beam opening angle. Cartographer's submap probability grid implements this accumulation as a product of odds, backed by a lookup table. ROS Nav2's `costmap_2d` instead works with 0-254 cost values updated by raytracing-based marking and clearing, and SLAM Toolbox (of the Karto family) thresholds a per-cell hit/visit count ratio, so their representations and update rules differ.
+Here $\alpha$ controls modeled obstacle thickness and $\beta$ denotes the beam opening angle. Real SLAM and navigation packages vary in how they implement these updates: Cartographer's submap probability grid updates occupancy via an odds product backed by a lookup table; ROS Nav2's `costmap_2d` maintains 0–254 cost values via raytraced marking and clearing; and SLAM Toolbox (from the Karto lineage) thresholds per-cell hit-to-visit ratios rather than storing log-odds directly.
 
 #### 14.7B.3 Multi-Sensor Fusion
 
-Camera, LiDAR, sonar, and infrared each have a different inverse_sensor_model. The simplest fusion strategy is **conservative max per cell**: if any sensor reports a hit, that cell is classified as occupied. This conservative policy is safe for collision avoidance but tends to underestimate free space.
-
-An alternative is to accumulate each sensor's log-odds updates independently and then sum per cell. When sensors carry different amounts of information, weighted summation is needed.
+Cameras, LiDAR, sonar, and infrared sensors each require a tailored `inverse_sensor_model`. The simplest way to fuse them is a **conservative per-cell maximum**: if any sensor indicates occupancy, the cell is marked occupied. While safe for collision avoidance, this rule can systematically underestimate navigable free space. An alternative is to accumulate log-odds updates independently per sensor and combine them via a weighted sum reflecting each modality's reliability.
 
 #### 14.7B.4 Learning the inverse_sensor_model
 
-A hand-designed inverse_sensor_model is a simple geometric model. **If the forward model $p(z | x, m)$ is already available, the inverse can be derived by learning.**
-
-The procedure: generate triples $\{(x^{(k)}, z^{(k)}, m_i^{(k)})\}$ from simulation, then train a function approximator with cross-entropy loss.
+Hand-crafted geometric inverse models are simple approximations that break down when sensor physics grows complicated. **When a realistic forward model $p(z | x, m)$ or simulator is available, the inverse model can be learned directly from data.** By generating pose-scan-occupancy triples $\{(x^{(k)}, z^{(k)}, m_i^{(k)})\}$ in simulation, a function approximator can be trained with binary cross-entropy loss:
 
 $$\mathcal{L} = -\sum_k \left[m_i^{(k)} \log \hat{p}_i + (1 - m_i^{(k)}) \log(1 - \hat{p}_i)\right]$$
 
-A neural network with input $(x, z)$ and output $\hat{p}_i = p(m_i | x, z)$ takes over the role of inverse_sensor_model. This is useful when complex sensor geometry (sonar reflection patterns, LiDAR behavior on glass) is too difficult to model explicitly.
+A neural network taking $(x, z)$ as input and outputting $\hat{p}_i = p(m_i | x, z)$ takes over the role of `inverse_sensor_model`, which is especially useful when complex sensor geometry—such as multipath sonar reflections or LiDAR behavior on glass—resists analytical modeling.
 
 #### 14.7B.5 MAP Occupancy Mapping (Advanced)
 
-The cell independence assumption of the standard algorithm creates one contradiction: adjacent cells inside the same beam cone share correlated evidence in reality, but the independence assumption ignores this correlation. The problem is most noticeable with wide-beam sensors such as sonar.
+Assuming independent cells creates a subtle inconsistency: adjacent cells within a single beam cone receive correlated evidence in reality, yet independent binary Bayes updates ignore that coupling—an effect especially visible with wide-beam sonar.
 
-MAP Occupancy Mapping directly maximizes the mode of the map posterior.
+**MAP Occupancy Mapping** drops cell independence and directly seeks the maximum a posteriori map across all poses and measurements:
 
 $$m^* = \arg\max_m \left[\sum_t \log p(z_t \mid x_t, m) + \log p(m)\right]$$
 
-Rather than an inverse model, it uses the **forward model** $p(z_t | x_t, m)$ directly. Starting from an all-free map, hill-climbing flips cells one at a time in the direction that increases log-likelihood.
+Instead of an inverse model, it evaluates the **forward sensor model** $p(z_t | x_t, m)$ directly. Initializing every cell as free, hill-climbing flips individual cells whenever doing so increases the joint log-posterior:
 
 ```
 MAP_occupancy_grid_mapping(x_{1:t}, z_{1:t}):
@@ -617,14 +539,14 @@ MAP_occupancy_grid_mapping(x_{1:t}, z_{1:t}):
   return m
 ```
 
-Practical limits: it is batch and does not fit incremental SLAM; hill-climbing gets trapped in local maxima; posterior uncertainty disappears. But the insight that **"the cell independence assumption must be broken"** carries forward.
+In practice, this algorithm is strictly batch (unsuited to incremental SLAM), vulnerable to local maxima during coordinate ascent, and discards posterior cell uncertainty. Its lasting value lies in highlighting why breaking the cell-independence assumption produces cleaner maps under wide-beam or correlated observations.
 
 #### 14.7B.6 Comparison with Other Spatial Representations: OctoMap, Voxblox, NeRF, 3DGS
 
-**OctoMap** stores 3D occupancy in an octree and can be viewed as a direct 3D extension of an occupancy grid. **Voxblox** and **nvblox** belong to a different distance-field family: a TSDF stores signed distance to a surface. **NeRF** density and **3D Gaussian Splatting** opacity also composite transparency and color along rays, but they are learned novel-view representations rather than direct descendants of a binary occupancy Bayes filter. The families share mathematical ideas such as forward sensor models and ray integration, but their lineage and objectives should not be equated. Occupancy grids remain in navigation components such as SLAM Toolbox and the Nav2 costmap.
+Occupancy grids anchor 2D navigation stacks such as SLAM Toolbox and the Nav2 costmap, and **OctoMap** extends them directly into 3D via hierarchical octrees. **Voxblox** and **nvblox**, by contrast, belong to the signed-distance-field family (TSDFs), storing continuous distances to surfaces rather than binary occupancy probabilities. **NeRF** density fields and **3D Gaussian Splatting** opacities also integrate color and transparency along viewing rays, but they are learned novel-view synthesis representations rather than direct descendants of binary Bayes occupancy filters. Although these families share mathematical tools such as forward sensor models and ray integration, their objectives and theoretical lineages remain distinct.
 
 > **Practice**: [Occupancy Grid](https://alexjunholee.github.io/robotics-practice/app.html#occupancy_grid)
-> Visualize the log-odds accumulation process cell by cell and observe how the hit/free regions of the inverse_sensor_model build into a map.
+> Step through log-odds accumulation cell by cell and observe how hit and free updates from `inverse_sensor_model` build a coherent map.
 
 ---
 
@@ -632,23 +554,16 @@ Practical limits: it is batch and does not fit incremental SLAM; hill-climbing g
 
 ### 14.8 Learning-based & Neural SLAM
 
-Traditional SLAM uses hand-designed keypoints, matching algorithms, and optimization pipelines. Recent work has been replacing part or all of this pipeline with deep learning.
+Classical SLAM pipelines rely on hand-crafted keypoints, geometric descriptors, and explicit optimization back-ends. Over the past few years, deep learning has begun replacing individual front-end modules—and in some cases the entire map representation itself.
 
-**DROID-SLAM (2021)**:
-- SLAM based on dense recurrent optical flow
-- Without keypoint extraction/matching, it iteratively refines dense optical flow to jointly estimate camera pose and depth
-- Improved robustness in settings where existing methods fail, such as textureless environments and illumination changes
-- Uses a differentiable dense bundle adjustment (DBA) layer for end-to-end training
+**DROID-SLAM (2021)** replaces discrete keypoint extraction and matching with dense recurrent optical flow. By iteratively updating dense flow fields and passing them through a differentiable dense bundle adjustment (DBA) layer, DROID-SLAM estimates camera poses and pixel depths end to end. Because learned optical flow degrades far more gracefully than hand-crafted corners in textureless corridors or shifting lighting, DROID-SLAM overcomes key failure modes of both feature-based pipelines like ORB-SLAM and photometric direct methods like DSO—at the cost of requiring a GPU and higher compute than lightweight CPU trackers.
 
-Why DROID-SLAM drew attention: existing feature-based SLAM (ORB-SLAM) fails in keypoint-starved environments, and direct methods (DSO) are weak against illumination changes. DROID-SLAM uses learned representations, and as a result it overcomes these limits to a significant degree. That said, it requires a GPU, and its real-time performance does not always match the older methods.
-
-**3DGS-SLAM fusion**:
-The 3D Gaussian Splatting covered in 13.5.2 is also being used as the map representation in SLAM. SplaTAM and MonoGS are representative examples; they replace the sparse/dense point maps of classic SLAM with 3D Gaussians as the environment representation. The scene's visual fidelity improves, and rendering-based applications (virtual view synthesis, AR overlays, and so on) become possible.
+**3DGS-SLAM fusion** bridges classical tracking with the 3D Gaussian Splatting representation introduced in Section 13.5.2. Systems such as **SplaTAM** and **MonoGS** replace sparse point clouds or occupancy grids with anisotropic 3D Gaussians as the live map, yielding photorealistic reconstructions suited to novel-view synthesis and augmented-reality overlays as the robot moves.
 
 > **Further reading**
 > - [Teed & Deng, "DROID-SLAM: Deep Visual SLAM for Monocular, Stereo, and RGB-D Cameras" (2021)](https://arxiv.org/abs/2108.10869) — The DROID-SLAM paper.
-> - [Keetha et al., "SplaTAM" (2024)](https://arxiv.org/abs/2312.02126) — Dense SLAM based on 3DGS.
-> - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — Collection of recent SLAM papers and projects.
+> - [Keetha et al., "SplaTAM" (2024)](https://arxiv.org/abs/2312.02126) — Dense SLAM built on 3D Gaussian Splatting.
+> - [Awesome-SLAM GitHub](https://github.com/SilenceOverflow/Awesome-SLAM) — Curated index of recent SLAM papers and open-source projects.
 
 ---
 
@@ -658,88 +573,72 @@ The 3D Gaussian Splatting covered in 13.5.2 is also being used as the map repres
 
 For the history of information-form SLAM before the factor graph era (EKF-SLAM, EIF, SEIF, EM), see §14.16 Advanced: History of Information-Form SLAM.
 
-The SLAM front-end processes sensor data to produce constraints; the back-end finds the optimal state (poses, landmarks) that jointly satisfies these constraints. This process is a nonlinear least squares problem. What we cover here is the mathematical background needed to understand "why you configure libraries like g2o, GTSAM, and Ceres the way you do."
+While the SLAM front-end extracts relative motion and landmark observations from raw sensor streams, the **back-end** solves for the globally consistent set of poses and landmarks that best agrees with all of those measurements. Every time a robot drives forward ("I moved 1 m") and observes a feature ("that landmark sits 3 m ahead"), it adds a noisy constraint. Because no exact solution satisfies every noisy measurement simultaneously, the back-end formulates a **nonlinear least squares** problem that minimizes the sum of weighted squared residuals. Understanding this mathematical machinery explains why solvers such as g2o, GTSAM, and Ceres are structured—and configured—the way they are.
 
-**Intuition for the problem the SLAM back-end solves**
-
-After linearization, each SLAM back-end iteration reduces to a system of the form **Ax = b**.
-
-The robot produces two kinds of data as it drives:
-1. **Odometry**: "I moved 1 m forward" (relative motion)
-2. **Observations**: "that landmark is visible at 3 m"
-
-You want to find poses and landmark positions that satisfy all of these measurements, but because of sensor noise no solution satisfies them perfectly. Instead, you look for the solution that "minimizes the sum of squared errors against all the measurements." This is the nonlinear least squares problem, and solving it efficiently is the role of the SLAM back-end.
-
-Because the objective is nonlinear, the back-end linearizes it around the current estimate and updates the state iteratively. Gauss-Newton repeats the sequence "linearize → solve Ax=b → update."
-
-(Reference: [Giseop Kim's blog — SLAM back-end series](https://gisbi-kim.github.io/blog/2021/03/04/slambackend-1.html))
+Because observation models and 3D rigid transforms are nonlinear, the back-end linearizes the objective around the current state estimate and updates it iteratively via Gauss-Newton steps: linearize around the current estimate, solve the linear system `Ax = b`, apply the state increment, and repeat until convergence (see also [Giseop Kim's blog — SLAM back-end series](https://gisbi-kim.github.io/blog/2021/03/04/slambackend-1.html)).
 
 #### 14.9.1 Gauss-Newton on a Manifold
 
-A SLAM pose lies on the Lie group SE(3), rather than in a Euclidean vector space. The usual Gauss-Newton update `x ← x + δx` therefore does not apply directly: adding a vector to a rotation matrix does not preserve a valid rotation.
+Robot poses live on the Lie group `SE(3)`, not in a flat Euclidean vector space. A naive vector update `x ← x + δx` cannot be applied directly to a rotation matrix without breaking orthogonality and determinant constraints.
 
-The fix is to define the perturbation on the Lie algebra se(3).
+The standard remedy is to parameterize small increments `δξ ∈ R^6` in the Lie algebra `se(3)` and apply a **left perturbation** on the manifold:
 
-**Update step (left perturbation)**:
 ```
 T ← exp(δξ^) · T
 ```
-Here `δξ ∈ R^6` is a small perturbation on se(3), `exp(·)` is the exponential map, and `^` (the hat operator) converts a 6-vector into a 4x4 matrix.
 
-**Jacobian computation**: Compute the Jacobian of the error function `e(T)` with respect to `δξ`.
+Here `exp(·)` denotes the exponential map and `^` (the hat operator) maps a 6-vector into a 4x4 `se(3)` matrix.
+
+Linearizing an error term `e(T)` with respect to this perturbation requires computing the Jacobian:
+
 ```
 J = ∂e / ∂δξ
 ```
-By the chain rule this becomes `∂e/∂(Tp) · ∂(exp(δξ^)Tp)/∂δξ`, where the second term is the derivative of the group action induced by the left perturbation; for a 3D point it takes the form `[I, -(Tp)^]` (with δξ ordered as translation then rotation). The left Jacobian of SE(3) is the 6x6 matrix that relates Lie algebra perturbations through the BCH relation, so it is a different object from this term.
 
-**Normal equation**:
+By the chain rule, `J` factors into `∂e/∂(Tp) · ∂(exp(δξ^)Tp)/∂δξ`, where the second factor is the derivative of the group action under left perturbation; for a transformed 3D point `Tp`, it equals `[I, -(Tp)^]` when `δξ` orders translation before rotation. (Note that this action derivative is distinct from the 6x6 left Jacobian of `SE(3)`, which relates Lie algebra perturbations through the Baker–Campbell–Hausdorff (BCH) formula.)
+
+Accumulating the linearized errors across all factors yields the Gauss-Newton **normal equation**:
+
 ```
 (J^T Σ^{-1} J) δξ* = -J^T Σ^{-1} e
 ```
-- `Σ` is the measurement noise covariance
-- `H = J^T Σ^{-1} J` is the Gauss-Newton approximation of the Hessian; this is the **information matrix**
-- With multiple constraints, sum the per-constraint `J^T Σ^{-1} J` (additive property)
 
-Iterate this process until convergence. At every iteration, recompute the Jacobian at the current estimate and apply the update.
+Here `Σ` is the measurement noise covariance, and `H = J^T Σ^{-1} J` is the Gauss-Newton Hessian approximation—also called the **information matrix**. Crucially, independent constraints sum additively into `H` via their individual `J^T Σ^{-1} J` blocks. At each iteration, the solver updates `T` on the manifold, recomputes the Jacobians at the new operating point, and repeats until the step size falls below a tolerance.
 
 #### 14.9.2 Schur Complement (Marginalization)
 
-In bundle adjustment (BA) the state variables are of two kinds: camera poses (p) and landmarks (l). The Hessian `H` of the normal equation has the following block structure:
+In visual bundle adjustment (BA), the state partitions naturally into camera poses `p` and 3D landmarks `l`. Grouping variables by type exposes a clean 2x2 block structure in the normal equation:
 
 ```
 [H_pp  H_pl] [δp]   [b_p]
 [H_lp  H_ll] [δl] = [b_l]
 ```
 
-Let the number of poses be `m` and the number of landmarks be `n`; typically `n >> m`. Solving this large system directly is expensive.
-
-Use the **Schur complement** to marginalize out the landmarks:
+Suppose there are `m` poses and `n` landmarks, where typically `n >> m` (hundreds of poses observing tens of thousands of points). Solving the full `(m + n)`-sized linear system directly is prohibitively slow. Instead, eliminating the landmarks via the **Schur complement** yields a much smaller reduced camera system solely in `δp`:
 
 ```
 (H_pp - H_pl · H_ll^{-1} · H_lp) δp = b_p - H_pl · H_ll^{-1} · b_l
 ```
 
-This is possible because **`H_ll` is block diagonal**. Each landmark is not directly coupled to other landmarks (no shared factor between two landmarks), so the inverse of `H_ll` can be computed by inverting each block independently. The cost is a cheap `O(n)`.
+This elimination is fast because **`H_ll` is block diagonal**: landmarks never share direct measurement factors with other landmarks, only with the camera poses that observe them. Inverting `H_ll` therefore reduces to inverting `n` tiny 3x3 blocks independently in `O(n)` time. While the reduced system dimension depends only on pose count `m`, forming the Schur complement and recovering landmarks still scale with the number of observations and landmarks; exploiting this block sparsity is what makes large-scale BA practical, with actual throughput governed by graph connectivity, linear solver choice, and hardware.
 
-After the Schur complement, the reduced camera-system dimension is set by pose count `m`, but landmark elimination and back-substitution still depend on the observation and landmark counts. Block sparsity enables efficient large BA solves; throughput still depends on graph structure, solver, and hardware.
+Once the reduced system yields `δp`, each landmark update `δl` follows cheaply by back-substitution:
 
-Once `δp` is found, recover `δl` by back-substitution:
 ```
 δl = H_ll^{-1} (b_l - H_lp · δp)
 ```
 
 #### 14.9.3 Sparsity and Variable Ordering
 
-In pose-graph optimization, `H` is usually **sparse** because each factor connects only a small subset of poses. Odometry factors connect neighbors and loop factors connect distant poses. Node degree depends on the dataset and closure count, while dense loop proposals or a poor elimination order can increase fill-in.
+In pose-graph optimization, the Hessian `H` is typically **sparse** because each factor couples only a handful of poses—odometry links consecutive frames, while loop closures link revisited pairs. Node degree varies with trajectory length and loop frequency, and dense loop proposals or poor elimination orderings can degrade that sparsity.
 
-When solving a sparse linear system you use Cholesky factorization (`H = L L^T`), and the **fill-in** problem shows up here. Positions that were originally zero become non-zero during factorization. Heavy fill-in blows up memory and compute cost.
+Solving `H δx = b` directly via Cholesky factorization (`H = L L^T`) encounters **fill-in**: entries that were zero in `H` become non-zero in the Cholesky factor `L`, inflating both memory and runtime. Choosing a good variable ordering before factorization is essential to keep `L` sparse:
 
-To minimize fill-in, you have to choose the variable ordering well:
-- **COLAMD** (Column Approximate Minimum Degree): A common heuristic for sparse least-squares problems that approximates a column ordering with limited fill-in.
-- **AMD** (Approximate Minimum Degree): Similar to COLAMD but specialized for symmetric matrices.
-- **Nested dissection**: Determines the ordering by recursively partitioning the graph. Effective on large-scale problems.
+- **COLAMD** (Column Approximate Minimum Degree) orders columns heuristically to limit fill-in during sparse least-squares QR or Cholesky solves.
+- **AMD** (Approximate Minimum Degree) targets symmetric positive-definite matrices such as `H` directly.
+- **Nested dissection** recursively partitions the factor graph via vertex separators, scaling well on very large graphs.
 
-When configuring solvers in libraries such as g2o, GTSAM, and Ceres, inspect both the linear solver type (DENSE_SCHUR, SPARSE_NORMAL_CHOLESKY, and so on) and the ordering strategy. The effect of ordering on fill-in and runtime depends on graph structure, so compare memory and latency on representative data.
+When configuring g2o, GTSAM, or Ceres, both the linear solver (such as `DENSE_SCHUR` or `SPARSE_NORMAL_CHOLESKY`) and the ordering strategy matter; because fill-in depends strongly on graph topology, measure memory footprint and solve latency on representative trajectories:
 
 ```python
 # Example of setting the ordering in Ceres Solver (Python binding)
@@ -751,35 +650,32 @@ options.sparse_linear_algebra_library_type = ceres.SparseLinearAlgebraLibraryTyp
 
 #### 14.9.4 Comparison of Optimization Libraries
 
+The table below contrasts the three standard C++ back-end solvers across design philosophy and common SLAM deployments.
+
 | Library | Characteristics | Primary uses |
 |---|---|---|
 | **g2o** | Dedicated to pose graph / BA, lightweight, C++ only | ORB-SLAM2/3, LSD-SLAM |
 | **GTSAM** | Factor graph based, supports Bayes tree (iSAM2), strong at incremental optimization | LIO-SAM, research |
 | **Ceres Solver** | General-purpose nonlinear least squares, supports auto-diff, developed by Google | Cartographer, VINS-Fusion, various projects |
 
-Selection criteria:
-- SLAM-only and want to stay lightweight → g2o
-- Need factor graph modeling, and incremental update (progressive optimization as keyframes are added) matters → GTSAM (iSAM2)
-- Need general-purpose optimization beyond SLAM, and do not want to derive Jacobians by hand → Ceres (auto-diff)
+As a rule of thumb, choose **g2o** when you want a minimal, lightweight C++ solver dedicated to pose graphs or BA; choose **GTSAM (iSAM2)** when factor-graph modeling and incremental updates as new keyframes arrive are priorities; and choose **Ceres Solver** when you need general-purpose nonlinear optimization or automatic differentiation without deriving analytical Jacobians by hand.
 
 > **Further reading**
 > - Barfoot, "State Estimation for Robotics" Ch.4 (Nonlinear Estimation) — Systematic treatment of optimization on manifolds.
-> - [Dellaert & Kaess, "Factor Graphs for Robot Perception" (Foundations and Trends in Robotics, 2017)](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — Factor graphs and SLAM back-end theory.
-> - [g2o Tutorial](https://github.com/RainerKuemmerle/g2o) / [GTSAM Tutorial](https://gtsam.org/tutorials/intro.html) — Hands-on tutorials per library.
-> - [Giseop Kim's blog — Gauss-Newton Opt == IEKF update?](https://gisbi-kim.github.io/blog/2022/03/05/gn-iekf-same.html) — An exposition of the mathematical equivalence between GN optimization and iterated Kalman filtering. A reference for the filter vs optimization debate.
+> - [Dellaert & Kaess, "Factor Graphs for Robot Perception" (Foundations and Trends in Robotics, 2017)](https://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf) — Definitive reference on factor graphs and SLAM back-end theory.
+> - [g2o Tutorial](https://github.com/RainerKuemmerle/g2o) / [GTSAM Tutorial](https://gtsam.org/tutorials/intro.html) — Hands-on tutorials for each library.
+> - [Giseop Kim's blog — Gauss-Newton Opt == IEKF update?](https://gisbi-kim.github.io/blog/2022/03/05/gn-iekf-same.html) — Exposition of the mathematical equivalence between Gauss-Newton optimization and iterated Kalman filtering.
 
 > **Practice**: [Bundle Adjustment Visualization](https://alexjunholee.github.io/robotics-practice/app.html#bundle_adjustment)
-> Observe the bundle adjustment process — jointly optimizing camera poses and 3D points — interactively.
+> Interactively explore bundle adjustment as camera poses and 3D landmarks are optimized jointly.
 
 ### 14.10 Advanced: IMU Preintegration
 
-For localization extended with IMU coupling, see §14.7 and §14.7B for the mapping foundation. When introducing VINS-Mono in 14.3.3 we mentioned IMU preintegration briefly. Here we look at the mathematical background.
+For localization extended with IMU coupling, see §14.7, and see §14.7B for the mapping foundation. Section 14.3.3 introduced IMU preintegration conceptually inside VINS-Mono; here we examine the mathematical formulation that makes high-rate inertial fusion tractable inside a keyframe optimizer.
 
-**Problem statement**: An IMU typically outputs acceleration and angular velocity at 200–1000 Hz. In contrast, SLAM optimization is done on a keyframe basis (a few Hz to tens of Hz). Hundreds of IMU measurements sit between two keyframes. An IMU measurement is itself the observation of a factor, but adding a state (pose, velocity, bias) at every one of those instants makes the problem size explode.
+An IMU typically outputs angular velocities and linear accelerations at 200–1000 Hz, whereas visual or LiDAR keyframes are added at a few Hz to tens of Hz. Creating a full state node (pose, velocity, and biases) at every single inertial sample would cause the factor graph to explode in size. **IMU preintegration** avoids that bottleneck by summarizing all inertial measurements between two keyframes `i` and `j` into a single relative-motion factor.
 
-**The idea of preintegration**: Compress the IMU measurements between two keyframes `i` and `j` into a single "relative motion measurement." This compressed measurement enters optimization as a factor.
-
-**Preintegrated measurements**: Compute three relative quantities from keyframe `i` to `j`.
+Specifically, integrating the raw gyroscope readings `ω_k` and accelerometer readings `a_k` (with sampling interval `Δt` and current bias estimates `b_g`, `b_a`) yields three preintegrated quantities expressed **in the local coordinate frame of keyframe `i`**:
 
 ```
 ΔR_ij = Π_{k=i}^{j-1} Exp((ω_k - b_g) · Δt)          # relative rotation
@@ -787,22 +683,17 @@ For localization extended with IMU coupling, see §14.7 and §14.7B for the mapp
 Δp_ij = Σ_{k=i}^{j-1} (Δv_ik · Δt + 0.5 · ΔR_ik · (a_k - b_a) · Δt^2)  # relative position
 ```
 
-Here `ω_k` and `a_k` are IMU measurements, `b_g` and `b_a` are the gyroscope/accelerometer biases, and `Δt` is the IMU sampling interval.
+Because these increments live purely in keyframe `i`'s local frame, adjusting keyframe `i`'s global pose or velocity during optimization does not require reintegrating the raw IMU stream.
 
-These preintegrated measurements are computed **in the coordinate frame of keyframe `i`**. Even if the absolute pose of keyframe `i` changes during optimization, you do not need to recompute the preintegrated measurement.
-
-**Covariance propagation**: Compute how the IMU measurement noise propagates into the preintegrated measurement. Discrete-time propagation updates the covariance at every IMU measurement.
+To weight this factor properly in the optimizer, discrete-time covariance propagation tracks how sensor noise `Q` (from the IMU datasheet) accumulates across each step via the state-transition Jacobian `A_k` and noise-input Jacobian `B_k`:
 
 ```
 Σ_{k+1} = A_k · Σ_k · A_k^T + B_k · Q · B_k^T
 ```
-- `A_k`: state transition matrix (the Jacobian at the current state)
-- `B_k`: noise input matrix
-- `Q`: IMU noise covariance (from the datasheet)
 
-This covariance becomes the information matrix (`Σ^{-1}`) of the corresponding factor in optimization.
+The inverse of the resulting covariance `Σ^{-1}` supplies the information matrix of the preintegrated factor.
 
-**Correction for bias changes**: During optimization the IMU bias estimate can change. If the bias changes, in principle you should redo the preintegration from scratch. But that is expensive. Instead, you correct it with a **first-order approximation**:
+One subtlety remains: if the optimizer updates the gyroscope or accelerometer bias estimates (`b_g`, `b_a`) during iteration, the preintegrated quantities strictly depend on those biases. Rather than reintegrating hundreds of samples from scratch whenever `b` shifts slightly by `δb`, preintegration applies a **first-order Taylor correction** using bias Jacobians accumulated alongside the original integration:
 
 ```
 ΔR_ij ≈ ΔR_ij^0 · Exp(∂ΔR/∂b_g · δb_g)
@@ -810,87 +701,74 @@ This covariance becomes the information matrix (`Σ^{-1}`) of the corresponding 
 Δp_ij ≈ Δp_ij^0 + ∂Δp/∂b_g · δb_g + ∂Δp/∂b_a · δb_a
 ```
 
-`^0` denotes the value computed with the previous bias estimate, `δb` is the bias change, and the partial derivatives are accumulated alongside the preintegration. As long as the bias change is not large (which is usually the case), this approximation is accurate enough.
+Here `^0` marks the quantities computed at the nominal bias estimate. As long as bias updates remain small—which holds well in practice—this linear correction stays accurate while keeping optimization fast.
 
-**Why preintegrate on the manifold**: Preintegration itself was first proposed by Lupton and Sukkarieh, whose formulation parameterized rotation with Euler angles. Forster et al. recast it on SO(3). Integrating ahead of time on the Lie group 1) keeps rotation within the group structure and avoids the singularities of Euler angles, and 2) produces a result that plugs directly into a factor graph as a relative motion measurement. Discrete-time integration error and measurement noise remain either way. This recasting is the core contribution of Forster et al. (2015 RSS, 2017 TRO).
+**Why preintegrate on the manifold**: Lupton and Sukkarieh originally proposed inertial preintegration using Euler angles, which suffer from gimbal-lock singularities. Forster et al. (2015 RSS, 2017 TRO) reformulated preintegration directly on the rotation group `SO(3)`, preserving group structure without singularities and producing residuals that plug cleanly into on-manifold factor graphs (discrete-time integration error and sensor noise still apply).
 
-**Tightly-coupled vs loosely-coupled**: Using LIO-SAM as an example:
-- **Loosely-coupled**: This label covers two variants. In one, the IMU is used only for point-cloud de-skewing and as the initial guess for scan matching; in the other, LiDAR odometry and the IMU estimate state independently and are combined afterwards based on covariance. LeGO-LOAM belongs to the former.
-- **Tightly-coupled**: Optimizes an IMU preintegration factor jointly with the LiDAR odometry factor inside the same factor graph. The IMU acts not as a mere initial guess but as an independent observation of the relative pose between keyframes. LIO-SAM follows this approach.
-
-The advantage of tightly-coupled shows up in aggressive motion (fast rotation, sharp acceleration/deceleration). The IMU factor catches fast changes that LiDAR scan matching alone cannot capture. A practical advantage is that, because it is in factor graph form, GPS factors, loop closure factors, and others can be plugged in like modules.
-
-**Structure of LIO-SAM**: Built on GTSAM, it optimizes IMU preintegration factors + LiDAR odometry factors + GPS factors + loop closure factors in a single graph. LiDAR odometry extracts edge features and planar features separately and manages them in voxel maps of different resolutions. During scan matching, planar features solve for the relative transformation that minimizes point-to-plane distance, and edge features minimize point-to-line distance.
-
-Modern VIO/LIO systems such as VINS-Mono, ORB-SLAM3 (visual-inertial mode), and LIO-SAM use this technique directly to implement their IMU factors.
+**Tightly-coupled vs loosely-coupled LIO**: LIO-SAM illustrates why this distinction matters in LiDAR-inertial systems. In a **loosely-coupled** pipeline, the IMU either merely de-skews point clouds and seeds scan matching (as in LeGO-LOAM) or runs as a separate estimator fused afterward by covariance. In a **tightly-coupled** pipeline such as LIO-SAM, the IMU preintegration factor sits directly inside the same GTSAM factor graph alongside LiDAR odometry, optional GPS, and loop-closure factors. LiDAR odometry separately extracts edge and planar features into multi-resolution voxel maps to minimize point-to-line and point-to-plane distances, while the IMU factor bridges rapid rotations or sharp accelerations that scan matching alone would miss—a design shared across modern VIO/LIO systems including VINS-Mono, ORB-SLAM3's inertial mode, and LIO-SAM.
 
 > **Further reading**
-> - [Forster et al., "On-Manifold Preintegration for Real-Time Visual-Inertial Odometry" (TRO 2017, arXiv:1512.02363)](https://arxiv.org/abs/1512.02363) — The original on-manifold preintegration paper (the preintegration concept itself is from Lupton & Sukkarieh 2012). Equation-heavy, but required reading for the field.
-> - [Forster et al., "IMU Preintegration on Manifold for Efficient VIO" (2015 RSS)](https://rpg.ifi.uzh.ch/docs/RSS15_Forster.pdf) — An earlier version of the paper above that explains the method more concisely.
-> - [Shan et al., "LIO-SAM" (IROS 2020)](https://github.com/TixiaoShan/LIO-SAM) — Reference implementation of tightly-coupled LIO. Read both the code and the paper.
-> - [Sola et al., "A micro Lie theory for state estimation in robotics" (arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — A practical summary of Lie groups and algebras. Good to read before preintegration.
-> - Source code of GTSAM's `PreintegratedImuMeasurements` class — see how the theory turns into code.
-> - [IMU Preintegration MATLAB implementation](https://github.com/GentleDell/imu_preintegration_matlab) — MATLAB code tested on KITTI. Good for studying by cross-referencing equations and code.
+> - [Forster et al., "On-Manifold Preintegration for Real-Time Visual-Inertial Odometry" (TRO 2017, arXiv:1512.02363)](https://arxiv.org/abs/1512.02363) — Foundational on-manifold preintegration paper (building on the preintegration concept of Lupton & Sukkarieh 2012); mathematically dense, essential reading.
+> - [Forster et al., "IMU Preintegration on Manifold for Efficient VIO" (2015 RSS)](https://rpg.ifi.uzh.ch/docs/RSS15_Forster.pdf) — Earlier, more concise conference presentation of the method above.
+> - [Shan et al., "LIO-SAM" (IROS 2020)](https://github.com/TixiaoShan/LIO-SAM) — Reference open-source implementation of tightly coupled LIO; worth reading alongside the paper.
+> - [Sola et al., "A micro Lie theory for state estimation in robotics" (arXiv:1812.01537)](https://arxiv.org/abs/1812.01537) — Practical primer on Lie groups and Lie algebras; ideal preparation before studying preintegration.
+> - Source code of GTSAM's `PreintegratedImuMeasurements` class — Shows exactly how the preintegration equations map into production C++ code.
+> - [IMU Preintegration MATLAB implementation](https://github.com/GentleDell/imu_preintegration_matlab) — Clean MATLAB code tested on KITTI for cross-referencing equations against implementation.
 
 ### 14.11 Advanced: Observability Analysis
 
-Run a SLAM/VIO system and you run into phenomena like "why is drift so bad in this situation?" and "why does the pose wobble when I stand still?" Many of these phenomena stem from limits of the system's **observability**.
+Anyone running VIO or SLAM on hardware eventually hits puzzling failure modes: drift spikes unexpectedly along a straight corridor, or the pose drifts slowly even when the robot is sitting completely still. Many of these symptoms reflect fundamental **observability limits** rather than coding bugs.
 
-**Unobservable states of visual-inertial systems**: Hesch et al. (2014) analyzed an ideal linearized VINS model that undergoes arbitrary motion while observing a single point feature, and found the following 4 directions to be unobservable:
+In an influential analysis, Hesch et al. (2014) examined an ideal linearized VINS model undergoing arbitrary motion while observing a point feature and showed that four global degrees of freedom are strictly **unobservable**:
 
-1. **Global position (3 DoF)** — The absolute position is unknown. Without an absolute reference like GPS, you can only treat the starting point as the origin.
-2. **Global yaw (1 DoF)** — The rotation (heading) about the gravity-direction axis. Without a compass, you cannot tell "which way is north."
+1. **Global position (3 DoF)** — Without an external reference such as GPS, no combination of onboard camera and IMU measurements can recover absolute world coordinates; the starting pose simply defines the origin.
+2. **Global yaw (1 DoF)** — Gravity fixes roll and pitch relative to the vertical axis, yet rotation about gravity (heading) remains unobservable without a compass or known landmark frame.
 
-This result applies to the stated model and motion conditions. Whether roll/pitch, metric scale, IMU bias, and calibration parameters can be estimated depends on the sensor configuration and on motion excitation. A stereo baseline provides a metric reference, but monocular images alone cannot determine scale. Monocular VIO estimates scale by also using IMU measurements under sufficiently informative motion.
+While those four gauge directions are always unobservable under the stated model, whether roll/pitch, metric scale, IMU biases, and extrinsics can be recovered depends on sensor configuration and trajectory excitation. A stereo rig supplies scale from its calibrated baseline, whereas a monocular VIO system requires accelerated motion to excite the IMU and render metric scale observable.
 
-**Degenerate motion** — Under specific motion patterns, additional states become unobservable:
+**Degenerate motion** creates additional unobservable directions on top of those four baseline gauge freedoms:
 
-- **Pure rotation**: With no translational parallax, translation cannot be recovered from monocular images alone. Estimating the rotation itself and whether tracking can continue are separate matters.
-- **Insufficient motion during initialization**: If monocular VIO initialization observes only constant-velocity motion or a stationary state, multiple solutions for the IMU bias can remain. Scale, gravity, and bias initialization can then become weak; the exact degeneracy depends on the state and measurement models.
+- **Pure rotation** produces zero translational parallax, preventing monocular triangulation of depth or translation (though rotation estimation and tracking survival depend on the front-end).
+- **Insufficient motion during initialization**—such as moving at constant velocity or remaining stationary—leaves multiple solutions for IMU biases indistinguishable, weakening scale, gravity alignment, and bias convergence depending on the exact state and measurement model.
 
-**Problem in EKF-based systems**: Apply a standard EKF to VIO and, due to linearization error, the covariance shrinks even along theoretically unobservable directions (the uncertainty is reduced artificially). This is a major cause of inconsistency.
+**Inconsistency in standard EKFs**: When a standard EKF is applied to VIO, evaluating Jacobians at successively changing state estimates breaks the theoretical unobservable subspace. As a result, covariance shrinks spuriously along unobservable directions—creating false confidence that drives estimator inconsistency and divergence.
 
-**OC-EKF (Observability-Constrained EKF)**: To fix this problem, the EKF's Jacobian is modified to preserve the null space of the unobservable directions. It forces the estimator to "keep not knowing what it does not know."
+**OC-EKF (Observability-Constrained EKF)** fixes this defect by constraining the EKF's transition and measurement Jacobians so they preserve the true unobservable null space, forcing the filter to remain honest about what it cannot observe.
 
-Practical implications:
-- During VIO initialization, provide enough rotational and translational motion to meet the conditions of the implementation you use, and check the convergence indicators for scale, gravity, and bias.
-- Loop closure can reduce accumulated drift through revisit constraints, but it does not by itself create a new absolute reference for global position or yaw.
-- Because monocular VIO's metric scale is not determined by images alone, check that the IMU measurements and motion during initialization provide enough information.
+In practice, these observability properties translate into three operational checks:
+- Excite both rotation and translation sufficiently during VIO initialization, and verify convergence indicators for scale, gravity, and biases before trusting odometry.
+- Remember that loop closure reduces relative drift between revisited segments, but cannot by itself anchor absolute global position or yaw.
+- Because monocular images never fix metric scale alone, confirm that inertial excitation during startup is rich enough to make scale observable.
 
 > **Further reading**
-> - [Hesch et al., "Consistency Analysis and Improvement of Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6605544) — The original paper for OC-EKF/OC-VINS.
-> - [Hong & Lim, "Visual-Inertial Odometry with Robust Initialization and Online Scale Estimation" (Sensors 2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6308559/) — An implementation example that addresses the conditions under which initialization weakens during constant-velocity or stationary segments.
-> - Barfoot, "State Estimation for Robotics" Ch.9 — Theoretical foundation of observability analysis.
-> - [Huang & Dissanayake, "A critique of current developments in Simultaneous Localization and Mapping" (IJRR 2016)](https://journals.sagepub.com/doi/10.1177/0278364916643566) — A critical summary of observability/consistency issues in SLAM.
+> - [Hesch et al., "Consistency Analysis and Improvement of Vision-aided Inertial Navigation" (TRO 2014)](https://ieeexplore.ieee.org/document/6605544) — The foundational OC-EKF / OC-VINS paper.
+> - [Hong & Lim, "Visual-Inertial Odometry with Robust Initialization and Online Scale Estimation" (Sensors 2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6308559/) — Practical study addressing initialization degradation during constant-velocity and stationary segments.
+> - Barfoot, "State Estimation for Robotics" Ch.9 — Theoretical treatment of observability analysis.
+> - [Huang & Dissanayake, "A critique of current developments in Simultaneous Localization and Mapping" (IJRR 2016)](https://journals.sagepub.com/doi/10.1177/0278364916643566) — Critical survey of observability and consistency issues in SLAM.
 
 > **Practice**: [Odometry Uncertainty Visualization](https://alexjunholee.github.io/robotics-practice/app.html#odom_uncertainty)
-> Observe interactively how the uncertainty of odometry accumulates over time and how the covariance ellipse grows.
+> Interactively observe how odometry uncertainty compounds over time and watch the pose covariance ellipse grow.
 
 #### 14.11.1 Filter-based vs Optimization-based: Which Is Better?
 
-Whether filtering or optimization is preferable has long been debated in SLAM and VIO. Mathematically, Gauss-Newton optimization and the iterated EKF (IEKF) solve the same problem in different forms.
+The relative merits of filtering versus optimization have been debated throughout the history of SLAM and VIO. Mathematically, Gauss-Newton optimization and an iterated EKF (IEKF) solve the exact same MAP objective in different algebraic forms.
 
-- **Filter (EKF, MSCKF, and so on)**: updates state and covariance as measurements arrive. A simple EKF odometry can retain only the current state, whereas MSCKF keeps a bounded set of past camera clones in its state. Bounding the retained history can use less memory than full smoothing.
-- **Optimization (BA, factor graph)**: Keeps all past states and optimizes them jointly. Because past data can be relinearized, accuracy is higher. But compute grows with the number of states (mitigated by sliding window or iSAM2).
+In practice, the distinction comes down to state retention and relinearization:
+- **Filters (EKF, MSCKF)** update the state and covariance incrementally as each measurement arrives. Simple EKF odometry retains only the current state, whereas MSCKF keeps a bounded window of past camera poses; bounding retained history typically lowers memory usage relative to full smoothing.
+- **Optimizers (BA, factor graphs)** retain historical states (or a sliding window / Bayes tree in iSAM2) and optimize them jointly, allowing past linearization points to be refined for higher accuracy at greater computational cost.
 
-Performance differences between VINS-Mono (optimization) and MSCKF (filter) arise mainly from the **system structure**, including which states are retained and which measurements are used. Optimization-based systems can also reduce past linearization error through relinearization.
-
-Practical choice:
-- IMU-centric + lightweight → filter (MSCKF, the IEKF in FAST-LIO2)
-- Camera-centric + accuracy → optimization (VINS-Mono, ORB-SLAM3)
-- Both needed → hybrid (LIO-SAM: optimization with IMU preintegration plugged in as a factor)
-
-(Reference: [Giseop Kim's blog — Gauss-Newton Opt == IEKF update?](https://gisbi-kim.github.io/blog/2022/03/05/gn-iekf-same.html))
+Performance gaps between systems like VINS-Mono (optimization) and MSCKF (filtering) therefore stem primarily from **system architecture**—which states and measurements are kept—alongside the ability of optimizers to relinearize earlier states. In practice, IMU-centric platforms with tight compute budgets often favor filters (MSCKF or the IEKF in FAST-LIO2), camera-centric systems prioritizing accuracy favor sliding-window optimization (VINS-Mono, ORB-SLAM3), and factor-graph hybrids such as LIO-SAM combine both worlds by embedding IMU preintegration directly inside an incremental optimizer (see [Giseop Kim's blog — Gauss-Newton Opt == IEKF update?](https://gisbi-kim.github.io/blog/2022/03/05/gn-iekf-same.html)).
 
 ### 14.12 Advanced: Semantic SLAM
 
-Classic SLAM produces a purely geometric map. Point clouds, meshes, occupancy grids and so on record only "the shape of space." It records an obstacle's location without identifying whether it is a wall, a door, or a bookshelf. Semantic SLAM adds semantic information to the map.
+Classical SLAM constructs purely geometric maps—point clouds, meshes, or occupancy grids that record where surfaces lie without knowing whether a cluster of points is a wall, a door, or a bookshelf. **Semantic SLAM** enriches geometric mapping with object categories and high-level concepts so robots can reason about *what* occupies the space.
 
-Approaches split by landmark representation. **Object-level SLAM** (CubeSLAM, QuadricSLAM) estimates objects as landmarks — 3D cuboids, dual quadrics, and the like — rather than points. It depends on an object detector, but data association is more robust than point-based, and object-level reasoning becomes possible. **Panoptic SLAM** fuses panoptic segmentation results into 3D to produce a map where every pixel carries a semantic label. The robot can directly query "there are 3 chairs in this room" on the map. **Open-vocabulary SLAM** (ConceptGraphs) stores features from a vision-language model like CLIP in the map, so places can be searched with natural language. It connects directly to the 3D Scene Graph (Hydra, etc.) discussed in Chapter 13.
+Systems differ primarily in how semantic information attaches to the map:
+- **Object-level SLAM** (such as **CubeSLAM** and **QuadricSLAM**) represents landmarks as 3D cuboids or dual quadrics rather than anonymous points. Although it relies on an object detector, object-level data association is far more distinctive across viewpoints and supports reasoning at the level of whole objects.
+- **Panoptic SLAM** fuses per-pixel panoptic segmentation predictions into 3D, allowing queries such as "how many chairs are in this room" directly against the reconstructed map.
+- **Open-vocabulary SLAM** (such as **ConceptGraphs**) stores CLIP-style vision-language embeddings inside the map so arbitrary objects and places can be retrieved by natural language—connecting directly to the 3D scene graphs introduced in Chapter 13.
 
-**Handling dynamic objects**: Semantic labels are also used to improve SLAM robustness in dynamic environments. If you drop features from classes likely to be dynamic — "person," "car," and so on — from tracking/mapping, you can do clean SLAM with the static environment alone.
-- DynaSLAM: ORB-SLAM2 + Mask R-CNN to mask dynamic objects
-- DS-SLAM: semantic segmentation to filter dynamic regions
+Semantic labels also harden tracking in **dynamic environments**: by identifying and masking out keypoints belonging to transient classes such as people, cars, or animals, pipelines like **DynaSLAM** (ORB-SLAM2 paired with Mask R-CNN) and **DS-SLAM** restrict pose estimation and mapping to static structure alone:
 
 ```python
 # Pseudocode for dynamic object filtering
@@ -903,21 +781,22 @@ for feature in detected_features:
 ```
 
 > **Further reading**
-> - [Nicholson et al., "QuadricSLAM: Dual Quadrics from Object Detections as Landmarks in Object-Oriented SLAM" (RA-L 2019)](https://arxiv.org/abs/1804.04011) — Representative paper for object-level SLAM.
-> - [ConceptGraphs (arXiv:2309.16650)](https://arxiv.org/abs/2309.16650) — Open-vocabulary 3D scene graph. Read alongside Chapter 13.
-> - [Bescos et al., "DynaSLAM: Tracking, Mapping and Inpainting in Dynamic Scenes" (RA-L 2018)](https://arxiv.org/abs/1806.05620) — SLAM in dynamic environments.
+> - [Nicholson et al., "QuadricSLAM: Dual Quadrics from Object Detections as Landmarks in Object-Oriented SLAM" (RA-L 2019)](https://arxiv.org/abs/1804.04011) — Representative paper on object-level SLAM.
+> - [ConceptGraphs (arXiv:2309.16650)](https://arxiv.org/abs/2309.16650) — Open-vocabulary 3D scene graphs; pairs well with Chapter 13.
+> - [Bescos et al., "DynaSLAM: Tracking, Mapping and Inpainting in Dynamic Scenes" (RA-L 2018)](https://arxiv.org/abs/1806.05620) — Visual SLAM in dynamic environments.
 
 ### 14.13 Advanced: Multi-Robot SLAM
 
-Having one robot explore a large environment takes a long time. Multiple robots exploring in parallel can cut the time, but merging each robot's partial map (submap) into one consistent global map is not trivial.
+Mapping a large campus or warehouse with a single robot takes time. Deploying multiple robots in parallel speeds up coverage, but merging their independent submaps into a single globally consistent coordinate frame poses significant communication and consistency challenges.
 
-The **centralized approach** sends sensor data or local maps from several robots to a server for joint optimization. Global information is easier to access, but communication and server compute can become bottlenecks, and the server is a single point of failure. Centralization itself does not guarantee a global optimum for non-convex SLAM.
+In a **centralized** architecture, each robot streams sensor data or local submaps to a central server for joint optimization. While a central server simplifies global data association, bandwidth limits and server compute create bottlenecks, and the server becomes a single point of failure—nor does centralization alone guarantee a global optimum for non-convex SLAM objectives.
 
-The **distributed approach** has each robot run local SLAM and create relative-pose constraints at rendezvous or inter-robot loop closures. Exchanging descriptors or submaps rather than raw data can reduce communication, but may also remove evidence needed for verification. Which variables and factors each robot stores and exchanges, and when asynchronous optimization converges, depend on the algorithm.
+In a **distributed** architecture, each robot runs local SLAM onboard and exchanges compact descriptors or submaps only during rendezvous or inter-robot loop closures. Transmitting descriptors rather than raw point clouds saves bandwidth, though dropping raw evidence can make geometric verification harder; exactly which variables are shared and when asynchronous optimization converges depend on the distributed solver.
 
-A distributed system must address **inter-robot loop closure**, **coordinate-frame alignment**, and **outlier rejection** together. Relative SE(3) may arrive as one verified 6-DoF pose constraint; when estimated from 3D point correspondences, it needs at least three non-degenerate points and enough inliers. PCM, GNC, distributed Gauss-Seidel, and ADMM make different assumptions and communication tradeoffs, so selection depends on the system.
+Any distributed multi-robot pipeline must solve **inter-robot loop closure**, **coordinate-frame alignment**, and **outlier rejection** jointly. A verified inter-robot match may arrive as a full 6-DoF `SE(3)` constraint, or be estimated from 3D point correspondences (requiring at least three non-collinear points and sufficient inliers). Frameworks such as Pairwise Consistent Measurement Set Maximization (PCM), Graduated Non-Convexity (GNC), Distributed Gauss-Seidel (DGS), and Alternating Direction Method of Multipliers (ADMM) trade off communication overhead, outlier resilience, and convergence guarantees differently.
 
-**Representative systems**:
+The table below highlights three representative open-source multi-robot SLAM systems.
+
 | System | Characteristics |
 |---|---|
 | **Kimera-Multi** | Distributed, 3D mesh + semantic, Kimera based |
@@ -925,93 +804,82 @@ A distributed system must address **inter-robot loop closure**, **coordinate-fra
 | **Swarm-SLAM** | ROS2 based, supports diverse sensors, lightweight |
 
 > **Further reading**
-> - [Lajoie et al., "DOOR-SLAM: Distributed, Online, and Outlier Resilient SLAM for Robotic Teams" (RA-L 2020)](https://arxiv.org/abs/1909.12198) — Distributed SLAM + robust optimization.
-> - [Tian et al., "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM for Multi-Robot Systems" (T-RO 2022)](https://arxiv.org/abs/2106.14386) — Multi-robot semantic SLAM.
-> - [Cieslewski et al., "Data-Efficient Decentralized Visual SLAM" (ICRA 2018)](https://arxiv.org/abs/1710.05772) — Early work on communication-efficient distributed SLAM.
+> - [Lajoie et al., "DOOR-SLAM: Distributed, Online, and Outlier Resilient SLAM for Robotic Teams" (RA-L 2020)](https://arxiv.org/abs/1909.12198) — Distributed SLAM with outlier-resilient back-end optimization.
+> - [Tian et al., "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM for Multi-Robot Systems" (T-RO 2022)](https://arxiv.org/abs/2106.14386) — Distributed metric-semantic multi-robot SLAM.
+> - [Cieslewski et al., "Data-Efficient Decentralized Visual SLAM" (ICRA 2018)](https://arxiv.org/abs/1710.05772) — Foundational work on communication-efficient decentralized visual SLAM.
 
 ### 14.14 Advanced: Place Recognition
 
-The core question of loop closure: "have I seen this scene before?" This is an image retrieval problem. The descriptor of the current frame is compared against the descriptors of all past keyframes and the most similar one is found. The accuracy of SLAM depends on loop closure, and loop closure depends on place recognition.
+Loop closure begins with a retrieval problem: *"Have I seen this place before?"* Given the current sensor observation, place recognition searches past keyframes for the closest match. Because a single false-positive loop closure can corrupt an otherwise accurate trajectory, loop-closure reliability hinges directly on place-recognition precision and geometric verification.
 
 **Classical approach: Bag of Visual Words (BoVW)**
 
-The DBoW2 library is representative and is used in ORB-SLAM2/3.
-1. Extract local features (ORB, etc.) from a large image set
-2. Build a visual vocabulary (word dictionary) with k-means clustering
-3. Represent each image as a histogram (BoW vector) of "how often each visual word appears"
-4. Compare images by similarity between BoW vectors (L1-score, etc.)
+Used in ORB-SLAM2/3 via the **DBoW2** library, BoVW adapts text-retrieval inverted indices to image matching:
+1. Extract local keypoints and descriptors (such as ORB) across a large training corpus.
+2. Quantize those descriptors into a discrete visual vocabulary using k-means clustering.
+3. Summarize each incoming image as a normalized histogram (BoW vector) counting how often each visual word appears.
+4. Score candidate matches by comparing BoW histograms (for example via L1 distance).
 
-Strengths: fast (via an inverted index) and well-tested. Weaknesses: fragile against viewpoint/illumination changes, and the vocabulary needs training.
+BoVW lookup is fast via inverted indexing and thoroughly battle-tested, though it struggles under severe viewpoint shifts or lighting changes and depends on a pre-trained vocabulary.
 
 **Learning-based approach: global descriptors**
 
-This approach compresses a whole image into a single compact vector. **NetVLAD** (2016) combined CNN features with VLAD aggregation and reported higher recall than its comparison methods on the paper's city-scale benchmarks. **CosPlace** (2022) and **MixVPR** (2023) evaluated changes to descriptor learning and aggregation under their respective datasets and protocols. **AnyLoc** (2023) used DINOv2 features and reported results without place-recognition fine-tuning across several indoor, outdoor, and aerial datasets. None of these results guarantees greater robustness than BoVW in every environment; measure recall and false positives in the target domain.
+Learned place recognition encodes an entire image directly into a single compact vector. **NetVLAD** (2016) combined CNN feature maps with a differentiable VLAD pooling layer and outperformed classical baselines on city-scale benchmarks. Later works such as **CosPlace** (2022) and **MixVPR** (2023) refined training objectives and feature aggregation across their respective datasets, while **AnyLoc** (2023) leveraged frozen DINOv2 foundation features to perform place recognition without task-specific fine-tuning across indoor, outdoor, and aerial benchmarks. None of these methods automatically beats BoVW in every environment; recall and false-positive rates still need measurement on the target deployment domain.
 
-**LiDAR-based place recognition**:
+**LiDAR-based place recognition**
 
-Recognize places from 3D structure alone, so the descriptor does not directly depend on image illumination. Weather and dynamic objects can still change point returns, and structurally similar environments such as long corridors can be confused.
+Matching 3D point-cloud structure avoids sensitivity to ambient illumination, though snow, rain, dynamic traffic, and repetitive geometry such as identical long corridors can still trigger aliasing. **Scan Context** (IROS 2018) projects each 3D scan into a polar bird's-eye-view matrix encoding maximum height and supports fast rotation-invariant matching, whereas **OverlapTransformer** (2022) learns rotation-invariant global descriptors directly from LiDAR range images using a Transformer.
 
-- **Scan Context** (IROS 2018): Projects a 3D point cloud into a bird-eye view and generates a 2D descriptor based on range/height. Supports rotation-invariant matching.
-- **OverlapTransformer** (2022): Learns a global descriptor on LiDAR range images with a Transformer.
+**Cross-modal and sequence matching**
 
-**Cross-modal place recognition**: Query with a camera image and retrieve from a LiDAR map, or vice versa. Important for multi-robot SLAM across robots with different sensors.
+Multi-robot teams or heterogeneous mapping pipelines increasingly require **cross-modal place recognition**—querying a LiDAR map with a camera image or vice versa. Meanwhile, when individual frames are ambiguous across day/night or seasonal transitions, **sequence matching** compares short temporal windows instead of isolated snapshots. **SeqSLAM** (2012) demonstrated that matching sequences of frames remains reliable even when single-frame similarity collapses, and newer methods learn compact sequence descriptors to accelerate retrieval.
 
-**Sequence matching**: To overcome the limits of single-image matching, match sequences of consecutive frames together.
-- **SeqSLAM** (2012): Individual image similarities can be low, but if the sequence pattern matches, the system declares it the same place. Works even under dramatic appearance changes (day vs night).
-- Recent methods: learn a sequence descriptor for more efficient sequence matching.
-
-Practical tip: DBoW2 is a public baseline used by the ORB-SLAM family. Under large illumination or seasonal changes, compare learned descriptors after NetVLAD on the same target data. AnyLoc constructs features without task-specific fine-tuning, but backbone compute, descriptor memory, and target-domain recall still need validation.
-
-The cycle-posterior method in §14.16.5 also detects a place-consistency event and corrects past trajectory estimates. This is a functional analogy, not evidence that modern loop closure directly descends from that algorithm.
+In practice, DBoW2 remains a clean public baseline for standard visual SLAM; under major lighting or seasonal shifts, benchmark learned descriptors from NetVLAD onward on target data, weighing AnyLoc's zero-shot convenience against backbone latency, descriptor memory, and domain recall. Note also that the cycle-posterior method covered later in §14.16.5 detects a similar place-consistency event to trigger backward trajectory correction—a helpful functional analogy rather than a claim of direct algorithmic lineage.
 
 > **Further reading**
-> - [Arandjelovic et al., "NetVLAD: CNN architecture for weakly supervised place recognition" (arXiv:1511.07247)](https://arxiv.org/abs/1511.07247) — Starting point of learning-based place recognition.
-> - [Keetha et al., "AnyLoc: Towards Universal Visual Place Recognition" (arXiv:2308.00688)](https://arxiv.org/abs/2308.00688) — Foundation model-based zero-shot place recognition.
-> - [Kim & Kim, "Scan Context: Egocentric Spatial Descriptor for Place Recognition within 3D Point Cloud Map" (IROS 2018)](https://ieeexplore.ieee.org/document/8593953) — Representative method for LiDAR place recognition.
-> - [Giseop Kim's blog — Scan Context-based LiDAR Pose-graph SLAM implementation](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — A walk-through of integrating Scan Context into LiDAR SLAM.
-> - [Dark Programmer — Bag of Words technique](https://darkpgmr.tistory.com/125) — Explains the principles of BoW by connecting it to image retrieval.
+> - [Arandjelovic et al., "NetVLAD: CNN architecture for weakly supervised place recognition" (arXiv:1511.07247)](https://arxiv.org/abs/1511.07247) — Landmark paper in learned visual place recognition.
+> - [Keetha et al., "AnyLoc: Towards Universal Visual Place Recognition" (arXiv:2308.00688)](https://arxiv.org/abs/2308.00688) — Zero-shot place recognition built on visual foundation models.
+> - [Kim & Kim, "Scan Context: Egocentric Spatial Descriptor for Place Recognition within 3D Point Cloud Map" (IROS 2018)](https://ieeexplore.ieee.org/document/8593953) — Widely adopted descriptor for 3D LiDAR place recognition.
+> - [Giseop Kim's blog — Scan Context-based LiDAR Pose-graph SLAM implementation](https://gisbi-kim.github.io/blog/2021/05/17/sclidarslam.html) — Practical walk-through of integrating Scan Context into LiDAR SLAM.
+> - [Dark Programmer — Bag of Words technique](https://darkpgmr.tistory.com/125) — Explains BoW fundamentals through the lens of image retrieval.
 
 > **Technical Timeline: SLAM & Odometry**
-> - **~2007**: The classical era. EKF-SLAM and FastSLAM (particle-filter based) dominated. MonoSLAM (2007) announced the arrival of real-time monocular SLAM. PTAM (2007) proposed the tracking/mapping split architecture.
-> - **2010–2015**: direct methods such as LSD-SLAM and SVO emerged. LOAM (2014) presented an influential LiDAR odometry-and-mapping structure, and ORB-SLAM (2015) provided a public feature-based visual-SLAM baseline.
-> - **2015–2020**: public VIO implementations and applications expanded around VINS-Mono, the MSCKF family, and others. DSO presented direct sparse odometry, while LiDAR-inertial systems such as LIO-SAM appeared.
-> - **2020–2023**: public systems including FAST-LIO/FAST-LIO2, ORB-SLAM3, DROID-SLAM, and R3LIVE combined filtering, optimization, and learning in different ways.
-> - **2024–**: 3DGS-based SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is changing the direction of Neural SLAM. Research combining foundation models with SLAM (for instance, finding a location by describing a place in natural language) is also beginning.
-> - **Recent direction**: geometric SLAM has accumulated public implementations and benchmark results around systems such as ORB-SLAM3, LIO-SAM, and FAST-LIO2. Meanwhile, 3DGS-SLAM and learning-based methods expand the choices for scene representation and the front-end. KITTI, EuRoC, and TUM RGB-D provide common data for comparing their assumptions and failure cases.
+> - **~2007**: Classical filtering dominated via EKF-SLAM and particle-filter FastSLAM. MonoSLAM (2007) brought real-time monocular SLAM to desktop CPUs, while PTAM (2007) introduced the parallel tracking-and-mapping split.
+> - **2010–2015**: Direct photometric pipelines such as LSD-SLAM and SVO emerged. LOAM (2014) established edge/plane LiDAR odometry and mapping, and ORB-SLAM (2015) set a lasting open-source baseline for feature-based visual SLAM.
+> - **2015–2020**: Open visual-inertial estimators matured around VINS-Mono and the MSCKF family, DSO formalized direct sparse odometry, and tightly coupled LiDAR-inertial graph systems such as LIO-SAM appeared.
+> - **2020–2023**: Production and research systems—including FAST-LIO/FAST-LIO2, ORB-SLAM3, DROID-SLAM, and R3LIVE—combined iterated filtering, incremental smoothing, and learned front-ends in diverse architectures.
+> - **2024–**: 3DGS-based SLAM (SplaTAM, MonoGS, Gaussian-SLAM) is reshaping neural mapping, alongside early systems pairing foundation models with SLAM for natural-language spatial queries.
+> - **Recent direction**: Mature geometric systems such as ORB-SLAM3, LIO-SAM, and FAST-LIO2 anchor public benchmarks, while 3DGS-SLAM and learned front-ends broaden scene representations. Standard benchmarks including KITTI, EuRoC, and TUM RGB-D remain essential for testing assumptions and failure modes head-to-head.
 
 ### 14.15 Advanced: Long-term Mapping
 
-When you operate a robot in a real environment, "build the map once and be done" is not the reality. You visit the same place multiple times, update the map, remove dynamic objects (people, vehicles), and integrate data from multiple sessions. This is long-term mapping, and it is unavoidable in practical robot systems.
+A robot operating continuously in a real building or city cannot simply map its environment once and freeze that map forever. Layouts evolve, parked cars come and go, pedestrians walk across scans, and multiple mapping sessions must merge seamlessly over weeks or months. **Long-term mapping** extends SLAM to stay accurate, clean, and bounded across lifelong deployments.
 
 #### 14.15.1 Incremental Smoothing: from iSAM to iSAM2
 
-Filter-based SLAM (EKF, etc.) struggles with real-time processing as the Jacobian matrix grows with the number of states. iSAM (Kaess et al., TRO 2008) showed that the R matrix of the QR factorization can be updated incrementally with Givens rotations. When a new measurement is added, rather than recomputing the whole thing, only the affected part is updated. However, as non-zero elements accumulate, periodic re-ordering is needed.
+Classical EKF-SLAM slows down as state covariance grows, while naive batch nonlinear optimization recomputes the entire matrix factorization on every new keyframe. **iSAM** (Kaess et al., TRO 2008) avoided full recomputation by updating the QR factor `R` incrementally via Givens rotations whenever new measurements arrived—though accumulating fill-in still forced periodic global variable reordering.
 
-iSAM2 (Kaess et al., IJRR 2012) overcame this limit by introducing the Bayes tree structure. Only the affected subtree is re-eliminated, delivering consistent performance even on large-scale problems. The Bayes tree is exactly the core engine of GTSAM.
+**iSAM2** (Kaess et al., IJRR 2012) eliminated that bottleneck by organizing elimination as a **Bayes tree**, re-eliminating and relinearizing only the local subtree touched by new factors. That incremental tree engine is what powers GTSAM across large-scale SLAM back-ends today.
 
 #### 14.15.2 Dynamic Object Removal
 
-Removing dynamic objects from the map is an essential task in long-term mapping.
+Leaving ghost trails of walking pedestrians or moving cars inside a static map degrades later localization and path planning. Cleaning dynamic artifacts from point-cloud maps is therefore essential:
 
-**Removert** (Kim et al., 2020): Classifies static and dynamic points with multi-resolution range images. It projects a point cloud into a range image and compares the ranges with observations from other viewpoints. The two-stage design first selects static points conservatively and then restores points removed in error. Multiple confidence levels control the trade-off between the stages.
-
-Compared with prior approaches: voxel ray-casting is accurate but expensive; visibility-based methods assume that static points behind dynamics are preserved; segmentation-based methods are weak on unknown labels and ignore the scan-to-map relationship. Removert compensates for the drawbacks of these three using multi-resolution range-image comparison.
-
-**SuMa++** (Chen et al., IROS 2019): Adds semantic labels to surfel-based mapping. It augments LiDAR points with normals and semantic information, then removes only the surfels classified as dynamic by both semantics and motion. In motion-degenerate environments, moving points can still provide useful geometric constraints.
+- **Removert** (Kim et al., 2020) projects scans and maps into multi-resolution range images to flag discrepancies across viewpoints. Rather than carving out everything suspicious in one pass, its two-stage "remove, then revert" strategy aggressively prunes dynamic points first and then restores mistakenly removed static structure across confidence scales. Compared with voxel ray-casting (accurate but costly), naive visibility checks (which assume background points always survive), and pure semantic segmentation (blind to unseen classes and scan-to-map geometry), multi-resolution range-image comparison strikes a practical balance.
+- **SuMa++** (Chen et al., IROS 2019) enriches surfel maps with surface normals and semantic labels, suppressing surfels flagged as dynamic by both semantics and motion—while preserving moving-object constraints carefully when static geometry alone is degenerate.
 
 #### 14.15.3 Multi-Session SLAM
 
-When you map the same environment across multiple days, the trajectories of the sessions have to be merged into one. The problem is gauge freedom — each session's coordinate frame is different, so naively merging does not align them.
+Combining maps collected across different days introduces **gauge freedom**: each session starts in its own arbitrary coordinate origin, so raw trajectories cannot simply be overlaid.
 
-**LT-mapper** (Kim et al., 2021): Aligns multiple sessions via Scan Context-based anchor nodes and updates the map with positive/negative change detection. Splits changes into high dynamic and low dynamic, and further divides low dynamic into positive difference (newly appeared points) and negative difference (vanished points), managing a delta map.
-
-**Continuous-Time Estimation** (Furgale et al., ICRA 2012): Representing the trajectory with B-spline basis functions instead of discrete time lets you integrate sensors at different Hz with fewer variables. It is also applicable to self-calibration between fast sensors (IMU) and slow sensors (LiDAR, camera).
+- **LT-mapper** (Kim et al., 2021) aligns separate sessions using Scan Context anchor nodes and tracks map evolution through a delta map, separating transient high-dynamic clutter from low-dynamic structural changes—both newly added obstacles (positive differences) and removed objects (negative differences).
+- **Continuous-Time Estimation** (Furgale et al., ICRA 2012) replaces discrete pose timestamps with smooth B-spline basis functions, allowing asynchronous sensors at vastly different rates (such as high-rate IMUs, rolling-shutter cameras, and spinning LiDARs) to query states continuously with fewer variables and perform joint spatiotemporal self-calibration.
 
 > **Further reading**
-> - [Kaess et al., "iSAM2: Incremental Smoothing and Mapping Using the Bayes Tree" (IJRR 2012)](https://www.cs.cmu.edu/~kaess/pub/Kaess12ijrr.pdf) — Original paper on Bayes tree-based incremental SLAM.
-> - [Kim et al., "Remove, then Revert: Static Point Cloud Map Construction using Multiresolution Range Images" (IROS 2020)](https://github.com/irapkaist/removert) — Practical method for dynamic point removal. Code released.
-> - [Kim et al., "LT-mapper: A Modular Framework for LiDAR-based Lifelong Mapping" (ICRA 2022)](https://github.com/gisbi-kim/lt-mapper) — Multi-session SLAM framework.
-> - [Chen et al., "SuMa++: Efficient LiDAR-based Semantic SLAM" (IROS 2019)](https://github.com/PRBonn/semantic_suma) — LiDAR SLAM that exploits semantic information.
+> - [Kaess et al., "iSAM2: Incremental Smoothing and Mapping Using the Bayes Tree" (IJRR 2012)](https://www.cs.cmu.edu/~kaess/pub/Kaess12ijrr.pdf) — Original Bayes-tree incremental smoothing paper.
+> - [Kim et al., "Remove, then Revert: Static Point Cloud Map Construction using Multiresolution Range Images" (IROS 2020)](https://github.com/irapkaist/removert) — Practical dynamic-point removal algorithm and code.
+> - [Kim et al., "LT-mapper: A Modular Framework for LiDAR-based Lifelong Mapping" (ICRA 2022)](https://github.com/gisbi-kim/lt-mapper) — Multi-session lifelong LiDAR mapping framework.
+> - [Chen et al., "SuMa++: Efficient LiDAR-based Semantic SLAM" (IROS 2019)](https://github.com/PRBonn/semantic_suma) — Semantic surfel-based LiDAR SLAM.
 
 ---
 
@@ -1019,13 +887,13 @@ When you map the same environment across multiple days, the trajectories of the 
 
 *Cross-reference with §14.9 factor graph optimization (bidirectional).*
 
-When *Probabilistic Robotics* was published in 2005, several representations of SLAM uncertainty competed. EKF-SLAM used a joint state and covariance, EIF/SEIF exploited information-form additivity, and EM mapping treated unknown data association statistically. Factor graphs and GTSAM/iSAM2 later carried ideas such as additivity, variable elimination, and incremental updates into a modern optimization framework.
+When *Probabilistic Robotics* appeared in 2005, several competing formulations of SLAM uncertainty vied for dominance: EKF-SLAM maintained a joint state and dense covariance, EIF and SEIF exploited information-form additivity, and EM mapping treated unknown data association statistically. Modern factor graphs and incremental smoothers such as GTSAM and iSAM2 later brought additivity, variable elimination, and localized updates into a unified nonlinear optimization framework. Tracing this earlier generation clarifies *why* modern SLAM back-ends are structured the way they are.
 
 #### 14.16.1 EKF-SLAM (PR §10)
 
-The lineage begins with **Smith, Self, and Cheeseman (1986/1990)**, "Estimating Uncertain Spatial Relationships in Robotics." Their proposal of a "stochastic map" — bundling robot pose and landmarks into a single random variable — is the prototype of EKF-SLAM. Leonard and Durrant-Whyte in the 1990s, then Dissanayake et al. (2001, IEEE T-RA), completed the formalization.
+EKF-SLAM traces back to **Smith, Self, and Cheeseman (1986/1990)**, whose "stochastic map" stacked robot pose and landmarks into a single joint state vector. Leonard and Durrant-Whyte in the 1990s, followed by Dissanayake et al. (2001, IEEE T-RA), completed its mathematical formalization.
 
-**Algorithm skeleton**: The pose $x_t = (x, y, \theta)$ and N landmarks $(m_{j,x}, m_{j,y}, s_j)$ are packed into a $(3N+3)$-dimensional state vector $y_t$ and an EKF is run over it.
+To formulate the filter, the 2D pose $x_t = (x, y, \theta)$ and $N$ landmarks $(m_{j,x}, m_{j,y}, s_j)$ are stacked into a $(3N+3)$-dimensional joint state vector $y_t$, and a single EKF propagates both together:
 
 ```
 EKF_SLAM_known_correspondences(μ_{t-1}, Σ_{t-1}, u_t, z_t, c_t):
@@ -1049,35 +917,34 @@ EKF_SLAM_known_correspondences(μ_{t-1}, Σ_{t-1}, u_t, z_t, c_t):
   return μ_t, Σ_t
 ```
 
-**The Kalman gain $K_t^i$ is a $(3N+3) \times 3$ matrix** — a single landmark observation updates the entire state. Covariance off-diagonals propagate that observation to other landmark estimates, while the update cost grows as $O(N^2)$.
+Because **the Kalman gain $K_t^i$ is a $(3N+3) \times 3$ matrix**, observing even a single landmark updates the entire joint state vector. Off-diagonal covariance entries propagate that correction to every correlated landmark, causing each update step to scale as $O(N^2)$.
 
-With unknown correspondences, a provisional $(N_t+1)$-th landmark is temporarily appended to the map; Mahalanobis distances to all candidates are computed and the ML correspondence is selected. If the distance exceeds threshold $\alpha$, the observation is registered as a new landmark. This greedy ML decision, once wrong, cannot be undone — the fundamental weakness of ML data association.
+When correspondences are unknown, a provisional $(N_t+1)$-th landmark is appended temporarily to the map, Mahalanobis distances are evaluated against all existing candidates, and the maximum-likelihood (ML) match is selected; if the distance exceeds threshold $\alpha$, the observation initializes a new landmark. Because greedy ML decisions are irrevocable, a single false association permanently corrupts the covariance structure.
 
-EKF-SLAM's limits appeared on three axes. The covariance matrix $\Sigma \in \mathbb{R}^{(3N+3) \times (3N+3)}$ requires memory proportional to $N^2$ — 100 landmarks means a 303×303 matrix, 1000 landmarks means 3003×3003. As landmarks accumulate, past linearization error compounds and estimation becomes inconsistent (Bailey et al. 2006). Because past poses are marginalized out, full posterior optimization over them is impossible.
+Over larger trajectories, EKF-SLAM hits three structural limits: the dense covariance matrix $\Sigma \in \mathbb{R}^{(3N+3) \times (3N+3)}$ demands $O(N^2)$ memory (303×303 for 100 landmarks, 3003×3003 for 1,000); accumulating linearization errors ruin filter consistency (Bailey et al. 2006); and because past poses are marginalized out online, they can never be relinearized globally.
 
-For large landmark maps, dense covariance and accumulated linearization error make smoothing and factor-graph formulations more common than classical full-state EKF-SLAM. There is no universal landmark-count boundary below which EKF-SLAM is valid. It remains usable for small landmark or fiducial-mapping problems when compute, observation sparsity, and consistency requirements permit. Sliding-window filters such as MSCKF use EKF linearization and covariance propagation but do not keep landmarks permanently in the state. JCBB is an alternative to greedy ML association. GTSAM and iSAM2 solve the same broad SLAM problem through smoothing and factor graphs; they are a later formulation, not direct algorithmic descendants of EKF-SLAM.
+For large landmark maps, dense covariance and linearization drift have led modern pipelines toward smoothing and factor graphs. Although no universal landmark-count cutoff invalidates EKF-SLAM, it survives mostly in small fiducial-mapping or tightly constrained compute regimes. Sliding-window filters such as MSCKF retain EKF linearization and covariance propagation without keeping landmarks permanently in the state; joint compatibility branch and bound (JCBB) improves on greedy ML association; and GTSAM/iSAM2 solve SLAM via smoothing and factor graphs as a distinct formulation rather than a direct algorithmic descendant of EKF-SLAM.
 
 #### 14.16.2 GraphSLAM — Information-Form Batch SLAM (PR §11)
 
-In EKF-SLAM, $\Sigma$ carries dense correlations that must be updated with measurements. In the information form $\Omega = \Sigma^{-1}$, contributions from independent factors can be added locally, making graph sparsity easier to expose. Motion updates and marginalization can still create fill-in, so the information matrix does not stay sparse automatically. This motivates EIF and sparse graph formulations.
+While EKF-SLAM's covariance matrix $\Sigma$ couples every pair of variables densely, its inverse—the **information matrix** $\Omega = \Sigma^{-1}$—exposes the natural graph sparsity of SLAM because independent measurement factors enter by local addition. (Motion updates and variable marginalization can still create fill-in, so sparsity is not automatic.) That structural insight motivates both EIF and sparse graph formulations.
 
 ##### The intuition of information form: spring-mass analogy
 
-The central idea of EIF SLAM is that **information is additive**. Instead of covariance $\Sigma$, information matrix $\Omega = \Sigma^{-1}$ and information vector $\xi = \Omega \mu$ are used.
+Information-form SLAM replaces $(\mu, \Sigma)$ with the information matrix $\Omega = \Sigma^{-1}$ and information vector $\xi = \Omega \mu$, exploiting the fact that **information is additive**. Intuitively, variables (poses and landmarks) act like point masses, and non-zero off-diagonal blocks in $\Omega$ act like elastic springs tying coupled nodes together:
+- A control input $u_t$ inserts a spring between $x_{t-1}$ and $x_t$ with stiffness $R_t^{-1}$ (stiffer coupling for quieter odometry).
+- A landmark measurement $z_t^i$ inserts a spring between pose $x_t$ and landmark $m_j$ with stiffness $Q_t^{-1}$.
+- Two landmarks that have never been co-observed share no direct spring.
 
-Viewed as a spring-mass system: each variable (pose, landmark) is a node; off-diagonal elements of $\Omega$ are springs connecting two nodes.
-- Control $u_t$: a spring between $x_{t-1}$ and $x_t$. Stiffness = $R_t^{-1}$ (stronger coupling when motion noise is smaller).
-- Measurement $z_t^i$: a spring between pose $x_t$ and landmark $m_j$. Stiffness = $Q_t^{-1}$.
-- No direct spring between two different landmarks — they have never been observed relative to each other.
+Each measurement updates the information pair purely by **local addition**:
 
-**Information-form update rule**:
 $$\Omega \leftarrow \Omega + H_t^{iT} Q_t^{-1} H_t^i, \qquad \xi \leftarrow \xi + H_t^{iT} Q_t^{-1}[z_t^i - h(\mu_t) + H_t^i \mu_t]$$
 
-Measurement information can be introduced by **local addition**. Motion updates and marginalization can still require elimination and create fill-in, so not every operation is local. A factor graph supports a similar spring analogy because each factor connects a subset of variables, but the history and formulation of factor graphs do not begin with SEIF.
+While measurements add locally, motion updates and marginalization still require elimination steps that can introduce fill-in. Note that factor graphs share a similar spring-network intuition because each factor links a small subset of variables, even though factor graphs have a separate origin and do not begin with SEIF.
 
 ##### Four-step pipeline
 
-GraphSLAM processes the full posterior $p(x_{0:t}, m | z_{1:t}, u_{1:t})$ offline in batch, in information form. EIF and SEIF share that information form, but they are online filters that marginalize past states, so their objective and the states they retain differ.
+GraphSLAM applies this information-form view offline to the full batch posterior $p(x_{0:t}, m | z_{1:t}, u_{1:t})$, unlike EIF and SEIF, which run as online filters that marginalize out past robot poses:
 
 ```
 GraphSLAM_known_correspondence(u_{1:t}, z_{1:t}, c_{1:t}):
@@ -1094,22 +961,21 @@ GraphSLAM_known_correspondence(u_{1:t}, z_{1:t}, c_{1:t}):
   return μ_{0:t}, {μ_j}
 ```
 
-$\tau(j)$ denotes all pose time steps at which landmark $j$ was observed. The Reduce step *creates new springs between poses adjacent to each landmark and then detaches the landmark node*. This is mathematically identical to the **block diagonal Schur complement** trick in Bundle Adjustment (see §14.9.2).
+Here $\tau(j)$ denotes the set of time steps at which landmark $j$ was observed. Geometrically, the Reduce step replaces each landmark node with new springs directly linking all poses in $\tau(j)$—algebraically identical to the **block-diagonal Schur complement** used in modern bundle adjustment (§14.9.2).
 
-**Marginalization Lemma**: In a linear Gaussian information form, a marginal is expressed through a Schur complement. The operation can create fill-in among the variables that remain.
+More generally, the **Marginalization Lemma** expresses marginalization in any linear Gaussian information form as a Schur complement, which can introduce fill-in among the remaining variables:
+
 $$\bar\Omega_{xx} = \Omega_{xx} - \Omega_{xy} \Omega_{yy}^{-1} \Omega_{yx}$$
 
-GraphSLAM (Thrun and Montemerlo, 2006, IJRR) batch-optimizes a full trajectory and map posterior as a sparse information graph. It shares information-form additivity with EIF, but online filtering and batch smoothing should be distinguished. Lu and Milios (1997) were earlier work on global optimization of pose relations.
-
-One unknown-correspondence procedure for GraphSLAM evaluates whether feature pairs $(m_j, m_k)$ denote the same object, adds selected constraints to the graph, and reoptimizes. When factors are retained explicitly, a selected constraint can be removed before reoptimization. Switchable constraints (Sünderhauf & Protzel 2012) are a separate robust formulation that jointly optimizes a continuous activation variable for a loop factor; they should not be treated as a direct lineage claim.
-
-The sequence initialize → construct factors → eliminate variables → solve can be compared with modern batch SLAM. iSAM and iSAM2 perform incremental smoothing by updating the parts of linearization and elimination affected by new factors, while the Bayes tree organizes that factorization. This is more than a simple renaming or linear evolution of GraphSLAM.
+GraphSLAM (Thrun and Montemerlo, 2006, IJRR) thus optimizes the full trajectory and map in batch as a sparse information graph—building on earlier global pose-relation optimization by Lu and Milios (1997) and sharing information additivity with EIF, while remaining distinct from online filtering. When correspondences are unknown, GraphSLAM tests whether candidate feature pairs $(m_j, m_k)$ refer to the same landmark, inserts accepted constraints, and re-optimizes (removing explicit constraints before re-solving if needed—a discrete check distinct from switchable constraints by Sünderhauf & Protzel 2012, which jointly optimize continuous activation variables). Comparing GraphSLAM's `initialize → construct → eliminate → solve` cycle with modern iSAM/iSAM2 reveals both shared algebraic structure and a deeper advance: iSAM2 updates only affected subtrees in a Bayes tree rather than re-eliminating the entire graph in batch.
 
 #### 14.16.3 SEIF — Sparse Extended Information Filter (PR §12)
 
-The GraphSLAM formulation above is batch smoothing. A general EIF can also be used online, but an exact motion update can densify its information matrix. **SEIF** limits the active-feature set and introduces a sparsification approximation to target map-size-independent online updates. On its Victoria Park 3.5 km experiment, Thrun et al. (2004, IJRR) report similar error to their EKF-SLAM implementation at roughly half the time and one-quarter the memory.
+Whereas GraphSLAM operates in batch, an online EIF suffers from dense fill-in during exact motion updates. The **Sparse Extended Information Filter (SEIF)** bounds the set of "active" features and applies a **sparsification** step to pursue constant-time online updates independent of total map size. In their 3.5 km Victoria Park benchmark, Thrun et al. (2004, IJRR) reported accuracy comparable to EKF-SLAM at roughly half the runtime and one-quarter the memory.
 
 ##### Four-step update
+
+Each step of SEIF alternates local information updates with periodic sparsification and amortized state recovery:
 
 ```
 SEIF_SLAM_known_correspondences(ξ_{t-1}, Ω_{t-1}, μ_{t-1}, u_t, z_t, c_t):
@@ -1125,41 +991,39 @@ SEIF_SLAM_known_correspondences(ξ_{t-1}, Ω_{t-1}, μ_{t-1}, u_t, z_t, c_t):
 
 ##### Sparsification
 
-This is the core mechanism. The direct dependency between variables $a, b$ is approximated by the product of two marginals, creating a zero element in $\Omega$.
+Sparsification is SEIF's defining approximation: it severs the direct link between variables $a$ and $b$ by approximating the joint distribution as a product of marginals conditioned on $c$, forcing $\Omega_{a,b} = 0$:
 
 $$\tilde p(a,b,c) = \frac{p(a,c)\, p(b,c)}{p(c)} \quad \Longrightarrow \quad \Omega_{a,b} = 0$$
 
-This approximation can be described as a KL projection enforcing $a \perp b | c$. The effect of sparsification and repeated linearization on filter consistency must still be evaluated; it cannot be summarized as a universal guarantee that variance never decreases.
+This step corresponds to a KL-divergence projection enforcing conditional independence $a \perp b | c$. Because repeated approximation and relinearization can still erode filter consistency over long trajectories, sparsification cannot be treated as a blanket guarantee against overconfidence.
 
-Fixing the active feature count $K$ bounds the core local matrix in the motion and measurement updates at $(2K+3) \times (2K+3)$. This supports constant update complexity with respect to map size, but does not automatically make full-map state recovery or data association O(1).
-
-The example in *Probabilistic Robotics* uses about six active features. This is not a universal recommendation; consistency and compute must be checked for the sensor geometry and map. Eustice et al. (2006), "Exactly Sparse EIF," studies how to avoid the sparsification approximation under particular structures. PR Figure 12.3 shows how links change across measurement, motion, and sparsification.
+Keeping a fixed cap of $K$ active features bounds the local update matrix to size $(2K+3) \times (2K+3)$, delivering $O(1)$ motion and measurement updates with respect to map size (though full-map mean recovery and global data association are not automatically $O(1)$). *Probabilistic Robotics* illustrates SEIF with roughly six active features, though the safe number depends on sensor geometry and map density. Later work by Eustice et al. (2006), "Exactly Sparse EIF" (ESEIF), eliminates the sparsification approximation under specific structural conditions (see also PR Figure 12.3 for how graph links evolve across motion, measurement, and sparsification).
 
 ##### Tree-based data association
 
-The additivity of information form gives a special capability in data association: **soft correspondence constraints can be added or subtracted**. A soft constraint that features $m_i$ and $m_j$ are the same object is added as
+Information-form additivity also enables reversible data association: **soft correspondence constraints can be added or subtracted cleanly**. Asserting that features $m_i$ and $m_j$ represent the same landmark adds the quadratic term
 
 $$\Omega \leftarrow \Omega + F_{m_i - m_j}^T C\, F_{m_i - m_j}$$
 
-and can be removed if that factor is retained separately. This structure permits an A*-type frontier search over a data-association tree, but the number of hypotheses is exponential in the worst case. Switchable constraints (Sünderhauf & Protzel 2012) and Max-mixtures (Olson & Agarwal 2013) share the goal of robustness to false loop closures, but use separate formulations based on switch variables and mixture factors.
+which can be subtracted back out if kept as an explicit factor. This reversibility supports A*-style frontier search over a data-association tree (albeit with exponential worst-case branching). Later robust back-ends such as switchable constraints (Sünderhauf & Protzel 2012) and Max-mixtures (Olson & Agarwal 2013) share the goal of tolerating bad loop closures, but operate via continuous switch variables and mixture factors rather than tree search.
 
 ##### Multi-robot map fusion
 
-Information form makes the contribution of independent observation factors easy to add in multi-robot fusion. After expressing two robots' states in a common frame, their information terms can be added only when their priors and observations do not contain duplicated information.
+In multi-robot mapping, information additivity lets two robots merge maps after aligning into a shared coordinate frame—provided they do not share unmodeled priors or duplicate observations:
 
 $$\Omega^{\text{fused}} = \Omega^{j \leftarrow k\text{-aligned}} + \Omega^k, \qquad \xi^{\text{fused}} = \xi^{j \leftarrow k\text{-aligned}} + \xi^k$$
 
-Adding without tracking common information double-counts observations and produces over-confidence. Covariance-form estimates also cannot be fused by simple addition, although conservative methods such as covariance intersection exist. Nettleton et al. (2003) study distributed information fusion; DDF-SAM, Kimera-Multi, and Swarm-SLAM also address multi-robot estimation but use different communication and common-information assumptions (see §14.13).
+Summing correlated estimates naively double-counts shared evidence and produces overconfident covariances (covariance intersection avoids this in covariance form, while Nettleton et al. 2003, DDF-SAM, Kimera-Multi, and Swarm-SLAM address distributed fusion under distinct communication and bookkeeping assumptions; see §14.13).
 
-SEIF and iSAM2 address different settings: approximate information filtering versus incremental smoothing. For nonlinear problems, iSAM2 is also affected by its linearization point and relinearization policy. ESEIF belongs to the SEIF family, whereas sliding-window marginalization in VINS-Mono and OKVIS and feature elimination in MSCKF are separate ways to bound state and computation. Their common theme is managing sparsity and compute, not a direct chain of inheritance (see §14.9.2).
+Taken together, SEIF and iSAM2 target very different regimes: approximate online filtering versus incremental nonlinear smoothing (where iSAM2's accuracy also hinges on relinearization policies). ESEIF sits squarely in the SEIF family, whereas sliding-window marginalization in VINS-Mono/OKVIS and feature null-space projection in MSCKF represent separate strategies for bounding state size—united by the shared challenge of managing sparsity and compute rather than direct algorithmic inheritance (see §14.9.2).
 
 #### 14.16.4 EM Mapping
 
-SEIF is information-form additivity plus sparsification. The line of work that treats ambiguous data association statistically, however, came earlier: MHT and JPDA established multiple hypotheses and probabilistic association, and FastSLAM carried an association per particle. EM Mapping is the member of that family that alternates between estimating the map and resolving the association.
-
-EKF-SLAM, EIF SLAM, and SEIF all assumed that data association was either known or decided greedily by ML. EM Mapping **treats unknown data association as an EM latent variable, exploiting ambiguous data instead of discarding it.** The prototype is from Thrun, Burgard, and Fox (1998–2000, AAAI/JAIR); a variant was used in the RHINO museum guide robot (Burgard et al. 1999).
+Whereas EKF-SLAM, EIF, and SEIF either assumed known correspondences or committed greedily to ML matches, an earlier lineage—including MHT, JPDA, and particle-based FastSLAM—kept data association probabilistic. **EM Mapping** (Thrun, Burgard, and Fox, 1998–2000, AAAI/JAIR; deployed in variant form on the RHINO museum guide robot, Burgard et al. 1999) **treats unknown correspondences as latent variables inside an Expectation-Maximization loop**, extracting information from ambiguous scans instead of discarding them.
 
 ##### E-step / M-step skeleton
+
+Structurally identical to the Baum-Welch algorithm for hidden Markov models, EM Mapping alternates between computing smoothed pose posteriors given the current map (E-step) and updating cell occupancy frequencies given those trajectories (M-step):
 
 ```
 EM_mapping(d):
@@ -1185,13 +1049,11 @@ EM_mapping(d):
   return m
 ```
 
-$\alpha$ is forward localization (Markov localization); $\beta$ is backward (correcting past belief using future data). The $\beta$ term lets past belief be corrected backwards when a loop closes — the statistical core of EM mapping. The forward-backward structure is identical to the Baum-Welch algorithm for HMMs.
-
-The M-step is a frequentist count: "number of times the cell was observed as property l / total observations of anything," weighted by belief. Convergence typically takes 3–5 iterations.
+Here $\alpha$ propagates belief forward (Markov localization) while $\beta$ propagates future observations backward; when a loop closes at time $T$, that $\beta$ term retroactively sharpens earlier pose estimates—the statistical core of EM mapping. The M-step simply counts belief-weighted frequencies for each cell property $l$, typically converging within 3–5 iterations.
 
 ##### Layered EM Mapping
 
-A variant that fixes a problem in the basic EM_mapping M-step, where geometric consistency within the sensor cone is broken. A **local occupancy grid** is built from each short motion segment first; EM then optimizes only the *position* of those local maps. **Deterministic annealing** ($\sigma: 1.0 \to 0$ cooling) prevents EM from getting trapped in local maxima.
+Because the basic M-step evaluates cells independently and breaks geometric consistency inside each sensor cone, **Layered EM Mapping** first builds a **local occupancy grid** from each short motion segment and then uses EM solely to align the *poses* of those local submaps, adding **deterministic annealing** ($\sigma: 1.0 \to 0$) to escape shallow local optima:
 
 ```
 layered_EM_mapping(d):
@@ -1205,19 +1067,16 @@ layered_EM_mapping(d):
   return m_global
 ```
 
-Deterministic annealing, GNC (Yang et al. 2020), and robust-kernel scheduling share a design principle: increase the difficulty of the objective gradually to avoid poor local optima.
+Gradually sharpening the objective via deterministic annealing reflects the same continuation principle seen later in graduated non-convexity (GNC; Yang et al. 2020) and robust-kernel scheduling.
 
 ##### Why EM Mapping Left the Mainstream
 
-EM_mapping and layered_EM_mapping are not mainstream components of modern SLAM systems. Alternating pose and map through E/M-steps became less attractive as joint optimization with factor graphs became practical; their batch/offline character also fits real-time SLAM poorly. Cartographer (Hess et al. 2016), for example, solves the problem directly with scan matching and pose graph optimization, without EM. GMapping (Grisetti et al. 2007) likewise avoids EM but is structured differently: it is a Rao-Blackwellized particle filter that improves the proposal distribution with scan matching, and it uses no pose graph.
-
-Layered EM and Cartographer's local/global SLAM do share a **submap + global alignment** pattern: construct local maps first, then align them globally. This is a structural analogy, not evidence of a direct historical lineage.
+Neither EM_mapping nor layered_EM_mapping remains a core component of modern real-time SLAM. Once sparse factor-graph optimization matured, optimizing poses jointly proved far faster and cleaner than alternating E/M passes over full batch trajectories. Modern systems take very different routes: Cartographer (Hess et al. 2016) combines scan matching directly with pose-graph optimization without EM, while GMapping (Grisetti et al. 2007) uses a Rao-Blackwellized particle filter whose proposal distribution is sharpened by scan matching, without a pose graph at all. Even so, Layered EM's **submap + global alignment** motif—building locally consistent submaps before optimizing their global relative poses—echoes structurally in Cartographer's local/global split, even without direct historical descent.
 
 #### 14.16.5 Cycle Posterior
 
-The stepwise ML mapper has two limits: it cannot handle large odometry errors, and it cannot correct past poses backward in time. The cycle posterior approach runs a pose posterior estimator in parallel with the ML mapper to fix both.
+Incremental ML mapping fails when odometry drift grows large or when a loop closes, because it has no mechanism to push corrections backward along past poses. The **Cycle Posterior** method remedies both flaws by running a global pose posterior estimator alongside the incremental ML mapper:
 
-**Algorithm skeleton**:
 ```
 Incremental Mapping with Posterior Estimation:
   1. incremental_ML_mapping(o, a, s, m)  → ⟨m', s'⟩    [ML update]
@@ -1228,15 +1087,13 @@ Incremental Mapping with Posterior Estimation:
   5. run incremental_ML_mapping backwards in time          [nested ML refinement]
 ```
 
-A sudden narrowing of the posterior signals cycle closure, and the difference between the narrowed mode and the ML estimate is the correction signal. Because two estimators (ML mapper + posterior estimator) run simultaneously, an MCL-based implementation is natural. The algorithm is designed to operate without odometry.
+When a previously ambiguous multi-modal posterior suddenly collapses onto a sharp mode $s''$ that disagrees with the ML pose $s'$, the discrepancy triggers a cycle-closure correction distributed linearly backward along the loop—even without odometry, naturally implemented using MCL for the parallel posterior tracker.
 
-This is an early example that combines explicit cycle detection with backward correction in one framework, so it is useful to compare with later loop-closure systems. It does not, however, establish that modern place recognition and incremental graph optimization descended directly from this algorithm.
-
-The particular combination of MCL, linear distribution, and nested ML is not widely used now. A similar division of labor does remain common: a detector proposes a revisited place, and graph optimization corrects the state after geometric verification. iSAM (Kaess et al. 2008), iSAM2 (2012), and GTSAM's incremental smoothing update the parts of the problem affected by new constraints.
+While this specific pairing of MCL, linear error distribution, and nested backward ML refinement is rarely used today, its **two-stage division of labor**—a global detector flagging a revisited place, followed by a back-end corrector propagating the constraint through past states—parallels modern place recognition plus incremental graph optimization (such as iSAM, iSAM2, and GTSAM), serving as an instructive early precedent rather than a direct ancestor.
 
 #### 14.16.6 Summary: What Survived
 
-The information-form SLAM methods in *Probabilistic Robotics* (2005) contributed several ideas that remain visible in current systems:
+The classical algorithms in *Probabilistic Robotics* (2005) introduced structural principles that still resonate across modern SLAM and localization stacks:
 
 | PR algorithm | Core contribution | Comparable modern structure | Scope of the relationship |
 |---|---|---|---|
@@ -1246,7 +1103,7 @@ The information-form SLAM methods in *Probabilistic Robotics* (2005) contributed
 | EM Mapping | latent association, forward-backward localization, submaps | EM-based mapping, submap systems | a statistical or structural comparison, not direct lineage |
 | Cycle Posterior | combined online closure detection and correction | place recognition + graph optimization | similar functional separation |
 
-Information-form **additivity** can be compared directly with the sum of modern factor costs. SEIF **sparsification**, sliding-window marginalization, and Bayes-tree elimination all manage computation but are different operations. The detector/corrector division in cycle posterior and the submap organization in EM mapping admit structural comparisons with modern systems; they should not be presented as direct lineage claims (see §14.9).
+Information-form **additivity** maps directly onto the summed factor costs of modern nonlinear least squares. By contrast, SEIF **sparsification**, sliding-window marginalization, and Bayes-tree elimination all manage computational complexity through distinct mathematical operations, and the submap and detector/corrector motifs in EM Mapping and Cycle Posterior offer structural parallels rather than direct historical lineage (see §14.9).
 
 > **Further reading**
 > - [Thrun et al., "Simultaneous Localization and Mapping with Sparse Extended Information Filters" (IJRR 2004)](https://journals.sagepub.com/doi/10.1177/0278364904045026) — Original SEIF paper.
@@ -1256,4 +1113,4 @@ Information-form **additivity** can be compared directly with the sum of modern 
 
 ---
 
-In service-robot localization, the choice of method depends in part on how the belief is represented, while a pose-graph estimate requires a separate map-generation process to produce the final map. The rise of factor graphs as a widely used formulation can be understood along the same line. EKF localization also remains a viable choice for ceiling-marker systems and platforms with limited compute. Their coexistence shows that convergence on one architecture does not answer every operating condition.
+Across this chapter, no single SLAM or localization architecture solves every operating condition. Service-robot localization hinges on choosing the right belief representation, pose-graph optimization must still be paired with a dedicated map-generation step such as occupancy grid mapping, factor graphs dominate large-scale smoothing, and classical EKF localization remains practical for ceiling-marker systems and compute-constrained platforms. In deployed robots, none of these estimators runs in isolation: sensor drivers, SLAM nodes, localization filters, planners, and controllers must execute concurrently while exchanging time-synchronized messages and coordinate transforms—the role of robot middleware frameworks such as ROS, covered next in Ch.15.
