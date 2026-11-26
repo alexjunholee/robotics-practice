@@ -84,7 +84,7 @@
 - YouTube에 공개된 강의로, 수학적 엄밀함을 놓치지 않으면서 다시점 기하학을 깊이 있게 다룬다.
 - YouTube: https://www.youtube.com/playlist?list=PLTBdjV_4f-EJn6udZ34tht9EVIW7lbeo4
 
-**SLAM 입문 (한국어)**:
+**SLAM 입문 (한국어)**
 - 국내 SLAM 연구자 모임인 SLAM KR에서 정리한 한국어 스터디 자료다.
 
 ### ROS
@@ -143,7 +143,7 @@
 
 ### 필독 논문 리스트
 
-분야의 흐름을 이해하려면 최신 논문만 쫓기보다, 각 갈래의 전환점이 된 대표 논문을 먼저 짚어 보는 게 좋다. 아래 목록은 고전 SLAM부터 딥러닝, 객체 탐지, Foundation Model, 최근 3D·로봇 연구까지 핵심 이정표가 되는 논문들이다.
+분야의 흐름을 이해하려면 최신 논문만 쫓기보다, 각 갈래의 전환점이 된 대표 논문을 먼저 짚어 보는 게 좋다. 아래 목록에는 고전 SLAM부터 딥러닝, 객체 탐지, Foundation Model, 최근 3D·로봇 연구까지 핵심 이정표가 되는 논문들이 실려 있다.
 
 **Classical CV/SLAM**:
 - ORB-SLAM: Mur-Artal et al., 2015 — [arXiv:1502.00956](https://arxiv.org/abs/1502.00956)
@@ -180,7 +180,7 @@
 > - [Overleaf](https://www.overleaf.com/) — 여럿이 실시간으로 공동 편집할 수 있는 온라인 LaTeX 에디터
 > - [Mathpix](https://mathpix.com/) — 수식 스크린샷을 곧바로 LaTeX 코드로 변환해 주는 도구
 > - [Detexify](https://detexify.kirelabs.org/classify.html) — 손으로 기호를 그려서 해당 LaTeX 명령어를 찾는 사이트
-> - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 표를 시각적으로 만들어 주는 생성기
+> - [Tables Generator](https://www.tablesgenerator.com/) — LaTeX/HTML 표를 시각적으로 만들어 주는 도구
 > - [QuillBot](https://quillbot.com/) — 영어 문장을 다른 어조나 표현으로 다듬어 주는 도구
 > - [Ludwig](https://ludwig.guru/) — 실제 원어민 문헌에서 쓰이는 영어 표현 용례 검색 엔진
 > - [DL Monitor (deeplearn.org)](https://deeplearn.org/) — 주요 학회와 arXiv에 올라오는 딥러닝 논문을 자동으로 추적해 주는 서비스
@@ -191,7 +191,7 @@
 
 ## 19.6 유용한 GitHub 저장소
 
-논문만 읽어서는 구현의 세부가 잘 잡히지 않을 때가 많다. 널리 검증된 오픈소스 저장소의 코드 구조와 설정 파일을 직접 뜯어보면 이론이 실제 시스템으로 어떻게 옮겨지는지 빠르게 익힐 수 있다.
+논문만 읽어서는 세부 구현을 파악하기 어려울 때가 많다. 널리 검증된 오픈소스 저장소의 코드 구조와 설정 파일을 직접 뜯어보면 이론이 실제 시스템으로 어떻게 옮겨지는지 빠르게 익힐 수 있다.
 
 ### SLAM
 
@@ -342,7 +342,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | 포인트 클라우드 처리 | Open3D 사용법 | [Open3D 문서의 Tutorial 목차](https://www.open3d.org/docs/release/) + 13장 |
 | Depth Estimation | 단안 카메라 depth 추정 | 10장 + [Depth Anything 코드](https://github.com/DepthAnything/Depth-Anything-V2) |
 
-이론을 코드로 확인하기 위해 다음 실습들을 진행해 본다.
+이론을 코드로 확인하기 위해 다음 실습을 해 본다.
 - KITTI 데이터셋 다루기 — [KITTI 홈페이지](https://www.cvlibs.net/datasets/kitti/)
 - YOLOv8 파인튜닝 — 직접 모은 데이터셋으로 다시 학습시켜 보기
 - ORB-SLAM3 실행 및 분석 — TUM RGB-D 데이터셋으로 궤적 평가하기
@@ -361,7 +361,7 @@ https://github.com/MrNeRF/awesome-3D-gaussian-splatting
 | --- | --- | --- |
 | VFM 심화 (1.4절 중급 항목의 확장) | DINOv2, SAM, CLIP | 10~11장 + 논문 직접 읽기 |
 | 3D 재구성 심화 | NeRF, 3D Gaussian Splatting | [NeRF Studio](https://github.com/nerfstudio-project/nerfstudio) + 13장 |
-| 논문 읽기 및 구현 | 최신 논문 분석 | [Hugging Face Papers](https://huggingface.co/papers/trending) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격은 [「연구노트」 6–15장 — 읽기](../research-notes/guide.html#chapter-6)* |
+| 논문 읽기 및 구현 | 최신 논문 분석 | [Hugging Face Papers](https://huggingface.co/papers/trending) + [Yannic Kilcher 채널](https://www.youtube.com/@YannicKilcher) — *본격적인 내용은 [「연구노트」 6–15장 — 읽기](../research-notes/guide.html#chapter-6)* |
 | 새로운 아이디어 실험 | 가설 수립, 실험 설계 | 연구실 세미나 + 학회 워크숍 참여 — *가설 수립은 [「연구노트」 1–5장 — 시작하기](../research-notes/guide.html#chapter-1)* |
 | 벤치마크 평가 | 정량적 비교 | 분야별 표준 벤치마크 (KITTI, ScanNet, Replica 등) — *결과 해석은 [「연구노트」 26장 결과와 논의](../research-notes/guide.html#chapter-26)* |
 
@@ -396,16 +396,16 @@ Git 사용법                      포인트 클라우드 (Open3D)           논
 
 ### 19.8.0 연구자 마인드셋
 
-기술 스택만큼이나 오래 지치지 않고 연구를 이어 가는 태도가 중요하다. 아래 자매 가이드의 장들이 초기에 방향을 잡을 때 길잡이가 된다.
+기술 스택만큼이나 오래 지치지 않고 연구를 이어 가는 태도가 중요하다. 초기에 방향을 잡을 때는 아래에 소개한 자매 가이드의 각 장이 길잡이가 된다.
 
 - 연구의 방향, 오래 버티는 작업 방식, 도구 → [「대학원노트」 16장 연구가 삶이 되는 조건](../grad-notes/guide.html#chapter-16) §16.5
 - 스스로 정해야 하는 대학원 생활과 장기전 → [「대학원노트」 13장 자율성](../grad-notes/guide.html#chapter-13) §13.1
-- 꾸준한 성장과 옆 사람과 속도를 비교하는 함정 → [「대학원노트」 14장 남과 비교하는 마음 다루기](../grad-notes/guide.html#chapter-14) §14.3
+- 꾸준한 성장, 그리고 옆 사람과 속도를 비교하는 함정 → [「대학원노트」 14장 남과 비교하는 마음 다루기](../grad-notes/guide.html#chapter-14) §14.3
 - 떨어뜨릴 이유가 없는 논문 → [「연구노트」 16장 쓰기 전에 정할 것](../research-notes/guide.html#chapter-16) §16.1
 
 ### 19.8.1 논문 쓰기
 
-Abstract → Introduction → Related Work → Method → Experiments → Conclusion으로 이어지는 표준 논문 구조와, 서론에서 문제 정의·기존 한계·접근·기여(contribution)를 설득력 있게 엮는 법은 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)와 [「연구노트」 23장 서론](../research-notes/guide.html#chapter-23)에 자세히 정리되어 있다.
+표준 논문 구조는 Abstract → Introduction → Related Work → Method → Experiments → Conclusion으로 이어진다. 이 구조는 [「연구노트」 Part 2 — 쓰기](../research-notes/guide.html#chapter-16)에, 서론에서 문제 정의·기존 한계·접근·기여(contribution)를 설득력 있게 엮는 법은 [「연구노트」 23장 서론](../research-notes/guide.html#chapter-23)에 자세히 정리되어 있다.
 
 ### 19.8.2 실험 설계와 Ablation
 
@@ -424,7 +424,7 @@ SLAM과 컴퓨터 비전 실험은 핵심 아이디어 하나만 좋아서는 �
 논문 작성과 서지 관리, 시각 자료 제작에 주로 쓰는 도구들을 목적별로 추렸다.
 
 - LaTeX: Overleaf 또는 로컬 환경 (texlive + vscode)
-- 참고 문헌: PDF 리더로 원문에 직접 표시해 두고, Zotero + Better BibTeX로 서지 정보를 체계적으로 관리한다. AI가 만들어 준 요약이나 related work 비교, BibTeX 초안은 반드시 원문과 DOI 메타데이터를 대조해 검증한 뒤 반영한다.
+- 참고 문헌: PDF 리더로 원문에 직접 표시해 두고, Zotero + Better BibTeX로 서지 정보를 체계적으로 관리한다. AI가 만들어 준 요약이나 related work 비교, BibTeX 초안은 반드시 원문 및 DOI 메타데이터와 대조해 검증한 뒤 반영한다.
 - 파이프라인 그림: TikZ (정밀한 벡터 도식), draw.io (빠른 구조도 제작), Inkscape (SVG 편집)
 - 테이블: booktabs (\toprule, \midrule, \bottomrule)
 - 알고리즘: algorithm2e

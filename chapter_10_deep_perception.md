@@ -1,6 +1,6 @@
 # 10장 딥러닝 기반 인식
 
-9장에서 다룬 기하 기반 컴퓨터 비전이 이미지 속 모서리와 3차원 점들의 좌표를 짚어 준다면, 딥러닝 기반 인식은 그 점들이 도대체 **무엇**인지 의미를 읽어 낸다. 데이터로부터 직접 표현을 학습한 신경망은 장면을 보고 물체의 종류를 맞히고(분류), 어디에 놓여 있는지 사각형으로 감싸고(물체 탐지), 심지어 픽셀 하나하나가 어떤 물체에 속하는지 경계를 갈라 낸다(분할). 로봇이 어지러운 작업대 위에서 원하는 부품만 집어 올리거나 보행자를 피해 주행하려면 바로 이 의미 정보가 기하 정보와 맞물려야 한다.
+9장에서 다룬 기하 기반 컴퓨터 비전이 이미지 속 모서리와 3차원 점들의 좌표를 짚어 준다면, 딥러닝 기반 인식은 그 점들이 도대체 **무엇**인지 의미를 읽어 낸다. 데이터로부터 직접 표현을 학습한 신경망은 장면을 보고 물체의 종류를 맞히고(분류), 어디에 놓여 있는지 찾아 사각형으로 감싸고(물체 탐지), 심지어 픽셀 하나하나가 어떤 물체에 속하는지 경계를 갈라 낸다(분할). 로봇이 어지러운 작업대 위에서 원하는 부품만 집어 올리거나 보행자를 피해 주행하려면 바로 이 의미 정보가 기하 정보와 맞물려야 한다.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### 10.1.1 PyTorch (권장)
 
-로보틱스와 컴퓨터 비전 연구에 처음 입문한다면 **PyTorch**로 시작하기를 권한다. 코드가 쓰인 순서 그대로 한 줄씩 실행되는 동적 그래프(eager execution) 방식을 따르기 때문에 중간 텐서 모양이나 값을 일반 Python 디버거로 곧바로 찍어 보며 디버깅하기 편하다. 여기에 `torchvision`과 `timm` 같은 생태계 덕분에 검증된 사전학습 모델을 몇 줄 만에 불러올 수 있고, 최신 논문의 공개 구현도 대부분 PyTorch로 작성되어 있어 연구 코드를 실험에 곧장 적용하고 고치기가 수월하다.
+로보틱스와 컴퓨터 비전 연구에 입문한다면 **PyTorch**로 시작하기를 권한다. 코드가 쓰인 순서 그대로 한 줄씩 실행되는 동적 그래프(eager execution) 방식을 따르기 때문에 중간 텐서 모양이나 값을 일반 Python 디버거로 곧바로 찍어 보며 디버깅하기 편하다. 여기에 `torchvision`과 `timm` 같은 생태계 덕분에 검증된 사전학습 모델을 몇 줄 만에 불러올 수 있고, 최신 논문의 공개 구현도 대부분 PyTorch로 작성되어 있어 연구 코드를 실험에 곧장 적용하고 고치기가 수월하다.
 
 CUDA 12.1 환경 기준으로 설치 명령은 다음과 같다.
 
@@ -41,7 +41,7 @@ x = x.to(device)
 
 ### 10.1.2 TensorFlow / JAX
 
-실무와 연구 현장에서는 PyTorch 외에 **TensorFlow**와 **JAX**도 자주 마주친다. TensorFlow는 프로덕션 서버 배포 도구가 잘 갖춰져 있을 뿐 아니라, TF Lite(2024년 9월 **LiteRT**로 이름이 바뀜)를 앞세워 모바일 기기나 라즈베리파이 같은 소형 엣지 디바이스에 경량 모델을 올릴 때 강점을 발휘한다. 반면 JAX는 함수형 프로그래밍 패러다임 위에서 자동 미분과 XLA 컴파일을 결합한 고성능 수치 연산 라이브러리로, 주로 연구 목적이나 Google DeepMind의 공개 코드베이스에서 많이 쓰인다. 처음부터 셋을 다 파고들 필요는 없고 PyTorch를 기본 무기로 삼되, 프로젝트나 논문에 등장할 때 두 프레임워크의 성격과 용도를 구분할 수 있으면 충분하다.
+실무와 연구 현장에서는 PyTorch 외에 **TensorFlow**와 **JAX**도 자주 마주친다. TensorFlow는 프로덕션 서버 배포 도구가 잘 갖춰져 있을 뿐 아니라, TF Lite(2024년 9월 **LiteRT**로 이름이 바뀜)를 앞세워 모바일 기기나 라즈베리파이 같은 소형 엣지 디바이스에 경량 모델을 올릴 때 강점을 발휘한다. 반면 JAX는 함수형 프로그래밍 패러다임을 바탕으로 자동 미분과 XLA 컴파일을 결합한 고성능 수치 연산 라이브러리다. 주로 연구 목적으로 활용되거나 Google DeepMind의 공개 코드베이스에서 많이 쓰인다. 처음부터 셋을 다 파고들 필요는 없고 PyTorch를 기본 무기로 삼되, 두 프레임워크가 프로젝트나 논문에 등장할 때 성격과 용도를 구분할 수 있으면 충분하다.
 
 > **추천 자료**
 > - [TensorFlow 공식 가이드](https://www.tensorflow.org/guide) — TFLite 변환까지 다룬다
@@ -51,13 +51,13 @@ x = x.to(device)
 
 ## 10.2 딥러닝 기초 개념
 
-이 장 뒷부분에서 살펴볼 탐지·분할 모델들은 겉보기엔 복잡해 보여도, 결국 두 가지 핵심 엔진 위에서 돌아간다. 하나는 ResNet처럼 지역 패턴을 훑어 올리는 **CNN의 합성곱 구조**이고, 다른 하나는 ViT와 DETR처럼 화면 전체의 문맥을 한 번에 엮는 **Transformer의 attention 구조**다. 두 작동 원리부터 분명히 짚고 넘어가자.
+이 장 뒷부분에서 살펴볼 탐지·분할 모델은 겉보기엔 복잡해 보여도, 결국 두 가지 핵심 엔진으로 돌아간다. 하나는 ResNet처럼 지역 패턴을 훑어 올리는 **CNN의 합성곱 구조**이고, 다른 하나는 ViT와 DETR처럼 화면 전체의 문맥을 한 번에 엮는 **Transformer의 attention 구조**다. 두 작동 원리부터 분명히 짚고 넘어가자.
 
 ### 10.2.1 CNN (Convolutional Neural Network)
 
-9장에서 다룬 SIFT나 ORB는 사람이 수학적 직관으로 설계한 고정 필터를 써서 코너와 모서리를 찾았다(→ 9장). 반면 **CNN**은 작은 필터(kernel)를 이미지 격자 위에서 미끄러지듯 이동시키며 공간 특징을 뽑아내되, 그 필터의 가중치 숫자들을 사람이 정하지 않고 학습 목적함수를 최적화하는 과정에서 데이터로부터 스스로 찾아낸다. 덕분에 얕은 층에서는 단순한 에지나 색상 대비를, 깊은 층으로 올라갈수록 바퀴나 손잡이 같은 고수준 부품을 포착하는 계층적 표현이 자연스럽게 만들어진다.
+9장에서 다룬 SIFT나 ORB는 사람이 수학적 직관으로 설계한 고정 필터를 써서 코너와 모서리를 찾았다(→ 9장). 반면 **CNN**은 작은 필터(kernel)를 이미지 격자 위에서 미끄러지듯 움직이며 공간 특징을 뽑아낸다. 이때 필터의 가중치 숫자는 사람이 정하지 않고, 학습 목적함수를 최적화하는 과정에서 CNN이 데이터로부터 스스로 찾아낸다. 덕분에 얕은 층에서는 단순한 에지나 색상 대비를 잡아내고, 깊은 층으로 올라갈수록 바퀴나 손잡이 같은 고수준 부품을 포착하면서 계층적 표현이 자연스럽게 만들어진다.
 
-전형적인 CNN은 다음 네 가지 요소가 한 블록으로 맞물려 동작한다.
+전형적인 CNN에서는 다음 네 가지 요소가 한 블록으로 맞물려 동작한다.
 
 - **Convolution Layer**: 학습 가능한 필터로 국소 영역의 공간 특징을 추출한다.
 - **Batch Normalization**: 각 층의 출력 분포를 정규화해 학습 중 기울기가 튀거나 사라지는 현상을 줄이고 수렴을 안정시킨다.
@@ -94,7 +94,7 @@ CNN의 합성곱은 한 층에서 바로 이웃한 3×3 같은 좁은 범위만 
 Attention(Q, K, V) = softmax(QK^T / √d_k) V
 ```
 
-수식에서 Query(`Q`)와 Key(`K`)의 내적으로 모든 위치 쌍의 관련도 점수를 구한 뒤 `√d_k`로 스케일을 맞추고 `softmax`로 가중치를 정규화해 Value(`V`)를 가중 합산한다. **Vision Transformer(ViT)**는 이 구조를 이미지에 그대로 이식하기 위해, 이미지를 16×16 같은 고정 크기 정사각형 패치로 잘게 자른 뒤 각 패치를 자연어 처리의 단어 토큰(token) 하나처럼 펼쳐 Transformer encoder에 밀어 넣는다. 원 논문은 대규모 데이터셋으로 사전학습했을 때 순수 Transformer만으로도 CNN과 동등하거나 더 높은 분류 성능을 낼 수 있음을 보였고, 2020년 이후에는 분류·탐지·분할 모델 전반에 걸쳐 순수 Transformer 구조와 CNN-Transformer 하이브리드 구조가 함께 주류를 이루고 있다.
+수식에서 Query(`Q`)와 Key(`K`)의 내적으로 모든 위치 쌍의 관련도 점수를 구한 뒤 `√d_k`로 스케일을 맞추고 `softmax`로 가중치를 정규화해 Value(`V`)를 가중 합산한다. **Vision Transformer(ViT)**는 이 구조를 이미지에 그대로 이식하기 위해, 이미지를 16×16 같은 고정 크기의 정사각형 패치로 잘게 자른 뒤 각 패치를 자연어 처리의 단어 토큰(token) 하나처럼 펼쳐 Transformer encoder에 밀어 넣는다. 원 논문에서는 대규모 데이터셋으로 사전학습했을 때 순수 Transformer만으로도 CNN과 동등하거나 더 높은 분류 성능을 낼 수 있음을 보였다. 2020년 이후에는 분류·탐지·분할 모델 전반에 걸쳐 순수 Transformer 구조와 CNN-Transformer 하이브리드 구조가 함께 주류를 이루고 있다.
 
 > **추천 자료**
 > - [Vaswani et al., "Attention Is All You Need" (2017)](https://arxiv.org/abs/1706.03762) — Transformer 원논문
@@ -108,7 +108,7 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) V
 
 로봇이 실제 현장에서 단순히 "이 사진은 머그컵 사진이다"라는 딱지 하나만 얻는 데서 멈추는 일은 드물다. 그럼에도 이미지 분류(classification)가 모든 비전 태스크의 출발점이 되는 이유는 분명하다. 물체 탐지기든 픽셀 분할 모델이든 내부에는 클래스 이름을 판별하는 분류기가 들어가며, 무엇보다 ImageNet 같은 대규모 분류 데이터셋으로 미리 학습해 둔 **backbone**(특징 추출기)이 다른 모든 비전 모델의 척추 역할을 맡기 때문이다.
 
-시대에 따라 널리 쓰이는 대표 분류 백본들은 구조와 계산 예산에서 뚜렷한 성격을 드러낸다.
+시대에 따라 널리 쓰이는 대표 분류 백본은 구조와 계산 예산 면에서 각기 성격이 뚜렷하다.
 
 | 모델 | 특징 | 용도 |
 | --- | --- | --- |
@@ -117,9 +117,9 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) V
 | ViT | Transformer 기반 | 대규모 데이터로 사전학습할 때 |
 | ConvNeXt | ViT의 설계 요소를 CNN에 옮김 | ViT 대신 쓰는 CNN 백본 |
 
-그중에서도 2015년에 등장한 ResNet의 **residual connection**(잔차 연결)은 딥러닝 설계의 판도를 바꾸어 놓았다. 블록의 입력 `x`를 출력 `F(x)`에 곧바로 더해 `F(x) + x`를 내보내는 이 단순한 지름길 덕분에, 수십~백수십 개 층을 쌓아도 역전파 기울기가 소실되지 않고 안정적으로 학습된다. 이후 등장한 Transformer를 비롯한 현대 아키텍처 대부분이 이 잔차 연결을 기본 골격으로 채택했다.
+그중에서도 2015년에 등장한 ResNet의 **residual connection**(잔차 연결)은 딥러닝 설계의 판도를 바꾸어 놓았다. 블록의 입력 `x`를 출력 `F(x)`에 곧바로 더해 `F(x) + x`를 내보내는 이 단순한 지름길 덕분에, 수십~백수십 개 층을 쌓아도 역전파 기울기가 소실되지 않고 네트워크가 안정적으로 학습된다. 이후 등장한 Transformer를 비롯한 현대 아키텍처 대부분에서도 이 잔차 연결을 기본 골격으로 채택했다.
 
-실무에서 새 로봇 작업에 맞는 인식기를 만들 때는 처음부터 무작위 가중치로 학습하지 않고, ImageNet 등으로 이미 시각적 패턴을 배운 모델을 가져와 마지막 분류 층만 떼어 내고 앞단의 특징 벡터를 재활용하는 **전이 학습(transfer learning)**을 쓴다. 새 도메인의 라벨 데이터가 몇백~몇천 장밖에 없을 때도 탄탄한 초기 표현을 곧바로 빌려 올 수 있기 때문이다.
+실무에서 새 로봇 작업에 맞는 인식기를 만들 때는 처음부터 무작위 가중치로 학습하지 않고 **전이 학습(transfer learning)**을 쓴다. ImageNet 등으로 이미 시각적 패턴을 배운 모델을 가져와 마지막 분류 층만 떼어 내고 앞단의 특징 벡터를 재활용하는 방식이다. 새 도메인의 라벨 데이터가 몇백~몇천 장밖에 없을 때도 탄탄한 초기 표현을 곧바로 빌려 올 수 있기 때문이다.
 
 ```python
 import torchvision.models as models
@@ -179,9 +179,9 @@ results[0].show()
 
 ### 10.4.3 Transformer-based
 
-전통적인 one-stage·two-stage 탐지기들은 미리 깔아 두는 수많은 anchor box와 겹친 예측 상자를 추려 내는 NMS(non-maximum suppression) 후처리라는 수작업 규칙에 크게 의존했다. **DETR(Detection Transformer)**은 물체 탐지를 "고정된 개수의 물체 집합을 맞히는 문제"로 다시 정의해 이 수작업들을 걷어 냈다. 학습 가능한 벡터인 `object query`들이 각자 물체 하나씩을 맡아 이미지 특징과 cross-attention을 주고받으며 최종 박스와 클래스를 바로 내놓으므로, 별도의 anchor나 NMS 없이 완전한 end-to-end 학습이 가능하다.
+전통적인 one-stage·two-stage 탐지기들은 수작업 규칙에 크게 의존했다. 수많은 anchor box를 미리 깔아 두고, 겹친 예측 상자를 NMS(non-maximum suppression) 후처리로 추려 내는 방식이었다. **DETR(Detection Transformer)**은 물체 탐지를 "고정된 개수의 물체 집합을 맞히는 문제"로 다시 정의해 이 수작업을 걷어 냈다. 학습 가능한 벡터인 `object query`들이 각자 물체 하나씩을 맡아 이미지 특징과 cross-attention을 주고받으며 최종 박스와 클래스를 바로 내놓으므로, 별도의 anchor나 NMS 없이 완전한 end-to-end 학습이 가능하다.
 
-초창기 DETR은 attention 가중치가 수렴하는 데 학습 epoch이 아주 오래 걸리는 단점이 있었지만, 관심 위치 주변만 집중해 보는 Deformable DETR, 탐지 성능과 수렴 속도를 끌어올린 DINO(DETR 계열 탐지기로, §10.9의 자기지도 백본 DINOv2와는 다른 모델이다), 그리고 Co-DETR 같은 후속 연구들이 이어지면서 실시간 탐지 분야까지 Transformer 계열의 영역이 넓어졌다.
+초창기 DETR은 attention 가중치가 수렴하는 데 학습 epoch이 아주 오래 걸리는 단점이 있었다. 하지만 관심 위치 주변만 집중해 보는 Deformable DETR, 탐지 성능과 수렴 속도를 끌어올린 DINO, 그리고 Co-DETR 같은 후속 연구들이 이어지면서 실시간 탐지 분야까지 Transformer 계열의 영역이 넓어졌다. (여기서 DINO는 DETR 계열 탐지기로, §10.9의 자기지도 백본 DINOv2와는 다른 모델이다.)
 
 > **추천 자료**
 > - [Carion et al., "End-to-End Object Detection with Transformers" (2020)](https://arxiv.org/abs/2005.12872) — DETR 원논문
@@ -240,7 +240,7 @@ Semantic segmentation은 픽셀마다 클래스 이름("의자")만 붙일 뿐, 
 
 ## 10.7 Depth Estimation
 
-지금까지의 탐지와 분할이 "무엇이 화면의 어느 픽셀에 있는가"를 읽는 2차원 인식이었다면, 로봇이 실제로 팔을 뻗고 장애물을 피하려면 그 물체까지 거리가 얼마나 되는지 3차원 깊이가 필요하다. **Monocular depth estimation(단안 깊이 추정)**은 스테레오 카메라나 무거운 LiDAR 없이 단 한 장의 RGB 이미지에서 픽셀별 깊이를 예측한다. 센서 가격과 무게를 아낄 수 있어 탑재 중량(payload)이 빠듯한 드론이나 소형 이동 로봇에 특히 요긴하며, 2024년에 발표된 Depth Anything처럼 대규모 데이터로 학습해 처음 보는 실내외 장면에서도 일관된 깊이를 뽑아내는 모델들이 실전성을 높이고 있다.
+지금까지의 탐지와 분할이 "무엇이 화면의 어느 픽셀에 있는가"를 읽는 2차원 인식이었다면, 로봇이 실제로 팔을 뻗고 장애물을 피하려면 그 물체까지 거리가 얼마나 되는지 알아야 하므로 3차원 깊이가 필요하다. **Monocular depth estimation(단안 깊이 추정)**은 스테레오 카메라나 무거운 LiDAR 없이 단 한 장의 RGB 이미지에서 픽셀별 깊이를 예측한다. 센서 가격과 무게를 아낄 수 있어 탑재 중량(payload)이 빠듯한 드론이나 소형 이동 로봇에 특히 요긴하며, 2024년에 발표된 Depth Anything처럼 대규모 데이터로 학습해 처음 보는 실내외 장면에서도 일관된 깊이를 뽑아내는 모델들이 실전성을 높이고 있다.
 
 대표적인 단안 깊이 모델은 학습 데이터 규모와 출력 단위에 따라 성격을 나눌 수 있다.
 
@@ -269,17 +269,17 @@ depth = result['depth']
 
 ## 10.8 학습 레시피 [심화]
 
-사전학습된 모델을 곧장 가져다 쓰는 것만으로 부족해 로봇 현장 데이터에 맞게 모델을 다시 학습하거나 파인튜닝해야 할 때가 오면, 똑같은 네트워크 아키텍처를 쓰더라도 학습 설정에 따라 수렴 여부와 최종 정확도가 크게 벌어진다. 논문 수치를 제대로 재현하고 싶다면 모델 구조뿐 아니라 learning rate 스케줄, 데이터 증강(augmentation), 정규화 기법까지 한 세트로 맞추어야 한다.
+사전학습된 모델을 곧장 가져다 쓰는 것만으로 부족해 로봇 현장 데이터에 맞게 모델을 다시 학습하거나 파인튜닝해야 할 때가 오면, 똑같은 네트워크 아키텍처를 쓰더라도 학습 설정에 따라 수렴 여부와 최종 정확도가 크게 달라진다. 논문 수치를 제대로 재현하고 싶다면 모델 구조뿐 아니라 learning rate 스케줄, 데이터 증강(augmentation), 정규화 기법까지 한 세트로 맞추어야 한다.
 
 학습 초기에는 가중치가 아직 불안정해 큰 step으로 갱신하면 기울기가 튀기 쉽고, 후반부에는 손실 함수의 골짜기에 차분히 내려앉아야 한다. 이를 위해 **Learning Rate Schedule**을 설계한다.
 
-- **Cosine Annealing with Warm-up**: 처음 몇 epoch 동안은 learning rate를 0에서 목표값까지 천천히 선형으로 끌어올려(warm-up) 초기 불안정을 넘긴 뒤, 이후에는 코사인 곡선을 따라 완만하게 바닥까지 낮춘다. warm-up이 끝난 뒤의 감쇠 구간은 다음 식으로 나타낸다.
+- **Cosine Annealing with Warm-up**: 처음 몇 epoch 동안은 learning rate를 0에서 목표값까지 천천히 선형으로 끌어올려(warm-up) 초기 불안정을 넘긴 뒤에는 코사인 곡선을 따라 완만하게 바닥까지 낮춘다. warm-up이 끝난 뒤의 감쇠 구간은 다음 식으로 나타낸다.
 
 $$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 + \cos\left(\frac{t \cdot \pi}{T}\right)\right)$$
 
 여기서 `η_t`는 `t`번째 epoch의 learning rate, `η_max`와 `η_min`은 시작값과 최솟값, `T`는 코사인 감쇠가 진행되는 전체 epoch 수(아래 코드의 `T_max`)다.
 
-- **OneCycleLR**: 전체 학습 기간 동안 learning rate를 한 번 최댓값까지 끌어올렸다가 서서히 내리는 단일 사이클 스케줄이다. Smith는 이 방식으로 보통보다 훨씬 적은 epoch 만에 수렴에 도달하는 현상을 super-convergence라 불렀다.
+- **OneCycleLR**: 전체 학습 기간 동안 learning rate를 한 번 최댓값까지 끌어올렸다가 서서히 내리는 단일 사이클 스케줄이다. Smith는 이 방식으로 보통보다 훨씬 적은 epoch 만에 수렴하는 현상을 super-convergence라 불렀다.
 
 ```python
 import torch.optim as optim
@@ -321,7 +321,7 @@ transform = T.Compose([
 
 여기에 모델이 학습 데이터의 우연한 패턴까지 외워 버리지 않도록 **Regularization** 기법들을 더한다.
 
-- **Label Smoothing**: 정답 1, 오답 0인 날카로운 hard label 대신, 정답 확률에서 `ε`(예: `0.1`)만큼을 덜어내 모든 클래스에 고르게 나누어 준 soft label을 쓴다. 모델이 지나치게 과신하지 않도록 누르는 효과가 있으며, PyTorch에서는 `nn.CrossEntropyLoss(label_smoothing=0.1)`로 바로 적용한다.
+- **Label Smoothing**: 정답 1, 오답 0인 날카로운 hard label 대신, 정답 확률에서 `ε`(예: `0.1`)만큼을 덜어내 모든 클래스에 고르게 나누어 준 soft label을 쓴다. 모델의 과신을 억제하는 효과가 있으며, PyTorch에서는 `nn.CrossEntropyLoss(label_smoothing=0.1)`로 바로 적용한다.
 - **Stochastic Depth**: 학습할 때 일부 residual 블록을 확률적으로 건너뛰어 앙상블과 비슷한 효과를 내고, 깊은 ResNet 계열의 overfitting을 줄인다.
 - **Weight Decay**: optimizer에 `weight_decay=0.01~0.05`를 주어 가중치가 비대해지는 것을 억제한다. 특히 `AdamW`는 weight decay를 adaptive gradient 갱신 식에서 분리해(decoupled) 적용한다.
 
@@ -341,7 +341,7 @@ torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 | train loss NaN 발생 | Gradient explosion | gradient clipping, learning rate 대폭 감소, 데이터 검증 |
 | val loss 초반에 급감 후 완전 정체 | Learning rate 부족 또는 스케줄 문제 | warm-up 추가, cosine schedule 적용 |
 
-모델과 데이터셋 규모가 커져 GPU 한 장으로는 실험 한 번에 며칠씩 걸린다면 여러 GPU로 학습을 나누어야 한다. **DistributedDataParallel(DDP)**은 각 GPU에 모델을 복제해 올린 뒤 서로 다른 미니배치에서 계산한 gradient만 동기화하는 PyTorch의 기본 분산 학습 방식이다.
+모델과 데이터셋 규모가 커져 GPU 한 장으로는 실험 한 번에 며칠씩 걸린다면 여러 GPU로 학습을 나누어야 한다. **DistributedDataParallel(DDP)**은 PyTorch의 기본 분산 학습 방식으로, 각 GPU에 모델을 복제해 올린 뒤 서로 다른 미니배치에서 계산한 gradient만 동기화한다.
 
 ```python
 # DDP 최소 구조 (torchrun으로 실행)
@@ -374,11 +374,11 @@ model = DDP(model, device_ids=[local_rank])
 
 ## 10.9 자기지도 학습과 대조 학습 [심화]
 
-로봇을 하루만 굴려도 카메라는 이미지를 수천, 수만 장씩 쏟아 내지만, 사람이 일일이 경계 상자와 픽셀 마스크를 그려 라벨을 붙이는 일은 비용과 시간이 막대하다. **자기지도 학습(self-supervised learning)**은 사람이 단 라벨 없이도 방대한 이미지 데이터 그 자체에서 학습 신호를 만들어 내어 쓸모 있는 시각 표현을 미리 익히게 한다.
+로봇을 하루만 굴려도 카메라는 이미지를 수천, 수만 장씩 쏟아 내지만, 사람이 일일이 경계 상자와 픽셀 마스크를 그려 라벨을 붙이는 일에는 막대한 비용과 시간이 든다. **자기지도 학습(self-supervised learning)**은 사람이 붙인 라벨 없이도 방대한 이미지 데이터 자체에서 학습 신호를 만들어 내어 쓸모 있는 시각 표현을 미리 익히게 한다.
 
 대표적인 갈래 중 하나인 **Contrastive Learning(대조 학습)**은 "같은 장면을 다르게 변형한 두 이미지는 임베딩 공간에서 서로 끌어당기고, 다른 이미지끼리는 밀어낸다"는 단순한 원리로 표현을 배운다. 같은 원본에 서로 다른 augmentation을 건 두 장을 **positive pair**, 다른 이미지와 짝지은 쌍을 **negative pair**라고 부른다.
 
-- **SimCLR**: 한 이미지에서 변형을 두 번 만들어 positive pair로 삼고, 같은 미니배치 안에 들어 있는 나머지 이미지들을 전부 negative로 쓴다. 풍부한 negative를 확보하려면 배치 크기를 아주 크게 잡아야 한다.
+- **SimCLR**: 한 이미지에서 변형된 이미지 두 장을 만들어 positive pair로 삼고, 같은 미니배치 안에 들어 있는 나머지 이미지들을 전부 negative로 쓴다. 풍부한 negative를 확보하려면 배치 크기를 아주 크게 잡아야 한다.
 - **MoCo (Momentum Contrast)**: momentum encoder와 별도의 queue를 두어 지난 배치들의 임베딩을 계속 쌓아 두기 때문에, 작은 배치 크기에서도 수많은 negative와 비교할 수 있다.
 
 대조 학습의 핵심 목적함수인 **InfoNCE Loss**는 이 끌어당김과 밀어냄을 소프트맥스 분류 문제처럼 수식으로 옮긴 형태다.
@@ -387,11 +387,11 @@ $$\mathcal{L} = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau)}{\sum_{k=1}^{2N} \
 
 미니배치 이미지 `N`장에 augmentation을 두 번씩 걸면 총 `2N`개의 임베딩이 나온다. `z_i`와 `z_j`는 같은 원본 이미지에서 파생된 두 임베딩이고, `sim`은 코사인 유사도, `τ`는 분포의 날카로움을 조절하는 temperature다. 이 손실을 최소화하면 분자에 놓인 positive pair 유사도는 커지고, 분모에 합산된 수많은 negative pair 유사도는 작아진다.
 
-대조 학습과 달리 negative pair 없이 입력의 일부를 가리고 복원하면서 표현을 배우는 방식도 있다. **MAE(Masked Autoencoders)**는 ViT 입력 패치의 75%를 무작위로 가린 뒤, 남은 25%의 조각만으로 가려진 영역의 픽셀을 복원하도록 학습한다. 자연어 처리의 BERT가 문장 속 빈칸을 맞히던 아이디어를 비전에 옮긴 셈이다. 이미지는 텍스트보다 인접 픽셀 사이의 정보 중복이 훨씬 심하기 때문에 조금만 가리면 주변 색깔을 베껴 쉽게 메워 버리므로, 마스킹 비율을 75%까지 높여 과제를 어렵게 만들어야 비로소 물체의 구조적 표현을 배운다. 또한 무거운 인코더가 가리지 않은 25% 패치만 처리하도록 설계한 덕분에, 원 논문은 사전학습 속도가 3배 이상 빨라졌다고 보고한다(다만 attention 연산 비용이 토큰 수에 대해 초선형으로 늘고 디코더 연산이 더해지므로, 실제 연산량 절감 비율이 마스킹 비율과 꼭 비례하지는 않는다).
+대조 학습과 달리 negative pair 없이 입력의 일부를 가리고 복원하면서 표현을 배우는 방식도 있다. **MAE(Masked Autoencoders)**는 ViT 입력 패치의 75%를 무작위로 가린 뒤, 남은 25%의 조각만으로 가려진 영역의 픽셀을 복원하도록 학습한다. 자연어 처리의 BERT가 문장 속 빈칸을 맞히던 아이디어를 비전에 옮긴 셈이다. 이미지는 텍스트보다 인접 픽셀 사이의 정보 중복이 훨씬 심해, 조금만 가리면 주변 색깔을 베껴 쉽게 메워 버린다. 그래서 마스킹 비율을 75%까지 높여 과제를 어렵게 만들어야 비로소 물체의 구조적 표현을 배운다. 또한 원 논문에서는 무거운 인코더가 가리지 않은 25% 패치만 처리하도록 설계한 덕분에 사전학습 속도가 3배 이상 빨라졌다고 보고한다(다만 attention 연산 비용이 토큰 수에 따라 초선형으로 늘고 디코더 연산이 더해지므로, 실제 연산량 절감 비율이 마스킹 비율과 꼭 비례하지는 않는다).
 
-오늘날 로보틱스 백본으로 각광받는 **DINOv2**는 또 다른 축인 **self-distillation** 계열에 뿌리를 두고 있다. 같은 구조의 teacher와 student 네트워크를 두고, teacher의 가중치는 student 가중치의 지수 이동 평균(EMA, exponential moving average)으로 천천히 따라가게 만든다. 이때 모든 입력에 대해 똑같은 상수 벡터를 내뱉으며 학습이 무너지는 collapse 현상을 막기 위해, teacher 출력에는 낮은 temperature로 분포를 뾰족하게 만드는 **sharpening**과 편향을 누르는 **centering**을 건다(DINO v1은 teacher 출력에서 평균을 빼는 centering을, DINOv2는 그 자리에 SwAV의 Sinkhorn-Knopp centering을 적용했다). DINOv2 논문은 이렇게 라벨 없이 학습한 backbone의 가중치를 통째로 고정(freeze)한 채, ImageNet 분류는 linear probe와 학습 없는 k-NN으로, ADE20K 의미 분할은 선형 head만 학습하는 linear probe의 mIoU로 평가해 supervised 사전학습 모델에 견줄 만한 성능을 보고했다(결과를 인용할 때는 이처럼 평가 방식과 모델 크기를 함께 밝혀야 공정하다).
+오늘날 로보틱스 백본으로 각광받는 **DINOv2**는 또 다른 축인 **self-distillation** 계열에 뿌리를 두고 있다. 같은 구조의 teacher와 student 네트워크를 두고, teacher의 가중치가 지수 이동 평균(EMA, exponential moving average)으로 student 가중치를 천천히 따라가게 만든다. 이때 모든 입력에 똑같은 상수 벡터를 내뱉으며 학습이 무너지는 collapse 현상을 막기 위해, teacher 출력에는 낮은 temperature로 분포를 뾰족하게 만드는 **sharpening**과 편향을 누르는 **centering**을 건다(DINO v1은 teacher 출력에서 평균을 빼는 centering을, DINOv2는 그 대신 SwAV의 Sinkhorn-Knopp centering을 적용했다). DINOv2 논문에서는 이렇게 라벨 없이 학습한 backbone의 가중치를 통째로 고정(freeze)한 채, ImageNet 분류는 선형 head만 학습하는 linear probe와 학습 없는 k-NN으로, ADE20K 의미 분할은 linear probe의 mIoU로 평가했다. 그렇게 얻은 성능이 supervised 사전학습 모델에 견줄 만하다고 보고했다(결과를 인용할 때는 이처럼 평가 방식과 모델 크기를 함께 밝혀야 공정하다).
 
-실무에서는 HuggingFace에서 사전학습된 DINOv2 backbone을 내려받아 가중치를 얼린 뒤, 내가 가진 소량의 데이터에 맞는 가벼운 분류 head만 학습해 빠르게 인식기를 만들 수 있다.
+실무에서는 사전학습된 DINOv2 backbone을 HuggingFace에서 내려받아 가중치를 얼린 뒤, 내가 가진 소량의 데이터에 맞는 가벼운 분류 head만 학습해 빠르게 인식기를 만들 수 있다.
 
 ```python
 from transformers import AutoModel, AutoImageProcessor
@@ -425,9 +425,9 @@ class MyClassifier(nn.Module):
 
 ## 10.10 Knowledge Distillation [심화]
 
-자기지도 학습이나 대규모 사전학습으로 거대한 모델의 성능은 눈부시게 좋아졌지만, 수억 개가 넘는 파라미터를 실은 모델은 전력과 GPU 메모리가 빠듯한 로봇 온보드 컴퓨터에서 실시간으로 돌아가기 어렵다. **Knowledge distillation(지식 증류)**은 이미 성능이 검증된 거대한 모델(**teacher**)이 내는 풍부한 출력 신호를 작고 빠른 모델(**student**)이 그대로 따라 하도록 가르쳐, 무거운 모델의 능력을 엣지 디바이스에 옮겨 담는 압축 기법이다. 가령 MobileSAM은 거대한 SAM의 image encoder를 훨씬 작은 encoder로 증류해 실행 속도를 극적으로 줄였다.
+자기지도 학습이나 대규모 사전학습으로 거대한 모델의 성능은 눈부시게 좋아졌지만, 수억 개가 넘는 파라미터를 실은 모델은 전력과 GPU 메모리가 빠듯한 로봇 온보드 컴퓨터에서 실시간으로 돌아가기 어렵다. **Knowledge distillation(지식 증류)**은 무거운 모델의 능력을 엣지 디바이스에 옮겨 담는 압축 기법으로, 이미 성능이 검증된 거대한 모델(**teacher**)이 내는 풍부한 출력 신호를 작고 빠른 모델(**student**)이 그대로 따라 하도록 가르친다. 가령 MobileSAM은 거대한 SAM의 image encoder를 훨씬 작은 encoder로 증류해 실행 속도를 극적으로 줄였다.
 
-Teacher가 단순한 정답 라벨(`hard label`)보다 더 좋은 선생님이 되는 이유는 **soft prediction** 안에 담긴 클래스 간 유사도 정보 때문이다. 예를 들어 (고양이, 개, 자동차) 세 클래스를 구분할 때 고양이 사진의 hard label은 `[1, 0, 0]`으로 정답만 1이고 나머지는 0으로 잘라 버린다. 반면 잘 학습된 teacher는 `[0.85, 0.10, 0.05]` 같은 확률 분포를 내놓아, "이 사진은 고양이이지만 자동차보다는 개와 훨씬 닮았다"는 미묘한 관계(dark knowledge)까지 student에게 들려준다.
+Teacher가 단순한 정답 라벨(`hard label`)보다 더 좋은 선생님이 되는 이유는 **soft prediction** 안에 담긴 클래스 간 유사도 정보 때문이다. 예를 들어 (고양이, 개, 자동차) 세 클래스를 구분할 때 고양이 사진의 hard label은 `[1, 0, 0]`인데, 정답만 1로 두고 나머지는 0으로 잘라 버린다. 반면 잘 학습된 teacher는 `[0.85, 0.10, 0.05]` 같은 확률 분포를 내놓아, "이 사진은 고양이이지만 자동차보다는 개와 훨씬 닮았다"는 미묘한 관계(dark knowledge)까지 student에게 들려준다.
 
 이 오답 클래스들 사이의 작은 확률 차이까지 또렷이 전달하려면 logits를 temperature `τ`(`τ > 1`)로 나누어 분포를 완만하게 편 뒤 KL divergence로 차이를 잰다(아래 코드 예제는 `τ = 4`를 쓴다).
 
@@ -437,7 +437,7 @@ $$\mathcal{L}_{KD} = \text{KL}\left(\sigma\left(\frac{z_t}{\tau}\right) \| \sigm
 
 $$\mathcal{L} = \alpha \cdot \mathcal{L}_{CE}(y, \sigma(z_s)) + (1 - \alpha) \cdot \tau^2 \cdot \mathcal{L}_{KD}$$
 
-`y`는 정답 라벨, `α`는 두 손실의 비중을 정하는 가중치다. 두 번째 항에 `τ^2`을 곱해 주는 이유는, logit을 `τ`로 나누면서 soft target loss의 역전파 gradient 크기가 `1/τ^2`만큼 줄어들기 때문에 이를 되살려 hard label loss와 균형을 맞추기 위해서다.
+`y`는 정답 라벨, `α`는 두 손실의 비중을 정하는 가중치다. logit을 `τ`로 나누면서 soft target loss의 역전파 gradient 크기가 `1/τ^2`만큼 줄어들기 때문에, 이를 되살려 hard label loss와 균형을 맞추려고 두 번째 항에 `τ^2`을 곱해 준다.
 
 최종 출력 logit뿐 아니라 중간 은닉층의 공간 특징까지 닮게 하고 싶다면 **Feature-based Distillation(FitNets)**을 쓴다.
 
@@ -513,15 +513,15 @@ Input --> Feature Extractor --> [Task Classifier]      --> Task Loss
                               \--> [Domain Discriminator] --> Domain Loss (GRL)
 ```
 
-여기서 핵심 장치는 두 네트워크 사이에 끼운 **Gradient Reversal Layer(GRL)**다. 순전파 때는 입력을 그대로 통과시키지만, 역전파로 돌아오는 gradient의 부호만 반대로 뒤집는다. 그 결과 task classifier는 라벨이 있는 `D_s` 데이터로 원래 과제를 충실히 학습하는 동시에, feature extractor는 domain discriminator가 `D_s`와 `D_t`를 전혀 구별하지 못하게 만드는 쪽으로 가중치를 고치게 된다.
+여기서 핵심 장치는 두 네트워크 사이에 끼운 **Gradient Reversal Layer(GRL)**다. 순전파 때는 입력을 그대로 통과시키지만, 역전파로 돌아오는 gradient의 부호만 반대로 뒤집는다. 그 결과 task classifier는 라벨이 있는 `D_s` 데이터로 원래 과제를 충실히 학습하는 동시에, feature extractor는 domain discriminator가 `D_s`와 `D_t`를 전혀 구별하지 못하게 만드는 쪽으로 가중치를 고친다.
 
 $$\mathcal{L} = \mathcal{L}_{task}(D_s) - \lambda \cdot \mathcal{L}_{domain}(D_s, D_t)$$
 
-`λ`는 두 손실의 균형을 잡는 가중치다. 식의 마이너스 부호가 뜻하듯 feature extractor는 `L_domain`을 키우는 방향으로, 반면 discriminator는 같은 `L_domain`을 줄이는 방향으로 맞서며 마치 GAN처럼 미니맥스 게임을 벌이고, 결국 과제 수행에는 유용하면서도 도메인 색채가 빠진 표현만 살아남는다.
+`λ`는 두 손실의 균형을 잡는 가중치다. 식의 마이너스 부호가 뜻하듯 feature extractor는 `L_domain`을 키우는 방향으로, discriminator는 같은 `L_domain`을 줄이는 방향으로 맞서며 마치 GAN처럼 미니맥스 게임을 벌인다. 결국 과제 수행에는 유용하면서도 도메인 색채가 빠진 표현만 살아남는다.
 
 **Test-Time Adaptation (TTA)**:
 
-모델을 이미 로봇에 실어 배포한 뒤에도 조명이 어두워지거나 비가 오는 등 환경이 계속 바뀐다면, 학습 데이터를 다시 꺼내지 않고 추론 중에 들어오는 테스트 배치만으로 모델을 조금씩 조율하는 **Test-Time Adaptation(TTA)**을 고려할 수 있다. 대표적으로 **TENT**는 모델이 타겟 환경에서 내놓는 예측 분포가 자신감 있고 또렷해지도록(즉 prediction entropy가 줄어들도록) Batch Normalization 층의 affine 파라미터(`weight`, `bias`)만 실시간으로 업데이트한다. **CoTTA**는 이를 확장해 분포가 시간에 따라 끊임없이 변하는 연속(continual) 환경을 다룬다.
+모델을 이미 로봇에 실어 배포한 뒤에도 조명이 어두워지거나 비가 오는 등 환경이 계속 바뀐다면 **Test-Time Adaptation(TTA)**을 고려할 수 있다. TTA는 학습 데이터를 다시 꺼내지 않고 추론 중에 들어오는 테스트 배치만으로 모델을 조금씩 조율하는 기법이다. 대표적으로 **TENT**는 모델이 타겟 환경에서 내놓는 예측 분포가 자신감 있고 또렷해지도록(즉 prediction entropy가 줄어들도록) Batch Normalization 층의 affine 파라미터(`weight`, `bias`)만 실시간으로 업데이트한다. **CoTTA**는 이를 확장해 분포가 시간에 따라 끊임없이 변하는 연속(continual) 환경을 다룬다.
 
 ```python
 # TENT 업데이트 과정 (간략화)
@@ -557,7 +557,7 @@ for batch in test_loader:
 
 물론 세 단계를 늘 모두 묶어 써야 하는 것은 아니다. domain randomization만으로 충분해 곧장 실제 소량 데이터로 파인튜닝을 더하기도 하고, 안전 검증이 엄격한 로봇에서는 배포 중에 가중치가 변하는 것을 막으려고 TTA를 쓰지 않기도 한다. 결국 안전 제약과 온보드 계산 예산을 함께 따져 알맞은 조합을 고른다.
 
-여기까지 10장에서는 특정 태스크와 데이터셋을 중심으로 모델을 학습시켜 분류, 탐지, 분할, 단안 깊이 추정을 수행하고, 이를 경량화해 현장 환경에 적응시키는 딥러닝 인식 파이프라인을 다루었다. 하지만 작업 현장에 새 물체가 나타날 때마다 라벨을 새로 모으고 모델을 다시 학습시키는 데는 한계가 있다. 다음 11장에서는 인터넷 규모의 방대한 데이터로 사전학습해 추가 학습 없이도(zero-shot) 새로운 물체와 장면을 곧바로 인식하고 분할하는 **비전 파운데이션 모델(VFM)**로 시야를 넓혀 본다.
+여기까지 10장에서는 딥러닝 인식 파이프라인을 다루었다. 이 파이프라인에서는 특정 태스크와 데이터셋을 중심으로 모델을 학습시켜 분류, 탐지, 분할, 단안 깊이 추정을 하고, 그 모델을 경량화해 현장 환경에 적응시킨다. 하지만 작업 현장에 새 물체가 나타날 때마다 라벨을 새로 모으고 모델을 다시 학습시키는 데는 한계가 있다. 다음 11장에서는 **비전 파운데이션 모델(VFM)**로 시야를 넓혀 본다. VFM은 인터넷 규모의 방대한 데이터로 사전학습해, 추가 학습 없이도(zero-shot) 새로운 물체와 장면을 곧바로 인식하고 분할한다.
 
 > **추천 자료**
 > - [Tobin et al., "Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World" (2017)](https://arxiv.org/abs/1703.06907) — Domain randomization 원논문

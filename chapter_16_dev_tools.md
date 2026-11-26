@@ -10,7 +10,7 @@ AI 코딩 에이전트가 보일러플레이트나 스크립트 작성을 상당
 
 실시간 제어 루프, ROS 노드, SLAM, 고빈도 센서 처리처럼 지연 시간에 민감한 모듈은 C++로 작성한다. 연구실에서 자주 마주치는 ORB-SLAM3, LOAM, VINS-Mono 같은 핵심 오픈소스 패키지도 대부분 C++ 기반이므로, 직접 밑바닥부터 짜지 않더라도 구조를 읽고 수정할 수 있을 만큼은 익숙해져야 한다(1장 §1.5).
 
-C++는 실행 속도가 빠르고 메모리를 직접 제어할 수 있어 실시간 시스템에 적합하지만, 문법이 까다롭고 컴파일·디버깅 주기가 길며 포인터 실수로 메모리 오류가 나기 쉽다는 부담이 있다. 다행히 최근 로봇 오픈소스 코드는 과거 C 스타일의 날것 포인터 대신 스마트 포인터, 범위 기반 반복문, 람다 표현식을 쓰는 모던 C++(C++17/20) 관용구를 널리 채택해 가독성과 안전성이 한결 나아졌다. 실제 코드에서 가장 자주 만나는 세 가지 문법은 다음과 같다.
+C++는 실행 속도가 빠르고 메모리를 직접 제어할 수 있어 실시간 시스템에 적합하지만, 문법이 까다롭고 컴파일·디버깅 주기가 길며 포인터 실수로 메모리 오류가 나기 쉽다는 부담이 있다. 다행히 최근 로봇 오픈소스 코드에서는 모던 C++(C++17/20) 방식이 자리 잡으면서, 과거 C 스타일의 원시 포인터 대신 스마트 포인터, 범위 기반 반복문, 람다 표현식을 널리 쓴다. 그 덕분에 가독성과 안전성이 한결 나아졌다. 실제 코드에서 가장 자주 만나는 세 가지 문법은 다음과 같다.
 
 ```cpp
 // 스마트 포인터
@@ -34,7 +34,7 @@ auto func = [&](int x) { return x * 2; };
 
 ### 16.1.2 Python
 
-C++가 로봇의 실시간 심장을 담당한다면, Python은 빠른 프로토타이핑, 딥러닝 학습과 추론, 데이터 분석 및 시각화를 맡는다. PyTorch 학습 스크립트나 데이터 전처리 파이프라인을 짤 때 특히 생산성이 높다. 코딩 에이전트로 초안을 빠르게 뽑아내는 데도 잘 어울리지만, 생성된 코드의 텐서 차원과 실행 결과, 데이터 로딩 병목은 직접 확인하고 짚어낼 수 있어야 한다.
+C++가 로봇의 실시간 심장을 담당한다면, Python은 빠른 프로토타이핑, 딥러닝 학습과 추론, 데이터 분석 및 시각화를 맡는다. PyTorch 학습 스크립트나 데이터 전처리 파이프라인을 짤 때 특히 생산성이 높다. 코딩 에이전트로 초안을 빠르게 뽑아내는 데도 잘 맞지만, 생성된 코드에서 텐서 차원과 실행 결과를 직접 확인하고 데이터 로딩 병목을 짚어낼 수 있어야 한다.
 
 로보틱스와 비전 연구에서 거의 매번 설치하게 되는 핵심 패키지는 수치 연산, 영상·3D 처리, 딥러닝 스택이다.
 
@@ -53,7 +53,7 @@ pip install transformers  # HuggingFace
 
 ## 16.2 개발 환경 설정
 
-사용할 언어를 정했다면 이제 운영체제와 GPU 드라이버, 패키지 환경을 깔 차례다. 로보틱스 개발에서는 이 바닥층의 버전 궁합을 맞추는 일이 전체 삽질의 절반을 차지한다.
+사용할 언어를 정했다면 이제 운영체제와 GPU 드라이버를 깔고 패키지 환경을 구성할 차례다. 로보틱스 개발에서는 이 바닥층의 버전 궁합을 맞추는 일이 전체 삽질의 절반을 차지한다.
 
 ### 16.2.1 Ubuntu
 
@@ -63,7 +63,7 @@ Ubuntu는 ROS의 1차 지원 플랫폼이며 NVIDIA 드라이버, CUDA, cuDNN �
 - Ubuntu 24.04 LTS (ROS2 Jazzy)
 - Ubuntu 26.04 LTS (ROS2 Lyrical, 2026년 5월 출시)
 
-새 Ubuntu 머신을 받으면 컴파일러, 빌드 도구, 파이썬 가상환경, 터미널 유틸리티부터 먼저 설치해 둔다.
+새 Ubuntu 머신을 받으면 컴파일러, 빌드 도구, 파이썬 가상환경, 터미널 유틸리티부터 설치해 둔다.
 
 ```bash
 # 기본 도구
@@ -85,7 +85,7 @@ sudo apt install -y vim tmux htop
 
 ### 16.2.2 CUDA / cuDNN
 
-딥러닝 모델을 학습시키려면 GPU 가속이 필수다. 이때 많은 초보자가 호스트의 CUDA 버전과 PyTorch 안의 CUDA 버전이 똑같아야 한다고 오해하지만, 핵심은 설치된 NVIDIA GPU 드라이버가 PyTorch에 내장된 CUDA 런타임을 지원하느냐에 있다. 먼저 현재 머신의 드라이버와 CUDA toolkit 상태를 아래 명령으로 확인한다.
+딥러닝 모델을 학습시키려면 GPU 가속이 필수다. 이때 많은 초보자가 호스트의 CUDA 버전과 PyTorch 안의 CUDA 버전이 똑같아야 한다고 오해하지만, 실제로는 설치된 NVIDIA GPU 드라이버가 PyTorch에 내장된 CUDA 런타임을 지원하는지가 관건이다. 먼저 현재 머신의 드라이버와 CUDA toolkit 상태를 아래 명령으로 확인한다.
 
 ```bash
 nvidia-smi          # GPU 상태
@@ -96,7 +96,7 @@ nvcc --version      # CUDA 버전
 
 **NVIDIA 드라이버 설치 트러블슈팅**
 
-새로 깐 Ubuntu에 NVIDIA 드라이버를 올릴 때 가장 흔하게 부딪히는 장애물은 리눅스 커널의 기본 오픈소스 드라이버인 `nouveau`와의 충돌이다. 드라이버를 설치하기 전에 `nouveau`를 먼저 비활성화하고 재부팅한 뒤 `apt`로 드라이버를 설치하면 충돌을 피할 수 있다.
+새로 깐 Ubuntu에 NVIDIA 드라이버를 올릴 때 가장 흔하게 부딪히는 장애물은 리눅스 커널의 기본 오픈소스 드라이버인 `nouveau`와의 충돌이다. 먼저 `nouveau`를 비활성화하고 재부팅한 뒤 `apt`로 드라이버를 설치하면 충돌을 피할 수 있다.
 
 ```bash
 # nouveau 비활성화
@@ -121,11 +121,11 @@ sudo reboot
 nvidia-smi
 ```
 
-설치 후에도 `nvidia-smi`에서 GPU가 잡히지 않는다면 두 가지를 점검한다. 첫째, `sudo dkms status`로 커널 모듈이 제대로 빌드·설치됐는지와 `lsmod | grep nvidia`로 실제 커널에 올라왔는지를 본다. 둘째, 바이오스의 Secure Boot가 켜져 있으면 서명되지 않은 커널 모듈 로드가 차단되므로 MOK 키를 등록하거나 배포판이 서명한 드라이버 패키지를 쓰고, 여의치 않으면 Secure Boot를 끈다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
+설치 후에도 `nvidia-smi`에서 GPU가 잡히지 않는다면 두 가지를 점검한다. 첫째, `sudo dkms status`로 커널 모듈이 제대로 빌드·설치됐는지 확인하고, `lsmod | grep nvidia`로 커널에 실제로 올라왔는지 본다. 둘째, 바이오스의 Secure Boot가 켜져 있으면 서명되지 않은 커널 모듈 로드가 차단되므로 MOK 키를 등록하거나 배포판이 서명한 드라이버 패키지를 쓰고, 여의치 않으면 Secure Boot를 끈다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/11/22/ubuntu_graphic_driver_install/))
 
 **CUDA/cuDNN 버전 호환성**
 
-PyTorch 공식 wheel은 자체 CUDA 런타임을 안에 품고 배포되므로, 호스트에 설치된 CUDA toolkit(`nvcc`) 버전과 꼭 일치하지 않아도 돌아간다. 반면 NVIDIA 드라이버가 PyTorch의 CUDA 런타임보다 구버전이면 `import torch` 자체는 성공해도 `torch.cuda.is_available()`이 `False`를 반환하거나 첫 CUDA 호출 순간 오류를 낸다. 호환성 점검 순서는 다음과 같다.
+PyTorch 공식 wheel은 자체 CUDA 런타임을 안에 품고 배포되므로, 내장된 CUDA 버전과 호스트에 설치된 CUDA toolkit(`nvcc`) 버전이 꼭 일치하지 않아도 돌아간다. 반면 NVIDIA 드라이버가 PyTorch의 CUDA 런타임보다 구버전이면 `import torch` 자체는 성공해도 `torch.cuda.is_available()`이 `False`를 반환하거나 첫 CUDA 호출 순간 오류가 난다. 호환성 점검 순서는 다음과 같다.
 
 ```bash
 # 1. GPU 확인
@@ -142,7 +142,7 @@ python -c "import torch; print(torch.version.cuda)"
 # https://pytorch.org/get-started/locally/
 ```
 
-요컨대 `nvidia-smi` 우측 상단의 숫자가 `torch.version.cuda`보다 크거나 같으면 wheel 기반 학습 코드는 정상 실행되며, `nvcc`는 직접 C++/CUDA 확장을 컴파일할 때만 신경 쓰면 된다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/09/19/cuda_setting/))
+요컨대 `nvidia-smi` 우측 상단의 숫자가 `torch.version.cuda`보다 크거나 같으면 wheel 기반 학습 코드는 정상 실행되며, `nvcc`는 C++/CUDA 확장을 직접 컴파일할 때만 신경 쓰면 된다. (참고: [정진용 블로그](https://jinyongjeong.github.io/2016/09/19/cuda_setting/))
 
 **OpenCV + CUDA 직접 빌드**
 
@@ -222,7 +222,7 @@ pip install -r requirements.txt
 
 ### 16.3.1 왜 Docker인가?
 
-로보틱스 소프트웨어는 Python 패키지뿐 아니라 Ubuntu 시스템 라이브러리, C++ 빌드 도구, ROS 배포판, CUDA 런타임이 복잡하게 얽혀 있다. Conda나 venv만으로는 호스트 OS의 `apt` 패키지나 C++ 공유 라이브러리 충돌까지 막아 주지 못한다. Docker는 OS 사용자 공간, 시스템 라이브러리, 환경 설정을 하나의 이미지로 묶어 배포하므로, 같은 이미지를 쓰는 팀원이나 연구실 서버 어디에서나 동일한 실행 환경을 그대로 재현할 수 있고 논문 코드의 실행 환경을 통째로 아카이빙하기도 좋다.
+로보틱스 소프트웨어는 Python 패키지뿐 아니라 Ubuntu 시스템 라이브러리, C++ 빌드 도구, ROS 배포판, CUDA 런타임이 복잡하게 얽혀 있다. Conda나 venv만으로는 호스트 OS의 `apt` 패키지나 C++ 공유 라이브러리 충돌까지 막아 주지 못한다. Docker는 OS 사용자 공간, 시스템 라이브러리, 환경 설정을 하나의 이미지로 묶어 배포한다. 그래서 같은 이미지를 쓰는 팀원이든 연구실 서버 어디에서든 동일한 실행 환경을 그대로 재현할 수 있고, 논문 코드의 실행 환경을 통째로 아카이빙하기도 좋다.
 
 ### 16.3.2 기본 사용법
 
@@ -267,7 +267,7 @@ WORKDIR /workspace
 
 ### 16.3.3 NVIDIA Container Toolkit
 
-기본 Docker 컨테이너는 격리된 공간이므로 호스트의 GPU 장치를 바로 보지 못한다. 컨테이너 안에서 CUDA와 PyTorch를 돌리려면 호스트에 `nvidia-container-toolkit`을 설치해 Docker 데몬에 GPU 연결 기능을 등록해야 한다. 참고로 Docker 19.03부터는 예전의 `--runtime=nvidia` 옵션 대신 `--gpus all` 플래그로 GPU 접근을 요청한다.
+기본 Docker 컨테이너는 격리된 공간이므로 호스트의 GPU 장치에 바로 접근하지 못한다. 컨테이너 안에서 CUDA와 PyTorch를 돌리려면 호스트에 `nvidia-container-toolkit`을 설치해 Docker 데몬에 GPU 연결 기능을 등록해야 한다. 참고로 Docker 19.03부터는 예전의 `--runtime=nvidia` 옵션 대신 `--gpus all` 플래그로 GPU 접근을 요청한다.
 
 ```bash
 # nvidia-container-toolkit 설치 (Ubuntu 22.04/24.04)
@@ -290,11 +290,11 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 
 ### 16.3.4 실전 레시피: ROS2 + GPU + GUI + 센서
 
-로보틱스 개발용 컨테이너에는 딥러닝 학습용 GPU, 시각화 창(RViz/Gazebo)을 띄우는 GUI, 그리고 USB 카메라나 LiDAR 같은 물리 센서 접근 권한을 한꺼번에 물려야 하는 상황이 잦다. 아래 레시피는 [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)의 구성을 바탕으로 `nvidia-container-toolkit`과 ROS2 Humble(Ubuntu 22.04 기반 `osrf/ros:humble-desktop` 이미지)에 맞춘 설정이다. Jazzy 등 다른 ROS2 배포판을 쓰려면 이미지 태그와 `humble`이 들어간 패키지 이름·경로를 함께 맞추면 된다.
+로보틱스 개발용 컨테이너에는 딥러닝 학습용 GPU, 시각화 창(RViz/Gazebo)을 띄우는 GUI, 그리고 USB 카메라나 LiDAR 같은 물리 센서 접근 권한을 한꺼번에 넘겨야 하는 상황이 잦다. 아래 레시피는 [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui)의 구성을 바탕으로 `nvidia-container-toolkit`과 ROS2 Humble(Ubuntu 22.04 기반 `osrf/ros:humble-desktop` 이미지)에 맞춘 설정이다. Jazzy 등 다른 ROS2 배포판을 쓰려면 이미지 태그와 `humble`이 들어간 패키지 이름·경로를 함께 맞추면 된다.
 
 **1단계: X11 포워딩 준비 (호스트)**
 
-컨테이너 안의 RViz나 Gazebo 창을 호스트 모니터에 띄우려면 먼저 호스트 X 서버가 컨테이너의 화면 출력 요청을 받아 주도록 허용해야 한다.
+컨테이너 안의 RViz나 Gazebo 창을 호스트 모니터에 띄우려면 먼저 호스트 X 서버에서 컨테이너의 화면 출력 요청을 허용해야 한다.
 
 ```bash
 # 호스트에서 한 번만 실행
@@ -302,7 +302,7 @@ sudo apt-get install -y xauth
 xhost +local:docker
 ```
 
-`xhost +local:docker`는 로컬 연결을 허용하는 접근 규칙을 추가한다. `xhost`는 호스트 단위 접근 제어이므로 이 설정을 켜면 Docker 컨테이너를 포함한 모든 로컬 연결에 X 서버가 열린다. 특정 컨테이너에만 권한을 제한하고 싶다면 `xauth` 쿠키 기반 인증을 사용한다.
+`xhost +local:docker`는 로컬 연결을 허용하는 접근 규칙을 추가한다. `xhost`는 호스트 단위로 접근을 제어하므로 이 설정을 켜면 Docker 컨테이너를 포함한 모든 로컬 연결에 X 서버가 열린다. 권한을 특정 컨테이너로 제한하고 싶다면 `xauth` 쿠키 기반 인증을 사용한다.
 
 **2단계: 실행 스크립트**
 
@@ -346,7 +346,7 @@ docker run --rm -it \
 
 **3단계: 작업 후 컨테이너 저장**
 
-2단계를 `--rm` 옵션으로 띄우면 `exit`로 셸을 나가는 순간 컨테이너 안의 변경 사항이 사라진다. 컨테이너 안에서 새 패키지를 설치하고 그대로 보존하고 싶다면, 컨테이너가 살아 있는 동안 호스트의 다른 터미널에서 `commit`으로 이미지를 떠 두거나 애초에 `--rm`을 빼고 실행한다.
+2단계에서 `--rm` 옵션으로 컨테이너를 띄우면 `exit`로 셸을 나가는 순간 컨테이너 안의 변경 사항이 사라진다. 컨테이너 안에서 새 패키지를 설치하고 그대로 보존하고 싶다면, 컨테이너가 살아 있는 동안 호스트의 다른 터미널에서 `commit`으로 이미지를 떠 두거나 애초에 `--rm`을 빼고 실행한다.
 
 ```bash
 # 컨테이너 안에서 패키지 설치 등 작업을 했으면, 컨테이너를 띄운 채 호스트의 다른 셸에서 커밋
@@ -385,7 +385,7 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["bash"]
 ```
 
-`docker commit`으로 만든 이미지에도 레이어 히스토리는 남지만, 정확히 어떤 명령과 옵션으로 깔았는지 사람이 읽을 수 있는 명세서가 남지 않아 나중에 재생성하거나 일부만 고치기가 까다롭다. `Dockerfile`은 환경 그 자체가 곧 문서가 된다.
+`docker commit`으로 만든 이미지에도 레이어 히스토리는 남지만, 정확히 어떤 명령과 옵션으로 깔았는지가 사람이 읽을 수 있는 명세서로 남지 않는다. 그래서 나중에 재생성하거나 일부만 고치기가 까다롭다. `Dockerfile`은 환경 그 자체가 곧 문서가 된다.
 
 > **추천 자료**
 > - [turlucode/ros-docker-gui](https://github.com/turlucode/ros-docker-gui) — ROS + NVIDIA + GUI Docker 설정 레퍼런스. 현재 README는 ROS 1 Noetic과 ROS 2 Jazzy 등을 예로 든다
@@ -396,7 +396,7 @@ CMD ["bash"]
 
 ## 16.4 원격 관리: Git, SSH, 파일 전송
 
-로보틱스 실험은 내 노트북 한 대 안에서 끝나지 않는다. 모델 학습은 연구실 GPU 서버에서 돌리고, 로봇 제어 코드는 탑재된 온보드 PC로 옮겨 실행하며, 수정된 코드는 팀원들과 주고받아야 한다. 이 원격 작업 흐름을 지탱하는 도구가 Git, SSH, 파일 전송 도구, 그리고 Tailscale이다.
+로보틱스 실험은 내 노트북 한 대에서 끝나지 않는다. 모델 학습은 연구실 GPU 서버에서 돌리고, 로봇 제어 코드는 탑재된 온보드 PC로 옮겨 실행하며, 수정된 코드는 팀원들과 주고받아야 한다. 이 원격 작업 흐름을 지탱하는 도구가 Git, SSH, 파일 전송 도구, 그리고 Tailscale이다.
 
 ### 16.4.1 Git/GitHub
 
@@ -434,9 +434,9 @@ git push origin main
 
 ### 16.4.1.3 협업
 
-여러 명이 함께 코드를 다듬을 때는 기능 브랜치를 바로 `main`에 덮어쓰지 않고 **Pull Request (PR)** 절차를 거친다. 저장소를 fork하거나 새 브랜치를 만든 뒤 변경 사항을 커밋하고, PR을 열어 동료에게 리뷰를 요청해 검토가 끝나면 머지하는 흐름이다.
+여러 명이 함께 코드를 다듬을 때는 기능 브랜치를 바로 `main`에 덮어쓰지 않고 **Pull Request (PR)** 절차를 거친다. 저장소를 fork하거나 새 브랜치를 만든 뒤 변경 사항을 커밋하고, PR을 열어 동료에게 리뷰를 요청한 다음 검토가 끝나면 머지하는 흐름이다.
 
-이때 커밋 메시지에 일정한 규칙을 두면 나중에 히스토리만 훑어도 어떤 성격의 작업이 오갔는지 한눈에 파악된다. 널리 쓰이는 **Conventional Commits** 규칙은 다음과 같다.
+이때 커밋 메시지에 일정한 규칙을 두면 나중에 히스토리만 훑어도 어떤 성격의 작업이 있었는지 한눈에 파악된다. 널리 쓰이는 **Conventional Commits** 규칙은 다음과 같다.
 
 ```
 feat: 새로운 기능
@@ -515,7 +515,7 @@ rsync -avz --delete source/ user@server:/data/source/
 
 ### 16.4.4 Tailscale
 
-연구실 서버가 공유기나 기관 방화벽(NAT) 안쪽에 놓여 있으면 집이나 카페에서 곧바로 SSH 접속을 열 수 없다. **Tailscale**은 WireGuard 기반 메시 VPN으로, 서버와 내 노트북 양쪽에 설치해 로그인만 해 두면 별도의 공유기 포트 포워딩 없이도 사설 고정 IP로 직접 연결된다.
+연구실 서버가 공유기나 기관 방화벽(NAT) 안쪽에 놓여 있으면 집이나 카페에서 곧바로 SSH로 접속할 수 없다. **Tailscale**은 WireGuard 기반 메시 VPN이다. 서버와 내 노트북 양쪽에 설치해 로그인만 해 두면, 별도의 공유기 포트 포워딩 없이도 두 기기가 사설 고정 IP로 직접 연결된다.
 
 ```bash
 # 설치 (서버와 로컬 양쪽에)
@@ -531,7 +531,7 @@ ssh user@100.x.y.z
 
 덕분에 카페·집·학교 어디서든 똑같은 IP로 연구실 GPU 서버에 접속하며, Tailscale SSH 기능을 켜면 별도의 SSH 키를 배포하지 않고도 Tailscale 계정 인증으로 접속을 관리한다.
 
-자주 붙는 서버라면 `~/.ssh/config`에 Tailscale IP를 별칭으로 등록해 두어 `ssh lab-gpu` 한 줄로 연결되도록 만들어 둔다.
+자주 붙는 서버라면 `~/.ssh/config`에 Tailscale IP를 별칭으로 등록해 두면 `ssh lab-gpu` 한 줄로 연결된다.
 
 ```
 Host lab-gpu
@@ -545,7 +545,7 @@ Host lab-gpu
 
 ## 16.5 실험 관리
 
-원격 서버에서 딥러닝 실험을 여러 번 돌리다 보면 "어제 가장 잘 나온 모델의 학습률과 배치 크기가 뭐였지?" 하고 헤매는 순간이 반드시 온다. 엑셀 표나 개인 노트에 손으로 적는 방식은 실험이 열 개만 넘어가도 금방 누락이 생긴다. 실험 설정과 손실 곡선, 모델 체크포인트를 자동으로 묶어 기록해 두는 도구가 필요한 이유다.
+원격 서버에서 딥러닝 실험을 여러 번 돌리다 보면 "어제 가장 잘 나온 모델의 학습률과 배치 크기가 뭐였지?" 하고 헤매는 순간이 반드시 온다. 엑셀 표나 개인 노트에 손으로 적는 방식은 실험이 열 개만 넘어가도 금방 누락이 생긴다. 그래서 실험 설정과 손실 곡선, 모델 체크포인트를 자동으로 묶어 기록해 두는 도구가 필요하다.
 
 ### 16.5.1 Weights & Biases (wandb)
 
@@ -569,7 +569,7 @@ for epoch in range(wandb.config.epochs):
 wandb.finish()
 ```
 
-팀 프로젝트에서 여러 사람이 돌린 실험 곡선을 한 그래프 위에 겹쳐 비교할 때 특히 편리하다.
+팀 프로젝트에서 여러 사람이 돌린 실험의 곡선을 그래프 하나에 겹쳐 비교할 때 특히 편리하다.
 
 > **추천 자료**
 > - [Weights & Biases 공식 문서 및 Quickstart](https://docs.coreweave.com/products/wandb/quickstart) — wandb 시작 가이드. 5분이면 첫 실험 로깅 가능
@@ -592,7 +592,7 @@ with mlflow.start_run():
 
 ### 16.5.3 TensorBoard
 
-외부 계정 가입이나 별도 서버 구축 없이 내 컴퓨터에서 가볍게 학습 곡선과 샘플 이미지만 확인하고 싶다면 **TensorBoard**가 가장 손쉽다. PyTorch 기본 유틸리티(`torch.utils.tensorboard`)에 내장되어 있어 `SummaryWriter`로 로그 디렉터리에 스칼라와 이미지를 써 둔 뒤 `tensorboard` 명령으로 웹 UI를 띄우면 된다.
+외부 계정 가입이나 별도 서버 구축 없이 내 컴퓨터에서 가볍게 학습 곡선과 샘플 이미지만 확인하고 싶다면 **TensorBoard**가 가장 손쉽다. PyTorch 기본 유틸리티(`torch.utils.tensorboard`)에 내장되어 있어 `SummaryWriter`로 로그 디렉터리에 스칼라와 이미지를 기록해 둔 뒤 `tensorboard` 명령으로 웹 UI를 띄우면 된다.
 
 ```python
 from torch.utils.tensorboard import SummaryWriter
@@ -621,7 +621,7 @@ tensorboard --logdir runs
 
 ### 16.6.1 Linting & Formatting
 
-팀원마다 들여쓰기나 따옴표, 줄바꿈 스타일이 다르면 코드 리뷰에서 정작 중요한 알고리즘 로직 대신 스타일 논쟁으로 시간을 허비하게 된다. 자동 포매터를 도입하면 이런 소모전이 사라지고, 혼자 연구할 때도 몇 달 뒤 자기 코드를 다시 읽을 때 한결 수월하다. Python에서는 속도가 빠르고 린팅과 Black 호환 포매팅을 한 번에 처리하는 `ruff`, 정적 타입 검사를 맡는 `mypy`를 자주 조합하고, C++에서는 `clang-format`을 쓴다.
+팀원마다 들여쓰기나 따옴표, 줄바꿈 스타일이 다르면 코드 리뷰에서 정작 중요한 알고리즘 로직 대신 스타일 논쟁으로 시간을 허비하게 된다. 자동 포매터를 도입하면 이런 소모전이 사라지고, 혼자 연구할 때도 몇 달 뒤 자기 코드를 다시 읽기가 한결 수월하다. Python에서는 속도가 빠르고 린팅과 Black 호환 포매팅을 한 번에 처리하는 `ruff`와 정적 타입 검사를 맡는 `mypy`를 자주 조합하고, C++에서는 `clang-format`을 쓴다.
 
 **Python**:
 
@@ -647,7 +647,7 @@ mypy .
 clang-format -i src/*.cpp
 ```
 
-저장소 루트에 설정 파일(`pyproject.toml`이나 `.clang-format`)을 함께 커밋해 두면 에디터 저장 시 자동으로 맞춰져 따로 신경 쓸 일이 없다.
+저장소 루트에 설정 파일(`pyproject.toml`이나 `.clang-format`)을 함께 커밋해 두면 에디터에서 저장할 때 코드 스타일이 자동으로 맞춰져 따로 신경 쓸 일이 없다.
 
 ### 16.6.2 Testing
 
@@ -665,7 +665,7 @@ def test_function():
     assert result == expected
 ```
 
-테스트 파일을 `tests/` 아래에 모아 두고 아래 한 줄만 실행하면 모든 검증 항목이 자동으로 돈다.
+테스트 파일을 `tests/` 아래에 모아 두고 다음 한 줄만 실행하면 모든 검증 항목이 자동으로 돈다.
 
 ```bash
 pytest tests/ -v
