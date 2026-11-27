@@ -33,7 +33,7 @@ Early-stage researchers often fall into one of a few familiar traps: chasing pap
 
 Both SLAM and computer vision already have battle-tested public implementations—ORB-SLAM3, COLMAP, and 3D Gaussian Splatting among them. Unless your goal is strictly educational or you have a concrete new design to test, running an existing baseline and diagnosing where it breaks is usually the fastest route to a real research problem.
 
-## 22.4 A Sense of the Long Game
+## 22.4 Pacing Yourself for Long-Term Research
 
 What the first year, the first summer, and the five-year arc of a PhD feel like is covered in [Grad Notes Ch.7](../../grad-notes/guide.html#chapter-7) and [Grad Notes Ch.1](../../grad-notes/guide.html#chapter-1) *(Korean only)*.
 

@@ -262,7 +262,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
   font-size: 12px;
   font-weight: 700;
   color: var(--accent);
-  margin-right: 10px;
+  margin-right: 6px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -570,10 +570,10 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
       topbarTitle: 'Spatial AI 로보틱스 가이드',
       overviewTitle: 'Spatial AI 로보틱스 가이드',
       groups: [
-        { label: '1부 기초', chapters: [1, 2, 3] },
-        { label: '2부 매니퓰레이터와 제어', chapters: [4, 5, 6, 7, 8] },
-        { label: '3부 인식', chapters: [9, 10, 11, 12, 13, 14] },
-        { label: '4부 개발 환경', chapters: [15, 16, 17] },
+        { label: '1부 Spatial AI, 센서, 수학 기초', chapters: [1, 2, 3] },
+        { label: '2부 기구학, 동역학, 제어, 플래닝', chapters: [4, 5, 6, 7, 8] },
+        { label: '3부 컴퓨터 비전, 딥러닝, 3D 비전, SLAM', chapters: [9, 10, 11, 12, 13, 14] },
+        { label: '4부 ROS, 개발 도구, 데이터셋', chapters: [15, 16, 17] },
         { label: '5부 연구 실전', chapters: [18, 19, 20] },
         { label: '부록', chapters: [100] }
       ],
@@ -743,7 +743,7 @@ mark.search-highlight { background: rgba(0,113,227,0.18); color: inherit; paddin
         numSpan.className = 'overview-chapter-num';
         numSpan.textContent = chNum === 100 ? '' : (state.lang === 'ko' ? chNum + '장' : 'Ch.' + chNum);
         chLink.appendChild(numSpan);
-        chLink.appendChild(document.createTextNode(ch.title));
+        chLink.appendChild(document.createTextNode((chNum === 100 ? '' : ' ') + ch.title));
         chWrap.appendChild(chLink);
 
         if (ch.sections.length) {

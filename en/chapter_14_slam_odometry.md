@@ -5,7 +5,7 @@ In Ch.13, 3D vision algorithms reconstructed point clouds, depth maps, neural fi
 
 ---
 
-## Part 1. Foundations and Systems
+## Part 1. Classical SLAM Foundations and Systems
 
 ### 14.1 Concept Introduction
 
@@ -550,7 +550,7 @@ Occupancy grids anchor 2D navigation stacks such as SLAM Toolbox and the Nav2 co
 
 ---
 
-## Part 2. Recent Trends
+## Part 2. Learning-Based SLAM
 
 ### 14.8 Learning-based & Neural SLAM
 
@@ -567,7 +567,7 @@ Classical SLAM pipelines rely on hand-crafted keypoints, geometric descriptors, 
 
 ---
 
-## Part 3. Advanced
+## Part 3. Advanced Topics
 
 ### 14.9 Advanced: SLAM Back-end Optimization
 
